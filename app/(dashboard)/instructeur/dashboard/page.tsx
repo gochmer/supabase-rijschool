@@ -5,6 +5,7 @@ import { InsightPanel } from "@/components/dashboard/insight-panel";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { QuickActionGrid } from "@/components/dashboard/quick-action-grid";
 import { MetricCard } from "@/components/metric-card";
+import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
 import { Button } from "@/components/ui/button";
 import {
   getInstructeurDashboardMetrics,
@@ -97,21 +98,22 @@ export default async function InstructeurDashboardPage() {
           ]}
         />
 
-        <DataTableCard
-          title="Planning"
-          description="Je eerstvolgende lessen en geplande ritten in een rustig professioneel overzicht."
-          headers={["Les", "Datum", "Leerling", "Locatie", "Status"]}
-          rows={lessons.map((lesson) => [
-            lesson.titel,
-            `${lesson.datum} - ${lesson.tijd}`,
-            lesson.leerling_naam,
-            lesson.locatie,
-            lesson.status,
-          ])}
-          badgeColumns={[4]}
-          emptyTitle="Nog geen lessen ingepland"
-          emptyDescription="Zodra leerlingen een aanvraag doen en lessen worden bevestigd, bouwt je planning zich hier op."
-        />
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Planning (bewerken mogelijk)</h3>
+          <div className="grid gap-3">
+            {lessons.map((lesson) => (
+              <div key={lesson.id} className="flex items-center justify-between rounded-xl border p-3">
+                <div>
+                  <p className="font-semibold">{lesson.titel}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {lesson.datum} - {lesson.tijd} ({lesson.leerling_naam})
+                  </p>
+                </div>
+                <LessonEditDialog lesson={lesson} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
@@ -130,23 +132,11 @@ export default async function InstructeurDashboardPage() {
           emptyDescription="Je inbox is bijgewerkt. Nieuwe lesaanvragen verschijnen hier automatisch."
         />
 
-        <div className="rounded-[1.35rem] border border-white/70 bg-white/84 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
-          <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Profielboost</h3>
-          <p className="mt-1.5 text-[13px] leading-6 text-muted-foreground dark:text-slate-300">
-            Kleine verbeteringen aan je profiel zorgen vaak direct voor meer vertrouwen en hogere conversie.
+        <div className="rounded-[1.35rem] border p-4">
+          <h3 className="text-lg font-semibold">Profielboost</h3>
+          <p className="text-sm text-muted-foreground">
+            Kleine verbeteringen aan je profiel zorgen voor meer vertrouwen en boekingen.
           </p>
-          <div className="mt-3.5 grid gap-2">
-            {[
-              "Voeg extra beschikbaarheid in de avond toe.",
-              "Maak pakketten aan die passen bij starter, opfris of examenfocus.",
-              "Werk je bio bij met specialisaties en lesstijl.",
-              "Controleer of je prijs en werkgebied actueel zijn.",
-            ].map((item) => (
-              <div key={item} className="rounded-[0.95rem] bg-slate-50/85 px-3 py-2.5 text-[13px] leading-6 text-slate-600 dark:bg-white/5 dark:text-slate-300">
-                {item}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </>
