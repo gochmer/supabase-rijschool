@@ -89,14 +89,20 @@ export function InstructorFinder({
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    setCity(getParam(params, "city", ""));
-    setSpecialization(getParam(params, "specialization", ""));
-    setPrice(getParam(params, "price", "alles"));
-    setRating(getParam(params, "rating", "0"));
-    setAvailability(getParam(params, "availability", "alles"));
-    setTransmission(getParam(params, "transmission", "alles") as TransmissieType | "alles");
-    setSortBy(getParam(params, "sort", "top"));
-    setQuickFilter(getParam(params, "quick", "alles"));
+    const syncFrame = window.requestAnimationFrame(() => {
+      setCity(getParam(params, "city", ""));
+      setSpecialization(getParam(params, "specialization", ""));
+      setPrice(getParam(params, "price", "alles"));
+      setRating(getParam(params, "rating", "0"));
+      setAvailability(getParam(params, "availability", "alles"));
+      setTransmission(getParam(params, "transmission", "alles") as TransmissieType | "alles");
+      setSortBy(getParam(params, "sort", "top"));
+      setQuickFilter(getParam(params, "quick", "alles"));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(syncFrame);
+    };
   }, [searchParams]);
 
   useEffect(() => {

@@ -131,10 +131,10 @@ export default async function LeerlingDashboardPage() {
           description="Alle aanvragen die via de booking flow naar instructeurs zijn verstuurd."
           headers={["Instructeur", "Voorkeursdatum", "Tijdvak", "Type", "Status"]}
           rows={requests.map((request) => [
-            request.instructeur_naam,
+            request.instructeur_naam ?? "Nog niet gekoppeld",
             request.voorkeursdatum,
             request.tijdvak,
-            request.pakket_naam ?? request.aanvraag_type,
+            request.pakket_naam ?? request.aanvraag_type ?? "Aanvraag",
             request.status,
           ])}
           badgeColumns={[4]}
