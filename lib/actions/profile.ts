@@ -24,6 +24,62 @@ type UpdateProfileInput = {
   profielfotoKleur?: string;
 };
 
+export async function updateProfileAvatarAction(formData: FormData) {
+  const context = await ensureCurrentUserContext();
+
+  if (!context) {
+    return { success: false, message: "Log eerst in om een profielfoto te uploaden." };
+  }
+
+  const file = formData.get("avatar");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { success: false, message: "Kies eerst een afbeelding." };
+  }
+
+  if (!file.type.startsWith("image/")) {
+    return { success: false, message: "Upload een geldig afbeeldingsbestand." };
+  }
+
+  if (file.size > 4 * 1024 * 1024) {
+    return { success: false, message: "De afbeelding mag maximaal 4 MB zijn." };
+  }
+
+  const supabase = await createServerClient();
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${context.user.id}/avatar-${Date.now()}.${extension}`;
+  const arrayBuffer = await file.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(path, arrayBuffer, {
+      contentType: file.type,
+      upsert: true,
+    });
+
+  if (uploadError) {
+    return { success: false, message: "De profielfoto kon niet worden geüpload. Controleer of de avatars bucket bestaat." };
+  }
+
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  const avatarUrl = data.publicUrl;
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+    .eq("id", context.user.id);
+
+  if (profileError) {
+    return { success: false, message: "De profielfoto kon niet worden opgeslagen." };
+  }
+
+  revalidatePath("/instructeur/profiel");
+  revalidatePath("/instructeur/dashboard");
+  revalidatePath("/instructeurs");
+
+  return { success: true, message: "Je profielfoto is bijgewerkt." };
+}
+
 export async function updateCurrentProfileAction(input: UpdateProfileInput) {
   const context = await ensureCurrentUserContext();
 
