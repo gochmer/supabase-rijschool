@@ -27,6 +27,129 @@ type CreateLessonRequestInput = {
   requestType?: "algemeen" | "proefles";
 };
 
+type MutateLessonRequestInput = {
+  requestId: string;
+  reden?: string;
+  datum?: string;
+  tijdvak?: string;
+};
+
+function revalidateLessonRequestPaths(instructorSlug?: string) {
+  revalidatePath("/leerling/boekingen");
+  revalidatePath("/leerling/dashboard");
+  revalidatePath("/instructeur/aanvragen");
+  revalidatePath("/instructeur/dashboard");
+  revalidatePath("/leerling/instructeurs");
+
+  if (instructorSlug) {
+    revalidatePath(`/instructeurs/${instructorSlug}`);
+  }
+}
+
+export async function cancelLessonRequestAction(input: MutateLessonRequestInput) {
+  const context = await ensureCurrentUserContext();
+
+  if (!context || context.role !== "leerling") {
+    return { success: false, message: "Alleen leerlingen kunnen een aanvraag annuleren." };
+  }
+
+  const leerling = await getCurrentLeerlingRecord();
+
+  if (!leerling) {
+    return { success: false, message: "Je leerlingprofiel kon niet worden gevonden." };
+  }
+
+  const supabase = await createServerClient();
+  const { data: request } = await supabase
+    .from("lesaanvragen")
+    .select("id, status")
+    .eq("id", input.requestId)
+    .eq("leerling_id", leerling.id)
+    .maybeSingle();
+
+  if (!request) {
+    return { success: false, message: "Deze aanvraag kon niet worden gevonden." };
+  }
+
+  if (request.status !== "aangevraagd") {
+    return { success: false, message: "Alleen open aanvragen kunnen worden geannuleerd." };
+  }
+
+  const { error } = await supabase
+    .from("lesaanvragen")
+    .update({
+      status: "geannuleerd",
+      bericht: input.reden?.trim()
+        ? `Geannuleerd door leerling: ${input.reden.trim()}`
+        : "Geannuleerd door leerling.",
+    } as never)
+    .eq("id", input.requestId)
+    .eq("leerling_id", leerling.id);
+
+  if (error) {
+    return { success: false, message: "De aanvraag kon niet worden geannuleerd." };
+  }
+
+  revalidateLessonRequestPaths();
+  return { success: true, message: "Je aanvraag is geannuleerd." };
+}
+
+export async function rescheduleLessonRequestAction(input: MutateLessonRequestInput) {
+  const context = await ensureCurrentUserContext();
+
+  if (!context || context.role !== "leerling") {
+    return { success: false, message: "Alleen leerlingen kunnen een aanvraag verplaatsen." };
+  }
+
+  const leerling = await getCurrentLeerlingRecord();
+
+  if (!leerling) {
+    return { success: false, message: "Je leerlingprofiel kon niet worden gevonden." };
+  }
+
+  const datum = input.datum?.trim() ?? "";
+  const tijdvak = input.tijdvak?.trim() ?? "";
+
+  if (!datum || !tijdvak) {
+    return { success: false, message: "Kies een nieuwe datum en tijdvak." };
+  }
+
+  const supabase = await createServerClient();
+  const { data: request } = await supabase
+    .from("lesaanvragen")
+    .select("id, status")
+    .eq("id", input.requestId)
+    .eq("leerling_id", leerling.id)
+    .maybeSingle();
+
+  if (!request) {
+    return { success: false, message: "Deze aanvraag kon niet worden gevonden." };
+  }
+
+  if (request.status !== "aangevraagd") {
+    return { success: false, message: "Alleen open aanvragen kunnen worden verplaatst." };
+  }
+
+  const { error } = await supabase
+    .from("lesaanvragen")
+    .update({
+      voorkeursdatum: datum,
+      tijdvak,
+      bericht: input.reden?.trim()
+        ? `Verplaatsingsverzoek: ${input.reden.trim()}`
+        : "Leerling heeft een nieuw voorkeursmoment gekozen.",
+    } as never)
+    .eq("id", input.requestId)
+    .eq("leerling_id", leerling.id);
+
+  if (error) {
+    return { success: false, message: "De aanvraag kon niet worden verplaatst." };
+  }
+
+  revalidateLessonRequestPaths();
+  return { success: true, message: "Je nieuwe voorkeursmoment is opgeslagen." };
+}
+
 export async function createLessonRequestAction(input: CreateLessonRequestInput) {
   const context = await ensureCurrentUserContext();
 
@@ -232,6 +355,28 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     };
   }
 
+  const duplicateQuery = supabase
+    .from("lesaanvragen")
+    .select("id")
+    .eq("leerling_id", leerling.id)
+    .eq("instructeur_id", instructeur.id)
+    .eq("voorkeursdatum", voorkeursdatum)
+    .eq("tijdvak", tijdvak)
+    .in("status", ["aangevraagd", "geaccepteerd", "ingepland"]);
+
+  if (selectedPackage?.id) {
+    duplicateQuery.eq("pakket_id", selectedPackage.id);
+  }
+
+  const { data: duplicateRequest } = await duplicateQuery.maybeSingle();
+
+  if (duplicateRequest) {
+    return {
+      success: false,
+      message: "Je hebt al een open aanvraag voor dit pakket of moment.",
+    };
+  }
+
   const { error } = await supabase.from("lesaanvragen").insert({
     leerling_id: leerling.id,
     instructeur_id: instructeur.id,
@@ -253,12 +398,7 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     };
   }
 
-  revalidatePath("/leerling/boekingen");
-  revalidatePath("/leerling/dashboard");
-  revalidatePath("/instructeur/aanvragen");
-  revalidatePath("/instructeur/dashboard");
-  revalidatePath("/leerling/instructeurs");
-  revalidatePath(`/instructeurs/${input.instructorSlug}`);
+  revalidateLessonRequestPaths(input.instructorSlug);
 
   return {
     success: true,
