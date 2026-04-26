@@ -1,0 +1,1570 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import {
+  Award,
+  CalendarDays,
+  CheckCircle2,
+  CircleAlert,
+  ClipboardList,
+  Flame,
+  GraduationCap,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  TrendingUp,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import {
+  clearStudentProgressAssessmentAction,
+  saveStudentProgressAssessmentAction,
+} from "@/lib/actions/student-progress";
+import { updateStudentSelfSchedulingAccessAction } from "@/lib/actions/student-scheduling";
+import type {
+  InstructorStudentProgressRow,
+  StudentProgressAssessment,
+  StudentProgressLessonNote,
+  StudentProgressStatus,
+} from "@/lib/types";
+import {
+  getStudentAutomaticNotifications,
+  getStudentExamReadiness,
+  formatStudentProgressDate,
+  getStudentProgressFocusItems,
+  getStudentProgressItem,
+  getStudentMilestoneOverview,
+  getStudentProgressMomentum,
+  getStudentProgressSectionSummaries,
+  getStudentProgressStreak,
+  getStudentProgressStatusMeta,
+  getStudentProgressStrongestItems,
+  getStudentProgressSummary,
+  getStudentThreeLessonTrack,
+  getStudentWeeklyGoals,
+  STUDENT_PROGRESS_SECTIONS,
+  STUDENT_PROGRESS_STATUS_OPTIONS,
+  type StudentProgressSection,
+} from "@/lib/student-progress";
+import { cn } from "@/lib/utils";
+import { ProgressPrintButton } from "@/components/progress/progress-print-button";
+import { StudentProgressLessonNoteEditor } from "@/components/progress/student-progress-lesson-note-editor";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+type ActiveMarkMode = StudentProgressStatus | "clear";
+
+function getTodayInputValue() {
+  const current = new Date();
+  const local = new Date(current.getTime() - current.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+}
+
+function formatFullDate(dateValue: string) {
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date(`${dateValue}T12:00:00`));
+}
+
+function getProgressBand(value: number) {
+  if (value >= 75) {
+    return {
+      label: "Sterk op koers",
+      badge: "success" as const,
+      ring: "border-emerald-200/70 bg-emerald-50/85 dark:border-emerald-400/18 dark:bg-emerald-500/8",
+    };
+  }
+
+  if (value >= 40) {
+    return {
+      label: "In opbouw",
+      badge: "warning" as const,
+      ring: "border-amber-200/70 bg-amber-50/85 dark:border-amber-400/18 dark:bg-amber-500/8",
+    };
+  }
+
+  return {
+    label: "Extra aandacht",
+    badge: "danger" as const,
+    ring: "border-rose-200/70 bg-rose-50/85 dark:border-rose-400/18 dark:bg-rose-500/8",
+  };
+}
+
+function getStatusStyles(status?: StudentProgressStatus | null) {
+  switch (status) {
+    case "zelfstandig":
+      return {
+        card: "border-emerald-300/65 bg-emerald-100 text-emerald-800 dark:border-emerald-400/28 dark:bg-emerald-500/16 dark:text-emerald-100",
+        dot: "bg-emerald-500",
+      };
+    case "begeleid":
+      return {
+        card: "border-sky-300/65 bg-sky-100 text-sky-800 dark:border-sky-400/28 dark:bg-sky-500/16 dark:text-sky-100",
+        dot: "bg-sky-500",
+      };
+    case "uitleg":
+      return {
+        card: "border-amber-300/65 bg-amber-100 text-amber-800 dark:border-amber-400/28 dark:bg-amber-500/16 dark:text-amber-100",
+        dot: "bg-amber-500",
+      };
+    case "herhaling":
+      return {
+        card: "border-rose-300/65 bg-rose-100 text-rose-800 dark:border-rose-400/28 dark:bg-rose-500/16 dark:text-rose-100",
+        dot: "bg-rose-500",
+      };
+    default:
+      return {
+        card: "border-slate-200/80 bg-white/85 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400",
+        dot: "bg-slate-300 dark:bg-slate-500",
+      };
+  }
+}
+
+function getAssessmentDatesForStudent(
+  studentId: string | undefined,
+  assessments: StudentProgressAssessment[],
+  selectedDate: string
+) {
+  if (!studentId) {
+    return [selectedDate];
+  }
+
+  const uniqueDates = Array.from(
+    new Set(
+      assessments
+        .filter((assessment) => assessment.leerling_id === studentId)
+        .map((assessment) => assessment.beoordelings_datum)
+    )
+  ).sort((left, right) => right.localeCompare(left));
+
+  if (!uniqueDates.includes(selectedDate)) {
+    uniqueDates.unshift(selectedDate);
+  }
+
+  return uniqueDates.slice(0, 6).sort((left, right) => left.localeCompare(right));
+}
+
+function buildNextAssessmentsState(
+  current: StudentProgressAssessment[],
+  payload: {
+    leerlingId: string;
+    vaardigheidKey: string;
+    beoordelingsDatum: string;
+    status: StudentProgressStatus | null;
+  }
+) {
+  const next = current.filter(
+    (assessment) =>
+      !(
+        assessment.leerling_id === payload.leerlingId &&
+        assessment.vaardigheid_key === payload.vaardigheidKey &&
+        assessment.beoordelings_datum === payload.beoordelingsDatum
+      )
+  );
+
+  if (payload.status) {
+    next.unshift({
+      id: `local-${payload.leerlingId}-${payload.vaardigheidKey}-${payload.beoordelingsDatum}`,
+      leerling_id: payload.leerlingId,
+      instructeur_id: "local",
+      vaardigheid_key: payload.vaardigheidKey,
+      beoordelings_datum: payload.beoordelingsDatum,
+      status: payload.status,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  return next;
+}
+
+export function StudentsBoard({
+  students,
+  assessments,
+  notes,
+}: {
+  students: InstructorStudentProgressRow[];
+  assessments: StudentProgressAssessment[];
+  notes: StudentProgressLessonNote[];
+}) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("alles");
+  const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id ?? "");
+  const [selectedDate, setSelectedDate] = useState(getTodayInputValue());
+  const [activeMarkMode, setActiveMarkMode] =
+    useState<ActiveMarkMode>("zelfstandig");
+  const [localStudents, setLocalStudents] = useState(students);
+  const [localAssessments, setLocalAssessments] = useState(assessments);
+  const [localNotes, setLocalNotes] = useState(notes);
+  const [isPending, startTransition] = useTransition();
+
+  const filteredStudents = useMemo(() => {
+    return localStudents.filter((student) => {
+      const matchesQuery = `${student.naam} ${student.pakket} ${student.email ?? ""}`
+        .toLowerCase()
+        .includes(query.toLowerCase());
+
+      const matchesFilter =
+        filter === "alles" ||
+        (filter === "hoog" && student.voortgang >= 70) ||
+        (filter === "midden" && student.voortgang >= 40 && student.voortgang < 70) ||
+        (filter === "laag" && student.voortgang < 40) ||
+        (filter === "actie" &&
+          student.laatsteBeoordeling !== "Nog geen beoordeling" &&
+          student.voortgang < 70);
+
+      return matchesQuery && matchesFilter;
+    });
+  }, [filter, localStudents, query]);
+
+  const selectedStudent =
+    filteredStudents.find((student) => student.id === selectedStudentId) ??
+    filteredStudents[0] ??
+    localStudents.find((student) => student.id === selectedStudentId) ??
+    localStudents[0] ??
+    null;
+
+  const selectedStudentAssessments = useMemo(() => {
+    if (!selectedStudent) {
+      return [];
+    }
+
+    return localAssessments.filter(
+      (assessment) => assessment.leerling_id === selectedStudent.id
+    );
+  }, [localAssessments, selectedStudent]);
+
+  const summary = useMemo(
+    () => getStudentProgressSummary(selectedStudentAssessments),
+    [selectedStudentAssessments]
+  );
+  const sectionSummaries = useMemo(
+    () => getStudentProgressSectionSummaries(selectedStudentAssessments),
+    [selectedStudentAssessments]
+  );
+  const selectedStudentNotes = useMemo(() => {
+    if (!selectedStudent) {
+      return [];
+    }
+
+    return localNotes.filter((note) => note.leerling_id === selectedStudent.id);
+  }, [localNotes, selectedStudent]);
+  const focusItems = useMemo(
+    () => getStudentProgressFocusItems(selectedStudentAssessments),
+    [selectedStudentAssessments]
+  );
+  const strongestItems = useMemo(
+    () => getStudentProgressStrongestItems(selectedStudentAssessments),
+    [selectedStudentAssessments]
+  );
+  const momentum = useMemo(
+    () =>
+      getStudentProgressMomentum(selectedStudentAssessments, selectedStudentNotes),
+    [selectedStudentAssessments, selectedStudentNotes]
+  );
+  const examReadiness = useMemo(
+    () => getStudentExamReadiness(selectedStudentAssessments, selectedStudentNotes),
+    [selectedStudentAssessments, selectedStudentNotes]
+  );
+  const automaticNotifications = useMemo(
+    () =>
+      getStudentAutomaticNotifications(
+        selectedStudentAssessments,
+        selectedStudentNotes
+      ),
+    [selectedStudentAssessments, selectedStudentNotes]
+  );
+  const weeklyGoals = useMemo(
+    () => getStudentWeeklyGoals(selectedStudentAssessments, selectedStudentNotes),
+    [selectedStudentAssessments, selectedStudentNotes]
+  );
+  const progressStreak = useMemo(
+    () => getStudentProgressStreak(selectedStudentAssessments, selectedStudentNotes),
+    [selectedStudentAssessments, selectedStudentNotes]
+  );
+  const milestoneOverview = useMemo(
+    () =>
+      getStudentMilestoneOverview(
+        selectedStudentAssessments,
+        selectedStudentNotes
+      ),
+    [selectedStudentAssessments, selectedStudentNotes]
+  );
+  const threeLessonTrack = useMemo(
+    () => getStudentThreeLessonTrack(selectedStudentAssessments, selectedStudentNotes),
+    [selectedStudentAssessments, selectedStudentNotes]
+  );
+
+  const visibleDates = useMemo(
+    () =>
+      getAssessmentDatesForStudent(
+        selectedStudent?.id,
+        localAssessments,
+        selectedDate
+      ),
+    [localAssessments, selectedDate, selectedStudent?.id]
+  );
+
+  const averageProgress = useMemo(() => {
+    if (!localStudents.length) {
+      return 0;
+    }
+
+    return Math.round(
+      localStudents.reduce((total, student) => total + student.voortgang, 0) /
+        localStudents.length
+    );
+  }, [localStudents]);
+
+  const attentionStudents = useMemo(
+    () => localStudents.filter((student) => student.voortgang < 40).length,
+    [localStudents]
+  );
+  const selectedLessonNote = useMemo(() => {
+    if (!selectedStudent) {
+      return null;
+    }
+
+    return (
+      selectedStudentNotes.find(
+        (note) =>
+          note.leerling_id === selectedStudent.id && note.lesdatum === selectedDate
+      ) ?? null
+    );
+  }, [selectedDate, selectedStudent, selectedStudentNotes]);
+  const recentNotes = useMemo(() => {
+    return [...selectedStudentNotes]
+      .sort((left, right) => right.lesdatum.localeCompare(left.lesdatum))
+      .slice(0, 4);
+  }, [selectedStudentNotes]);
+
+  function updateStudentSummary(nextAssessments: StudentProgressAssessment[]) {
+    if (!selectedStudent) {
+      return;
+    }
+
+    const nextSummary = getStudentProgressSummary(
+      nextAssessments.filter((assessment) => assessment.leerling_id === selectedStudent.id)
+    );
+
+    setLocalStudents((current) =>
+      current.map((student) =>
+        student.id === selectedStudent.id
+          ? {
+              ...student,
+              voortgang: nextSummary.percentage,
+              laatsteBeoordeling: nextSummary.lastReviewedAt
+                ? formatFullDate(nextSummary.lastReviewedAt)
+                : "Nog geen beoordeling",
+              laatsteBeoordelingAt: nextSummary.lastReviewedAt,
+            }
+          : student
+      )
+    );
+  }
+
+  function handleAssessmentUpdate(
+    vaardigheidKey: string,
+    section: StudentProgressSection
+  ) {
+    if (!selectedStudent) {
+      return;
+    }
+
+    const previousAssessments = localAssessments;
+    const nextAssessments = buildNextAssessmentsState(previousAssessments, {
+      leerlingId: selectedStudent.id,
+      vaardigheidKey,
+      beoordelingsDatum: selectedDate,
+      status: activeMarkMode === "clear" ? null : activeMarkMode,
+    });
+
+    setLocalAssessments(nextAssessments);
+    updateStudentSummary(nextAssessments);
+
+    startTransition(async () => {
+      const result =
+        activeMarkMode === "clear"
+          ? await clearStudentProgressAssessmentAction({
+              leerlingId: selectedStudent.id,
+              vaardigheidKey,
+              beoordelingsDatum: selectedDate,
+            })
+          : await saveStudentProgressAssessmentAction({
+              leerlingId: selectedStudent.id,
+              vaardigheidKey,
+              beoordelingsDatum: selectedDate,
+              status: activeMarkMode,
+            });
+
+      if (!result.success) {
+        setLocalAssessments(previousAssessments);
+        updateStudentSummary(previousAssessments);
+        toast.error(result.message);
+        return;
+      }
+
+      const vaardigheid = getStudentProgressItem(vaardigheidKey);
+      if (vaardigheid) {
+        toast.success(`${section.shortLabel}: ${vaardigheid.label}`);
+      }
+    });
+  }
+
+  function handleLessonNoteSaved(nextNote: StudentProgressLessonNote | null) {
+    if (!selectedStudent) {
+      return;
+    }
+
+    setLocalNotes((current) => {
+      const filtered = current.filter(
+        (note) =>
+          !(
+            note.leerling_id === selectedStudent.id &&
+            note.lesdatum === selectedDate
+          )
+      );
+
+      if (!nextNote) {
+        return filtered;
+      }
+
+      return [nextNote, ...filtered];
+    });
+  }
+
+  function handleSelfSchedulingToggle(nextAllowed: boolean) {
+    if (!selectedStudent || !selectedStudent.planningVrijTeGeven) {
+      return;
+    }
+
+    const previousAllowed = Boolean(selectedStudent.zelfInplannenToegestaan);
+
+    setLocalStudents((current) =>
+      current.map((student) =>
+        student.id === selectedStudent.id
+          ? { ...student, zelfInplannenToegestaan: nextAllowed }
+          : student
+      )
+    );
+
+    startTransition(async () => {
+      const result = await updateStudentSelfSchedulingAccessAction(
+        selectedStudent.id,
+        nextAllowed
+      );
+
+      if (!result.success) {
+        setLocalStudents((current) =>
+          current.map((student) =>
+            student.id === selectedStudent.id
+              ? { ...student, zelfInplannenToegestaan: previousAllowed }
+              : student
+          )
+        );
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
+        <aside className="space-y-4 print:hidden">
+          <div className="rounded-[1.55rem] border border-white/70 bg-white/86 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
+            <div className="space-y-3">
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
+                  Leerlingregie
+                </p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                  Voortgang per leerling
+                </h2>
+                <p className="mt-1.5 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                  Hier landt de instructiekaart het slimst: precies waar je leerling, volgende les en
+                  vaardigheidsscore samenkomen.
+                </p>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
+                {[
+                  {
+                    icon: Search,
+                    label: "Leerlingen",
+                    value: `${localStudents.length}`,
+                  },
+                  {
+                    icon: Target,
+                    label: "Gem. voortgang",
+                    value: `${averageProgress}%`,
+                  },
+                  {
+                    icon: CircleAlert,
+                    label: "Extra aandacht",
+                    value: `${attentionStudents}`,
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-[1.1rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                  >
+                    <item.icon className="size-4 text-slate-500 dark:text-slate-300" />
+                    <p className="mt-2 text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                      {item.label}
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3">
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Zoek op leerling, mail of pakket"
+                  className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
+                />
+                <select
+                  value={filter}
+                  onChange={(event) => setFilter(event.target.value)}
+                  className="native-select h-11 rounded-xl px-3 text-sm"
+                >
+                  <option value="alles">Alle leerlingen</option>
+                  <option value="hoog">Sterk op koers</option>
+                  <option value="midden">In opbouw</option>
+                  <option value="laag">Extra aandacht</option>
+                  <option value="actie">Actie nodig</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-3 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
+            <div className="space-y-2">
+              {filteredStudents.length ? (
+                filteredStudents.map((student) => {
+                  const band = getProgressBand(student.voortgang);
+                  const isSelected = selectedStudent?.id === student.id;
+
+                  return (
+                    <button
+                      key={student.id}
+                      type="button"
+                      onClick={() => setSelectedStudentId(student.id)}
+                      className={cn(
+                        "w-full rounded-[1.2rem] border p-3 text-left transition-all",
+                        isSelected
+                          ? "border-sky-300/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(59,130,246,0.14),rgba(15,23,42,0.04))] shadow-[0_18px_44px_-28px_rgba(14,165,233,0.34)] dark:border-sky-400/30 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(59,130,246,0.14),rgba(15,23,42,0.32))]"
+                          : "border-slate-200/80 bg-slate-50/88 hover:border-slate-300/80 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/8"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-[15px] font-semibold text-slate-950 dark:text-white">
+                            {student.naam}
+                          </p>
+                          <p className="mt-0.5 truncate text-[12px] text-slate-500 dark:text-slate-400">
+                            {student.pakket}
+                          </p>
+                        </div>
+                        <Badge variant={band.badge}>{student.voortgang}%</Badge>
+                      </div>
+
+                      <div className="mt-3 grid gap-2 text-[12px] text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center justify-between gap-2">
+                          <span>Volgende les</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-100">
+                            {student.volgendeLes}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span>Status</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-100">
+                            {band.label}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/85 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Geen leerlingen in dit filter
+                  </p>
+                  <p className="mt-1.5 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                    Pas je zoekterm aan of wacht tot er nieuwe trajecten aan deze instructeur gekoppeld
+                    zijn.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+
+        <section className="space-y-4">
+          {selectedStudent ? (
+            <>
+              <div
+                data-progress-print-root
+                className="rounded-[1.7rem] border border-white/70 bg-white/88 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]"
+              >
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
+                        Digitale instructiekaart
+                      </p>
+                      <Badge variant={getProgressBand(selectedStudent.voortgang).badge}>
+                        {getProgressBand(selectedStudent.voortgang).label}
+                      </Badge>
+                    </div>
+                    <div>
+                      <h2 className="text-[1.65rem] font-semibold tracking-tight text-slate-950 dark:text-white">
+                        {selectedStudent.naam}
+                      </h2>
+                      <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                        {selectedStudent.pakket} · {selectedStudent.email || "Geen e-mail"} ·{" "}
+                        {selectedStudent.telefoon || "Geen telefoon"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 xl:w-[26rem]">
+                    <div className="flex justify-end">
+                      <ProgressPrintButton className="h-9 rounded-full text-[12px]" />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      {
+                        icon: Target,
+                        label: "Voortgang",
+                        value: `${selectedStudent.voortgang}%`,
+                        context:
+                          summary.beoordeeldCount > 0
+                            ? `${summary.beoordeeldCount} onderdelen beoordeeld`
+                            : "Nog geen onderdelen gemarkeerd",
+                      },
+                      {
+                        icon: CheckCircle2,
+                        label: "Zelfstandig",
+                        value: `${summary.zelfstandigCount}`,
+                        context: "Onderdelen die zelfstandig lukken",
+                      },
+                      {
+                        icon: CircleAlert,
+                        label: "Aandacht",
+                        value: `${summary.aandachtCount}`,
+                        context: "Onderdelen met uitleg of herhaling",
+                      },
+                      {
+                        icon: CalendarDays,
+                        label: "Volgende les",
+                        value: selectedStudent.volgendeLes,
+                        context: `${selectedStudent.gekoppeldeLessen} gekoppelde lesmomenten`,
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                      >
+                        <item.icon className="size-4 text-slate-500 dark:text-slate-300" />
+                        <p className="mt-2 text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                          {item.label}
+                        </p>
+                        <p className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
+                          {item.value}
+                        </p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                          {item.context}
+                        </p>
+                      </div>
+                    ))}
+                    </div>
+                    <div className="mt-3 rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <ShieldCheck className="size-4 text-slate-500 dark:text-slate-300" />
+                            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                              Zelf inplannen
+                            </p>
+                            <Badge
+                              variant={
+                                selectedStudent.zelfInplannenToegestaan
+                                  ? "success"
+                                  : selectedStudent.planningVrijTeGeven
+                                    ? "warning"
+                                    : "info"
+                              }
+                            >
+                              {selectedStudent.zelfInplannenToegestaan
+                                ? "Vrijgegeven"
+                                : selectedStudent.planningVrijTeGeven
+                                  ? "Nog uit"
+                                  : "Nog niet beschikbaar"}
+                            </Badge>
+                          </div>
+                          <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                            {selectedStudent.zelfInplannenToegestaan
+                              ? "Deze leerling mag nu jouw agenda zien en zelf een passend moment kiezen."
+                              : selectedStudent.planningVrijTeGeven
+                                ? "Deze leerling zit al in een actief traject. Jij bepaalt hier of zelf inplannen wordt vrijgegeven."
+                                : "De agenda blijft afgeschermd tot er een geaccepteerde aanvraag of echte lesrelatie is."}
+                          </p>
+                        </div>
+                        {selectedStudent.planningVrijTeGeven ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9 rounded-full text-[12px]"
+                            onClick={() =>
+                              handleSelfSchedulingToggle(
+                                !selectedStudent.zelfInplannenToegestaan
+                              )
+                            }
+                            disabled={isPending}
+                          >
+                            {selectedStudent.zelfInplannenToegestaan
+                              ? "Zet zelf inplannen uit"
+                              : "Sta zelf inplannen toe"}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {sectionSummaries.map((section) => (
+                  <div
+                    key={section.key}
+                    className="rounded-[1.3rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
+                  >
+                    <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                      {section.shortLabel}
+                    </p>
+                    <div className="mt-2 flex items-end justify-between gap-3">
+                      <p className="text-2xl font-semibold text-slate-950 dark:text-white">
+                        {section.percentage}%
+                      </p>
+                      <Badge
+                        variant={
+                          section.percentage >= 75
+                            ? "success"
+                            : section.percentage >= 40
+                            ? "warning"
+                            : "danger"
+                        }
+                      >
+                        {section.masteredCount}/{section.totalCount}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                      {section.attentionCount > 0
+                        ? `${section.attentionCount} onderdeel${section.attentionCount === 1 ? "" : "en"} vragen nog extra aandacht.`
+                        : "Dit toetsblok oogt stabiel en groeit richting zelfstandigheid."}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-3">
+                <div className="rounded-[1.3rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Richting proefexamen
+                      </h3>
+                    </div>
+                    <Badge variant={examReadiness.badge}>{examReadiness.label}</Badge>
+                  </div>
+                  <div className="mt-3 flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                        Gereedheid
+                      </p>
+                      <p className="mt-1 text-3xl font-semibold text-slate-950 dark:text-white">
+                        {examReadiness.score}%
+                      </p>
+                    </div>
+                    <p className="max-w-[10rem] text-right text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                      {examReadiness.nextMilestone}
+                    </p>
+                  </div>
+                  <p className="mt-3 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                    {examReadiness.summary}
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    {examReadiness.checks.map((check) => (
+                      <div
+                        key={check.label}
+                        className="rounded-[1rem] border border-slate-200/80 bg-slate-50/90 px-3 py-2 dark:border-white/10 dark:bg-white/5"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                            {check.label}
+                          </p>
+                          <Badge variant={check.badge}>{check.value}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.3rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Recent ritme
+                      </h3>
+                    </div>
+                    <Badge variant={momentum.badge}>{momentum.label}</Badge>
+                  </div>
+                  <p className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">
+                    {momentum.score}%
+                  </p>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                    {momentum.detail}
+                  </p>
+                  <div className="mt-3 rounded-[1rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                      Coachsignaal
+                    </p>
+                    <p className="mt-1 text-[13px] leading-6 text-slate-700 dark:text-slate-200">
+                      {momentum.suggestion}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.3rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-slate-500 dark:text-slate-300" />
+                    <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                      Wat al sterk staat
+                    </h3>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {strongestItems.length ? (
+                      strongestItems.map((item) => {
+                        const meta = item.latest?.status
+                          ? getStudentProgressStatusMeta(item.latest.status)
+                          : null;
+
+                        return (
+                          <div
+                            key={item.key}
+                            className="rounded-[1rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                  {item.sectionLabel}
+                                </p>
+                                <p className="mt-1 text-[13px] font-medium text-slate-900 dark:text-white">
+                                  {item.label}
+                                </p>
+                              </div>
+                              {meta ? <Badge variant="success">{meta.shortLabel}</Badge> : null}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5">
+                        <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                          Zodra onderdelen echt zelfstandig staan, verschijnen hier automatisch de
+                          sterkste punten van deze leerling.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-3">
+                <div className="rounded-[1.3rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+                  <div className="flex items-center gap-2">
+                    <Award className="size-4 text-slate-500 dark:text-slate-300" />
+                    <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                      Badges en mijlpalen
+                    </h3>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                    {milestoneOverview.headline}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {milestoneOverview.unlocked.length ? (
+                      milestoneOverview.unlocked.map((badge) => (
+                        <Badge
+                          key={badge.key}
+                          variant={badge.badge}
+                          className={cn(
+                            "rounded-full px-3 py-1.5",
+                            badge.newlyUnlocked
+                              ? "milestone-badge-fresh ring-2 ring-emerald-300/70 dark:ring-emerald-400/30"
+                              : ""
+                          )}
+                        >
+                          {badge.newlyUnlocked ? `Nieuw: ${badge.title}` : badge.title}
+                        </Badge>
+                      ))
+                    ) : (
+                      <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 px-3 py-2 text-[12px] leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                        De eerste badges verschijnen automatisch zodra de kaart sterker gevuld raakt.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.3rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Volgende badge
+                      </h3>
+                    </div>
+                    {milestoneOverview.next ? (
+                      <Badge variant={milestoneOverview.next.badge}>
+                        {milestoneOverview.next.badgeLabel}
+                      </Badge>
+                    ) : (
+                      <Badge variant="success">Compleet</Badge>
+                    )}
+                  </div>
+                  {milestoneOverview.next ? (
+                    <>
+                      <p className="mt-3 text-lg font-semibold text-slate-950 dark:text-white">
+                        {milestoneOverview.next.title}
+                      </p>
+                      <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                        {milestoneOverview.next.detail}
+                      </p>
+                      <div className="mt-3 rounded-[1rem] border border-slate-200/80 bg-slate-50/90 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+                        <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                          Richting
+                        </p>
+                        <p className="mt-1 text-[13px] font-medium text-slate-900 dark:text-white">
+                          {milestoneOverview.next.progressLabel}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-3 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                      Alle huidige badges zijn vrijgespeeld. De kaart staat sterk en laat een volwassen
+                      groeibeeld zien.
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-[1.3rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Flame className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Groei-streak
+                      </h3>
+                    </div>
+                    <Badge variant={progressStreak.badge}>
+                      {progressStreak.count}x
+                    </Badge>
+                  </div>
+                  <p className="mt-3 text-lg font-semibold text-slate-950 dark:text-white">
+                    {progressStreak.label}
+                  </p>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                    {progressStreak.detail}
+                  </p>
+                </div>
+              </div>
+
+              {milestoneOverview.recentUnlocked.length ? (
+                <div className="milestone-celebration rounded-[1.45rem] border border-emerald-200/80 bg-[linear-gradient(135deg,rgba(16,185,129,0.10),rgba(14,165,233,0.08),rgba(255,255,255,0.82))] p-4 shadow-[0_20px_54px_-40px_rgba(16,185,129,0.32)] print:shadow-none dark:border-emerald-400/20 dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(14,165,233,0.12),rgba(15,23,42,0.84))]">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="mt-0.5 size-5 text-emerald-600 dark:text-emerald-300" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300">
+                        Nieuw behaald
+                      </p>
+                      <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                        {milestoneOverview.recentUnlocked.length} nieuwe {milestoneOverview.recentUnlocked.length === 1 ? "badge" : "badges"} na de laatste les
+                      </h3>
+                      <p className="mt-1.5 text-[13px] leading-6 text-slate-700 dark:text-slate-200">
+                        Mooie stap. De meest recente les heeft direct een nieuwe mijlpaal opgeleverd.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {milestoneOverview.recentUnlocked.map((badge) => (
+                          <Badge
+                            key={badge.key}
+                            variant={badge.badge}
+                            className="milestone-badge-fresh rounded-full px-3 py-1.5 ring-2 ring-emerald-300/70 dark:ring-emerald-400/30"
+                          >
+                            Nieuw: {badge.title}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]">
+                <div
+                  data-progress-print-root
+                  className="rounded-[1.7rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]"
+                >
+                  <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-4 print:border-slate-200 dark:border-white/10">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-950 dark:text-white">
+                          Instructiekaart per lesmoment
+                        </h3>
+                        <p className="mt-1.5 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                          Kies eerst een lesdatum en klik daarna in de geselecteerde kolom om onderdelen
+                          te markeren. Zo houd je voortgang en examenklaarheid veel strakker bij.
+                        </p>
+                      </div>
+
+                      <div className="w-full print:hidden sm:w-[12.5rem]">
+                        <label className="mb-1.5 block text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                          Lesdatum
+                        </label>
+                        <Input
+                          type="date"
+                          value={selectedDate}
+                          onChange={(event) => setSelectedDate(event.target.value)}
+                          className="h-10 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 print:hidden">
+                      {STUDENT_PROGRESS_STATUS_OPTIONS.map((option) => {
+                        const styles = getStatusStyles(option.value);
+                        const active = activeMarkMode === option.value;
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setActiveMarkMode(option.value)}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all",
+                              styles.card,
+                              active
+                                ? "ring-2 ring-slate-900/12 dark:ring-white/18"
+                                : "opacity-80 hover:opacity-100"
+                            )}
+                          >
+                            {option.shortLabel} · {option.label}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveMarkMode("clear")}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all",
+                          activeMarkMode === "clear"
+                            ? "border-slate-400 bg-slate-900 text-white dark:border-white/30 dark:bg-white dark:text-slate-950"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                        )}
+                      >
+                        Wis markering
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="min-w-full border-separate border-spacing-y-2 text-left">
+                      <thead>
+                        <tr>
+                          <th className="sticky left-0 z-10 min-w-[17rem] rounded-l-[1rem] bg-white/96 px-3 py-2 text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:bg-[rgba(15,23,42,0.96)] dark:text-slate-400">
+                            Onderdeel
+                          </th>
+                          {visibleDates.map((dateValue) => {
+                            const isSelectedColumn = dateValue === selectedDate;
+
+                            return (
+                              <th
+                                key={dateValue}
+                                className={cn(
+                                  "min-w-[5.2rem] px-1.5 py-2 text-center",
+                                  isSelectedColumn ? "text-slate-950 dark:text-white" : "text-slate-500 dark:text-slate-400"
+                                )}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedDate(dateValue)}
+                                  className={cn(
+                                    "w-full rounded-[0.95rem] border px-2 py-2 text-[11px] font-semibold tracking-[0.12em] uppercase transition-all",
+                                    isSelectedColumn
+                                      ? "border-sky-300/70 bg-sky-100 text-sky-800 dark:border-sky-400/28 dark:bg-sky-500/18 dark:text-sky-100"
+                                      : "border-slate-200/80 bg-slate-50/90 text-slate-600 hover:border-slate-300/80 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                                  )}
+                                >
+                                  {formatStudentProgressDate(dateValue)}
+                                </button>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {STUDENT_PROGRESS_SECTIONS.map((section) => (
+                          <StudentSectionRows
+                            key={section.key}
+                            section={section}
+                            assessments={selectedStudentAssessments}
+                            visibleDates={visibleDates}
+                            selectedDate={selectedDate}
+                            isPending={isPending}
+                            onMark={(vaardigheidKey) =>
+                              handleAssessmentUpdate(vaardigheidKey, section)
+                            }
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+                    <div className="flex items-center gap-2">
+                      <CircleAlert className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Automatische meldingen
+                      </h3>
+                    </div>
+                    <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                      Automatische waarschuwingen en kansen die direct uit de kaart komen, zodat je
+                      sneller weet waar nu actie nodig is.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {automaticNotifications.map((signal) => (
+                        <div
+                          key={signal.title}
+                          className="rounded-[1.05rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[13px] font-medium text-slate-900 dark:text-white">
+                                {signal.title}
+                              </p>
+                              <p className="mt-1 text-[12px] leading-6 text-slate-600 dark:text-slate-300">
+                                {signal.detail}
+                              </p>
+                            </div>
+                            <Badge variant={signal.badge}>{signal.badgeLabel}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+                    <div className="flex items-center gap-2">
+                      <Target className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Weekdoelen
+                      </h3>
+                    </div>
+                    <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                      Concrete doelen voor deze week, zodat je de groei van de leerling gericht en
+                      meetbaar kunt sturen.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {weeklyGoals.map((goal) => (
+                        <div
+                          key={goal.title}
+                          className="rounded-[1.05rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[13px] font-medium text-slate-900 dark:text-white">
+                                {goal.title}
+                              </p>
+                              <p className="mt-1 text-[12px] leading-6 text-slate-600 dark:text-slate-300">
+                                {goal.detail}
+                              </p>
+                            </div>
+                            <Badge variant={goal.badge}>{goal.badgeLabel}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Komende 3 lessen
+                      </h3>
+                    </div>
+                    <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                      Een slimme route per lesmoment, zodat je niet alleen losse aandachtspunten
+                      ziet maar ook meteen een logische opbouw kunt aanhouden.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {threeLessonTrack.map((item) => (
+                        <div
+                          key={`${item.lessonLabel}-${item.title}`}
+                          className="rounded-[1.05rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                {item.lessonLabel}
+                              </p>
+                              <p className="text-[13px] font-medium text-slate-900 dark:text-white">
+                                {item.title}
+                              </p>
+                              <p className="mt-1 text-[12px] leading-6 text-slate-600 dark:text-slate-300">
+                                {item.detail}
+                              </p>
+                            </div>
+                            <Badge variant={item.badge}>{item.badgeLabel}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Focus voor de volgende les
+                      </h3>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {focusItems.length ? (
+                        focusItems.map((item) => {
+                          const meta = item.latest?.status
+                            ? getStudentProgressStatusMeta(item.latest.status)
+                            : null;
+                          const styles = getStatusStyles(item.latest?.status);
+
+                          return (
+                            <div
+                              key={item.key}
+                              className="rounded-[1.05rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                    {item.sectionLabel}
+                                  </p>
+                                  <p className="mt-1 text-[13px] font-medium text-slate-900 dark:text-white">
+                                    {item.label}
+                                  </p>
+                                </div>
+                                {meta ? (
+                                  <span
+                                    className={cn(
+                                      "rounded-full border px-2 py-1 text-[11px] font-semibold",
+                                      styles.card
+                                    )}
+                                  >
+                                    {meta.shortLabel}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="rounded-[1.05rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5">
+                          <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                            Nog geen focusonderdelen. Zet de eerste markeringen in de kaart en deze
+                            sidebar toont automatisch waar extra aandacht nodig is.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] print:hidden dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+                    <StudentProgressLessonNoteEditor
+                      key={`${selectedStudent.id}-${selectedDate}-${selectedLessonNote?.updated_at ?? "new"}`}
+                      leerlingId={selectedStudent.id}
+                      lesdatum={selectedDate}
+                      note={selectedLessonNote}
+                      onSaved={handleLessonNoteSaved}
+                    />
+                  </div>
+
+                  <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="size-4 text-slate-500 dark:text-slate-300" />
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Lesmoment {formatFullDate(selectedDate)}
+                      </h3>
+                    </div>
+                    <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                      De geselecteerde kolom is nu actief. Kies bovenaan de juiste markering en klik in
+                      de rij van het onderdeel dat je wilt vastleggen.
+                    </p>
+
+                    <div className="mt-3 space-y-2">
+                      {STUDENT_PROGRESS_STATUS_OPTIONS.map((option) => {
+                        const styles = getStatusStyles(option.value);
+
+                        return (
+                          <div
+                            key={option.value}
+                            className="flex items-center gap-2 rounded-[1rem] border border-slate-200/80 bg-slate-50/90 px-3 py-2 dark:border-white/10 dark:bg-white/5"
+                          >
+                            <span
+                              className={cn(
+                                "inline-flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold",
+                                styles.card
+                              )}
+                            >
+                              {option.shortLabel}
+                            </span>
+                            <div>
+                              <p className="text-[12px] font-semibold text-slate-900 dark:text-white">
+                                {option.label}
+                              </p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {option.value === "zelfstandig"
+                                  ? "Gebruik dit als de leerling het zelfstandig beheerst."
+                                  : option.value === "begeleid"
+                                  ? "Gebruik dit als sturing nog nodig is."
+                                  : option.value === "uitleg"
+                                  ? "Gebruik dit bij eerste uitleg of demonstratie."
+                                  : "Gebruik dit als het onderdeel opnieuw moet worden opgepakt."}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-3 rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 text-[12px] leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                      Wissel naar een oudere datum boven de kaart als je een eerder lesmoment wilt
+                      corrigeren. De geselecteerde datum blijft altijd de enige bewerkbare kolom.
+                    </div>
+
+                    {selectedLessonNote ? (
+                      <div className="mt-3 space-y-2 rounded-[1rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                        <div>
+                          <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                            Lesreflectie
+                          </p>
+                          <p className="mt-1 text-[12px] leading-6 text-slate-700 dark:text-slate-200">
+                            {selectedLessonNote.samenvatting || "Nog geen samenvatting ingevuld."}
+                          </p>
+                        </div>
+                        {selectedLessonNote.sterk_punt ? (
+                          <div>
+                            <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                              Sterk punt
+                            </p>
+                            <p className="mt-1 text-[12px] leading-6 text-slate-700 dark:text-slate-200">
+                              {selectedLessonNote.sterk_punt}
+                            </p>
+                          </div>
+                        ) : null}
+                        {selectedLessonNote.focus_volgende_les ? (
+                          <div>
+                            <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                              Volgende focus
+                            </p>
+                            <p className="mt-1 text-[12px] leading-6 text-slate-700 dark:text-slate-200">
+                              {selectedLessonNote.focus_volgende_les}
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] print:hidden dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+                    <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                      Recente lesreflecties
+                    </h3>
+                    <div className="mt-3 space-y-2">
+                      {recentNotes.length ? (
+                        recentNotes.map((note) => (
+                          <div
+                            key={note.id}
+                            className="rounded-[1rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                {formatFullDate(note.lesdatum)}
+                              </p>
+                              {note.lesdatum === selectedDate ? (
+                                <Badge variant="info">Actieve datum</Badge>
+                              ) : null}
+                            </div>
+                            <p className="mt-2 text-[13px] leading-6 text-slate-700 dark:text-slate-200">
+                              {note.samenvatting || "Nog geen samenvatting ingevuld."}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5">
+                          <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                            Zodra je coachnotities opslaat, verschijnen de laatste lesreflecties hier
+                            automatisch.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-[1.7rem] border border-dashed border-slate-200 bg-white/88 p-8 text-center shadow-[0_24px_80px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+              <h3 className="text-lg font-semibold text-slate-950 dark:text-white">
+                Nog geen leerling geselecteerd
+              </h3>
+              <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                Zodra hier leerlingen staan, open ik voor de geselecteerde leerling direct een digitale
+                instructiekaart om prestaties per lesmoment bij te houden.
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function StudentSectionRows({
+  section,
+  assessments,
+  visibleDates,
+  selectedDate,
+  isPending,
+  onMark,
+}: {
+  section: StudentProgressSection;
+  assessments: StudentProgressAssessment[];
+  visibleDates: string[];
+  selectedDate: string;
+  isPending: boolean;
+  onMark: (vaardigheidKey: string) => void;
+}) {
+  return (
+    <>
+      <tr>
+        <td
+          colSpan={visibleDates.length + 1}
+          className="rounded-[1rem] bg-[linear-gradient(90deg,rgba(14,165,233,0.16),rgba(59,130,246,0.12),rgba(255,255,255,0.02))] px-3 py-2 text-[11px] font-semibold tracking-[0.18em] text-slate-700 uppercase dark:bg-[linear-gradient(90deg,rgba(14,165,233,0.18),rgba(59,130,246,0.14),rgba(255,255,255,0.04))] dark:text-slate-200"
+        >
+          {section.label}
+        </td>
+      </tr>
+
+      {section.items.map((item) => {
+        const latest = assessments
+          .filter((assessment) => assessment.vaardigheid_key === item.key)
+          .sort((left, right) =>
+            right.beoordelings_datum.localeCompare(left.beoordelings_datum)
+          )[0];
+        const latestMeta = latest?.status
+          ? getStudentProgressStatusMeta(latest.status)
+          : null;
+        const latestStyles = getStatusStyles(latest?.status);
+
+        return (
+          <tr key={item.key}>
+            <td className="sticky left-0 z-10 rounded-l-[1rem] border border-slate-200/80 bg-white/96 px-3 py-3 align-top dark:border-white/10 dark:bg-[rgba(15,23,42,0.96)]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-slate-950 dark:text-white">
+                    {item.label}
+                  </p>
+                  {latestMeta ? (
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      Laatst gemarkeerd als {latestMeta.label.toLowerCase()}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      Nog niet beoordeeld
+                    </p>
+                  )}
+                </div>
+                {latestMeta ? (
+                  <span
+                    className={cn(
+                      "rounded-full border px-2 py-1 text-[11px] font-semibold",
+                      latestStyles.card
+                    )}
+                  >
+                    {latestMeta.shortLabel}
+                  </span>
+                ) : null}
+              </div>
+            </td>
+
+            {visibleDates.map((dateValue) => {
+              const assessment = assessments.find(
+                (entry) =>
+                  entry.vaardigheid_key === item.key &&
+                  entry.beoordelings_datum === dateValue
+              );
+              const isEditableColumn = dateValue === selectedDate;
+              const meta = assessment?.status
+                ? getStudentProgressStatusMeta(assessment.status)
+                : null;
+              const styles = getStatusStyles(assessment?.status);
+
+              return (
+                <td
+                  key={`${item.key}-${dateValue}`}
+                  className="rounded-[1rem] border border-slate-200/80 bg-slate-50/88 p-1.5 text-center align-middle dark:border-white/10 dark:bg-white/5"
+                >
+                  {isEditableColumn ? (
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => onMark(item.key)}
+                      className={cn(
+                        "inline-flex h-10 w-full items-center justify-center rounded-[0.85rem] border text-[11px] font-semibold transition-all",
+                        styles.card,
+                        "hover:brightness-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+                      )}
+                    >
+                      {meta ? meta.shortLabel : "+"}
+                    </button>
+                  ) : (
+                    <div
+                      className={cn(
+                        "inline-flex h-10 w-full items-center justify-center rounded-[0.85rem] border text-[11px] font-semibold",
+                        styles.card
+                      )}
+                    >
+                      {meta ? meta.shortLabel : "·"}
+                    </div>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        );
+      })}
+    </>
+  );
+}

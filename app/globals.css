@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,82 +49,697 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --font-body:
+    "Aptos",
+    "Segoe UI Variable Text",
+    "Trebuchet MS",
+    "Segoe UI",
+    sans-serif;
+  --font-heading:
+    "Aptos Display",
+    "Segoe UI Variable Display",
+    "Trebuchet MS",
+    "Segoe UI",
+    sans-serif;
+  --font-mono: "Consolas", "Cascadia Code", "SFMono-Regular", monospace;
+  --background: oklch(0.98 0.01 255);
+  --foreground: oklch(0.22 0.03 258);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.22 0.03 258);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.22 0.03 258);
+  --primary: oklch(0.57 0.19 246);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.01 245);
+  --secondary-foreground: oklch(0.24 0.03 260);
+  --muted: oklch(0.97 0.01 250);
+  --muted-foreground: oklch(0.51 0.03 257);
+  --accent: oklch(0.94 0.03 230);
+  --accent-foreground: oklch(0.26 0.03 257);
+  --destructive: oklch(0.62 0.2 28);
+  --border: oklch(0.91 0.01 258);
+  --input: oklch(0.91 0.01 258);
+  --ring: oklch(0.63 0.17 246);
+  --chart-1: oklch(0.65 0.16 246);
+  --chart-2: oklch(0.71 0.15 200);
+  --chart-3: oklch(0.72 0.17 80);
+  --chart-4: oklch(0.73 0.14 25);
+  --chart-5: oklch(0.65 0.18 320);
+  --radius: 1rem;
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0.22 0.03 258);
+  --sidebar-primary: oklch(0.57 0.19 246);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.95 0.02 246);
+  --sidebar-accent-foreground: oklch(0.22 0.03 258);
+  --sidebar-border: oklch(0.91 0.01 258);
+  --sidebar-ring: oklch(0.63 0.17 246);
+  --app-body-background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.1), transparent 24%),
+    radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.08), transparent 20%),
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 255, 0.88));
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.16 0.02 255);
+  --foreground: oklch(0.96 0.01 250);
+  --card: oklch(0.2 0.02 255);
+  --card-foreground: oklch(0.96 0.01 250);
+  --popover: oklch(0.2 0.02 255);
+  --popover-foreground: oklch(0.96 0.01 250);
+  --primary: oklch(0.78 0.14 243);
+  --primary-foreground: oklch(0.16 0.02 255);
+  --secondary: oklch(0.25 0.02 255);
+  --secondary-foreground: oklch(0.96 0.01 250);
+  --muted: oklch(0.24 0.02 255);
+  --muted-foreground: oklch(0.72 0.02 250);
+  --accent: oklch(0.28 0.02 248);
+  --accent-foreground: oklch(0.96 0.01 250);
+  --destructive: oklch(0.68 0.16 28);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.78 0.14 243);
+  --chart-1: oklch(0.78 0.14 243);
+  --chart-2: oklch(0.74 0.12 190);
+  --chart-3: oklch(0.78 0.14 95);
+  --chart-4: oklch(0.72 0.15 35);
+  --chart-5: oklch(0.7 0.17 320);
+  --sidebar: oklch(0.18 0.02 255);
+  --sidebar-foreground: oklch(0.96 0.01 250);
+  --sidebar-primary: oklch(0.78 0.14 243);
+  --sidebar-primary-foreground: oklch(0.16 0.02 255);
+  --sidebar-accent: oklch(0.24 0.02 255);
+  --sidebar-accent-foreground: oklch(0.96 0.01 250);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.78 0.14 243);
+  --app-body-background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 24%),
+    radial-gradient(circle at 18% 28%, rgba(99, 102, 241, 0.14), transparent 20%),
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 20%),
+    linear-gradient(180deg, rgba(5, 10, 18, 0.97), rgba(9, 15, 25, 0.98));
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: clip;
+    background-image: var(--app-body-background);
+    background-attachment: fixed;
+    transition:
+      background-color 220ms ease,
+      color 220ms ease,
+      background-image 220ms ease;
+  }
+
+  ::selection {
+    background: rgba(37, 99, 235, 0.18);
+    color: inherit;
+  }
+}
+
+@keyframes dashboard-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes resident-border-sweep {
+  0% {
+    transform: translateX(-68%) skewX(-18deg);
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 0.54;
+  }
+
+  56% {
+    opacity: 0.34;
+  }
+
+  100% {
+    transform: translateX(88%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes resident-scanlines {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 0 26px;
+  }
+}
+
+@keyframes milestone-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(167, 243, 208, 0.24),
+      0 16px 34px -28px rgba(16, 185, 129, 0.18);
+    transform: translateY(0);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(125, 211, 252, 0.34),
+      0 18px 42px -24px rgba(14, 165, 233, 0.24);
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes milestone-sheen {
+  0% {
+    transform: translateX(-128%) skewX(-18deg);
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 0.48;
+  }
+
+  46% {
+    opacity: 0.16;
+  }
+
+  100% {
+    transform: translateX(138%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes milestone-panel-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 20px 54px -40px rgba(16, 185, 129, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(0);
+  }
+
+  50% {
+    box-shadow:
+      0 24px 64px -34px rgba(14, 165, 233, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+  }
+}
+
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: #0f172a !important;
+  }
+
+  [data-progress-print-root],
+  [data-progress-print-root] * {
+    box-shadow: none !important;
+  }
+}
+
+@layer utilities {
+  .site-shell {
+    max-width: 1240px;
+  }
+
+  .dashboard-fade {
+    animation: dashboard-fade-up 480ms ease-out both;
+  }
+
+  .re-scanlines {
+    isolation: isolate;
+    position: relative;
+  }
+
+  .re-scanlines::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.045) 0,
+        rgba(255, 255, 255, 0.045) 1px,
+        transparent 1px,
+        transparent 7px
+      );
+    background-size: 100% 18px;
+    opacity: 0.14;
+    mix-blend-mode: screen;
+    animation: resident-scanlines 14s linear infinite;
+  }
+
+  .re-frame-flash {
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .re-frame-flash::after {
+    content: "";
+    position: absolute;
+    inset: -16% -34%;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        108deg,
+        transparent 34%,
+        rgba(255, 255, 255, 0.03) 41%,
+        rgba(255, 255, 255, 0.22) 48%,
+        rgba(255, 255, 255, 0.04) 54%,
+        transparent 62%
+      );
+    transform: translateX(-68%) skewX(-18deg);
+    animation: resident-border-sweep 6.8s linear infinite;
+  }
+
+  .re-threat-grid {
+    background-image:
+      linear-gradient(rgba(239, 68, 68, 0.09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(239, 68, 68, 0.08) 1px, transparent 1px);
+    background-position: center;
+    background-size: 28px 28px;
+  }
+
+  .native-select {
+    appearance: none;
+    border: 1px solid color-mix(in srgb, var(--color-border) 86%, white);
+    background-color: rgba(255, 255, 255, 0.92);
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.92)),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat;
+    background-position: center, right 0.95rem center;
+    background-size: auto, 0.85rem;
+    box-shadow: 0 14px 32px -24px rgba(15, 23, 42, 0.18);
+    padding-right: 2.5rem;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .native-select:hover {
+    border-color: rgba(125, 211, 252, 0.95);
+    background-color: rgba(255, 255, 255, 0.98);
+  }
+
+  .native-select:focus {
+    outline: none;
+    border-color: rgba(56, 189, 248, 0.95);
+    box-shadow:
+      0 0 0 3px rgba(125, 211, 252, 0.22),
+      0 18px 38px -26px rgba(14, 165, 233, 0.24);
+  }
+
+  .dark .native-select {
+    border-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(15, 23, 42, 0.88);
+    background-image:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.92)),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    color: #f8fafc;
+    box-shadow: 0 16px 36px -28px rgba(15, 23, 42, 0.56);
+  }
+
+  .dark .native-select:hover {
+    border-color: rgba(125, 211, 252, 0.26);
+    background-color: rgba(15, 23, 42, 0.94);
+  }
+
+  .dark .native-select:focus {
+    border-color: rgba(125, 211, 252, 0.46);
+    box-shadow:
+      0 0 0 3px rgba(125, 211, 252, 0.18),
+      0 18px 38px -28px rgba(14, 165, 233, 0.26);
+  }
+
+  .loading-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .loading-shimmer::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 100%
+    );
+    animation: shimmer-slide 1.5s ease-in-out infinite;
+  }
+
+  .milestone-badge-fresh {
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+    animation: milestone-glow 5.8s ease-in-out infinite;
+  }
+
+  .milestone-badge-fresh::after {
+    content: "";
+    position: absolute;
+    inset: -28% -36%;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        108deg,
+        transparent 34%,
+        rgba(255, 255, 255, 0.04) 42%,
+        rgba(255, 255, 255, 0.28) 48%,
+        rgba(186, 230, 253, 0.18) 52%,
+        transparent 60%
+      );
+    transform: translateX(-128%) skewX(-18deg);
+    animation: milestone-sheen 6.6s linear infinite;
+  }
+
+  .milestone-celebration {
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+    animation: milestone-panel-pulse 7.2s ease-in-out infinite;
+  }
+
+  .milestone-celebration::before {
+    content: "";
+    position: absolute;
+    inset: -14%;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(circle at 18% 22%, rgba(167, 243, 208, 0.16), transparent 28%),
+      radial-gradient(circle at 86% 28%, rgba(125, 211, 252, 0.14), transparent 30%),
+      radial-gradient(circle at 50% 108%, rgba(255, 255, 255, 0.08), transparent 34%);
+    opacity: 0.9;
+  }
+
+  .milestone-celebration > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .lesson-calendar .fc {
+    min-width: 0;
+    --fc-page-bg-color: transparent;
+    --fc-button-border-radius: 999px;
+  }
+
+  .lesson-calendar .fc .fc-toolbar {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .lesson-calendar .fc .fc-toolbar-title {
+    font-size: clamp(1.05rem, 2vw, 1.4rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .lesson-calendar .fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+
+  .lesson-calendar .fc .fc-button {
+    border-radius: 999px;
+    box-shadow: none;
+    font-weight: 600;
+    padding: 0.62rem 0.92rem;
+  }
+
+  .lesson-calendar .fc .fc-button-group {
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .lesson-calendar .fc-direction-ltr .fc-button-group > .fc-button:not(:first-child) {
+    margin-left: 0;
+  }
+
+  .lesson-calendar .fc-direction-ltr .fc-button-group > .fc-button:not(:last-child) {
+    border-bottom-right-radius: 999px;
+    border-top-right-radius: 999px;
+  }
+
+  .lesson-calendar .fc-direction-ltr .fc-button-group > .fc-button:not(:first-child) {
+    border-bottom-left-radius: 999px;
+    border-top-left-radius: 999px;
+  }
+
+  .lesson-calendar .fc .fc-scrollgrid,
+  .lesson-calendar .fc-theme-standard td,
+  .lesson-calendar .fc-theme-standard th {
+    border-color: var(--fc-border-color);
+  }
+
+  .lesson-calendar .fc .fc-scrollgrid {
+    border-radius: 1.35rem;
+    overflow: hidden;
+  }
+
+  .lesson-calendar .fc .fc-col-header-cell-cushion,
+  .lesson-calendar .fc .fc-daygrid-day-number {
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .lesson-calendar .fc .fc-daygrid-day-number:hover,
+  .lesson-calendar .fc .fc-col-header-cell-cushion:hover {
+    text-decoration: none;
+  }
+
+  .lesson-calendar .fc .fc-event {
+    border-radius: 0.9rem;
+    border-width: 1px;
+    box-shadow: 0 16px 32px -22px rgba(15, 23, 42, 0.42);
+    overflow: hidden;
+  }
+
+  .lesson-calendar .fc .lesson-calendar-event--request {
+    border-style: dashed;
+    opacity: 0.94;
+  }
+
+  .lesson-calendar .fc .lesson-calendar-event--availability {
+    opacity: 0.98;
+  }
+
+  .lesson-calendar .fc .lesson-calendar-event--availability-muted {
+    border-style: dashed;
+    opacity: 0.78;
+  }
+
+  .lesson-calendar .fc .fc-event-main {
+    padding: 0.15rem 0.35rem;
+  }
+
+  .lesson-calendar .fc .fc-timegrid-slot {
+    height: 2.7rem;
+  }
+
+  .lesson-calendar .fc .fc-day-today {
+    background: var(--fc-today-bg-color);
+  }
+
+  .lesson-calendar--default .fc {
+    color: #0f172a;
+    --fc-border-color: rgba(148, 163, 184, 0.26);
+    --fc-button-text-color: #0f172a;
+    --fc-button-bg-color: rgba(255, 255, 255, 0.94);
+    --fc-button-border-color: rgba(203, 213, 225, 0.9);
+    --fc-button-hover-bg-color: #f8fafc;
+    --fc-button-hover-border-color: rgba(148, 163, 184, 0.9);
+    --fc-button-active-bg-color: #0f172a;
+    --fc-button-active-border-color: #0f172a;
+    --fc-page-bg-color: rgba(255, 255, 255, 0.2);
+    --fc-neutral-bg-color: rgba(226, 232, 240, 0.46);
+    --fc-today-bg-color: rgba(56, 189, 248, 0.08);
+    --fc-now-indicator-color: rgba(14, 165, 233, 0.82);
+  }
+
+  .lesson-calendar--default .fc .fc-button-primary:not(:disabled).fc-button-active,
+  .lesson-calendar--default .fc .fc-button-primary:not(:disabled):active {
+    color: #f8fafc;
+  }
+
+  .lesson-calendar--default .fc .fc-daygrid-day-number,
+  .lesson-calendar--default .fc .fc-col-header-cell-cushion,
+  .lesson-calendar--default .fc .fc-toolbar-title {
+    color: #0f172a;
+  }
+
+  .dark .lesson-calendar--default .fc {
+    color: #e2e8f0;
+    --fc-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-text-color: #e2e8f0;
+    --fc-button-bg-color: rgba(255, 255, 255, 0.06);
+    --fc-button-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-hover-bg-color: rgba(255, 255, 255, 0.1);
+    --fc-button-hover-border-color: rgba(255, 255, 255, 0.14);
+    --fc-button-active-bg-color: rgba(148, 163, 184, 0.18);
+    --fc-button-active-border-color: rgba(148, 163, 184, 0.22);
+    --fc-page-bg-color: rgba(15, 23, 42, 0.42);
+    --fc-neutral-bg-color: rgba(148, 163, 184, 0.08);
+    --fc-today-bg-color: rgba(125, 211, 252, 0.08);
+    --fc-now-indicator-color: rgba(125, 211, 252, 0.88);
+  }
+
+  .dark .lesson-calendar--default .fc .fc-daygrid-day-number,
+  .dark .lesson-calendar--default .fc .fc-col-header-cell-cushion,
+  .dark .lesson-calendar--default .fc .fc-toolbar-title {
+    color: #f8fafc;
+  }
+
+  .dark .availability-manager,
+  .dark .availability-manager-dialog {
+    color: #e2e8f0;
+  }
+
+  .dark .availability-manager [class*="bg-white/88"] {
+    background-color: rgba(15, 23, 42, 0.82);
+    background-image: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.76));
+    backdrop-filter: blur(18px);
+  }
+
+  .dark .availability-manager [class*="bg-slate-50/90"],
+  .dark .availability-manager [class*="bg-slate-50/80"],
+  .dark .availability-manager [class*="bg-slate-50/70"],
+  .dark .availability-manager [class*="bg-slate-100"],
+  .dark .availability-manager [class*="bg-white/92"],
+  .dark .availability-manager [class*="bg-white/90"],
+  .dark .availability-manager [class*="bg-white/80"],
+  .dark .availability-manager [class~="bg-white"],
+  .dark .availability-manager [class*="bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.9))]"],
+  .dark .availability-manager [class*="bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))]"],
+  .dark .availability-manager-dialog,
+  .dark .availability-manager-dialog [class*="bg-slate-50/90"],
+  .dark .availability-manager-dialog [class*="bg-slate-50/80"],
+  .dark .availability-manager-dialog [class~="bg-white"] {
+    background-color: rgba(15, 23, 42, 0.74);
+    background-image: none;
+  }
+
+  .dark .availability-manager [class*="border-slate-200"],
+  .dark .availability-manager [class*="border-slate-200/80"],
+  .dark .availability-manager [class*="border-white/70"],
+  .dark .availability-manager [class*="border-white/90"],
+  .dark .availability-manager [class*="border-white/80"],
+  .dark .availability-manager-dialog,
+  .dark .availability-manager-dialog [class*="border-slate-200"],
+  .dark .availability-manager-dialog [class*="border-white/80"] {
+    border-color: rgba(148, 163, 184, 0.18);
+  }
+
+  .dark .availability-manager .text-slate-950,
+  .dark .availability-manager-dialog .text-slate-950 {
+    color: #f8fafc;
+  }
+
+  .dark .availability-manager .text-slate-700,
+  .dark .availability-manager-dialog .text-slate-700 {
+    color: #dbe4f0;
+  }
+
+  .dark .availability-manager .text-slate-600,
+  .dark .availability-manager-dialog .text-slate-600 {
+    color: #cbd5e1;
+  }
+
+  .dark .availability-manager .text-slate-500,
+  .dark .availability-manager-dialog .text-slate-500 {
+    color: #94a3b8;
+  }
+
+  .dark .availability-manager-dialog-footer {
+    background-color: rgba(2, 6, 23, 0.68);
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .lesson-calendar--urban .fc {
+    color: #e2e8f0;
+    --fc-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-text-color: #e2e8f0;
+    --fc-button-bg-color: rgba(255, 255, 255, 0.06);
+    --fc-button-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-hover-bg-color: rgba(255, 255, 255, 0.1);
+    --fc-button-hover-border-color: rgba(255, 255, 255, 0.14);
+    --fc-button-active-bg-color: rgba(148, 163, 184, 0.18);
+    --fc-button-active-border-color: rgba(148, 163, 184, 0.22);
+    --fc-page-bg-color: rgba(15, 23, 42, 0.42);
+    --fc-neutral-bg-color: rgba(148, 163, 184, 0.08);
+    --fc-today-bg-color: rgba(125, 211, 252, 0.08);
+    --fc-now-indicator-color: rgba(125, 211, 252, 0.88);
+  }
+
+  .lesson-calendar--urban .fc .fc-daygrid-day-number,
+  .lesson-calendar--urban .fc .fc-col-header-cell-cushion,
+  .lesson-calendar--urban .fc .fc-toolbar-title {
+    color: #f8fafc;
+  }
+
+  .lesson-calendar--urban .fc .fc-button-primary:focus,
+  .lesson-calendar--urban .fc .fc-button-primary:not(:disabled).fc-button-active:focus,
+  .lesson-calendar--urban .fc .fc-button-primary:not(:disabled):active:focus {
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
+  }
+
+  @media (max-width: 920px) {
+    .lesson-calendar .fc .fc-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .lesson-calendar .fc .fc-toolbar-chunk {
+      justify-content: center;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .milestone-badge-fresh,
+  .milestone-celebration {
+    animation: none !important;
+  }
+
+  .milestone-badge-fresh::after,
+  .milestone-celebration::before {
+    animation: none !important;
   }
 }
