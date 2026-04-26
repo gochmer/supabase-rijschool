@@ -145,13 +145,49 @@ export async function getCurrentLeerlingRecord() {
   }
 
   const supabase = await createServerClient();
+  const selectColumns =
+    "id, profile_id, voortgang_percentage, pakket_id, favoriete_instructeurs";
   const { data } = await supabase
     .from("leerlingen")
-    .select("id, profile_id, voortgang_percentage, pakket_id, favoriete_instructeurs")
+    .select(selectColumns)
     .eq("profile_id", context.user.id)
     .maybeSingle();
 
-  return (data as {
+  if (data) {
+    return data as {
+      id: string;
+      profile_id: string;
+      voortgang_percentage: number;
+      pakket_id: string | null;
+      favoriete_instructeurs: string[] | null;
+    };
+  }
+
+  const { data: inserted } = await supabase
+    .from("leerlingen")
+    .insert({
+      profile_id: context.user.id,
+    })
+    .select(selectColumns)
+    .maybeSingle();
+
+  if (inserted) {
+    return inserted as {
+      id: string;
+      profile_id: string;
+      voortgang_percentage: number;
+      pakket_id: string | null;
+      favoriete_instructeurs: string[] | null;
+    };
+  }
+
+  const { data: fallbackData } = await supabase
+    .from("leerlingen")
+    .select(selectColumns)
+    .eq("profile_id", context.user.id)
+    .maybeSingle();
+
+  return (fallbackData as {
     id: string;
     profile_id: string;
     voortgang_percentage: number;
@@ -168,15 +204,75 @@ export async function getCurrentInstructeurRecord() {
   }
 
   const supabase = await createServerClient();
+  const selectColumns =
+    "id, profile_id, slug, bio, ervaring_jaren, werkgebied, prijs_per_les, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur";
   const { data } = await supabase
     .from("instructeurs")
-    .select(
-      "id, profile_id, slug, bio, ervaring_jaren, werkgebied, prijs_per_les, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur"
-    )
+    .select(selectColumns)
     .eq("profile_id", context.user.id)
     .maybeSingle();
 
-  return (data as {
+  if (data) {
+    return data as {
+      id: string;
+      profile_id: string;
+      slug: string;
+      bio: string | null;
+      ervaring_jaren: number | null;
+      werkgebied: string[] | null;
+      prijs_per_les: number | string | null;
+      transmissie: TransmissieType | null;
+      beoordeling: number | string | null;
+      profiel_status: string | null;
+      profiel_compleetheid: number | null;
+      specialisaties: string[] | null;
+      profielfoto_kleur: string | null;
+    };
+  }
+
+  const { data: inserted } = await supabase
+    .from("instructeurs")
+    .insert({
+      profile_id: context.user.id,
+      slug: createSlug(
+        context.profile?.volledige_naam || getDefaultName(context.user),
+        context.user.id
+      ),
+      bio:
+        typeof context.user.user_metadata?.bio === "string"
+          ? context.user.user_metadata.bio
+          : "",
+      werkgebied: [],
+      profiel_status: "in_beoordeling",
+    })
+    .select(selectColumns)
+    .maybeSingle();
+
+  if (inserted) {
+    return inserted as {
+      id: string;
+      profile_id: string;
+      slug: string;
+      bio: string | null;
+      ervaring_jaren: number | null;
+      werkgebied: string[] | null;
+      prijs_per_les: number | string | null;
+      transmissie: TransmissieType | null;
+      beoordeling: number | string | null;
+      profiel_status: string | null;
+      profiel_compleetheid: number | null;
+      specialisaties: string[] | null;
+      profielfoto_kleur: string | null;
+    };
+  }
+
+  const { data: fallbackData } = await supabase
+    .from("instructeurs")
+    .select(selectColumns)
+    .eq("profile_id", context.user.id)
+    .maybeSingle();
+
+  return (fallbackData as {
     id: string;
     profile_id: string;
     slug: string;

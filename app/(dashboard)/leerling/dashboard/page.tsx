@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
+import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { QuickActionGrid } from "@/components/dashboard/quick-action-grid";
 import { MetricCard } from "@/components/metric-card";
@@ -126,18 +127,10 @@ export default async function LeerlingDashboardPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <DataTableCard
+        <LearnerRequestOverview
           title="Je lesaanvragen"
-          description="Alle aanvragen die via de booking flow naar instructeurs zijn verstuurd."
-          headers={["Instructeur", "Voorkeursdatum", "Tijdvak", "Type", "Status"]}
-          rows={requests.map((request) => [
-            request.instructeur_naam ?? "Nog niet gekoppeld",
-            request.voorkeursdatum,
-            request.tijdvak,
-            request.pakket_naam ?? request.aanvraag_type ?? "Aanvraag",
-            request.status,
-          ])}
-          badgeColumns={[4]}
+          description="Alle aanvragen die via de booking flow naar instructeurs zijn verstuurd, inclusief verplaatsen of annuleren zolang ze nog open staan."
+          requests={requests}
           emptyTitle="Nog geen aanvragen"
           emptyDescription="Start met vergelijken en vraag direct een proefles of pakket aan bij een instructeur."
         />

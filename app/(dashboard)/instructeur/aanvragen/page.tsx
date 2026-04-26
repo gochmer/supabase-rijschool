@@ -14,11 +14,35 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  getRequestStatusLabel,
+  getRequestStatusVariant,
+  requestStatusTimeline,
+} from "@/lib/lesson-request-flow";
 import { getInstructeurLessonRequests } from "@/lib/data/lesson-requests";
+import { getLocationOptions } from "@/lib/data/locations";
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
 
+function isTimelineStepActive(
+  stepValue: (typeof requestStatusTimeline)[number]["value"],
+  currentStatus: string
+) {
+  const order = requestStatusTimeline.map((item) => item.value);
+  const currentIndex = order.indexOf(currentStatus as (typeof order)[number]);
+  const stepIndex = order.indexOf(stepValue);
+
+  if (currentStatus === "geweigerd") {
+    return stepValue === "aangevraagd";
+  }
+
+  return stepIndex <= currentIndex;
+}
+
 export default async function AanvragenPage() {
-  const requests = await getInstructeurLessonRequests();
+  const [requests, locationOptions] = await Promise.all([
+    getInstructeurLessonRequests(),
+    getLocationOptions(),
+  ]);
 
   return (
     <>
@@ -97,15 +121,9 @@ export default async function AanvragenPage() {
                       ) : null}
                     </div>
                     <Badge
-                      variant={
-                        request.status === "aangevraagd"
-                          ? "warning"
-                          : request.status === "geaccepteerd"
-                            ? "success"
-                            : "info"
-                      }
+                      variant={getRequestStatusVariant(request.status)}
                     >
-                      {request.status}
+                      {getRequestStatusLabel(request.status)}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -113,6 +131,28 @@ export default async function AanvragenPage() {
                   <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
                     {request.bericht || "Geen extra toelichting meegegeven bij deze aanvraag."}
                   </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {requestStatusTimeline.map((step) => {
+                      const active = isTimelineStepActive(step.value, request.status);
+                      return (
+                        <span
+                          key={`${request.id}-${step.value}`}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase ${
+                            active
+                              ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100"
+                              : "border-slate-200 bg-slate-50 text-slate-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-500"
+                          }`}
+                        >
+                          {step.label}
+                        </span>
+                      );
+                    })}
+                    {request.status === "geweigerd" ? (
+                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-rose-700 uppercase dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
+                        Geweigerd
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-600">
                     <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5">
                       <Clock3 className="size-4" />
@@ -136,7 +176,11 @@ export default async function AanvragenPage() {
                   </p>
                 </div>
                 <div className="mt-5">
-                  <RequestStatusActions requestId={request.id} status={request.status} />
+                  <RequestStatusActions
+                    requestId={request.id}
+                    status={request.status}
+                    locationOptions={locationOptions}
+                  />
                 </div>
               </div>
             </div>

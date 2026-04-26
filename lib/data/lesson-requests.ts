@@ -84,6 +84,27 @@ function parseRequestDateTime(
   };
 }
 
+async function getInstructorScopeIds(
+  profileId: string,
+  fallbackInstructorId: string
+) {
+  const supabase = await createServerClient();
+  const { data: rows } = await supabase
+    .from("instructeurs")
+    .select("id")
+    .eq("profile_id", profileId);
+
+  const scopedIds = (rows ?? [])
+    .map((row) => row.id)
+    .filter((value): value is string => Boolean(value));
+
+  if (!scopedIds.length) {
+    return [fallbackInstructorId];
+  }
+
+  return Array.from(new Set([fallbackInstructorId, ...scopedIds]));
+}
+
 export async function getLeerlingLessonRequests(): Promise<LesAanvraag[]> {
   const leerling = await getCurrentLeerlingRecord();
 
@@ -167,12 +188,16 @@ export async function getInstructeurLessonRequests(): Promise<LesAanvraag[]> {
   }
 
   const supabase = await createServerClient();
+  const instructorIds = await getInstructorScopeIds(
+    instructeur.profile_id,
+    instructeur.id
+  );
   const { data: rows, error } = (await supabase
     .from("lesaanvragen")
     .select(
       "id, leerling_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type"
     )
-    .eq("instructeur_id", instructeur.id)
+    .in("instructeur_id", instructorIds)
     .order("created_at", { ascending: false })) as unknown as {
     data: LessonRequestRow[] | null;
     error: unknown;
@@ -306,6 +331,7 @@ export async function getLeerlingLessons(): Promise<Les[]> {
     duur_minuten: row.duur_minuten ?? 60,
     status: row.status,
     locatie: row.locatie_id ? locatieMap.get(row.locatie_id) ?? "Nog onbekend" : "Nog onbekend",
+    locatie_id: row.locatie_id,
     leerling_naam: "",
     instructeur_naam:
       row.instructeur_id
@@ -322,10 +348,14 @@ export async function getInstructeurLessons(): Promise<Les[]> {
   }
 
   const supabase = await createServerClient();
+  const instructorIds = await getInstructorScopeIds(
+    instructeur.profile_id,
+    instructeur.id
+  );
   const { data: rows, error } = await supabase
     .from("lessen")
     .select("id, titel, start_at, duur_minuten, status, locatie_id, leerling_id")
-    .eq("instructeur_id", instructeur.id)
+    .in("instructeur_id", instructorIds)
     .order("start_at", { ascending: true });
 
   if (error) {
@@ -383,6 +413,7 @@ export async function getInstructeurLessons(): Promise<Les[]> {
     duur_minuten: row.duur_minuten ?? 60,
     status: row.status,
     locatie: row.locatie_id ? locatieMap.get(row.locatie_id) ?? "Nog onbekend" : "Nog onbekend",
+    locatie_id: row.locatie_id,
     leerling_naam:
       row.leerling_id
         ? profileMap.get(leerlingMap.get(row.leerling_id) ?? "") ?? "Leerling"

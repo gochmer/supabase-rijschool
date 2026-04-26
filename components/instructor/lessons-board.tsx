@@ -2,17 +2,21 @@
 
 import { useMemo, useState } from "react";
 
-import type { Les, LesAanvraag } from "@/lib/types";
+import type { Les, LesAanvraag, LocationOption } from "@/lib/types";
 import { LessonCalendar } from "@/components/calendar/lesson-calendar";
+import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 export function LessonsBoard({
   lessons,
   requests = [],
+  locationOptions = [],
 }: {
   lessons: Les[];
   requests?: LesAanvraag[];
+  locationOptions?: LocationOption[];
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("alles");
@@ -72,6 +76,46 @@ export function LessonsBoard({
         description="Bekijk je bevestigde lessen en open aanvragen in kalenderweergave en houd direct overzicht op dag-, week- en maandniveau."
         emptyDescription="Er zijn nog geen lessen of aanvragen die aan deze filters voldoen. Pas je zoekopdracht aan of plan nieuwe lessen in."
       />
+
+      <div className="grid gap-3">
+        {filteredLessons.length ? (
+          filteredLessons.slice(0, 8).map((lesson) => (
+            <div
+              key={lesson.id}
+              className="grid gap-3 rounded-[1.35rem] border border-white/70 bg-white/84 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)] sm:grid-cols-[1fr_auto]"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-slate-950 dark:text-white">
+                    {lesson.titel}
+                  </p>
+                  <Badge
+                    variant={
+                      lesson.status === "geannuleerd"
+                        ? "danger"
+                        : lesson.status === "afgerond"
+                          ? "success"
+                          : "info"
+                    }
+                  >
+                    {lesson.status}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  {lesson.datum} om {lesson.tijd} • {lesson.leerling_naam}
+                </p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {lesson.locatie}
+                </p>
+              </div>
+              <LessonEditDialog
+                lesson={lesson}
+                locationOptions={locationOptions}
+              />
+            </div>
+          ))
+        ) : null}
+      </div>
 
       <DataTableCard
         title="Lessenoverzicht"

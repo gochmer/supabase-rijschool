@@ -65,6 +65,7 @@ export interface Les {
   duur_minuten: number;
   status: LesStatus;
   locatie: string;
+  locatie_id?: string | null;
   leerling_naam: string;
   instructeur_naam: string;
 }
@@ -178,6 +179,14 @@ export interface DashboardMetric {
   label: string;
   waarde: string;
   context: string;
+}
+
+export interface LocationOption {
+  id: string;
+  naam: string;
+  stad: string;
+  adres?: string | null;
+  label: string;
 }
 
 export interface StudentProgressAssessment {

@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
+import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import {
+  appendRequestUpdateMessage,
+  buildLessonRequestReference,
+} from "@/lib/lesson-request-flow";
 import { createServerClient } from "@/lib/supabase/server";
 import type { LesStatus } from "@/lib/types";
 
@@ -14,6 +19,14 @@ type LessonRequestForScheduling = {
   tijdvak: string | null;
   aanvraag_type: string | null;
   pakket_naam_snapshot: string | null;
+  bericht: string | null;
+  status: LesStatus;
+};
+
+type UpdateLessonRequestStatusInput = LocationSelectionInput & {
+  requestId: string;
+  status: Extract<LesStatus, "geaccepteerd" | "geweigerd">;
+  reason?: string | null;
 };
 
 function toLocalDateTime(dateString: string, timeString: string) {
@@ -67,7 +80,35 @@ function getLessonTitle(request: LessonRequestForScheduling) {
   return "Rijles";
 }
 
-async function ensureLessonForAcceptedRequest(request: LessonRequestForScheduling) {
+async function createNotification({
+  profileId,
+  title,
+  text,
+  type = "info",
+}: {
+  profileId: string | null | undefined;
+  title: string;
+  text: string;
+  type?: "info" | "succes" | "waarschuwing";
+}) {
+  if (!profileId) {
+    return;
+  }
+
+  const supabase = await createServerClient();
+  await supabase.from("notificaties").insert({
+    profiel_id: profileId,
+    titel: title,
+    tekst: text,
+    type,
+    ongelezen: true,
+  } as never);
+}
+
+async function ensureLessonForAcceptedRequest(
+  request: LessonRequestForScheduling,
+  input: LocationSelectionInput
+) {
   if (!request.leerling_id || !request.instructeur_id) {
     return {
       success: false,
@@ -91,14 +132,16 @@ async function ensureLessonForAcceptedRequest(request: LessonRequestForSchedulin
   const { data: existingLesson } = await supabase
     .from("lessen")
     .select("id")
-    .eq("leerling_id", request.leerling_id)
     .eq("instructeur_id", request.instructeur_id)
-    .eq("start_at", startAt)
+    .eq("leerling_id", request.leerling_id)
+    .eq("notities", buildLessonRequestReference(request.id))
     .maybeSingle();
 
   if (existingLesson) {
     return { success: true };
   }
+
+  const locationId = await resolveLocationSelection(input);
 
   const { error } = await supabase.from("lessen").insert({
     leerling_id: request.leerling_id,
@@ -106,14 +149,15 @@ async function ensureLessonForAcceptedRequest(request: LessonRequestForSchedulin
     titel: getLessonTitle(request),
     start_at: startAt,
     duur_minuten: durationMinutes,
-    status: "ingepland",
-    locatie_id: null,
+    status: "geaccepteerd",
+    locatie_id: locationId,
+    notities: buildLessonRequestReference(request.id),
   } as never);
 
   if (error) {
     return {
       success: false,
-      message: "De aanvraag is niet omgezet naar een geplande les.",
+      message: "De aanvraag is niet omgezet naar een geaccepteerde les.",
     };
   }
 
@@ -121,8 +165,7 @@ async function ensureLessonForAcceptedRequest(request: LessonRequestForSchedulin
 }
 
 export async function updateLessonRequestStatusAction(
-  requestId: string,
-  status: Extract<LesStatus, "geaccepteerd" | "geweigerd">
+  input: UpdateLessonRequestStatusInput
 ) {
   const instructeur = await getCurrentInstructeurRecord();
 
@@ -137,9 +180,9 @@ export async function updateLessonRequestStatusAction(
   const { data: request } = (await supabase
     .from("lesaanvragen")
     .select(
-      "id, leerling_id, instructeur_id, voorkeursdatum, tijdvak, aanvraag_type, pakket_naam_snapshot"
+      "id, leerling_id, instructeur_id, voorkeursdatum, tijdvak, aanvraag_type, pakket_naam_snapshot, bericht, status"
     )
-    .eq("id", requestId)
+    .eq("id", input.requestId)
     .eq("instructeur_id", instructeur.id)
     .maybeSingle()) as unknown as {
     data: LessonRequestForScheduling | null;
@@ -152,8 +195,22 @@ export async function updateLessonRequestStatusAction(
     };
   }
 
-  if (status === "geaccepteerd") {
-    const lessonResult = await ensureLessonForAcceptedRequest(request);
+  if (request.status !== "aangevraagd") {
+    return {
+      success: false,
+      message: "Alleen open aanvragen kunnen nog worden bijgewerkt.",
+    };
+  }
+
+  if (input.status === "geweigerd" && !input.reason?.trim()) {
+    return {
+      success: false,
+      message: "Geef een reden mee bij het weigeren van een aanvraag.",
+    };
+  }
+
+  if (input.status === "geaccepteerd") {
+    const lessonResult = await ensureLessonForAcceptedRequest(request, input);
 
     if (!lessonResult.success) {
       return {
@@ -163,10 +220,22 @@ export async function updateLessonRequestStatusAction(
     }
   }
 
+  const updateMessage =
+    input.status === "geaccepteerd"
+      ? "Geaccepteerd door instructeur"
+      : "Geweigerd door instructeur";
+
   const { error } = await supabase
     .from("lesaanvragen")
-    .update({ status })
-    .eq("id", requestId)
+    .update({
+      status: input.status,
+      bericht: appendRequestUpdateMessage(
+        request.bericht,
+        updateMessage,
+        input.reason
+      ),
+    } as never)
+    .eq("id", input.requestId)
     .eq("instructeur_id", instructeur.id);
 
   if (error) {
@@ -176,16 +245,40 @@ export async function updateLessonRequestStatusAction(
     };
   }
 
+  if (request.leerling_id) {
+    const { data: leerling } = await supabase
+      .from("leerlingen")
+      .select("profile_id")
+      .eq("id", request.leerling_id)
+      .maybeSingle();
+
+    await createNotification({
+      profileId: leerling?.profile_id,
+      title:
+        input.status === "geaccepteerd"
+          ? "Je aanvraag is geaccepteerd"
+          : "Je aanvraag is geweigerd",
+      text:
+        input.status === "geaccepteerd"
+          ? "De instructeur heeft je aanvraag geaccepteerd. De les staat nu klaar om verder ingepland te worden."
+          : input.reason?.trim()
+            ? `De instructeur heeft je aanvraag geweigerd. Reden: ${input.reason.trim()}`
+            : "De instructeur heeft je aanvraag geweigerd.",
+      type: input.status === "geaccepteerd" ? "succes" : "waarschuwing",
+    });
+  }
+
   revalidatePath("/instructeur/aanvragen");
   revalidatePath("/instructeur/dashboard");
+  revalidatePath("/instructeur/lessen");
   revalidatePath("/leerling/boekingen");
   revalidatePath("/leerling/dashboard");
 
   return {
     success: true,
     message:
-      status === "geaccepteerd"
-        ? "De aanvraag is geaccepteerd en als les ingepland."
+      input.status === "geaccepteerd"
+        ? "De aanvraag is geaccepteerd en staat nu klaar als les."
         : "De aanvraag is geweigerd.",
   };
 }

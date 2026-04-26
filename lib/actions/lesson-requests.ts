@@ -15,6 +15,7 @@ import {
   ensureCurrentUserContext,
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
+import { appendRequestUpdateMessage } from "@/lib/lesson-request-flow";
 import { createServerClient } from "@/lib/supabase/server";
 
 type CreateLessonRequestInput = {
@@ -32,6 +33,21 @@ type MutateLessonRequestInput = {
   reden?: string;
   datum?: string;
   tijdvak?: string;
+};
+
+type ReschedulableLessonRequestRow = {
+  id: string;
+  status: "aangevraagd" | "geaccepteerd" | "ingepland" | "afgerond" | "geweigerd" | "geannuleerd";
+  bericht: string | null;
+  instructeur_id: string | null;
+  pakket_id: string | null;
+};
+
+type DuplicateLessonRequestRow = {
+  id: string;
+  pakket_id: string | null;
+  voorkeursdatum: string | null;
+  tijdvak: string | null;
 };
 
 function revalidateLessonRequestPaths(instructorSlug?: string) {
@@ -62,7 +78,7 @@ export async function cancelLessonRequestAction(input: MutateLessonRequestInput)
   const supabase = await createServerClient();
   const { data: request } = await supabase
     .from("lesaanvragen")
-    .select("id, status")
+    .select("id, status, bericht")
     .eq("id", input.requestId)
     .eq("leerling_id", leerling.id)
     .maybeSingle();
@@ -75,13 +91,22 @@ export async function cancelLessonRequestAction(input: MutateLessonRequestInput)
     return { success: false, message: "Alleen open aanvragen kunnen worden geannuleerd." };
   }
 
+  if (!input.reden?.trim()) {
+    return {
+      success: false,
+      message: "Geef een reden mee bij het annuleren van een aanvraag.",
+    };
+  }
+
   const { error } = await supabase
     .from("lesaanvragen")
     .update({
       status: "geannuleerd",
-      bericht: input.reden?.trim()
-        ? `Geannuleerd door leerling: ${input.reden.trim()}`
-        : "Geannuleerd door leerling.",
+      bericht: appendRequestUpdateMessage(
+        request.bericht,
+        "Geannuleerd door leerling",
+        input.reden
+      ),
     } as never)
     .eq("id", input.requestId)
     .eq("leerling_id", leerling.id);
@@ -115,12 +140,14 @@ export async function rescheduleLessonRequestAction(input: MutateLessonRequestIn
   }
 
   const supabase = await createServerClient();
-  const { data: request } = await supabase
+  const { data: request } = (await supabase
     .from("lesaanvragen")
-    .select("id, status")
+    .select("id, status, bericht, instructeur_id, pakket_id")
     .eq("id", input.requestId)
     .eq("leerling_id", leerling.id)
-    .maybeSingle();
+    .maybeSingle()) as unknown as {
+    data: ReschedulableLessonRequestRow | null;
+  };
 
   if (!request) {
     return { success: false, message: "Deze aanvraag kon niet worden gevonden." };
@@ -130,14 +157,54 @@ export async function rescheduleLessonRequestAction(input: MutateLessonRequestIn
     return { success: false, message: "Alleen open aanvragen kunnen worden verplaatst." };
   }
 
+  if (!request.instructeur_id) {
+    return {
+      success: false,
+      message: "Deze aanvraag mist instructeurgegevens en kan niet worden verplaatst.",
+    };
+  }
+
+  const { data: existingRequests } = (await supabase
+    .from("lesaanvragen")
+    .select("id, pakket_id, voorkeursdatum, tijdvak")
+    .eq("leerling_id", leerling.id)
+    .eq("instructeur_id", request.instructeur_id)
+    .neq("id", input.requestId)
+    .in("status", ["aangevraagd", "geaccepteerd", "ingepland"])) as unknown as {
+    data: DuplicateLessonRequestRow[] | null;
+  };
+
+  const hasDuplicatePackage = request.pakket_id
+    ? (existingRequests ?? []).some((item) => item.pakket_id === request.pakket_id)
+    : false;
+  const hasDuplicateSlot = (existingRequests ?? []).some(
+    (item) => item.voorkeursdatum === datum && item.tijdvak === tijdvak
+  );
+
+  if (hasDuplicatePackage) {
+    return {
+      success: false,
+      message: "Je hebt al een andere open aanvraag voor dit pakket.",
+    };
+  }
+
+  if (hasDuplicateSlot) {
+    return {
+      success: false,
+      message: "Je hebt al een andere open aanvraag op dit tijdslot.",
+    };
+  }
+
   const { error } = await supabase
     .from("lesaanvragen")
     .update({
       voorkeursdatum: datum,
       tijdvak,
-      bericht: input.reden?.trim()
-        ? `Verplaatsingsverzoek: ${input.reden.trim()}`
-        : "Leerling heeft een nieuw voorkeursmoment gekozen.",
+      bericht: appendRequestUpdateMessage(
+        request.bericht,
+        "Leerling heeft een nieuw voorkeursmoment gekozen",
+        input.reden
+      ),
     } as never)
     .eq("id", input.requestId)
     .eq("leerling_id", leerling.id);
@@ -355,25 +422,36 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     };
   }
 
-  const duplicateQuery = supabase
+  const { data: existingRequests } = (await supabase
     .from("lesaanvragen")
-    .select("id")
+    .select("id, pakket_id, voorkeursdatum, tijdvak")
     .eq("leerling_id", leerling.id)
     .eq("instructeur_id", instructeur.id)
-    .eq("voorkeursdatum", voorkeursdatum)
-    .eq("tijdvak", tijdvak)
-    .in("status", ["aangevraagd", "geaccepteerd", "ingepland"]);
+    .in("status", ["aangevraagd", "geaccepteerd", "ingepland"])) as unknown as {
+    data: DuplicateLessonRequestRow[] | null;
+  };
 
-  if (selectedPackage?.id) {
-    duplicateQuery.eq("pakket_id", selectedPackage.id);
-  }
+  const hasDuplicatePackage = selectedPackage?.id
+    ? (existingRequests ?? []).some(
+        (request) => request.pakket_id === selectedPackage.id
+      )
+    : false;
+  const hasDuplicateSlot = (existingRequests ?? []).some(
+    (request) =>
+      request.voorkeursdatum === voorkeursdatum && request.tijdvak === tijdvak
+  );
 
-  const { data: duplicateRequest } = await duplicateQuery.maybeSingle();
-
-  if (duplicateRequest) {
+  if (hasDuplicatePackage) {
     return {
       success: false,
-      message: "Je hebt al een open aanvraag voor dit pakket of moment.",
+      message: "Je hebt al een open aanvraag voor dit pakket.",
+    };
+  }
+
+  if (hasDuplicateSlot) {
+    return {
+      success: false,
+      message: "Je hebt al een open aanvraag voor dit tijdslot.",
     };
   }
 

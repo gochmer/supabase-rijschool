@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
   cancelLessonRequestAction,
   rescheduleLessonRequestAction,
 } from "@/lib/actions/lesson-requests";
+import type { LesStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,48 +27,52 @@ export function LearnerRequestActions({
   status,
 }: {
   requestId: string;
-  status: string;
+  status: LesStatus;
 }) {
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const [rescheduleOpen, setRescheduleOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const [date, setDate] = useState("");
-  const [timeSlot, setTimeSlot] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const dateId = useId();
+  const timeId = useId();
+  const reasonId = useId();
+  const cancelReasonId = useId();
 
   if (status !== "aangevraagd") {
-    return <span className="text-xs text-muted-foreground">Geen acties beschikbaar</span>;
+    return (
+      <span className="text-xs text-slate-500 dark:text-slate-400">
+        Geen acties beschikbaar
+      </span>
+    );
   }
 
-  function cancelRequest() {
+  function handleReschedule(formData: FormData) {
     startTransition(async () => {
-      const result = await cancelLessonRequestAction({ requestId, reden: reason });
+      const result = await rescheduleLessonRequestAction({
+        requestId,
+        datum: String(formData.get("datum") ?? ""),
+        tijdvak: String(formData.get("tijdvak") ?? ""),
+        reden: String(formData.get("reden") ?? ""),
+      });
 
       if (result.success) {
         toast.success(result.message);
-        setCancelOpen(false);
-        setReason("");
+        setRescheduleOpen(false);
       } else {
         toast.error(result.message);
       }
     });
   }
 
-  function rescheduleRequest() {
+  function handleCancel(formData: FormData) {
     startTransition(async () => {
-      const result = await rescheduleLessonRequestAction({
+      const result = await cancelLessonRequestAction({
         requestId,
-        datum: date,
-        tijdvak: timeSlot,
-        reden: reason,
+        reden: String(formData.get("reden") ?? ""),
       });
 
       if (result.success) {
         toast.success(result.message);
-        setRescheduleOpen(false);
-        setReason("");
-        setDate("");
-        setTimeSlot("");
+        setCancelOpen(false);
       } else {
         toast.error(result.message);
       }
@@ -75,70 +80,112 @@ export function LearnerRequestActions({
   }
 
   return (
-    <div className="grid gap-2 sm:flex [&>*]:w-full sm:[&>*]:w-auto">
+    <div className="flex flex-wrap gap-2">
       <Dialog open={rescheduleOpen} onOpenChange={setRescheduleOpen}>
         <DialogTrigger asChild>
           <Button size="sm" variant="outline" className="rounded-full">
             Verplaatsen
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
+        <DialogContent className="sm:max-w-lg dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
           <DialogHeader>
             <DialogTitle>Aanvraag verplaatsen</DialogTitle>
             <DialogDescription>
-              Kies een nieuw voorkeursmoment. De instructeur ziet je wijziging direct terug.
+              Kies een nieuw voorkeursmoment en geef eventueel aan waarom je wilt
+              verplaatsen.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label>Nieuwe datum</Label>
-              <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+
+          <form action={handleReschedule} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={dateId}>Nieuwe datum</Label>
+                <Input
+                  id={dateId}
+                  name="datum"
+                  type="date"
+                  required
+                  className="dark:border-white/10 dark:bg-white/5 dark:text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={timeId}>Nieuw tijdvak</Label>
+                <Input
+                  id={timeId}
+                  name="tijdvak"
+                  placeholder="Bijvoorbeeld 18:00 - 19:30"
+                  required
+                  className="dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label>Nieuw tijdvak</Label>
-              <Input value={timeSlot} onChange={(event) => setTimeSlot(event.target.value)} placeholder="Bijvoorbeeld 18:00 - 19:30" />
+              <Label htmlFor={reasonId}>Toelichting</Label>
+              <Textarea
+                id={reasonId}
+                name="reden"
+                placeholder="Bijvoorbeeld: ik kan toch niet op het eerdere moment."
+                className="min-h-24 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Toelichting</Label>
-              <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Waarom wil je verplaatsen?" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setRescheduleOpen(false)}>
-              Sluiten
-            </Button>
-            <Button type="button" onClick={rescheduleRequest} disabled={isPending || !date || !timeSlot}>
-              {isPending ? "Opslaan..." : "Nieuw moment opslaan"}
-            </Button>
-          </DialogFooter>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRescheduleOpen(false)}
+              >
+                Annuleren
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Opslaan..." : "Nieuw moment opslaan"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogTrigger asChild>
-          <Button size="sm" variant="outline" className="rounded-full text-red-600 hover:text-red-700">
+          <Button size="sm" variant="outline" className="rounded-full">
             Annuleren
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
+        <DialogContent className="sm:max-w-lg dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
           <DialogHeader>
             <DialogTitle>Aanvraag annuleren</DialogTitle>
             <DialogDescription>
-              Je kunt een open aanvraag annuleren zolang deze nog niet is geaccepteerd.
+              Geef kort aan waarom deze aanvraag vervalt. De instructeur ziet die
+              reden meteen terug.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label>Reden</Label>
-            <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Optioneel: waarom annuleer je deze aanvraag?" />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCancelOpen(false)}>
-              Terug
-            </Button>
-            <Button type="button" variant="destructive" onClick={cancelRequest} disabled={isPending}>
-              {isPending ? "Annuleren..." : "Aanvraag annuleren"}
-            </Button>
-          </DialogFooter>
+
+          <form action={handleCancel} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor={cancelReasonId}>Reden van annuleren</Label>
+              <Textarea
+                id={cancelReasonId}
+                name="reden"
+                placeholder="Bijvoorbeeld: ik kies toch een ander pakket of een andere datum."
+                required
+                className="min-h-28 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCancelOpen(false)}
+              >
+                Terug
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Annuleren..." : "Aanvraag annuleren"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,0 +1,2 @@
+-- Placeholder migration restored after local history reset.
+-- This version already exists on the linked remote database.

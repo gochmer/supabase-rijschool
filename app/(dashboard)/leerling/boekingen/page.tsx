@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { CalendarDays, Clock3, MapPin } from "lucide-react";
 
+import { LessonCalendar } from "@/components/calendar/lesson-calendar";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
+import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { TrendCard } from "@/components/dashboard/trend-card";
-import { LessonCalendar } from "@/components/calendar/lesson-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,7 +79,9 @@ export default async function LeerlingBoekingenPage() {
           {
             icon: CalendarDays,
             label: "Volgende les",
-            value: nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland",
+            value: nextLesson
+              ? `${nextLesson.datum} om ${nextLesson.tijd}`
+              : "Nog niet ingepland",
             detail: nextLesson
               ? `${nextLesson.instructeur_naam} • ${nextLesson.locatie}`
               : "Bevestigde lessen verschijnen hier automatisch.",
@@ -156,18 +159,14 @@ export default async function LeerlingBoekingenPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <DataTableCard
+        <LearnerRequestOverview
           tone="urban"
           title="Lesaanvragen"
           description="Statussen: aangevraagd, geaccepteerd, geweigerd, ingepland, afgerond en geannuleerd."
-          headers={["Instructeur", "Pakket", "Moment", "Status"]}
-          rows={requests.map((request) => [
-            request.instructeur_naam,
-            getRequestLabel(request),
-            `${request.voorkeursdatum} • ${request.tijdvak}`,
-            request.status,
-          ])}
-          badgeColumns={[3]}
+          requests={requests.map((request) => ({
+            ...request,
+            pakket_naam: request.pakket_naam ?? getRequestLabel(request),
+          }))}
           emptyTitle="Nog geen lesaanvragen"
           emptyDescription="Zodra je een aanvraag verstuurt, verschijnt hier automatisch je volledige statusoverzicht."
         />
@@ -221,7 +220,8 @@ export default async function LeerlingBoekingenPage() {
           Live planning
         </Badge>
         <p className="text-sm leading-7 text-slate-300">
-          Deze pagina leest live lesaanvragen en lessen uit Supabase en zet ze neer in een veel netter, rustiger en professioneler overzicht.
+          Deze pagina leest live lesaanvragen en lessen uit Supabase en zet ze neer
+          in een veel netter, rustiger en professioneler overzicht.
         </p>
       </div>
     </div>
