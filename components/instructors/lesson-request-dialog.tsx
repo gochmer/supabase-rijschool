@@ -80,6 +80,8 @@ export function LessonRequestDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
+  const [manualDate, setManualDate] = useState("");
+  const [manualTime, setManualTime] = useState("");
   const [isPending, startTransition] = useTransition();
   const isHazard = tone === "hazard";
   const hasAvailableSlots = availableSlots.length > 0;
@@ -88,12 +90,15 @@ export function LessonRequestDialog({
   const selectedSlot = useMemo(() => availableSlots.find((slot) => slot.id === selectedSlotId) ?? availableSlots[0] ?? null, [availableSlots, selectedSlotId]);
   const previewSlots = useMemo(() => availableSlots.slice(0, 3), [availableSlots]);
   const primaryLabel = selectedPackage ? selectedPackage.naam : requestType === "proefles" ? "Proefles" : "Lesaanvraag";
+  const canGoNextFromMoment = hasAvailableSlots ? Boolean(selectedSlot) : Boolean(manualDate && manualTime);
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     if (nextOpen) {
       setStep(1);
-      if (hasAvailableSlots) setSelectedSlotId(defaultSlotId ?? availableSlots[0]?.id ?? "");
+      if (hasAvailableSlots) {
+        setSelectedSlotId(defaultSlotId ?? availableSlots[0]?.id ?? "");
+      }
     }
   }
 
@@ -133,6 +138,9 @@ export function LessonRequestDialog({
         </div>
 
         <form action={handleSubmit} className="space-y-4">
+          {selectedPackage ? <input type="hidden" name="packageId" value={selectedPackage.id} /> : null}
+          {hasAvailableSlots ? <input type="hidden" name="slotId" value={selectedSlot?.id ?? ""} /> : <><input type="hidden" name="datum" value={manualDate} /><input type="hidden" name="tijdvak" value={manualTime} /></>}
+
           {step === 1 ? (
             <div className={cn("rounded-[1.35rem] border p-4", isHazard ? "border-red-300/16 bg-white/5 text-white" : "border-slate-200 bg-slate-50/90 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white")}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -148,31 +156,28 @@ export function LessonRequestDialog({
                 <div className="rounded-[1rem] bg-white px-3 py-2 dark:bg-white/6"><p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">Inhoud</p><p className="mt-1 text-sm font-semibold">{selectedPackage ? selectedPackage.lessen > 0 ? `${selectedPackage.lessen} lessen` : "Flexibel traject" : "Intake en eerste indruk"}</p></div>
               </div>
               {previewSlots.length ? <div className="mt-4 rounded-[1rem] border border-dashed border-slate-200 p-3 dark:border-white/10"><p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">Eerstvolgende momenten</p><div className="mt-2 flex flex-wrap gap-1.5">{previewSlots.map((slot) => <span key={slot.id} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">{formatAvailabilitySlotLabel(slot)}</span>)}</div></div> : null}
-              {selectedPackage ? <input type="hidden" name="packageId" value={selectedPackage.id} /> : null}
             </div>
           ) : null}
 
           {step === 2 ? hasAvailableSlots ? (
             <div className="space-y-4">
-              <div className="space-y-2"><Label>Beschikbaar moment</Label><Select value={selectedSlot?.id ?? ""} onValueChange={setSelectedSlotId}><SelectTrigger className="h-11 w-full border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/5 dark:text-white"><SelectValue placeholder="Kies een beschikbaar moment" /></SelectTrigger><SelectContent>{availableSlots.map((slot) => <SelectItem key={slot.id} value={slot.id}>{formatAvailabilitySlotLabel(slot)}</SelectItem>)}</SelectContent></Select><input type="hidden" name="slotId" value={selectedSlot?.id ?? ""} /></div>
+              <div className="space-y-2"><Label>Beschikbaar moment</Label><Select value={selectedSlot?.id ?? ""} onValueChange={setSelectedSlotId}><SelectTrigger className="h-11 w-full border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/5 dark:text-white"><SelectValue placeholder="Kies een beschikbaar moment" /></SelectTrigger><SelectContent>{availableSlots.map((slot) => <SelectItem key={slot.id} value={slot.id}>{formatAvailabilitySlotLabel(slot)}</SelectItem>)}</SelectContent></Select></div>
               {selectedSlot ? <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"><p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Gekozen uit live agenda</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="flex items-center gap-3"><CalendarDays className="size-4" /><span>{selectedSlot.dag}</span></div><div className="flex items-center gap-3"><Clock3 className="size-4" /><span>{selectedSlot.tijdvak}</span></div></div></div> : null}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="datum">Voorkeursdatum</Label><Input id="datum" name="datum" type="date" required className="dark:border-white/10 dark:bg-white/5 dark:text-white" /></div><div className="space-y-2"><Label htmlFor="tijdvak">Tijdvak</Label><Input id="tijdvak" name="tijdvak" placeholder="Bijvoorbeeld 18:00 - 19:30" required className="dark:border-white/10 dark:bg-white/5 dark:text-white" /></div></div>
+            <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="datum">Voorkeursdatum</Label><Input id="datum" type="date" required value={manualDate} onChange={(event) => setManualDate(event.target.value)} className="dark:border-white/10 dark:bg-white/5 dark:text-white" /></div><div className="space-y-2"><Label htmlFor="tijdvak">Tijdvak</Label><Input id="tijdvak" placeholder="Bijvoorbeeld 18:00 - 19:30" required value={manualTime} onChange={(event) => setManualTime(event.target.value)} className="dark:border-white/10 dark:bg-white/5 dark:text-white" /></div></div>
           ) : null}
 
           {step === 3 ? (
             <div className="space-y-4">
-              {selectedPackage ? <input type="hidden" name="packageId" value={selectedPackage.id} /> : null}
-              {hasAvailableSlots ? <input type="hidden" name="slotId" value={selectedSlot?.id ?? ""} /> : null}
-              <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"><p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Samenvatting</p><p className="mt-2 text-sm leading-6">{primaryLabel} bij {instructorName}{selectedSlot ? ` op ${selectedSlot.dag}, ${selectedSlot.tijdvak}` : " met jouw voorkeursmoment"}.</p></div>
+              <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"><p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Samenvatting</p><p className="mt-2 text-sm leading-6">{primaryLabel} bij {instructorName}{selectedSlot ? ` op ${selectedSlot.dag}, ${selectedSlot.tijdvak}` : manualDate && manualTime ? ` op ${manualDate}, ${manualTime}` : " met jouw voorkeursmoment"}.</p></div>
               <div className="space-y-2"><Label htmlFor="bericht">Opmerking</Label><Textarea id="bericht" name="bericht" placeholder="Geef aan wat je wilt oefenen of waar je hulp bij zoekt." className="min-h-28 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400" /></div>
             </div>
           ) : null}
 
           <DialogFooter className="gap-2 sm:justify-between">
             <Button type="button" variant="outline" onClick={() => step === 1 ? setOpen(false) : setStep((current) => current - 1)}>{step === 1 ? "Annuleren" : "Terug"}</Button>
-            {step < 3 ? <Button type="button" onClick={() => setStep((current) => current + 1)} disabled={step === 2 && hasAvailableSlots && !selectedSlot}>Volgende stap</Button> : <Button type="submit" disabled={isPending || (hasAvailableSlots && !selectedSlot)}>{isPending ? "Aanvraag versturen..." : "Aanvraag versturen"}</Button>}
+            {step < 3 ? <Button type="button" onClick={() => setStep((current) => current + 1)} disabled={step === 2 && !canGoNextFromMoment}>Volgende stap</Button> : <Button type="submit" disabled={isPending || !canGoNextFromMoment}>{isPending ? "Aanvraag versturen..." : "Aanvraag versturen"}</Button>}
           </DialogFooter>
         </form>
       </DialogContent>
