@@ -47,9 +47,7 @@ export default async function InstructeurProfielPage() {
     getCurrentInstructeurRecord(),
   ]);
 
-  const completionScore = Number(
-    instructor?.profiel_compleetheid ?? instructor?.profiel_voltooid ?? 0
-  );
+  const completionScore = Number(instructor?.profiel_compleetheid ?? 0);
   const safeScore = Math.min(100, Math.max(0, completionScore));
   const workArea = instructor?.werkgebied ?? [];
   const specialisaties = instructor?.specialisaties ?? [];
