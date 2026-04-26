@@ -15,10 +15,10 @@ import { getPublicInstructorPackageMap } from "@/lib/data/packages";
 export default async function HomePage() {
   const featuredInstructors = (await getPublicInstructorsByLessonType("auto")).slice(0, 6);
   const instructorIds = featuredInstructors.map((instructor) => instructor.id);
-  const packagesByInstructorId = await getPublicInstructorPackageMap(
-    instructorIds,
-    "auto"
-  );
+  const packagesByInstructorId = instructorIds.length
+    ? await getPublicInstructorPackageMap(instructorIds, "auto")
+    : {};
+  const hasFeaturedInstructors = featuredInstructors.length > 0;
 
   return (
     <div className="pb-20">
@@ -28,10 +28,10 @@ export default async function HomePage() {
           <Reveal
             className="relative overflow-hidden rounded-[2.6rem] bg-[linear-gradient(145deg,rgba(7,12,28,0.98),rgba(17,24,39,0.94),rgba(37,99,235,0.82),rgba(14,165,233,0.72))] px-6 py-6 text-white shadow-[0_40px_110px_-56px_rgba(15,23,42,0.72)] sm:px-7 sm:py-7 xl:min-h-[34rem] xl:px-8 xl:py-8"
           >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.1),transparent_28%)]" />
-              <div className="relative">
-                <InstructorSearchCard />
-              </div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.1),transparent_28%)]" />
+            <div className="relative">
+              <InstructorSearchCard />
+            </div>
           </Reveal>
         </div>
       </section>
@@ -44,11 +44,11 @@ export default async function HomePage() {
                 Uitgelichte instructeurs
               </p>
               <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
-                Profielen die meteen laten zien hoe premium en duidelijk de flow kan zijn.
+                Vergelijk rijinstructeurs op prijs, ervaring, beoordeling en beschikbaarheid.
               </h2>
               <p className="text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">
-                Deze selectie laat precies zien hoe prijs, ervaring, reviews en lesvorm samenkomen
-                in een rustige vergelijking.
+                Bekijk in één rustige selectie welke instructeur past bij jouw regio, budget en
+                voorkeur voor automaat of handgeschakeld.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -60,10 +60,22 @@ export default async function HomePage() {
               </span>
             </div>
           </div>
-          <FeaturedInstructorsCarousel
-            items={featuredInstructors}
-            packagesByInstructorId={packagesByInstructorId}
-          />
+          {hasFeaturedInstructors ? (
+            <FeaturedInstructorsCarousel
+              items={featuredInstructors}
+              packagesByInstructorId={packagesByInstructorId}
+            />
+          ) : (
+            <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-10 text-center shadow-[0_24px_70px_-48px_rgba(15,23,42,0.18)] dark:border-white/12 dark:bg-white/6">
+              <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                Er zijn nog geen uitgelichte instructeurs beschikbaar.
+              </p>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Zodra er instructeurs zijn toegevoegd, verschijnen ze hier automatisch met hun
+                pakketten, beoordelingen en beschikbaarheid.
+              </p>
+            </div>
+          )}
         </Reveal>
       </section>
 
@@ -77,11 +89,11 @@ export default async function HomePage() {
                   Klaar voor je volgende stap
                 </div>
                 <h2 className="max-w-[16ch] text-[2rem] font-semibold leading-[1.02] tracking-tight text-slate-950 dark:text-white sm:text-[2.8rem]">
-                  Klaar om jouw instructeur te kiezen in een flow die echt vertrouwen geeft?
+                  Vind sneller een instructeur die bij jouw rijdoel past.
                 </h2>
                 <p className="max-w-[38rem] text-[15px] leading-7 text-slate-600 dark:text-slate-300">
-                  De homepage stuurt nu veel rustiger richting de juiste match. Daardoor voelt de
-                  eerste stap professioneler en wordt doorklikken vanzelf logischer.
+                  Start met je locatie, vergelijk de belangrijkste verschillen en ga direct door
+                  naar een instructeur die aansluit op jouw planning en budget.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {["Sterke eerste indruk", "Heldere selectie", "Snelle doorstroom"].map(
@@ -100,8 +112,8 @@ export default async function HomePage() {
                     <ShieldCheck className="size-4" />
                   </div>
                   <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                    Een rustigere premium first impression helpt leerlingen sneller kiezen zonder
-                    dat het vaag of te druk aanvoelt.
+                    Duidelijke filters en rustige profielen helpen leerlingen met vertrouwen de
+                    eerste stap naar een rijlesaanvraag te zetten.
                   </p>
                 </div>
               </div>
@@ -117,7 +129,7 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <p className="max-w-[22ch] text-[1.1rem] font-semibold leading-6 text-white">
-                  Twee duidelijke acties. Geen ruis. Wel meteen door naar de juiste match.
+                  Kies eerst hoe je wilt starten en ga daarna direct naar de juiste match.
                 </p>
                 <div className="mt-4 flex flex-col gap-2.5">
                   <Button asChild size="lg" className="h-11 rounded-full bg-white text-slate-950 hover:bg-white/92">
