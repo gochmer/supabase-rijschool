@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowUpRight, Bell, CalendarClock, CheckCircle2, Clock3, Flame, PackageCheck, Sparkles, UserRoundCog } from "lucide-react";
+import { ArrowUpRight, Bell, CalendarClock, CheckCircle2, Flame, PackageCheck, Sparkles, UserRoundCog } from "lucide-react";
 
 import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
+import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { RequestStatusActions } from "@/components/dashboard/request-status-actions";
 import { MetricCard } from "@/components/metric-card";
 import { Badge } from "@/components/ui/badge";
@@ -33,15 +34,18 @@ export default async function InstructeurDashboardPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.18),transparent_26%),radial-gradient(circle_at_88%_18%,rgba(56,189,248,0.24),transparent_24%),radial-gradient(circle_at_70%_86%,rgba(249,115,22,0.16),transparent_24%)]" />
         <div className="relative grid gap-7 xl:grid-cols-[1fr_auto] xl:items-end">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase">
-              <Flame className="size-3.5" />
-              Instructeur cockpit
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase">
+                <Flame className="size-3.5" />
+                Instructeur cockpit
+              </div>
+              <RealtimeDashboardSync profileLabel="instructeur-dashboard" />
             </div>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
               Vandaag draaien om aanvragen, lessen en conversie.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-white/72 sm:text-[15px]">
-              Eén scherp overzicht voor je planning, nieuwe leerlingen, meldingen en profielacties. Geen ruis — alleen wat vandaag geld, vertrouwen en voortgang oplevert.
+              Een scherp overzicht voor je planning, nieuwe leerlingen, meldingen en profielacties. Geen ruis, alleen wat vandaag geld, vertrouwen en voortgang oplevert.
             </p>
           </div>
 
