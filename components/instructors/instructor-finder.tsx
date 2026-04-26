@@ -72,7 +72,6 @@ export function InstructorFinder({ instructors, detailBasePath = "/instructeurs"
       setSortBy(getParam(params, "sort", "top"));
       setQuickFilter(getParam(params, "quick", "alles"));
     });
-
     return () => window.cancelAnimationFrame(syncFrame);
   }, [searchParams]);
 
@@ -115,12 +114,20 @@ export function InstructorFinder({ instructors, detailBasePath = "/instructeurs"
       const matchesQuickFilter = quickFilter === "alles" || (quickFilter === "favorieten" && favoriteInstructorIds.includes(instructor.id)) || (quickFilter === "top" && instructor.beoordeling >= 4.9) || (quickFilter === "beste-prijs" && instructor.prijs_per_les <= 60) || (quickFilter === "examentraining" && instructor.specialisaties.some((tag) => tag.toLowerCase().includes("examentraining")));
       return matchesCity && matchesPrice && matchesRating && matchesAvailability && matchesTransmission && matchesSpecialization && matchesQuickFilter;
     });
-
     if (sortBy === "prijs-laag") return [...next].sort((a, b) => a.prijs_per_les - b.prijs_per_les);
     if (sortBy === "ervaring") return [...next].sort((a, b) => b.ervaring_jaren - a.ervaring_jaren);
     if (sortBy === "favorieten") return [...next].sort((a, b) => Number(favoriteInstructorIds.includes(b.id)) - Number(favoriteInstructorIds.includes(a.id)));
     return [...next].sort((a, b) => b.beoordeling - a.beoordeling);
   }, [availability, city, favoriteInstructorIds, instructors, price, quickFilter, rating, sortBy, specialization, transmission]);
+
+  const activeChips = [
+    city ? `Regio: ${city}` : null,
+    specialization ? `Specialisatie: ${specialization}` : null,
+    price !== "alles" ? formatPriceLabel(price) : null,
+    rating !== "0" ? `${rating}+ sterren` : null,
+    transmission !== "alles" ? transmission : null,
+    quickFilter !== "alles" ? quickFilter : null,
+  ].filter(Boolean) as string[];
 
   const filterFields = (
     <>
@@ -142,25 +149,18 @@ export function InstructorFinder({ instructors, detailBasePath = "/instructeurs"
 
   return (
     <div className="space-y-8">
+      {mobileFiltersOpen ? <button type="button" aria-label="Sluit filters" className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-sm lg:hidden" onClick={() => setMobileFiltersOpen(false)} /> : null}
+
       <div className="sticky top-[7.25rem] z-30 overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/88 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.34)] backdrop-blur-xl dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.68)] lg:top-[8.5rem]">
         <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(29,78,216,0.92),rgba(14,165,233,0.82))] px-5 py-5 text-white dark:border-white/10">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase">
-                <Sparkles className="size-3.5" />
-                Slim vergelijken
-              </div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                {filtered.length} van {instructors.length} instructeurs passen bij je selectie.
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-white/72">
-                Verfijn op regio, prijs, beoordeling en lesauto. Je ziet direct welke profielen het beste aansluiten.
-              </p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase"><Sparkles className="size-3.5" />Slim vergelijken</div>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{filtered.length} van {instructors.length} instructeurs passen bij je selectie.</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-white/72">Verfijn op regio, prijs, beoordeling en lesauto. Je ziet direct welke profielen het beste aansluiten.</p>
             </div>
             <div className="flex flex-wrap gap-2 text-xs font-medium text-white/78">
-              <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">{formatPriceLabel(price)}</span>
-              <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">{rating === "0" ? "Alle beoordelingen" : `${rating}+ sterren`}</span>
-              <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">{transmission === "alles" ? "Alle lesauto's" : transmission}</span>
+              {(activeChips.length ? activeChips : [formatPriceLabel(price), rating === "0" ? "Alle beoordelingen" : `${rating}+ sterren`, transmission === "alles" ? "Alle lesauto's" : transmission]).map((chip) => <span key={chip} className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">{chip}</span>)}
               {isPending ? <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">Bijwerken...</span> : null}
             </div>
           </div>
@@ -169,44 +169,32 @@ export function InstructorFinder({ instructors, detailBasePath = "/instructeurs"
         <div className="space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
-              {[["alles", "Alles"], ["favorieten", "Favorieten"], ["top", "Top beoordeeld"], ["beste-prijs", "Beste prijs"], ["examentraining", "Examentraining"]].map(([value, label]) => (
-                <button key={value} type="button" onClick={() => setQuickFilter(value)} className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${quickFilter === value ? "border-slate-950 bg-slate-950 text-white dark:border-sky-300/30 dark:bg-white/10" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/16 dark:hover:text-white"}`}>
-                  {label}
-                </button>
-              ))}
+              {[["alles", "Alles"], ["favorieten", "Favorieten"], ["top", "Top beoordeeld"], ["beste-prijs", "Beste prijs"], ["examentraining", "Examentraining"]].map(([value, label]) => <button key={value} type="button" onClick={() => setQuickFilter(value)} className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${quickFilter === value ? "border-slate-950 bg-slate-950 text-white dark:border-sky-300/30 dark:bg-white/10" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/16 dark:hover:text-white"}`}>{label}</button>)}
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setMobileFiltersOpen((value) => !value)} className="rounded-full lg:hidden">
-                <SlidersHorizontal className="size-4" />
-                Filters
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={resetFilters} disabled={!hasActiveFilters} className="rounded-full">
-                <X className="size-4" />
-                Reset filters
-              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setMobileFiltersOpen(true)} className="rounded-full lg:hidden"><SlidersHorizontal className="size-4" />Filters{hasActiveFilters ? ` (${activeChips.length})` : ""}</Button>
+              <Button type="button" variant="outline" size="sm" onClick={resetFilters} disabled={!hasActiveFilters} className="rounded-full"><X className="size-4" />Reset filters</Button>
             </div>
           </div>
-
           <div className="hidden gap-4 lg:grid lg:grid-cols-7">{filterFields}</div>
-          {mobileFiltersOpen ? <div className="grid gap-4 sm:grid-cols-2 lg:hidden">{filterFields}</div> : null}
         </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-[2rem] border border-white/70 bg-white p-5 shadow-[0_-28px_90px_-48px_rgba(15,23,42,0.6)] transition-transform duration-300 dark:border-white/10 dark:bg-slate-950 lg:hidden" style={{ transform: mobileFiltersOpen ? "translateY(0)" : "translateY(110%)" }}>
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700" />
+        <div className="flex items-center justify-between gap-3">
+          <div><p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">Filters</p><h3 className="text-xl font-semibold text-slate-950 dark:text-white">Verfijn je selectie</h3></div>
+          <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setMobileFiltersOpen(false)}><X className="size-4" /></Button>
+        </div>
+        <div className="mt-4 max-h-[62vh] overflow-y-auto pr-1"><div className="grid gap-4">{filterFields}</div></div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2"><Button type="button" variant="outline" className="rounded-full" onClick={resetFilters} disabled={!hasActiveFilters}>Reset filters</Button><Button type="button" className="rounded-full" onClick={() => setMobileFiltersOpen(false)}>Toon {filtered.length} resultaten</Button></div>
       </div>
 
       <div className={`grid gap-6 transition-opacity duration-200 lg:grid-cols-2 xl:grid-cols-3 ${isPending ? "opacity-70" : "opacity-100"}`}>
-        {filtered.map((instructor, index) => (
-          <div key={instructor.id} className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}>
-            <InstructorCard instructor={instructor} packages={packagesByInstructorId[instructor.id] ?? []} detailBasePath={detailBasePath} isFavorite={favoriteInstructorIds.includes(instructor.id)} />
-          </div>
-        ))}
+        {filtered.map((instructor, index) => <div key={instructor.id} className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}><InstructorCard instructor={instructor} packages={packagesByInstructorId[instructor.id] ?? []} detailBasePath={detailBasePath} isFavorite={favoriteInstructorIds.includes(instructor.id)} /></div>)}
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/78 p-10 text-center shadow-[0_24px_70px_-48px_rgba(15,23,42,0.18)] dark:border-white/12 dark:bg-white/6">
-          <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Geen instructeurs gevonden</h3>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground dark:text-slate-300">Je filters zijn waarschijnlijk te specifiek. Reset je selectie of zoek op een grotere regio om meer matches te zien.</p>
-          <Button type="button" onClick={resetFilters} className="mt-5 rounded-full px-6">Reset filters</Button>
-        </div>
-      ) : null}
+      {filtered.length === 0 ? <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/78 p-10 text-center shadow-[0_24px_70px_-48px_rgba(15,23,42,0.18)] dark:border-white/12 dark:bg-white/6"><h3 className="text-xl font-semibold text-slate-950 dark:text-white">Geen instructeurs gevonden</h3><p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground dark:text-slate-300">Je filters zijn waarschijnlijk te specifiek. Reset je selectie of zoek op een grotere regio om meer matches te zien.</p><Button type="button" onClick={resetFilters} className="mt-5 rounded-full px-6">Reset filters</Button></div> : null}
     </div>
   );
 }
