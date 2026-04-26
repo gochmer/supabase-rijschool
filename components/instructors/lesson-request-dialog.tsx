@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CalendarDays, Clock3 } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock3, MessageSquareText, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { createLessonRequestAction } from "@/lib/actions/lesson-requests";
@@ -46,6 +46,15 @@ function getDialogTriggerClassName(
     : "h-11 flex-1 rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white shadow-[0_18px_38px_-24px_rgba(14,116,144,0.4)]";
 }
 
+function StepBadge({ active, done, label, icon: Icon }: { active: boolean; done: boolean; label: string; icon: typeof PackageCheck }) {
+  return (
+    <div className={cn("flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all", active || done ? "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100" : "border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400")}>
+      {done ? <CheckCircle2 className="size-3.5" /> : <Icon className="size-3.5" />}
+      {label}
+    </div>
+  );
+}
+
 export function LessonRequestDialog({
   instructorName,
   instructorSlug,
@@ -70,27 +79,21 @@ export function LessonRequestDialog({
   triggerVariant?: "primary" | "secondary";
 }) {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(1);
   const [isPending, startTransition] = useTransition();
   const isHazard = tone === "hazard";
   const hasAvailableSlots = availableSlots.length > 0;
-  const [selectedSlotId, setSelectedSlotId] = useState(
-    defaultSlotId ?? availableSlots[0]?.id ?? ""
-  );
+  const [selectedSlotId, setSelectedSlotId] = useState(defaultSlotId ?? availableSlots[0]?.id ?? "");
 
-  const selectedSlot = useMemo(
-    () =>
-      availableSlots.find((slot) => slot.id === selectedSlotId) ??
-      availableSlots[0] ??
-      null,
-    [availableSlots, selectedSlotId]
-  );
+  const selectedSlot = useMemo(() => availableSlots.find((slot) => slot.id === selectedSlotId) ?? availableSlots[0] ?? null, [availableSlots, selectedSlotId]);
   const previewSlots = useMemo(() => availableSlots.slice(0, 3), [availableSlots]);
+  const primaryLabel = selectedPackage ? selectedPackage.naam : requestType === "proefles" ? "Proefles" : "Lesaanvraag";
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
-
-    if (nextOpen && hasAvailableSlots) {
-      setSelectedSlotId(defaultSlotId ?? availableSlots[0]?.id ?? "");
+    if (nextOpen) {
+      setStep(1);
+      if (hasAvailableSlots) setSelectedSlotId(defaultSlotId ?? availableSlots[0]?.id ?? "");
     }
   }
 
@@ -101,20 +104,10 @@ export function LessonRequestDialog({
       const slotId = String(formData.get("slotId") ?? "");
       const bericht = String(formData.get("bericht") ?? "");
       const packageId = String(formData.get("packageId") ?? "");
-      const result = await createLessonRequestAction({
-        instructorSlug,
-        datum,
-        tijdvak,
-        slotId,
-        bericht,
-        packageId,
-        requestType,
-      });
+      const result = await createLessonRequestAction({ instructorSlug, datum, tijdvak, slotId, bericht, packageId, requestType });
 
       if (result.success) {
-        toast.success(
-          `${result.message} ${instructorName} ontvangt direct de aanvraag.`
-        );
+        toast.success(`${result.message} ${instructorName} ontvangt direct de aanvraag.`);
         setOpen(false);
       } else {
         toast.error(result.message);
@@ -125,339 +118,61 @@ export function LessonRequestDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button
-          className={cn(
-            getDialogTriggerClassName(isHazard, triggerVariant),
-            triggerClassName
-          )}
-        >
-          {triggerLabel}
-        </Button>
+        <Button className={cn(getDialogTriggerClassName(isHazard, triggerVariant), triggerClassName)}>{triggerLabel}</Button>
       </DialogTrigger>
-        <DialogContent
-          className={
-            isHazard
-              ? "border-red-300/16 bg-[linear-gradient(180deg,rgba(10,11,15,0.98),rgba(31,15,17,0.96),rgba(52,18,18,0.92))] text-white shadow-[0_36px_90px_-54px_rgba(0,0,0,0.76)] sm:max-w-lg"
-            : "sm:max-w-lg dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white dark:shadow-[0_36px_90px_-54px_rgba(15,23,42,0.72)]"
-          }
-        >
+      <DialogContent className={isHazard ? "border-red-300/16 bg-[linear-gradient(180deg,rgba(10,11,15,0.98),rgba(31,15,17,0.96),rgba(52,18,18,0.92))] text-white shadow-[0_36px_90px_-54px_rgba(0,0,0,0.76)] sm:max-w-2xl" : "sm:max-w-2xl dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white dark:shadow-[0_36px_90px_-54px_rgba(15,23,42,0.72)]"}>
         <DialogHeader>
-          <DialogTitle className={isHazard ? "text-white" : "dark:text-white"}>
-            Les aanvragen
-          </DialogTitle>
-          <DialogDescription className={isHazard ? "text-stone-300" : "dark:text-slate-300"}>
-            {selectedPackage
-              ? hasAvailableSlots
-                ? `Kies een beschikbaar moment voor ${selectedPackage.naam} bij ${instructorName}.`
-                : `Vraag ${selectedPackage.naam} direct aan bij ${instructorName}.`
-              : requestType === "proefles"
-                ? hasAvailableSlots
-                  ? `Kies een beschikbaar moment voor een proefles bij ${instructorName}.`
-                  : `Plan direct een proefles bij ${instructorName}.`
-              : hasAvailableSlots
-                ? `Kies een beschikbaar moment uit de agenda van ${instructorName}.`
-                : `Vraag direct een proefles of vervolgles aan bij ${instructorName}.`}
-          </DialogDescription>
+          <DialogTitle className={isHazard ? "text-white" : "dark:text-white"}>Boeking starten</DialogTitle>
+          <DialogDescription className={isHazard ? "text-stone-300" : "dark:text-slate-300"}>Rond je aanvraag af in drie rustige stappen. {instructorName} ontvangt daarna direct je voorkeur.</DialogDescription>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
-          {selectedPackage || requestType === "proefles" ? (
-            <div
-              className={cn(
-                "rounded-[1.35rem] border p-4",
-                isHazard
-                  ? "border-red-300/16 bg-white/5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-                  : "border-slate-200 bg-slate-50/90 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white"
-              )}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p
-                    className={cn(
-                      "text-[10px] font-semibold tracking-[0.18em] uppercase",
-                      isHazard ? "text-stone-300" : "text-slate-500 dark:text-slate-400"
-                    )}
-                  >
-                    {selectedPackage ? "Gekozen pakket" : "Gekozen lesvorm"}
-                  </p>
-                  <p className={cn("mt-2 text-base font-semibold", isHazard ? "text-stone-100" : "text-slate-950 dark:text-white")}>
-                    {selectedPackage ? selectedPackage.naam : "Proefles"}
-                  </p>
-                  <p
-                    className={cn(
-                      "mt-2 text-sm leading-6",
-                      isHazard ? "text-stone-300" : "text-slate-600 dark:text-slate-300"
-                    )}
-                  >
-                    {selectedPackage
-                      ? selectedPackage.beschrijving
-                      : "Een eerste les om kennis te maken, je niveau te peilen en direct te voelen of deze instructeur bij je past."}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase",
-                    isHazard
-                      ? "border-red-200/20 bg-white/8 text-stone-100"
-                      : "border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100"
-                  )}
-                >
-                  {selectedPackage
-                    ? getRijlesTypeLabel(selectedPackage.les_type)
-                    : "Kennismaking"}
-                </span>
-              </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <div
-                  className={cn(
-                    "rounded-[1rem] px-3 py-2",
-                    isHazard
-                      ? "bg-white/6"
-                      : "bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:bg-white/6 dark:shadow-none"
-                  )}
-                >
-                  <p
-                    className={cn(
-                      "text-[10px] font-semibold tracking-[0.16em] uppercase",
-                      isHazard ? "text-stone-300" : "text-slate-500 dark:text-slate-400"
-                    )}
-                  >
-                    {selectedPackage ? "Pakketprijs" : "Richtprijs"}
-                  </p>
-                  <p className={cn("mt-1 text-sm font-semibold", isHazard ? "text-stone-100" : "text-slate-950 dark:text-white")}>
-                    {selectedPackage
-                      ? selectedPackage.prijs > 0
-                        ? formatCurrency(selectedPackage.prijs)
-                        : "Op aanvraag"
-                      : "In overleg"}
-                  </p>
+        <div className="flex flex-wrap gap-2">
+          <StepBadge active={step === 1} done={step > 1} label="Keuze" icon={PackageCheck} />
+          <StepBadge active={step === 2} done={step > 2} label="Moment" icon={CalendarDays} />
+          <StepBadge active={step === 3} done={false} label="Bericht" icon={MessageSquareText} />
+        </div>
+
+        <form action={handleSubmit} className="space-y-4">
+          {step === 1 ? (
+            <div className={cn("rounded-[1.35rem] border p-4", isHazard ? "border-red-300/16 bg-white/5 text-white" : "border-slate-200 bg-slate-50/90 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white")}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400">Gekozen traject</p>
+                  <p className="mt-2 text-lg font-semibold">{primaryLabel}</p>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">{selectedPackage ? selectedPackage.beschrijving : requestType === "proefles" ? "Een eerste les om kennis te maken, je niveau te peilen en te voelen of deze instructeur bij je past." : "Een algemene aanvraag waarmee je samen met de instructeur de juiste vervolgstap bepaalt."}</p>
                 </div>
-                <div
-                  className={cn(
-                    "rounded-[1rem] px-3 py-2",
-                    isHazard
-                      ? "bg-white/6"
-                      : "bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:bg-white/6 dark:shadow-none"
-                  )}
-                >
-                  <p
-                    className={cn(
-                      "text-[10px] font-semibold tracking-[0.16em] uppercase",
-                      isHazard ? "text-stone-300" : "text-slate-500 dark:text-slate-400"
-                    )}
-                  >
-                    {selectedPackage ? "Inhoud" : "Focus"}
-                  </p>
-                  <p className={cn("mt-1 text-sm font-semibold", isHazard ? "text-stone-100" : "text-slate-950 dark:text-white")}>
-                    {selectedPackage
-                      ? selectedPackage.lessen > 0
-                        ? `${selectedPackage.lessen} lessen`
-                        : "Flexibel traject"
-                      : "Intake en eerste indruk"}
-                  </p>
-                </div>
+                <span className="rounded-full border border-sky-100 bg-sky-50 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] text-sky-700 uppercase dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">{selectedPackage ? getRijlesTypeLabel(selectedPackage.les_type) : "Kennismaking"}</span>
               </div>
-              {selectedPackage && previewSlots.length ? (
-                <div className="mt-3 rounded-[1rem] border border-dashed p-3 dark:border-white/10">
-                  <p
-                    className={cn(
-                      "text-[10px] font-semibold tracking-[0.16em] uppercase",
-                      isHazard ? "text-stone-300" : "text-slate-500 dark:text-slate-400"
-                    )}
-                  >
-                    Eerstvolgende beschikbare momenten
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {previewSlots.map((slot) => (
-                      <span
-                        key={slot.id}
-                        className={cn(
-                          "rounded-full border px-2.5 py-1 text-[10px] font-medium",
-                          isHazard
-                            ? "border-red-300/16 bg-white/8 text-stone-100"
-                            : "border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100"
-                        )}
-                      >
-                        {formatAvailabilitySlotLabel(slot)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {selectedPackage ? (
-                <input type="hidden" name="packageId" value={selectedPackage.id} />
-              ) : null}
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-[1rem] bg-white px-3 py-2 dark:bg-white/6"><p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">Prijs</p><p className="mt-1 text-sm font-semibold">{selectedPackage ? selectedPackage.prijs > 0 ? formatCurrency(selectedPackage.prijs) : "Op aanvraag" : "In overleg"}</p></div>
+                <div className="rounded-[1rem] bg-white px-3 py-2 dark:bg-white/6"><p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">Inhoud</p><p className="mt-1 text-sm font-semibold">{selectedPackage ? selectedPackage.lessen > 0 ? `${selectedPackage.lessen} lessen` : "Flexibel traject" : "Intake en eerste indruk"}</p></div>
+              </div>
+              {previewSlots.length ? <div className="mt-4 rounded-[1rem] border border-dashed border-slate-200 p-3 dark:border-white/10"><p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">Eerstvolgende momenten</p><div className="mt-2 flex flex-wrap gap-1.5">{previewSlots.map((slot) => <span key={slot.id} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">{formatAvailabilitySlotLabel(slot)}</span>)}</div></div> : null}
+              {selectedPackage ? <input type="hidden" name="packageId" value={selectedPackage.id} /> : null}
             </div>
           ) : null}
 
-          {hasAvailableSlots ? (
-            <>
-              <div className="space-y-2">
-                <Label className={isHazard ? "text-stone-100" : undefined}>
-                  Beschikbaar moment
-                </Label>
-                <Select value={selectedSlot?.id ?? ""} onValueChange={setSelectedSlotId}>
-                  <SelectTrigger
-                    className={
-                      isHazard
-                        ? "h-11 w-full border-red-300/16 bg-white/5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                        : "h-11 w-full border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/5 dark:text-white"
-                    }
-                  >
-                    <SelectValue placeholder="Kies een beschikbaar moment" />
-                  </SelectTrigger>
-                  <SelectContent
-                    className={
-                      isHazard
-                        ? "border-red-300/16 bg-[#120d10] text-white"
-                        : undefined
-                    }
-                  >
-                    {availableSlots.map((slot) => (
-                      <SelectItem key={slot.id} value={slot.id}>
-                        {formatAvailabilitySlotLabel(slot)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <input type="hidden" name="slotId" value={selectedSlot?.id ?? ""} />
-              </div>
-
-              {selectedSlot ? (
-                <div
-                  className={cn(
-                    "rounded-[1.35rem] border p-4",
-                    isHazard
-                      ? "border-red-300/16 bg-white/5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-                        : "border-slate-200 bg-slate-50/90 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white"
-                  )}
-                >
-                  <p
-                    className={cn(
-                      "text-[10px] font-semibold tracking-[0.18em] uppercase",
-                      isHazard ? "text-stone-300" : "text-slate-500"
-                    )}
-                  >
-                    Gekozen uit live agenda
-                  </p>
-                  <div className="mt-3 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "flex size-9 shrink-0 items-center justify-center rounded-2xl",
-                          isHazard
-                            ? "bg-white/8 text-stone-100"
-                            : "bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)] dark:bg-white/8 dark:text-slate-100 dark:shadow-none"
-                        )}
-                      >
-                        <CalendarDays className="size-4" />
-                      </div>
-                      <div>
-                        <p
-                          className={cn(
-                            "text-xs font-semibold tracking-[0.16em] uppercase",
-                            isHazard ? "text-stone-300" : "text-slate-500 dark:text-slate-400"
-                          )}
-                        >
-                          Dag
-                        </p>
-                        <p className={isHazard ? "text-stone-100" : "text-slate-900 dark:text-white"}>
-                          {selectedSlot.dag}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "flex size-9 shrink-0 items-center justify-center rounded-2xl",
-                          isHazard
-                            ? "bg-white/8 text-stone-100"
-                            : "bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)] dark:bg-white/8 dark:text-slate-100 dark:shadow-none"
-                        )}
-                      >
-                        <Clock3 className="size-4" />
-                      </div>
-                      <div>
-                        <p
-                          className={cn(
-                            "text-xs font-semibold tracking-[0.16em] uppercase",
-                            isHazard ? "text-stone-300" : "text-slate-500 dark:text-slate-400"
-                          )}
-                        >
-                          Tijdvak
-                        </p>
-                        <p className={isHazard ? "text-stone-100" : "text-slate-900 dark:text-white"}>
-                          {selectedSlot.tijdvak}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </>
+          {step === 2 ? hasAvailableSlots ? (
+            <div className="space-y-4">
+              <div className="space-y-2"><Label>Beschikbaar moment</Label><Select value={selectedSlot?.id ?? ""} onValueChange={setSelectedSlotId}><SelectTrigger className="h-11 w-full border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/5 dark:text-white"><SelectValue placeholder="Kies een beschikbaar moment" /></SelectTrigger><SelectContent>{availableSlots.map((slot) => <SelectItem key={slot.id} value={slot.id}>{formatAvailabilitySlotLabel(slot)}</SelectItem>)}</SelectContent></Select><input type="hidden" name="slotId" value={selectedSlot?.id ?? ""} /></div>
+              {selectedSlot ? <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"><p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Gekozen uit live agenda</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="flex items-center gap-3"><CalendarDays className="size-4" /><span>{selectedSlot.dag}</span></div><div className="flex items-center gap-3"><Clock3 className="size-4" /><span>{selectedSlot.tijdvak}</span></div></div></div> : null}
+            </div>
           ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="datum" className={isHazard ? "text-stone-100" : undefined}>
-                  Voorkeursdatum
-                </Label>
-                <Input
-                  id="datum"
-                  name="datum"
-                  type="date"
-                  required
-                  className={
-                    isHazard
-                      ? "border-red-300/16 bg-white/5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                      : "dark:border-white/10 dark:bg-white/5 dark:text-white"
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tijdvak" className={isHazard ? "text-stone-100" : undefined}>
-                  Tijdvak
-                </Label>
-                <Input
-                  id="tijdvak"
-                  name="tijdvak"
-                  placeholder="Bijvoorbeeld 18:00 - 19:30"
-                  required
-                  className={
-                    isHazard
-                      ? "border-red-300/16 bg-white/5 text-white placeholder:text-stone-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                      : "dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
-                  }
-                />
-              </div>
-            </>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="bericht" className={isHazard ? "text-stone-100" : undefined}>
-              Opmerking
-            </Label>
-            <Textarea
-              id="bericht"
-              name="bericht"
-              placeholder="Geef aan wat je wilt oefenen of waar je hulp bij zoekt."
-              className={
-                isHazard
-                  ? "border-red-300/16 bg-white/5 text-white placeholder:text-stone-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                  : "dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
-              }
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              className={
-                isHazard
-                  ? "w-full border border-red-300/16 bg-[linear-gradient(135deg,#450a0a,#b91c1c,#ea580c)] text-white shadow-[0_18px_36px_-24px_rgba(185,28,28,0.42)] sm:w-auto"
-                  : "w-full sm:w-auto"
-              }
-              disabled={isPending || (hasAvailableSlots && !selectedSlot)}
-            >
-              {isPending ? "Aanvraag versturen..." : "Aanvraag versturen"}
-            </Button>
+            <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="datum">Voorkeursdatum</Label><Input id="datum" name="datum" type="date" required className="dark:border-white/10 dark:bg-white/5 dark:text-white" /></div><div className="space-y-2"><Label htmlFor="tijdvak">Tijdvak</Label><Input id="tijdvak" name="tijdvak" placeholder="Bijvoorbeeld 18:00 - 19:30" required className="dark:border-white/10 dark:bg-white/5 dark:text-white" /></div></div>
+          ) : null}
+
+          {step === 3 ? (
+            <div className="space-y-4">
+              {selectedPackage ? <input type="hidden" name="packageId" value={selectedPackage.id} /> : null}
+              {hasAvailableSlots ? <input type="hidden" name="slotId" value={selectedSlot?.id ?? ""} /> : null}
+              <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"><p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Samenvatting</p><p className="mt-2 text-sm leading-6">{primaryLabel} bij {instructorName}{selectedSlot ? ` op ${selectedSlot.dag}, ${selectedSlot.tijdvak}` : " met jouw voorkeursmoment"}.</p></div>
+              <div className="space-y-2"><Label htmlFor="bericht">Opmerking</Label><Textarea id="bericht" name="bericht" placeholder="Geef aan wat je wilt oefenen of waar je hulp bij zoekt." className="min-h-28 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400" /></div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => step === 1 ? setOpen(false) : setStep((current) => current - 1)}>{step === 1 ? "Annuleren" : "Terug"}</Button>
+            {step < 3 ? <Button type="button" onClick={() => setStep((current) => current + 1)} disabled={step === 2 && hasAvailableSlots && !selectedSlot}>Volgende stap</Button> : <Button type="submit" disabled={isPending || (hasAvailableSlots && !selectedSlot)}>{isPending ? "Aanvraag versturen..." : "Aanvraag versturen"}</Button>}
           </DialogFooter>
         </form>
       </DialogContent>
