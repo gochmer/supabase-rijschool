@@ -44,7 +44,11 @@ function FilterSelect({
           className="overflow-hidden rounded-[1rem] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] p-1 shadow-[0_22px_60px_-30px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))] dark:shadow-[0_22px_60px_-30px_rgba(15,23,42,0.52)]"
         >
           {options.map((option) => (
-            <SelectItem key={option.value} value={option.value} className="min-h-9 rounded-[0.8rem] px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-slate-200 focus:bg-[linear-gradient(135deg,#1d4ed8,#38bdf8)] focus:text-white">
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              className="min-h-9 rounded-[0.8rem] px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-slate-200 focus:bg-[linear-gradient(135deg,#1d4ed8,#38bdf8)] focus:text-white"
+            >
               {option.label}
             </SelectItem>
           ))}
@@ -81,11 +85,19 @@ export function InstructorFinder({
   const [city, setCity] = useState(searchParams.get("city") ?? "");
   const [price, setPrice] = useState(searchParams.get("price") ?? "alles");
   const [rating, setRating] = useState(searchParams.get("rating") ?? "0");
-  const [availability, setAvailability] = useState(searchParams.get("availability") ?? "alles");
-  const [transmission, setTransmission] = useState<TransmissieType | "alles">((searchParams.get("transmission") as TransmissieType | "alles") ?? "alles");
-  const [specialization, setSpecialization] = useState(searchParams.get("specialization") ?? "");
+  const [availability, setAvailability] = useState(
+    searchParams.get("availability") ?? "alles"
+  );
+  const [transmission, setTransmission] = useState<TransmissieType | "alles">(
+    (searchParams.get("transmission") as TransmissieType | "alles") ?? "alles"
+  );
+  const [specialization, setSpecialization] = useState(
+    searchParams.get("specialization") ?? ""
+  );
   const [sortBy, setSortBy] = useState(searchParams.get("sort") ?? "top");
-  const [quickFilter, setQuickFilter] = useState(searchParams.get("quick") ?? "alles");
+  const [quickFilter, setQuickFilter] = useState(
+    searchParams.get("quick") ?? "alles"
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -95,14 +107,14 @@ export function InstructorFinder({
       setPrice(getParam(params, "price", "alles"));
       setRating(getParam(params, "rating", "0"));
       setAvailability(getParam(params, "availability", "alles"));
-      setTransmission(getParam(params, "transmission", "alles") as TransmissieType | "alles");
+      setTransmission(
+        getParam(params, "transmission", "alles") as TransmissieType | "alles"
+      );
       setSortBy(getParam(params, "sort", "top"));
       setQuickFilter(getParam(params, "quick", "alles"));
     });
 
-    return () => {
-      window.cancelAnimationFrame(syncFrame);
-    };
+    return () => window.cancelAnimationFrame(syncFrame);
   }, [searchParams]);
 
   useEffect(() => {
@@ -117,12 +129,29 @@ export function InstructorFinder({
     if (quickFilter !== "alles") params.set("quick", quickFilter);
 
     const next = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    startTransition(() => {
-      router.replace(next, { scroll: false });
-    });
-  }, [availability, city, pathname, price, quickFilter, rating, router, sortBy, specialization, transmission]);
+    startTransition(() => router.replace(next, { scroll: false }));
+  }, [
+    availability,
+    city,
+    pathname,
+    price,
+    quickFilter,
+    rating,
+    router,
+    sortBy,
+    specialization,
+    transmission,
+  ]);
 
-  const hasActiveFilters = Boolean(city || specialization || price !== "alles" || rating !== "0" || availability !== "alles" || transmission !== "alles" || quickFilter !== "alles");
+  const hasActiveFilters = Boolean(
+    city ||
+      specialization ||
+      price !== "alles" ||
+      rating !== "0" ||
+      availability !== "alles" ||
+      transmission !== "alles" ||
+      quickFilter !== "alles"
+  );
 
   function resetFilters() {
     setCity("");
@@ -137,25 +166,70 @@ export function InstructorFinder({
 
   const filtered = useMemo(() => {
     const next = instructors.filter((instructor) => {
-      const matchesCity = !city || instructor.steden.some((place) => place.toLowerCase().includes(city.toLowerCase()));
+      const matchesCity =
+        !city ||
+        instructor.steden.some((place) =>
+          place.toLowerCase().includes(city.toLowerCase())
+        );
       const matchesPrice = price === "alles" || instructor.prijs_per_les <= Number(price);
       const matchesRating = instructor.beoordeling >= Number(rating);
       const matchesAvailability = availability === "alles" ? true : true;
-      const matchesTransmission = transmission === "alles" || instructor.transmissie === transmission || instructor.transmissie === "beide";
-      const matchesSpecialization = !specialization || instructor.specialisaties.some((tag) => tag.toLowerCase().includes(specialization.toLowerCase()));
-      const matchesQuickFilter = quickFilter === "alles" || (quickFilter === "favorieten" && favoriteInstructorIds.includes(instructor.id)) || (quickFilter === "top" && instructor.beoordeling >= 4.9) || (quickFilter === "beste-prijs" && instructor.prijs_per_les <= 60) || (quickFilter === "examentraining" && instructor.specialisaties.some((tag) => tag.toLowerCase().includes("examentraining")));
-      return matchesCity && matchesPrice && matchesRating && matchesAvailability && matchesTransmission && matchesSpecialization && matchesQuickFilter;
+      const matchesTransmission =
+        transmission === "alles" ||
+        instructor.transmissie === transmission ||
+        instructor.transmissie === "beide";
+      const matchesSpecialization =
+        !specialization ||
+        instructor.specialisaties.some((tag) =>
+          tag.toLowerCase().includes(specialization.toLowerCase())
+        );
+      const matchesQuickFilter =
+        quickFilter === "alles" ||
+        (quickFilter === "favorieten" && favoriteInstructorIds.includes(instructor.id)) ||
+        (quickFilter === "top" && instructor.beoordeling >= 4.9) ||
+        (quickFilter === "beste-prijs" && instructor.prijs_per_les <= 60) ||
+        (quickFilter === "examentraining" &&
+          instructor.specialisaties.some((tag) =>
+            tag.toLowerCase().includes("examentraining")
+          ));
+
+      return (
+        matchesCity &&
+        matchesPrice &&
+        matchesRating &&
+        matchesAvailability &&
+        matchesTransmission &&
+        matchesSpecialization &&
+        matchesQuickFilter
+      );
     });
 
     if (sortBy === "prijs-laag") return [...next].sort((a, b) => a.prijs_per_les - b.prijs_per_les);
     if (sortBy === "ervaring") return [...next].sort((a, b) => b.ervaring_jaren - a.ervaring_jaren);
-    if (sortBy === "favorieten") return [...next].sort((a, b) => Number(favoriteInstructorIds.includes(b.id)) - Number(favoriteInstructorIds.includes(a.id)));
+    if (sortBy === "favorieten") {
+      return [...next].sort(
+        (a, b) =>
+          Number(favoriteInstructorIds.includes(b.id)) -
+          Number(favoriteInstructorIds.includes(a.id))
+      );
+    }
     return [...next].sort((a, b) => b.beoordeling - a.beoordeling);
-  }, [availability, city, favoriteInstructorIds, instructors, price, quickFilter, rating, sortBy, specialization, transmission]);
+  }, [
+    availability,
+    city,
+    favoriteInstructorIds,
+    instructors,
+    price,
+    quickFilter,
+    rating,
+    sortBy,
+    specialization,
+    transmission,
+  ]);
 
   return (
     <div className="space-y-8">
-      <div className="sticky top-4 z-20 overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/88 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.34)] backdrop-blur-xl dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.68)]">
+      <div className="relative z-10 overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/88 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.34)] backdrop-blur-xl dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.68)]">
         <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(29,78,216,0.92),rgba(14,165,233,0.82))] px-5 py-5 text-white dark:border-white/10">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -182,8 +256,23 @@ export function InstructorFinder({
         <div className="space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
-              {[["alles", "Alles"], ["favorieten", "Favorieten"], ["top", "Top beoordeeld"], ["beste-prijs", "Beste prijs"], ["examentraining", "Examentraining"]].map(([value, label]) => (
-                <button key={value} type="button" onClick={() => setQuickFilter(value)} className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${quickFilter === value ? "border-slate-950 bg-slate-950 text-white dark:border-sky-300/30 dark:bg-white/10" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/16 dark:hover:text-white"}`}>
+              {[
+                ["alles", "Alles"],
+                ["favorieten", "Favorieten"],
+                ["top", "Top beoordeeld"],
+                ["beste-prijs", "Beste prijs"],
+                ["examentraining", "Examentraining"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setQuickFilter(value)}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+                    quickFilter === value
+                      ? "border-slate-950 bg-slate-950 text-white dark:border-sky-300/30 dark:bg-white/10"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/16 dark:hover:text-white"
+                  }`}
+                >
                   {label}
                 </button>
               ))}
