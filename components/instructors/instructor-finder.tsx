@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles, WandSparkles, X } from "lucide-react";
 
 import { InstructorCard } from "@/components/instructors/instructor-card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,7 @@ export function InstructorFinder({ instructors, detailBasePath = "/instructeurs"
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
 
   const [city, setCity] = useState(searchParams.get("city") ?? "");
   const [price, setPrice] = useState(searchParams.get("price") ?? "alles");
@@ -88,6 +89,7 @@ export function InstructorFinder({ instructors, detailBasePath = "/instructeurs"
 
     const next = params.toString() ? `${pathname}?${params.toString()}` : pathname;
     startTransition(() => router.replace(next, { scroll: false }));
+    setAnimationKey((current) => current + 1);
   }, [availability, city, pathname, price, quickFilter, rating, router, sortBy, specialization, transmission]);
 
   const hasActiveFilters = Boolean(city || specialization || price !== "alles" || rating !== "0" || availability !== "alles" || transmission !== "alles" || quickFilter !== "alles");
@@ -120,80 +122,33 @@ export function InstructorFinder({ instructors, detailBasePath = "/instructeurs"
     return [...next].sort((a, b) => b.beoordeling - a.beoordeling);
   }, [availability, city, favoriteInstructorIds, instructors, price, quickFilter, rating, sortBy, specialization, transmission]);
 
-  const activeChips = [
-    city ? `Regio: ${city}` : null,
-    specialization ? `Specialisatie: ${specialization}` : null,
-    price !== "alles" ? formatPriceLabel(price) : null,
-    rating !== "0" ? `${rating}+ sterren` : null,
-    transmission !== "alles" ? transmission : null,
-    quickFilter !== "alles" ? quickFilter : null,
-  ].filter(Boolean) as string[];
+  const smartSuggestions = useMemo(() => {
+    const allCities = instructors.flatMap((instructor) => instructor.steden).filter(Boolean);
+    const popularCity = allCities.sort((a, b) => allCities.filter((cityName) => cityName === b).length - allCities.filter((cityName) => cityName === a).length)[0];
+    const hasCheap = instructors.some((instructor) => instructor.prijs_per_les <= 60);
+    const hasTop = instructors.some((instructor) => instructor.beoordeling >= 4.8);
 
-  const filterFields = (
-    <>
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-        <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Zoek op stad of regio" className="h-11 rounded-xl pl-9 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400" />
-      </div>
-      <div className="relative">
-        <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-        <Input value={specialization} onChange={(e) => setSpecialization(e.target.value)} placeholder="Specialisatie" className="h-11 rounded-xl pl-9 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400" />
-      </div>
-      <FilterSelect label="Max. prijs per les" value={price} onValueChange={setPrice} options={[{ value: "alles", label: "Alles" }, { value: "55", label: "Tot EUR 55" }, { value: "65", label: "Tot EUR 65" }, { value: "75", label: "Tot EUR 75" }]} />
-      <FilterSelect label="Min. beoordeling" value={rating} onValueChange={setRating} options={[{ value: "0", label: "Alles" }, { value: "4", label: "4.0+" }, { value: "4.5", label: "4.5+" }, { value: "4.8", label: "4.8+" }]} />
-      <FilterSelect label="Beschikbaarheid" value={availability} onValueChange={setAvailability} options={[{ value: "alles", label: "Alles" }, { value: "avond", label: "Avond" }, { value: "weekend", label: "Weekend" }, { value: "deze-week", label: "Deze week" }]} />
-      <FilterSelect label="Transmissie" value={transmission} onValueChange={(value) => setTransmission(value as TransmissieType | "alles")} options={[{ value: "alles", label: "Alles" }, { value: "handgeschakeld", label: "Handgeschakeld" }, { value: "automaat", label: "Automaat" }, { value: "beide", label: "Beide" }]} />
-      <FilterSelect label="Sortering" value={sortBy} onValueChange={setSortBy} options={[{ value: "top", label: "Top beoordeeld" }, { value: "prijs-laag", label: "Laagste prijs" }, { value: "ervaring", label: "Meeste ervaring" }, { value: "favorieten", label: "Favorieten eerst" }]} />
-    </>
-  );
+    return [
+      popularCity && !city ? { label: `Populair in ${popularCity}`, action: () => setCity(popularCity) } : null,
+      hasTop && rating === "0" ? { label: "Alleen 4.8+ sterren", action: () => setRating("4.8") } : null,
+      hasCheap && price === "alles" ? { label: "Beste prijs tot EUR 60", action: () => setPrice("65") } : null,
+      transmission === "alles" ? { label: "Automaat filter", action: () => setTransmission("automaat") } : null,
+    ].filter(Boolean) as Array<{ label: string; action: () => void }>;
+  }, [city, instructors, price, rating, transmission]);
+
+  const activeChips = [city ? `Regio: ${city}` : null, specialization ? `Specialisatie: ${specialization}` : null, price !== "alles" ? formatPriceLabel(price) : null, rating !== "0" ? `${rating}+ sterren` : null, transmission !== "alles" ? transmission : null, quickFilter !== "alles" ? quickFilter : null].filter(Boolean) as string[];
+
+  const filterFields = <><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Zoek op stad of regio" className="h-11 rounded-xl pl-9 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400" /></div><div className="relative"><SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={specialization} onChange={(e) => setSpecialization(e.target.value)} placeholder="Specialisatie" className="h-11 rounded-xl pl-9 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400" /></div><FilterSelect label="Max. prijs per les" value={price} onValueChange={setPrice} options={[{ value: "alles", label: "Alles" }, { value: "55", label: "Tot EUR 55" }, { value: "65", label: "Tot EUR 65" }, { value: "75", label: "Tot EUR 75" }]} /><FilterSelect label="Min. beoordeling" value={rating} onValueChange={setRating} options={[{ value: "0", label: "Alles" }, { value: "4", label: "4.0+" }, { value: "4.5", label: "4.5+" }, { value: "4.8", label: "4.8+" }]} /><FilterSelect label="Beschikbaarheid" value={availability} onValueChange={setAvailability} options={[{ value: "alles", label: "Alles" }, { value: "avond", label: "Avond" }, { value: "weekend", label: "Weekend" }, { value: "deze-week", label: "Deze week" }]} /><FilterSelect label="Transmissie" value={transmission} onValueChange={(value) => setTransmission(value as TransmissieType | "alles")} options={[{ value: "alles", label: "Alles" }, { value: "handgeschakeld", label: "Handgeschakeld" }, { value: "automaat", label: "Automaat" }, { value: "beide", label: "Beide" }]} /><FilterSelect label="Sortering" value={sortBy} onValueChange={setSortBy} options={[{ value: "top", label: "Top beoordeeld" }, { value: "prijs-laag", label: "Laagste prijs" }, { value: "ervaring", label: "Meeste ervaring" }, { value: "favorieten", label: "Favorieten eerst" }]} /></>;
 
   return (
     <div className="space-y-8">
       {mobileFiltersOpen ? <button type="button" aria-label="Sluit filters" className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-sm lg:hidden" onClick={() => setMobileFiltersOpen(false)} /> : null}
-
       <div className="sticky top-[7.25rem] z-30 overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/88 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.34)] backdrop-blur-xl dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.68)] lg:top-[8.5rem]">
-        <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(29,78,216,0.92),rgba(14,165,233,0.82))] px-5 py-5 text-white dark:border-white/10">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase"><Sparkles className="size-3.5" />Slim vergelijken</div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{filtered.length} van {instructors.length} instructeurs passen bij je selectie.</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-white/72">Verfijn op regio, prijs, beoordeling en lesauto. Je ziet direct welke profielen het beste aansluiten.</p>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs font-medium text-white/78">
-              {(activeChips.length ? activeChips : [formatPriceLabel(price), rating === "0" ? "Alle beoordelingen" : `${rating}+ sterren`, transmission === "alles" ? "Alle lesauto's" : transmission]).map((chip) => <span key={chip} className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">{chip}</span>)}
-              {isPending ? <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">Bijwerken...</span> : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
-              {[["alles", "Alles"], ["favorieten", "Favorieten"], ["top", "Top beoordeeld"], ["beste-prijs", "Beste prijs"], ["examentraining", "Examentraining"]].map(([value, label]) => <button key={value} type="button" onClick={() => setQuickFilter(value)} className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${quickFilter === value ? "border-slate-950 bg-slate-950 text-white dark:border-sky-300/30 dark:bg-white/10" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/16 dark:hover:text-white"}`}>{label}</button>)}
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setMobileFiltersOpen(true)} className="rounded-full lg:hidden"><SlidersHorizontal className="size-4" />Filters{hasActiveFilters ? ` (${activeChips.length})` : ""}</Button>
-              <Button type="button" variant="outline" size="sm" onClick={resetFilters} disabled={!hasActiveFilters} className="rounded-full"><X className="size-4" />Reset filters</Button>
-            </div>
-          </div>
-          <div className="hidden gap-4 lg:grid lg:grid-cols-7">{filterFields}</div>
-        </div>
+        <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(29,78,216,0.92),rgba(14,165,233,0.82))] px-5 py-5 text-white dark:border-white/10"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase"><Sparkles className="size-3.5" />Slim vergelijken</div><h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{filtered.length} van {instructors.length} instructeurs passen bij je selectie.</h2><p className="mt-2 max-w-2xl text-sm leading-7 text-white/72">Verfijn op regio, prijs, beoordeling en lesauto. Je ziet direct welke profielen het beste aansluiten.</p></div><div className="flex flex-wrap gap-2 text-xs font-medium text-white/78">{(activeChips.length ? activeChips : [formatPriceLabel(price), rating === "0" ? "Alle beoordelingen" : `${rating}+ sterren`, transmission === "alles" ? "Alle lesauto's" : transmission]).map((chip) => <span key={chip} className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">{chip}</span>)}{isPending ? <span className="rounded-full border border-white/14 bg-white/10 px-3 py-1.5">Bijwerken...</span> : null}</div></div></div>
+        <div className="space-y-4 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap gap-2">{[["alles", "Alles"], ["favorieten", "Favorieten"], ["top", "Top beoordeeld"], ["beste-prijs", "Beste prijs"], ["examentraining", "Examentraining"]].map(([value, label]) => <button key={value} type="button" onClick={() => setQuickFilter(value)} className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${quickFilter === value ? "border-slate-950 bg-slate-950 text-white dark:border-sky-300/30 dark:bg-white/10" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/16 dark:hover:text-white"}`}>{label}</button>)}</div><div className="flex gap-2"><Button type="button" variant="outline" size="sm" onClick={() => setMobileFiltersOpen(true)} className="rounded-full lg:hidden"><SlidersHorizontal className="size-4" />Filters{hasActiveFilters ? ` (${activeChips.length})` : ""}</Button><Button type="button" variant="outline" size="sm" onClick={resetFilters} disabled={!hasActiveFilters} className="rounded-full"><X className="size-4" />Reset filters</Button></div></div>{smartSuggestions.length ? <div className="flex flex-wrap items-center gap-2 rounded-[1.15rem] border border-sky-100 bg-sky-50/80 p-2 dark:border-white/10 dark:bg-white/5"><span className="inline-flex items-center gap-1 px-2 text-xs font-semibold text-sky-700 dark:text-sky-200"><WandSparkles className="size-3.5" />Slimme filters</span>{smartSuggestions.map((suggestion) => <button key={suggestion.label} type="button" onClick={suggestion.action} className="rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-800 transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/8 dark:text-sky-100">{suggestion.label}</button>)}</div> : null}<div className="hidden gap-4 lg:grid lg:grid-cols-7">{filterFields}</div></div>
       </div>
-
-      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-[2rem] border border-white/70 bg-white p-5 shadow-[0_-28px_90px_-48px_rgba(15,23,42,0.6)] transition-transform duration-300 dark:border-white/10 dark:bg-slate-950 lg:hidden" style={{ transform: mobileFiltersOpen ? "translateY(0)" : "translateY(110%)" }}>
-        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700" />
-        <div className="flex items-center justify-between gap-3">
-          <div><p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">Filters</p><h3 className="text-xl font-semibold text-slate-950 dark:text-white">Verfijn je selectie</h3></div>
-          <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setMobileFiltersOpen(false)}><X className="size-4" /></Button>
-        </div>
-        <div className="mt-4 max-h-[62vh] overflow-y-auto pr-1"><div className="grid gap-4">{filterFields}</div></div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2"><Button type="button" variant="outline" className="rounded-full" onClick={resetFilters} disabled={!hasActiveFilters}>Reset filters</Button><Button type="button" className="rounded-full" onClick={() => setMobileFiltersOpen(false)}>Toon {filtered.length} resultaten</Button></div>
-      </div>
-
-      <div className={`grid gap-6 transition-opacity duration-200 lg:grid-cols-2 xl:grid-cols-3 ${isPending ? "opacity-70" : "opacity-100"}`}>
-        {filtered.map((instructor, index) => <div key={instructor.id} className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}><InstructorCard instructor={instructor} packages={packagesByInstructorId[instructor.id] ?? []} detailBasePath={detailBasePath} isFavorite={favoriteInstructorIds.includes(instructor.id)} /></div>)}
-      </div>
-
+      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-[2rem] border border-white/70 bg-white p-5 shadow-[0_-28px_90px_-48px_rgba(15,23,42,0.6)] transition-transform duration-300 dark:border-white/10 dark:bg-slate-950 lg:hidden" style={{ transform: mobileFiltersOpen ? "translateY(0)" : "translateY(110%)" }}><div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700" /><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">Filters</p><h3 className="text-xl font-semibold text-slate-950 dark:text-white">Verfijn je selectie</h3></div><Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setMobileFiltersOpen(false)}><X className="size-4" /></Button></div>{smartSuggestions.length ? <div className="mt-4 flex gap-2 overflow-x-auto pb-1">{smartSuggestions.map((suggestion) => <button key={suggestion.label} type="button" onClick={suggestion.action} className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800 dark:border-white/10 dark:bg-white/8 dark:text-sky-100">{suggestion.label}</button>)}</div> : null}<div className="mt-4 max-h-[56vh] overflow-y-auto pr-1"><div className="grid gap-4">{filterFields}</div></div><div className="mt-4 grid gap-2 sm:grid-cols-2"><Button type="button" variant="outline" className="rounded-full" onClick={resetFilters} disabled={!hasActiveFilters}>Reset filters</Button><Button type="button" className="rounded-full" onClick={() => setMobileFiltersOpen(false)}>Toon {filtered.length} resultaten</Button></div></div>
+      <div key={animationKey} className={`grid gap-6 transition-all duration-300 lg:grid-cols-2 xl:grid-cols-3 ${isPending ? "scale-[0.995] opacity-70 blur-[1px]" : "scale-100 opacity-100 blur-0"}`}>{filtered.map((instructor, index) => <div key={instructor.id} className="animate-in fade-in slide-in-from-bottom-3 zoom-in-[0.98] duration-500" style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}><InstructorCard instructor={instructor} packages={packagesByInstructorId[instructor.id] ?? []} detailBasePath={detailBasePath} isFavorite={favoriteInstructorIds.includes(instructor.id)} /></div>)}</div>
       {filtered.length === 0 ? <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/78 p-10 text-center shadow-[0_24px_70px_-48px_rgba(15,23,42,0.18)] dark:border-white/12 dark:bg-white/6"><h3 className="text-xl font-semibold text-slate-950 dark:text-white">Geen instructeurs gevonden</h3><p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground dark:text-slate-300">Je filters zijn waarschijnlijk te specifiek. Reset je selectie of zoek op een grotere regio om meer matches te zien.</p><Button type="button" onClick={resetFilters} className="mt-5 rounded-full px-6">Reset filters</Button></div> : null}
     </div>
   );
