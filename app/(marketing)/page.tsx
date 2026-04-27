@@ -1,6 +1,9 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BookOpenText,
+  PackageCheck,
+  SearchCheck,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -44,12 +47,40 @@ export default async function HomePage() {
       <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
         <div className="absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_10%_16%,rgba(56,189,248,0.18),transparent_24%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.18),transparent_26%),radial-gradient(circle_at_58%_62%,rgba(249,115,22,0.1),transparent_24%)]" />
         <div className="site-shell relative mx-auto w-full py-10 lg:py-16">
-          <Reveal
-            className="relative overflow-hidden rounded-[2.6rem] bg-[linear-gradient(145deg,rgba(7,12,28,0.98),rgba(17,24,39,0.94),rgba(37,99,235,0.82),rgba(14,165,233,0.72))] px-6 py-6 text-white shadow-[0_40px_110px_-56px_rgba(15,23,42,0.72)] sm:px-7 sm:py-7 xl:min-h-[34rem] xl:px-8 xl:py-8"
-          >
+          <Reveal className="relative overflow-hidden rounded-[2.6rem] bg-[linear-gradient(145deg,rgba(7,12,28,0.98),rgba(17,24,39,0.94),rgba(37,99,235,0.82),rgba(14,165,233,0.72))] p-4 text-white shadow-[0_40px_110px_-56px_rgba(15,23,42,0.72)] sm:p-6 xl:p-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.1),transparent_28%)]" />
-            <div className="relative">
+            <div className="relative grid gap-6 xl:grid-cols-[1fr_0.78fr] xl:items-center">
               <InstructorSearchCard />
+              <div className="rounded-[2rem] border border-white/12 bg-white/10 p-5 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+                <p className="text-[10px] font-semibold tracking-[0.24em] text-white/64 uppercase">
+                  Snelle route
+                </p>
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">
+                  Start met kiezen, niet met zoeken.
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-white/72">
+                  Pak direct de route die past bij je intentie: pakketten bekijken, instructeurs vergelijken of eerst rustig leren wat bij je past.
+                </p>
+                <div className="mt-5 grid gap-2">
+                  {[
+                    { href: "/instructeurs", label: "Vergelijk instructeurs", icon: SearchCheck },
+                    { href: "/pakketten", label: "Bekijk pakketten", icon: PackageCheck },
+                    { href: "/tips", label: "Lees rijles tips", icon: BookOpenText },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="group flex items-center justify-between rounded-[1rem] border border-white/12 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/16"
+                    >
+                      <span className="flex items-center gap-2">
+                        <item.icon className="size-4 text-sky-100" />
+                        {item.label}
+                      </span>
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
           </Reveal>
         </div>
@@ -66,18 +97,15 @@ export default async function HomePage() {
                 Vergelijk rijinstructeurs op prijs, ervaring, beoordeling en beschikbaarheid.
               </h2>
               <p className="text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">
-                Bekijk in één rustige selectie welke instructeur past bij jouw regio, budget en
-                voorkeur voor automaat of handgeschakeld.
+                Bekijk in één rustige selectie welke instructeur past bij jouw regio, budget en voorkeur voor automaat of handgeschakeld.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
-                Vergeleken op kwaliteit
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
-                Klaar voor directe aanvraag
-              </span>
-            </div>
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href="/instructeurs">
+                Alle instructeurs bekijken
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
           </div>
           {hasFeaturedInstructors ? (
             <FeaturedInstructorsCarousel
@@ -90,8 +118,7 @@ export default async function HomePage() {
                 Er zijn nog geen uitgelichte instructeurs beschikbaar.
               </p>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Zodra er instructeurs zijn toegevoegd, verschijnen ze hier automatisch met hun
-                pakketten, beoordelingen en beschikbaarheid.
+                Zodra er instructeurs zijn toegevoegd, verschijnen ze hier automatisch met hun pakketten, beoordelingen en beschikbaarheid.
               </p>
             </div>
           )}
@@ -100,32 +127,26 @@ export default async function HomePage() {
 
       <section className="site-shell mx-auto w-full px-4 pb-10 sm:px-6 lg:px-8">
         <Reveal>
-          <div className="rounded-[2.45rem] border border-white/70 bg-white/84 p-6 shadow-[0_32px_100px_-50px_rgba(15,23,42,0.18)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_32px_100px_-50px_rgba(15,23,42,0.64)] sm:p-8">
+          <div className="rounded-[2.45rem] border border-white/70 bg-white/90 p-6 shadow-[0_32px_100px_-50px_rgba(15,23,42,0.18)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_32px_100px_-50px_rgba(15,23,42,0.64)] sm:p-8">
             <div className="grid gap-8 xl:grid-cols-[1fr_auto] xl:items-end">
               <div className="max-w-3xl space-y-4">
                 <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-sky-700 uppercase dark:border-white/10 dark:bg-white/6 dark:text-sky-200">
                   <Sparkles className="size-3.5" />
                   Klaar voor je volgende stap
                 </div>
-                <h2 className="max-w-[16ch] text-[2rem] font-semibold leading-[1.02] tracking-tight text-slate-950 dark:text-white sm:text-[2.8rem]">
-                  Vind sneller een instructeur die bij jouw rijdoel past.
+                <h2 className="max-w-[18ch] text-[2rem] font-semibold leading-[1.02] tracking-tight text-slate-950 dark:text-white sm:text-[2.8rem]">
+                  Van oriënteren naar aanvragen in een duidelijke flow.
                 </h2>
-                <p className="max-w-[38rem] text-[15px] leading-7 text-slate-600 dark:text-slate-300">
-                  Start met je locatie, vergelijk de belangrijkste verschillen en ga direct door
-                  naar een instructeur die aansluit op jouw planning en budget.
+                <p className="max-w-[42rem] text-[15px] leading-7 text-slate-600 dark:text-slate-300">
+                  Start met een route, vergelijk de belangrijkste verschillen en ga daarna direct door naar een instructeur of pakket dat bij je planning past.
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Sterke eerste indruk", "Heldere selectie", "Snelle doorstroom"].map(
-                    (item) => (
-                      <div
-                        key={item}
-                        className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-slate-700 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:shadow-[0_18px_36px_-28px_rgba(15,23,42,0.38)]"
-                      >
-                        {item}
-                      </div>
-                    )
-                  )}
-                  </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {["Sterke eerste indruk", "Heldere selectie", "Snelle doorstroom"].map((item) => (
+                    <div key={item} className="rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3 text-[12px] font-semibold text-slate-700 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/6 dark:text-slate-200">
+                      {item}
+                    </div>
+                  ))}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="outline" className="rounded-full">
                     <Link href="/vergelijk/automaat-vs-schakel">
@@ -145,8 +166,7 @@ export default async function HomePage() {
                     <ShieldCheck className="size-4" />
                   </div>
                   <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                    Duidelijke filters en rustige profielen helpen leerlingen met vertrouwen de
-                    eerste stap naar een rijlesaanvraag te zetten.
+                    Duidelijke filters en rustige profielen helpen leerlingen met vertrouwen de eerste stap naar een rijlesaanvraag te zetten.
                   </p>
                 </div>
               </div>
@@ -179,8 +199,7 @@ export default async function HomePage() {
                   </Button>
                 </div>
                 <p className="mt-3 text-[11px] leading-5 text-white/72">
-                  Eerst vergelijken, daarna aanvragen. Zo blijft de route helder vanaf de eerste
-                  klik.
+                  Eerst vergelijken, daarna aanvragen. Zo blijft de route helder vanaf de eerste klik.
                 </p>
               </div>
             </div>
