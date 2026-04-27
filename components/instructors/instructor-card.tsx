@@ -139,6 +139,313 @@ function shouldIgnoreCardNavigation(target: EventTarget | null) {
   );
 }
 
+function InstructorCardHeader({
+  instructor,
+  detailHref,
+  isFavorite,
+  citiesLabel,
+}: {
+  instructor: InstructeurProfiel;
+  detailHref: string;
+  isFavorite: boolean;
+  citiesLabel: string;
+}) {
+  const topRated = instructor.beoordeling >= 4.9;
+
+  return (
+    <CardHeader className="gap-4 border-b border-slate-100/90 px-4 pb-4 pt-4 dark:border-white/10">
+      <div className="flex items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-200/80 bg-violet-50/85 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-violet-700 uppercase shadow-[0_12px_24px_-20px_rgba(109,40,217,0.2)] dark:border-violet-300/16 dark:bg-violet-400/10 dark:text-violet-100 dark:shadow-[0_12px_24px_-20px_rgba(15,23,42,0.38)]">
+          <Sparkles className="size-3.5" />
+          Premium match
+        </div>
+        <FavoriteButton
+          instructorId={instructor.id}
+          initialIsFavorite={isFavorite}
+        />
+      </div>
+
+      <div className="flex items-start gap-3.5">
+        <Link
+          href={detailHref}
+          className={`relative flex size-12 shrink-0 items-center justify-center rounded-[1.1rem] bg-gradient-to-br ${instructor.profielfoto_kleur} text-sm font-semibold text-white shadow-[0_18px_34px_-24px_rgba(15,23,42,0.36)] ring-2 ring-white transition-transform hover:scale-[1.02] dark:ring-white/10 sm:size-14`}
+        >
+          <span className="absolute inset-0 rounded-[1.1rem] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.35),transparent_34%)]" />
+          <span className="relative">{getInitials(instructor.volledige_naam)}</span>
+        </Link>
+
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-[1.05rem] leading-tight text-slate-950 dark:text-white sm:text-[1.14rem]">
+                <Link href={detailHref} className="transition-colors hover:text-primary">
+                  {instructor.volledige_naam}
+                </Link>
+              </CardTitle>
+              <span className="rounded-full border border-emerald-200/80 bg-emerald-50/80 px-2 py-0.5 text-[9px] font-semibold tracking-[0.14em] text-emerald-700 uppercase dark:border-emerald-300/16 dark:bg-emerald-400/10 dark:text-emerald-100">
+                Beschikbaar
+              </span>
+            </div>
+            <CardDescription className="text-[12px] leading-5 text-slate-500 dark:text-slate-300">
+              {citiesLabel}
+            </CardDescription>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full border border-violet-200/80 bg-violet-50/90 px-2.5 py-1 text-[10px] font-semibold text-violet-700 shadow-[0_12px_24px_-22px_rgba(109,40,217,0.24)] dark:border-violet-300/16 dark:bg-violet-400/10 dark:text-violet-100 dark:shadow-[0_12px_24px_-22px_rgba(15,23,42,0.4)]">
+              <Star className="size-3.5 fill-current text-current" />
+              {instructor.beoordeling.toFixed(1)}
+            </span>
+            <span className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-medium text-slate-600 shadow-[0_12px_24px_-22px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6 dark:text-slate-300 dark:shadow-[0_12px_24px_-22px_rgba(15,23,42,0.32)]">
+              {instructor.aantal_reviews} reviews
+            </span>
+            <span className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-medium text-slate-600 shadow-[0_12px_24px_-22px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6 dark:text-slate-300 dark:shadow-[0_12px_24px_-22px_rgba(15,23,42,0.32)]">
+              {instructor.ervaring_jaren} jaar ervaring
+            </span>
+          </div>
+
+          <div className="flex min-h-5 flex-wrap gap-1.5">
+            {topRated ? (
+              <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold text-emerald-700 dark:border-emerald-300/16 dark:bg-emerald-400/10 dark:text-emerald-100">
+                Top beoordeeld
+              </span>
+            ) : null}
+            {instructor.status === "goedgekeurd" ? (
+              <span className="rounded-full border border-sky-100 bg-sky-50 px-2 py-0.5 text-[9px] font-semibold text-sky-700 dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">
+                Geverifieerd
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </CardHeader>
+  );
+}
+
+function InstructorCardReviewPreview({
+  reviewPreview,
+}: {
+  reviewPreview: InstructeurProfiel["recente_review"] | null;
+}) {
+  if (!reviewPreview) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-[1rem] border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,251,235,0.92),rgba(255,247,237,0.9))] px-3.5 py-3 shadow-[0_18px_34px_-26px_rgba(245,158,11,0.18)] dark:border-amber-300/12 dark:bg-[linear-gradient(135deg,rgba(120,53,15,0.16),rgba(15,23,42,0.3))] dark:shadow-[0_18px_34px_-26px_rgba(15,23,42,0.42)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-100">
+            <MessageSquareQuote className="size-3.5" />
+            Review
+          </div>
+          <p className="mt-1.5 line-clamp-1 text-[12px] font-semibold text-slate-950 dark:text-white">
+            {reviewPreview.titel}
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-300/16 dark:bg-white/8 dark:text-amber-100">
+          <Star className="size-3 fill-current text-current" />
+          {reviewPreview.score}/5
+        </span>
+      </div>
+      <p className="mt-1.5 line-clamp-2 text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+        &ldquo;{getReviewExcerpt(reviewPreview.tekst)}&rdquo;
+      </p>
+    </div>
+  );
+}
+
+function InstructorCardPackagePanel({
+  packageOptions,
+  selectedPackage,
+  selectedPackageId,
+  onPackageChange,
+  instructor,
+}: {
+  packageOptions: Pakket[];
+  selectedPackage: Pakket | null;
+  selectedPackageId: string;
+  onPackageChange: (value: string) => void;
+  instructor: InstructeurProfiel;
+}) {
+  if (!packageOptions.length) {
+    return (
+      <div className="rounded-[1rem] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.92))] p-3.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(30,41,59,0.4))] dark:shadow-[0_18px_38px_-30px_rgba(15,23,42,0.44)]">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-300">
+              Lesprijs
+            </p>
+            <p className="mt-1 text-[1.15rem] font-semibold text-slate-950 dark:text-white">
+              {formatCurrency(instructor.prijs_per_les)}
+            </p>
+          </div>
+          <div className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-medium text-slate-600 dark:border-white/10 dark:bg-white/8 dark:text-slate-300">
+            {formatTransmissionLabel(instructor.transmissie)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-[1rem] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.92))] p-3.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(30,41,59,0.4))] dark:shadow-[0_18px_38px_-30px_rgba(15,23,42,0.44)]">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-300">
+            Kies lespakket
+          </p>
+          <p className="mt-1 text-[13px] font-medium text-slate-700 dark:text-slate-200">
+            {packageOptions.length} optie{packageOptions.length === 1 ? "" : "s"} beschikbaar
+          </p>
+        </div>
+        <div className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-medium text-slate-600 dark:border-white/10 dark:bg-white/8 dark:text-slate-300">
+          {formatTransmissionLabel(instructor.transmissie)}
+        </div>
+      </div>
+
+      <Select value={selectedPackageId} onValueChange={onPackageChange}>
+        <SelectTrigger className="h-10 w-full rounded-[0.85rem] border-slate-200 bg-white/95 text-left text-[12px] text-slate-950 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/8 dark:text-white dark:shadow-none">
+          <SelectValue placeholder="Kies een pakket" />
+        </SelectTrigger>
+        <SelectContent className="rounded-[1rem] border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950 dark:text-white">
+          {packageOptions.map((pkg) => (
+            <SelectItem key={pkg.id} value={pkg.id}>
+              {pkg.naam} - {formatPackageLessonsLabel(pkg.lessen)} -{" "}
+              {formatPackagePriceLabel(pkg.prijs)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {selectedPackage ? (
+        <div className="overflow-hidden rounded-[0.95rem] border border-slate-200/90 bg-white/95 shadow-[0_18px_34px_-26px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/6 dark:shadow-none">
+          <div className="bg-[linear-gradient(135deg,rgba(15,23,42,1),rgba(29,78,216,0.96),rgba(56,189,248,0.9))] px-3.5 py-3 text-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-[0.16em] text-white/72 uppercase">
+                  <Sparkles className="size-3" />
+                  Geselecteerd pakket
+                </div>
+                <p className="mt-1.5 line-clamp-1 text-[13px] font-semibold sm:text-[14px]">
+                  {selectedPackage.naam}
+                </p>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-white/80">
+                  {selectedPackage.beschrijving}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[1rem] font-semibold sm:text-[1.1rem]">
+                  {formatPackagePriceLabel(selectedPackage.prijs)}
+                </p>
+                <p className="mt-0.5 text-[10px] text-white/72">
+                  {formatPackageLessonsLabel(selectedPackage.lessen)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-2 p-3 sm:grid-cols-3">
+            <div className="rounded-[0.8rem] bg-slate-50 px-3 py-2 dark:bg-white/6">
+              <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                Type
+              </p>
+              <p className="mt-1 text-[12px] font-semibold text-slate-950 dark:text-white">
+                {getRijlesTypeLabel(selectedPackage.les_type)}
+              </p>
+            </div>
+            <div className="rounded-[0.8rem] bg-slate-50 px-3 py-2 dark:bg-white/6">
+              <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                Pakketprijs
+              </p>
+              <p className="mt-1 text-[12px] font-semibold text-slate-950 dark:text-white">
+                {formatPackagePriceLabel(selectedPackage.prijs)}
+              </p>
+            </div>
+            <div className="rounded-[0.8rem] bg-slate-50 px-3 py-2 dark:bg-white/6">
+              <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                Lessen
+              </p>
+              <p className="mt-1 text-[12px] font-semibold text-slate-950 dark:text-white">
+                {formatPackageLessonsLabel(selectedPackage.lessen)}
+              </p>
+            </div>
+          </div>
+
+          {selectedPackage.praktijk_examen_prijs !== null &&
+          selectedPackage.praktijk_examen_prijs !== undefined ? (
+            <div className="border-t border-slate-100 px-3.5 py-2 text-[11px] text-slate-600 dark:border-white/10 dark:text-slate-300">
+              Praktijk-examen:{" "}
+              <span className="font-semibold text-slate-950 dark:text-white">
+                {formatCurrency(selectedPackage.praktijk_examen_prijs)}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-[0.8rem] bg-white/92 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:bg-white/6 dark:shadow-none">
+          <p className="text-[10px] text-slate-500 dark:text-slate-300">Prijs per les</p>
+          <p className="mt-1 text-[13px] font-semibold text-slate-950 dark:text-white">
+            {formatCurrency(instructor.prijs_per_les)}
+          </p>
+        </div>
+        <div className="rounded-[0.8rem] bg-white/92 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:bg-white/6 dark:shadow-none">
+          <p className="text-[10px] text-slate-500 dark:text-slate-300">Transmissie</p>
+          <p className="mt-1 text-[13px] font-semibold text-slate-950 dark:text-white">
+            {formatTransmissionLabel(instructor.transmissie)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InstructorCardActions({
+  detailHref,
+  instructor,
+  selectedPackage,
+  availableSlots,
+}: {
+  detailHref: string;
+  instructor: InstructeurProfiel;
+  selectedPackage: Pakket | null;
+  availableSlots: BeschikbaarheidSlot[];
+}) {
+  return (
+    <CardFooter className="flex-col items-stretch gap-2.5 bg-transparent px-4 pb-4 pt-0">
+      <LessonRequestDialog
+        instructorName={instructor.volledige_naam}
+        instructorSlug={instructor.slug}
+        selectedPackage={selectedPackage}
+        availableSlots={availableSlots}
+        triggerLabel={selectedPackage ? "Vraag pakket aan" : "Les aanvragen"}
+        triggerClassName="!h-10 !rounded-full !text-[13px] !font-semibold"
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button asChild variant="outline" className="h-10 rounded-full text-[13px]">
+          <Link href={detailHref}>
+            Bekijk profiel
+            <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </Link>
+        </Button>
+
+        <LessonRequestDialog
+          instructorName={instructor.volledige_naam}
+          instructorSlug={instructor.slug}
+          requestType="proefles"
+          availableSlots={availableSlots}
+          triggerLabel="Plan proefles"
+          triggerVariant="secondary"
+          triggerClassName="!h-10 !rounded-full !text-[13px] !font-semibold"
+        />
+      </div>
+    </CardFooter>
+  );
+}
+
 export function InstructorCard({
   instructor,
   packages = [],
@@ -337,7 +644,7 @@ export function InstructorCard({
                   &ldquo;{getReviewExcerpt(reviewPreview.tekst)}&rdquo;
                 </p>
                 <p className="mt-1.5 text-[10px] text-stone-400">
-                  {reviewPreview.leerling_naam} • {reviewPreview.datum}
+                  {reviewPreview.leerling_naam} / {reviewPreview.datum}
                 </p>
               </div>
             ) : null}
@@ -424,274 +731,52 @@ export function InstructorCard({
         aria-label={`Open profiel van ${instructor.volledige_naam}`}
         onClick={handleCardClick}
         onKeyDown={handleCardKeyDown}
-        className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.22rem] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] shadow-[0_12px_32px_-28px_rgba(15,23,42,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_52px_-34px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(30,41,59,0.86),rgba(15,23,42,0.92))] dark:shadow-[0_12px_32px_-28px_rgba(15,23,42,0.52)] dark:hover:shadow-[0_20px_52px_-34px_rgba(15,23,42,0.6)] dark:focus-visible:ring-sky-300/40 dark:focus-visible:ring-offset-slate-950"
+        className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.22rem] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96),rgba(255,255,255,0.99))] shadow-[0_20px_48px_-34px_rgba(15,23,42,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_64px_-34px_rgba(15,23,42,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(30,41,59,0.88),rgba(15,23,42,0.94))] dark:shadow-[0_20px_48px_-34px_rgba(15,23,42,0.56)] dark:hover:shadow-[0_28px_64px_-34px_rgba(15,23,42,0.62)] dark:focus-visible:ring-sky-300/40 dark:focus-visible:ring-offset-slate-950"
       >
-        <CardHeader className="gap-1.5 px-3.5 pb-1 pt-3.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-100/90 bg-violet-50/90 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] text-violet-700 uppercase shadow-[0_10px_20px_-18px_rgba(109,40,217,0.18)] dark:border-violet-300/16 dark:bg-violet-400/10 dark:text-violet-100 dark:shadow-[0_10px_20px_-18px_rgba(15,23,42,0.36)]">
-              <Sparkles className="size-3" />
-              Premium match
-            </div>
-            <FavoriteButton
-              instructorId={instructor.id}
-              initialIsFavorite={isFavorite}
-            />
-          </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_top_left,rgba(125,211,252,0.16),transparent_55%),radial-gradient(circle_at_top_right,rgba(196,181,253,0.16),transparent_50%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.14),transparent_55%),radial-gradient(circle_at_top_right,rgba(167,139,250,0.14),transparent_50%)]" />
 
-          <div className="flex items-start gap-2.5">
-            <Link
-              href={detailHref}
-              className={`relative flex size-9 shrink-0 items-center justify-center rounded-[0.9rem] bg-gradient-to-br ${instructor.profielfoto_kleur} text-[12px] font-semibold text-white shadow-[0_12px_20px_-18px_rgba(15,23,42,0.42)] transition-transform hover:scale-[1.02] sm:size-10`}
-            >
-              <span className="absolute inset-0 rounded-[0.9rem] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.35),transparent_32%)]" />
-              <span className="relative">{getInitials(instructor.volledige_naam)}</span>
-            </Link>
+        <InstructorCardHeader
+          instructor={instructor}
+          detailHref={detailHref}
+          isFavorite={isFavorite}
+          citiesLabel={citiesLabel}
+        />
 
-            <div className="flex min-h-[4.15rem] flex-1 flex-col justify-between">
-              <div className="space-y-0.5">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <CardTitle className="text-[0.92rem] leading-tight text-slate-950 dark:text-white sm:text-[0.96rem]">
-                    <Link
-                      href={detailHref}
-                      className="transition-colors hover:text-primary"
-                    >
-                      {instructor.volledige_naam}
-                    </Link>
-                  </CardTitle>
-                  <span className="rounded-full border border-emerald-100 bg-emerald-50 px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.14em] text-emerald-700 uppercase dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-100">
-                    Beschikbaar
-                  </span>
-                </div>
-                <CardDescription className="text-[11px] leading-[1.35] text-slate-500 dark:text-slate-300 sm:min-h-[1.3rem]">
-                  {citiesLabel}
-                </CardDescription>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground dark:text-slate-300">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-violet-100 bg-violet-50/90 px-2 py-0.5 text-[9px] font-semibold text-violet-700 shadow-[0_10px_20px_-18px_rgba(109,40,217,0.24)] dark:border-violet-300/16 dark:bg-violet-400/10 dark:text-violet-100 dark:shadow-[0_10px_20px_-18px_rgba(15,23,42,0.38)]">
-                    <Star className="size-3 fill-violet-400 text-violet-400" />
-                    {instructor.beoordeling}
-                  </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    {instructor.aantal_reviews} reviews
-                  </span>
-                  <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-500" />
-                  <span className="text-[11px]">{instructor.ervaring_jaren} jaar ervaring</span>
-                </div>
-
-                <div className="flex min-h-4 flex-wrap gap-1">
-                  {instructor.beoordeling >= 4.9 ? (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-100">
-                      Top beoordeeld
-                    </span>
-                  ) : null}
-                  {instructor.status === "goedgekeurd" ? (
-                    <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[9px] font-semibold text-violet-700 dark:bg-violet-400/10 dark:text-violet-100">
-                      Geverifieerd
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="flex flex-1 flex-col space-y-2 px-3.5 pt-0">
-          <p className="line-clamp-3 text-[12px] leading-5 text-muted-foreground dark:text-slate-300 sm:min-h-[3.15rem]">
+        <CardContent className="flex flex-1 flex-col space-y-3 px-4 pb-4 pt-4">
+          <p className="line-clamp-3 min-h-[3.75rem] text-[12px] leading-6 text-muted-foreground dark:text-slate-300">
             {instructor.bio}
           </p>
 
-          {reviewPreview ? (
-            <div className="rounded-[0.95rem] border border-amber-100 bg-amber-50/70 px-3 py-2.5 shadow-[0_10px_20px_-18px_rgba(245,158,11,0.24)] dark:border-amber-300/12 dark:bg-amber-400/8 dark:shadow-[0_10px_20px_-18px_rgba(15,23,42,0.4)]">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-100">
-                  <MessageSquareQuote className="size-3" />
-                  Social proof
-                </div>
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-300/16 dark:bg-white/8 dark:text-amber-100">
-                  <Star className="size-3 fill-current text-current" />
-                  {reviewPreview.score}/5
-                </span>
-              </div>
-              <p className="mt-1.5 text-[11px] font-semibold text-slate-950 dark:text-white">
-                {reviewPreview.titel}
-              </p>
-              <p className="mt-1 text-[11px] leading-[1.45] text-slate-600 dark:text-slate-300">
-                &ldquo;{getReviewExcerpt(reviewPreview.tekst)}&rdquo;
-              </p>
-              <p className="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-                {reviewPreview.leerling_naam} • {reviewPreview.datum}
-              </p>
-            </div>
-          ) : null}
+          <InstructorCardReviewPreview reviewPreview={reviewPreview} />
 
-          <div className="flex min-h-[2rem] flex-wrap content-start gap-1">
+          <div className="flex min-h-[2.4rem] flex-wrap content-start gap-1.5">
             {instructor.specialisaties.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-slate-200 bg-white/92 px-2 py-0.5 text-[9px] font-medium text-slate-600 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:shadow-[0_10px_20px_-18px_rgba(15,23,42,0.38)]"
+                className="rounded-full border border-slate-200 bg-white/92 px-2.5 py-1 text-[10px] font-medium text-slate-600 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:shadow-[0_10px_20px_-18px_rgba(15,23,42,0.38)]"
               >
                 {tag}
               </span>
             ))}
           </div>
 
-          {packageOptions.length ? (
-            <div className="rounded-[0.95rem] border border-slate-100 bg-slate-50/90 p-2 dark:border-white/10 dark:bg-white/5">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
-                  Kies lespakket
-                </p>
-                <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/8 dark:text-slate-300">
-                  {packageOptions.length} optie{packageOptions.length === 1 ? "" : "s"}
-                </span>
-              </div>
-
-              <div className="mt-2">
-                <Select
-                  value={selectedPackage?.id ?? ""}
-                  onValueChange={setSelectedPackageId}
-                >
-                  <SelectTrigger className="h-9 w-full rounded-[0.8rem] border-slate-200 bg-white text-left text-[12px] text-slate-950 shadow-[0_10px_24px_-20px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/8 dark:text-white dark:shadow-none">
-                    <SelectValue placeholder="Kies een pakket" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-[1rem] border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950 dark:text-white">
-                    {packageOptions.map((pkg) => (
-                      <SelectItem key={pkg.id} value={pkg.id}>
-                        {pkg.naam} • {formatPackageLessonsLabel(pkg.lessen)} •{" "}
-                        {formatPackagePriceLabel(pkg.prijs)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedPackage ? (
-                <div className="mt-2 rounded-[0.8rem] border border-slate-200 bg-white px-2.5 py-2.5 shadow-[0_14px_28px_-22px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/6 dark:shadow-none">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-950 dark:text-white">
-                        {selectedPackage.naam}
-                      </p>
-                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-[1.35] text-slate-500 dark:text-slate-300">
-                        {selectedPackage.beschrijving}
-                      </p>
-                      {selectedPackage.praktijk_examen_prijs !== null &&
-                      selectedPackage.praktijk_examen_prijs !== undefined ? (
-                        <p className="mt-2 text-[10px] font-medium text-slate-700 dark:text-slate-200">
-                          Praktijk-examen {formatCurrency(selectedPackage.praktijk_examen_prijs)}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span className="rounded-full border border-sky-100 bg-sky-50 px-2 py-0.5 text-[9px] font-semibold text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">
-                      {getRijlesTypeLabel(selectedPackage.les_type)}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    <div className="rounded-[0.75rem] bg-slate-50 px-2.5 py-1.5 dark:bg-white/6">
-                      <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
-                        Pakketprijs
-                      </p>
-                      <p className="mt-0.5 text-[12px] font-semibold text-slate-950 dark:text-white">
-                        {formatPackagePriceLabel(selectedPackage.prijs)}
-                      </p>
-                    </div>
-                    <div className="rounded-[0.75rem] bg-slate-50 px-2.5 py-1.5 dark:bg-white/6">
-                      <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
-                        Inhoud
-                      </p>
-                      <p className="mt-0.5 text-[12px] font-semibold text-slate-950 dark:text-white">
-                        {formatPackageLessonsLabel(selectedPackage.lessen)}
-                      </p>
-                    </div>
-                  </div>
-
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-2 gap-1.5 rounded-[0.95rem] border border-slate-100 bg-slate-50/90 p-2 text-sm dark:border-white/10 dark:bg-white/5">
-            <div className="rounded-[0.8rem] bg-white px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:bg-white/6 dark:shadow-none">
-              <p className="text-[10px] text-muted-foreground dark:text-slate-300">Prijs per les</p>
-              <p className="mt-0.5 text-[13px] font-semibold text-slate-950 dark:text-white">
-                {formatCurrency(instructor.prijs_per_les)}
-              </p>
-            </div>
-
-            <div className="rounded-[0.8rem] bg-white px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:bg-white/6 dark:shadow-none">
-              <p className="text-[10px] text-muted-foreground dark:text-slate-300">Transmissie</p>
-              <p className="mt-0.5 text-[13px] font-semibold text-slate-950 dark:text-white">
-                {formatTransmissionLabel(instructor.transmissie)}
-              </p>
-            </div>
-          </div>
-
-          {selectedPackage ? (
-            <div className="rounded-[0.8rem] bg-[linear-gradient(135deg,rgba(15,23,42,1),rgba(29,78,216,0.96),rgba(56,189,248,0.92))] px-3 py-2.5 text-white shadow-[0_16px_36px_-28px_rgba(15,23,42,0.7)]">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="size-3 text-sky-100" />
-                    <span className="text-[9px] font-semibold tracking-[0.16em] uppercase text-white/78">
-                      Geselecteerd pakket
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-[12px] font-semibold sm:text-[13px]">
-                    {selectedPackage.naam}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[12px] font-semibold">
-                    {formatPackagePriceLabel(selectedPackage.prijs)}
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-white/72">
-                    {formatPackageLessonsLabel(selectedPackage.lessen)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-[0.8rem] bg-[linear-gradient(135deg,rgba(15,23,42,1),rgba(76,29,149,0.96),rgba(109,40,217,0.96))] px-3 py-2 text-sm text-white shadow-[0_16px_36px_-28px_rgba(15,23,42,0.7)]">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="size-3 text-violet-200" />
-                <span className="text-[11px] font-medium sm:text-[12px]">
-                  Sterke match voor premium begeleiding
-                </span>
-              </div>
-            </div>
-          )}
+          <InstructorCardPackagePanel
+            packageOptions={packageOptions}
+            selectedPackage={selectedPackage}
+            selectedPackageId={selectedPackage?.id ?? ""}
+            onPackageChange={setSelectedPackageId}
+            instructor={instructor}
+          />
 
           <div className="mt-auto" />
         </CardContent>
 
-        <CardFooter className="flex-col items-stretch gap-1.5 bg-transparent px-3.5 pb-3.5 pt-0">
-          <Button asChild variant="outline" className="h-9 w-full rounded-full text-[13px]">
-            <Link href={detailHref}>
-              Bekijk profiel
-              <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </Link>
-          </Button>
-          <LessonRequestDialog
-            instructorName={instructor.volledige_naam}
-            instructorSlug={instructor.slug}
-            selectedPackage={selectedPackage}
-            availableSlots={availableSlots}
-            triggerLabel={selectedPackage ? "Vraag pakket aan" : "Les aanvragen"}
-            triggerClassName="!h-9 !text-[13px]"
-          />
-          <LessonRequestDialog
-            instructorName={instructor.volledige_naam}
-            instructorSlug={instructor.slug}
-            requestType="proefles"
-            availableSlots={availableSlots}
-            triggerLabel="Plan proefles"
-            triggerVariant="secondary"
-            triggerClassName="!h-9 !text-[13px]"
-          />
-        </CardFooter>
+        <InstructorCardActions
+          detailHref={detailHref}
+          instructor={instructor}
+          selectedPackage={selectedPackage}
+          availableSlots={availableSlots}
+        />
       </Card>
     </HoverTilt>
   );

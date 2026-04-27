@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Compass, Scale, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, CheckCircle2, Compass, Scale, Trophy } from "lucide-react";
 
 import { Reveal } from "@/components/marketing/homepage-motion";
 import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";

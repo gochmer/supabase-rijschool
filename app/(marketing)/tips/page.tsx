@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpenText, Compass, SearchCheck, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpenText, Compass, SearchCheck } from "lucide-react";
 import type { Metadata } from "next";
 
 import { AutomaticInternalLinks } from "@/components/marketing/automatic-internal-links";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CarFront, MapPinned, PackageCheck, SearchCheck, Sparkles, Star } from "lucide-react";
+import { ArrowRight, MapPinned, PackageCheck, SearchCheck, Star } from "lucide-react";
 
 import { InstructorFinder } from "@/components/instructors/instructor-finder";
 import { Reveal } from "@/components/marketing/homepage-motion";
@@ -113,7 +113,7 @@ export default async function InstructeursPage() {
                     </div>
                     <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700 dark:border-white/10 dark:bg-white/6 dark:text-slate-200">{Number(pakket.prijs ?? 0) > 0 ? formatCurrency(Number(pakket.prijs)) : "Op aanvraag"}</div>
                   </div>
-                  <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">{pakket.omschrijving || "Een actief rijlespakket dat je direct kunt vergelijken met instructeurs en beschikbaarheid."}</p>
+                  <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">{pakket.beschrijving || "Een actief rijlespakket dat je direct kunt vergelijken met instructeurs en beschikbaarheid."}</p>
                 </div>
               ))}
             </div>
