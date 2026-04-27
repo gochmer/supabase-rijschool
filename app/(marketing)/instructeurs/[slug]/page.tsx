@@ -4,7 +4,6 @@ import {
   ArrowRight,
   CalendarClock,
   CheckCircle2,
-  MapPin,
   ShieldCheck,
   Star,
 } from "lucide-react";
@@ -137,23 +136,23 @@ export default async function InstructeurDetailPage({
   ];
 
   return (
-    <div className="pb-16">
-      <section className="relative overflow-hidden px-4 pt-10 sm:px-6 lg:px-8">
+    <div className="pb-14">
+      <section className="relative overflow-hidden px-4 pt-8 sm:px-6 lg:px-8">
         <div className="absolute inset-x-0 top-0 h-[26rem] bg-[radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.18),transparent_22%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.16),transparent_24%),radial-gradient(circle_at_56%_64%,rgba(249,115,22,0.12),transparent_24%)]" />
-        <div className="site-shell relative mx-auto w-full py-8 lg:py-12">
-          <SeoBreadcrumbs items={breadcrumbItems} className="mb-5" />
+        <div className="site-shell relative mx-auto w-full py-6 lg:py-10">
+          <SeoBreadcrumbs items={breadcrumbItems} className="mb-4" />
 
           <Reveal className="overflow-hidden rounded-[2.2rem] border border-white/80 bg-white/92 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.28)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.88),rgba(15,23,42,0.96))]">
             <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="p-5 sm:p-7">
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+              <div className="p-5 sm:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                   <div
-                    className={`flex size-24 shrink-0 items-center justify-center rounded-[1.9rem] bg-gradient-to-br ${instructor.profielfoto_kleur} text-2xl font-semibold text-white shadow-[0_22px_46px_-28px_rgba(15,23,42,0.42)]`}
+                    className={`flex size-20 shrink-0 items-center justify-center rounded-[1.7rem] bg-gradient-to-br ${instructor.profielfoto_kleur} text-[1.35rem] font-semibold text-white shadow-[0_22px_46px_-28px_rgba(15,23,42,0.42)]`}
                   >
                     {getInitials(instructor.volledige_naam)}
                   </div>
 
-                  <div className="min-w-0 flex-1 space-y-4">
+                  <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge className="border border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">
                         Instructeur profiel
@@ -174,10 +173,10 @@ export default async function InstructeurDetailPage({
                     </div>
 
                     <div>
-                      <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[2.8rem]">
+                      <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[2.55rem]">
                         {instructor.volledige_naam}
                       </h1>
-                      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
+                      <p className="mt-1.5 text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-base">
                         {instructor.steden.join(" / ")}
                       </p>
                     </div>
@@ -195,41 +194,41 @@ export default async function InstructeurDetailPage({
                       </span>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-2.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
                         <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                           Vanaf
                         </p>
-                        <p className="mt-1 text-[1.05rem] font-semibold text-slate-950 dark:text-white">
+                        <p className="mt-1 text-[0.98rem] font-semibold text-slate-950 dark:text-white">
                           {formatPriceLabel(startingPackagePrice || instructor.prijs_per_les)}
                         </p>
                       </div>
-                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-2.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
                         <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                           Werkgebied
                         </p>
-                        <p className="mt-1 text-[1.05rem] font-semibold text-slate-950 dark:text-white">
+                        <p className="mt-1 text-[0.98rem] font-semibold text-slate-950 dark:text-white">
                           {instructor.steden.length} regio&apos;s
                         </p>
                       </div>
-                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-2.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
                         <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                           Lesstijl
                         </p>
-                        <p className="mt-1 text-[1.05rem] font-semibold text-slate-950 dark:text-white">
+                        <p className="mt-1 text-[0.98rem] font-semibold text-slate-950 dark:text-white">
                           {getInstructorFocus(instructor)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:flex-wrap">
+                    <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap">
                       <LessonRequestDialog
                         instructorName={instructor.volledige_naam}
                         instructorSlug={instructor.slug}
                         requestType="proefles"
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
                         triggerLabel="Plan proefles"
-                        triggerClassName="h-10 px-5 text-[13px]"
+                        triggerClassName="h-9 px-5 text-[13px]"
                       />
                       <LessonRequestDialog
                         instructorName={instructor.volledige_naam}
@@ -238,9 +237,9 @@ export default async function InstructeurDetailPage({
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
                         triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
                         triggerVariant="secondary"
-                        triggerClassName="h-10 px-5 text-[13px]"
+                        triggerClassName="h-9 px-5 text-[13px]"
                       />
-                      <Button asChild variant="outline" className="h-10 rounded-full px-5 text-[13px]">
+                      <Button asChild variant="outline" className="h-9 rounded-full px-5 text-[13px]">
                         <a href="#pakketten-en-trajecten">
                           Scroll naar pakketten
                           <ArrowRight className="size-4" />
@@ -251,9 +250,9 @@ export default async function InstructeurDetailPage({
                 </div>
               </div>
 
-              <div className="border-t border-slate-200 bg-slate-50/85 p-5 dark:border-white/10 dark:bg-white/[0.04] sm:p-7 xl:border-l xl:border-t-0">
-                <div className="space-y-4">
-                  <div className="rounded-[1.5rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,0.96),rgba(224,242,254,0.88),rgba(255,255,255,0.92))] p-4 shadow-[0_22px_50px_-34px_rgba(14,165,233,0.22)] dark:border-sky-300/14 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.72),rgba(8,47,73,0.52),rgba(14,165,233,0.18))] dark:shadow-[0_22px_50px_-34px_rgba(15,23,42,0.5)]">
+              <div className="border-t border-slate-200 bg-slate-50/85 p-4 dark:border-white/10 dark:bg-white/[0.04] sm:p-5 xl:border-l xl:border-t-0">
+                <div className="space-y-3">
+                  <div className="rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,0.96),rgba(224,242,254,0.88),rgba(255,255,255,0.92))] p-3.5 shadow-[0_22px_50px_-34px_rgba(14,165,233,0.22)] dark:border-sky-300/14 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.72),rgba(8,47,73,0.52),rgba(14,165,233,0.18))] dark:shadow-[0_22px_50px_-34px_rgba(15,23,42,0.5)]">
                     <div className="flex items-start gap-3">
                       <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-sky-700 dark:bg-white/10 dark:text-sky-100">
                         <CalendarClock className="size-4" />
@@ -276,8 +275,8 @@ export default async function InstructeurDetailPage({
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                    <div className="rounded-[1.25rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[1.2rem] border border-slate-200 bg-white/92 p-3.5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
                       <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                         Eerstvolgende moment
                       </p>
@@ -285,7 +284,7 @@ export default async function InstructeurDetailPage({
                         {nextPlanningMoment}
                       </p>
                     </div>
-                    <div className="rounded-[1.25rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                    <div className="rounded-[1.2rem] border border-slate-200 bg-white/92 p-3.5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
                       <div className="flex items-start gap-3">
                         <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
                           <ShieldCheck className="size-4" />
@@ -300,21 +299,6 @@ export default async function InstructeurDetailPage({
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-[1.25rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
-                      <div className="flex items-start gap-3">
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
-                          <MapPin className="size-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                            Rustige flow
-                          </p>
-                          <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                            Eerst vertrouwen, daarna pas agenda en vervolgplanning.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -325,14 +309,14 @@ export default async function InstructeurDetailPage({
 
       <section
         id="pakketten-en-trajecten"
-        className="site-shell mx-auto w-full scroll-mt-28 px-4 py-6 sm:px-6 lg:px-8"
+        className="site-shell mx-auto w-full scroll-mt-28 px-4 py-5 sm:px-6 lg:px-8"
       >
         <Reveal className="space-y-4">
           <div className="max-w-3xl space-y-2">
             <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
               Pakketten
             </p>
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
               Kies een traject dat past bij je doel en tempo.
             </h2>
             <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
@@ -342,7 +326,7 @@ export default async function InstructeurDetailPage({
           </div>
 
           {packageGroups.length ? (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {packageGroups.map((group) => (
                 <div key={group.value} className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2.5">
@@ -354,7 +338,7 @@ export default async function InstructeurDetailPage({
                     </p>
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="grid gap-3 xl:grid-cols-2">
                     {group.packages.map((pkg, index) => {
                       const visual = getPackageVisualConfig(
                         pkg.icon_key,
@@ -386,7 +370,7 @@ export default async function InstructeurDetailPage({
                           className="relative h-full rounded-[1.45rem] [perspective:1200px]"
                         >
                           <Card
-                            className={`group relative flex h-full min-h-[27rem] flex-col overflow-hidden border p-0 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] transition-[transform,box-shadow,border-color] duration-500 ${
+                            className={`group relative flex h-full min-h-[24.5rem] flex-col overflow-hidden border p-0 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] transition-[transform,box-shadow,border-color] duration-500 ${
                               isPrimaryPackage
                                 ? `${visual.featuredCardClass} hover:shadow-[0_38px_110px_-48px_rgba(14,165,233,0.42)]`
                                 : `${visual.softCardClass} hover:shadow-[0_36px_100px_-44px_rgba(15,23,42,0.2)]`
@@ -394,7 +378,7 @@ export default async function InstructeurDetailPage({
                           >
                             {displayCoverUrl ? (
                               <div
-                                className={`relative z-10 mx-4 mt-4 h-28 overflow-hidden rounded-[1.1rem] border ${
+                                className={`relative z-10 mx-3.5 mt-3.5 h-24 overflow-hidden rounded-[1rem] border ${
                                   isPrimaryPackage
                                     ? "border-white/10"
                                     : "border-slate-200/80 dark:border-white/10"
@@ -418,7 +402,7 @@ export default async function InstructeurDetailPage({
                               </div>
                             ) : null}
 
-                            <CardHeader className="relative z-10 space-y-3 px-4 pb-3">
+                            <CardHeader className="relative z-10 space-y-2.5 px-3.5 pb-2.5">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <Badge
                                   className={`border px-2 py-0.5 text-[9px] tracking-[0.14em] ${
@@ -474,7 +458,7 @@ export default async function InstructeurDetailPage({
                                     {pkg.naam}
                                   </CardTitle>
                                   <CardDescription
-                                    className={`mt-1.5 line-clamp-2 text-[13px] leading-6 ${
+                                    className={`mt-1 line-clamp-2 text-[12px] leading-5 ${
                                       isPrimaryPackage
                                         ? "text-white/72"
                                         : "text-slate-600 dark:text-slate-300"
@@ -486,10 +470,10 @@ export default async function InstructeurDetailPage({
                               </div>
                             </CardHeader>
 
-                            <CardContent className="relative z-10 flex flex-1 flex-col space-y-3.5 px-4 pb-4">
+                            <CardContent className="relative z-10 flex flex-1 flex-col space-y-2.5 px-3.5 pb-3.5">
                               <div>
                                 <p
-                                  className={`text-[1.75rem] font-semibold ${
+                                  className={`text-[1.45rem] font-semibold ${
                                     isPrimaryPackage
                                       ? "text-white"
                                       : "text-slate-950 dark:text-white"
@@ -498,7 +482,7 @@ export default async function InstructeurDetailPage({
                                   {formatPriceLabel(Number(pkg.prijs ?? 0))}
                                 </p>
                                 <p
-                                  className={`mt-1 text-[12px] ${
+                                  className={`mt-0.5 text-[11px] ${
                                     isPrimaryPackage
                                       ? "text-white/70"
                                       : "text-slate-500 dark:text-slate-300"
@@ -511,7 +495,7 @@ export default async function InstructeurDetailPage({
                                 {pkg.praktijk_examen_prijs !== null &&
                                 pkg.praktijk_examen_prijs !== undefined ? (
                                   <p
-                                    className={`mt-1 text-[12px] font-medium ${
+                                    className={`mt-0.5 text-[11px] font-medium ${
                                       isPrimaryPackage
                                         ? "text-white/78"
                                         : "text-slate-700 dark:text-slate-200"
@@ -524,7 +508,7 @@ export default async function InstructeurDetailPage({
                               </div>
 
                               <div
-                                className={`grid gap-1.5 rounded-[1.05rem] p-2.5 ${
+                                className={`grid gap-1.5 rounded-[1rem] p-2 ${
                                   isPrimaryPackage
                                     ? "border border-white/10 bg-white/8"
                                     : "border border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/6"
@@ -532,7 +516,7 @@ export default async function InstructeurDetailPage({
                               >
                                 <div className="grid gap-1.5 sm:grid-cols-2">
                                   <div
-                                    className={`rounded-[0.85rem] px-2.5 py-2 ${
+                                    className={`rounded-[0.8rem] px-2 py-1.5 ${
                                       isPrimaryPackage
                                         ? "bg-white/10 text-white"
                                         : "bg-white text-slate-950 dark:bg-white/6 dark:text-white"
@@ -547,13 +531,13 @@ export default async function InstructeurDetailPage({
                                     >
                                       Prijs
                                     </p>
-                                    <p className="mt-1 text-[13px] font-semibold">
+                                    <p className="mt-0.5 text-[12px] font-semibold">
                                       {formatPriceLabel(Number(pkg.prijs ?? 0))}
                                     </p>
                                   </div>
 
                                   <div
-                                    className={`rounded-[0.85rem] px-2.5 py-2 ${
+                                    className={`rounded-[0.8rem] px-2 py-1.5 ${
                                       isPrimaryPackage
                                         ? "bg-white/10 text-white"
                                         : "bg-white text-slate-950 dark:bg-white/6 dark:text-white"
@@ -568,7 +552,7 @@ export default async function InstructeurDetailPage({
                                     >
                                       Inhoud
                                     </p>
-                                    <p className="mt-1 text-[13px] font-semibold">
+                                    <p className="mt-0.5 text-[12px] font-semibold">
                                       {pkg.lessen ? `${pkg.lessen} lessen` : "Maatwerk traject"}
                                     </p>
                                   </div>
@@ -578,7 +562,7 @@ export default async function InstructeurDetailPage({
                                   {packagePoints.map((item) => (
                                     <div
                                       key={item}
-                                      className={`flex items-start gap-2 rounded-[0.85rem] px-2.5 py-2 text-[12px] leading-5 ${
+                                      className={`flex items-start gap-2 rounded-[0.8rem] px-2 py-1.5 text-[11px] leading-5 ${
                                         isPrimaryPackage
                                           ? "bg-white/6 text-white/82"
                                           : "bg-white text-slate-600 dark:bg-white/6 dark:text-slate-300"
@@ -605,7 +589,7 @@ export default async function InstructeurDetailPage({
                                 selectedPackage={pkg}
                                 availableSlots={planningAccess.canViewAgenda ? slots : []}
                                 triggerLabel="Vraag dit pakket aan"
-                                triggerClassName="!h-10 !w-full !rounded-full !text-[13px]"
+                                triggerClassName="!h-9 !w-full !rounded-full !text-[13px]"
                               />
                             </CardContent>
 
@@ -630,17 +614,17 @@ export default async function InstructeurDetailPage({
       </section>
 
       <section className="site-shell mx-auto w-full px-4 py-2 sm:px-6 lg:px-8">
-        <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
           <Reveal>
-            <Card className="rounded-[1.8rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-              <CardHeader className="pb-3">
+            <Card className="rounded-[1.6rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+              <CardHeader className="pb-2.5">
                 <CardTitle>Profiel en lesstijl</CardTitle>
                 <CardDescription>
                   Zo geeft {instructor.volledige_naam} vorm aan de begeleiding.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm leading-8 text-slate-600 dark:text-slate-300 sm:text-[15px]">
+              <CardContent className="space-y-3">
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-[15px]">
                   {instructor.bio}
                 </p>
 
@@ -650,7 +634,7 @@ export default async function InstructeurDetailPage({
                   ))}
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-2.5 sm:grid-cols-3">
                   {[
                     {
                       label: "Werkgebied",
@@ -667,12 +651,12 @@ export default async function InstructeurDetailPage({
                   ].map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6"
+                      className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-2.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6"
                     >
                       <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                         {item.label}
                       </p>
-                      <p className="mt-1.5 text-[13px] leading-6 font-medium text-slate-950 dark:text-white">
+                      <p className="mt-1 text-[13px] leading-6 font-medium text-slate-950 dark:text-white">
                         {item.value}
                       </p>
                     </div>
@@ -684,12 +668,12 @@ export default async function InstructeurDetailPage({
 
           <div id="plan-afspraak" className="scroll-mt-28">
             <Reveal delay={0.06}>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="max-w-3xl space-y-2">
                   <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
                     Beschikbaarheid
                   </p>
-                  <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                  <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
                     Bekijk hoe planning voor deze instructeur werkt.
                   </h2>
                   <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
@@ -705,8 +689,8 @@ export default async function InstructeurDetailPage({
                     slots={slots}
                   />
                 ) : (
-                  <Card className="rounded-[1.8rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-                    <CardHeader className="pb-3">
+                  <Card className="rounded-[1.6rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+                    <CardHeader className="pb-2.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           variant={planningAccess.hasActiveRelationship ? "warning" : "info"}
@@ -727,8 +711,8 @@ export default async function InstructeurDetailPage({
                           : "Eerst vraag je een proefles of pakket aan. Daarna kan de instructeur plannen vrijgeven wanneer dat logisch is."}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid gap-3 md:grid-cols-3">
+                    <CardContent className="space-y-3">
+                      <div className="grid gap-2.5 md:grid-cols-3">
                         {[
                           {
                             label: "Stap 1",
@@ -745,7 +729,7 @@ export default async function InstructeurDetailPage({
                         ].map((item) => (
                           <div
                             key={item.label}
-                            className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/6"
+                            className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-2.5 dark:border-white/10 dark:bg-white/6"
                           >
                             <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                               {item.label}
@@ -764,7 +748,7 @@ export default async function InstructeurDetailPage({
                           selectedPackage={primaryPackage}
                           availableSlots={[]}
                           triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
-                          triggerClassName="h-10 text-[13px]"
+                          triggerClassName="h-9 text-[13px]"
                         />
                         <LessonRequestDialog
                           instructorName={instructor.volledige_naam}
@@ -773,7 +757,7 @@ export default async function InstructeurDetailPage({
                           availableSlots={[]}
                           triggerLabel="Plan proefles"
                           triggerVariant="secondary"
-                          triggerClassName="h-10 text-[13px]"
+                          triggerClassName="h-9 text-[13px]"
                         />
                       </div>
                     </CardContent>
@@ -785,14 +769,14 @@ export default async function InstructeurDetailPage({
         </div>
       </section>
 
-      <section className="site-shell mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
+      <section className="site-shell mx-auto w-full px-4 py-5 sm:px-6 lg:px-8">
         <Reveal className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-3xl space-y-2">
               <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
                 Reviews
               </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
                 Echte ervaringen van leerlingen.
               </h2>
               <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
@@ -806,12 +790,12 @@ export default async function InstructeurDetailPage({
           </div>
 
           {reviews.length ? (
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-3 xl:grid-cols-2">
               {reviews.map((review) => (
                 <HoverTilt key={review.id} className="relative rounded-[1.45rem] [perspective:1200px]">
                   <Card className="rounded-[1.45rem] border border-slate-200/80 bg-white/92 shadow-[0_22px_56px_-38px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_22px_56px_-38px_rgba(15,23,42,0.5)]">
-                    <CardContent className="space-y-3 p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <CardContent className="space-y-2.5 p-3.5">
+                      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <p className="line-clamp-1 font-semibold text-slate-950 dark:text-white">
                             {review.titel}
@@ -831,12 +815,12 @@ export default async function InstructeurDetailPage({
                         </div>
                       </div>
 
-                      <p className="line-clamp-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                      <p className="line-clamp-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
                         {review.tekst}
                       </p>
 
                       {review.antwoord_tekst ? (
-                        <div className="rounded-[1rem] border border-sky-100 bg-sky-50/80 p-3 dark:border-sky-300/12 dark:bg-sky-400/10">
+                        <div className="rounded-[1rem] border border-sky-100 bg-sky-50/80 p-2.5 dark:border-sky-300/12 dark:bg-sky-400/10">
                           <p className="text-[10px] font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-100">
                             Reactie van instructeur
                           </p>

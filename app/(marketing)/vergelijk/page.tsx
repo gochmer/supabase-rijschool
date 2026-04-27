@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Compass, Scale, Sparkles } from "lucide-react";
+import { ArrowRight, Compass, Scale } from "lucide-react";
 import type { Metadata } from "next";
 
 import { Reveal } from "@/components/marketing/homepage-motion";
