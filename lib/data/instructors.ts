@@ -17,6 +17,7 @@ import type {
   RijlesType,
   Review,
 } from "@/lib/types";
+import { getReviewStatsByInstructorIds } from "@/lib/data/reviews";
 import { createServerClient } from "@/lib/supabase/server";
 
 type DbInstructorRow = {
@@ -60,9 +61,18 @@ function toNumber(value: number | string | null | undefined, fallback = 0) {
 
 function mapInstructor(
   row: DbInstructorRow,
-  reviewCount: number
+  reviewStats?: {
+    reviewCount: number;
+    averageScore: number;
+  }
 ): InstructeurProfiel {
   const base = instructeurs.find((item) => item.slug === row.slug);
+  const resolvedReviewCount =
+    reviewStats?.reviewCount ?? base?.aantal_reviews ?? 0;
+  const resolvedRating =
+    reviewStats && reviewStats.reviewCount > 0
+      ? reviewStats.averageScore
+      : toNumber(row.beoordeling, base?.beoordeling ?? 0);
 
   return {
     id: row.id,
@@ -78,8 +88,8 @@ function mapInstructor(
     bio: row.bio || base?.bio || "Nog geen introductietekst toegevoegd.",
     ervaring_jaren: row.ervaring_jaren ?? base?.ervaring_jaren ?? 0,
     prijs_per_les: toNumber(row.prijs_per_les, base?.prijs_per_les ?? 0),
-    beoordeling: toNumber(row.beoordeling, base?.beoordeling ?? 0),
-    aantal_reviews: reviewCount || base?.aantal_reviews || 0,
+    beoordeling: resolvedRating,
+    aantal_reviews: resolvedReviewCount,
     transmissie: row.transmissie || base?.transmissie || "beide",
     steden: row.werkgebied?.length ? row.werkgebied : base?.steden || [],
     specialisaties:
@@ -113,19 +123,10 @@ export async function getPublicInstructors() {
   }
 
   const instructorIds = rows.map((row) => row.id);
-  const { data: reviewRows } = await supabase
-    .from("reviews")
-    .select("id, instructeur_id")
-    .in("instructeur_id", instructorIds);
-  const reviewCountMap = new Map<string, number>();
-
-  for (const review of reviewRows ?? []) {
-    const current = reviewCountMap.get(review.instructeur_id) ?? 0;
-    reviewCountMap.set(review.instructeur_id, current + 1);
-  }
+  const reviewStatsMap = await getReviewStatsByInstructorIds(instructorIds);
 
   return rows.map((row) =>
-    mapInstructor(row as DbInstructorRow, reviewCountMap.get(row.id) ?? 0)
+    mapInstructor(row as DbInstructorRow, reviewStatsMap.get(row.id))
   );
 }
 

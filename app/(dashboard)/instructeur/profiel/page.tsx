@@ -25,7 +25,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getCurrentInstructeurRecord, getCurrentProfile } from "@/lib/data/profiles";
-import { formatCurrency, getInitials } from "@/lib/format";
+import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
+import { formatCurrency, formatStars, getInitials } from "@/lib/format";
 import { instructorColorOptions } from "@/lib/instructor-profile";
 
 function transmissionLabel(value?: string | null) {
@@ -42,9 +43,10 @@ function getConversionLevel(score: number) {
 }
 
 export default async function InstructeurProfielPage() {
-  const [profile, instructor] = await Promise.all([
+  const [profile, instructor, reviewSummary] = await Promise.all([
     getCurrentProfile(),
     getCurrentInstructeurRecord(),
+    getCurrentInstructorReviewSummary(),
   ]);
 
   const completionScore = Number(instructor?.profiel_compleetheid ?? 0);
@@ -200,7 +202,14 @@ export default async function InstructeurProfielPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
                     <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                    {instructor?.beoordeling ?? 0} score
+                    {reviewSummary.reviewCount
+                      ? formatStars(reviewSummary.averageScore)
+                      : "Nog geen reviews"}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
+                    <BadgeCheck className="size-3.5" />
+                    {reviewSummary.reviewCount} review
+                    {reviewSummary.reviewCount === 1 ? "" : "s"}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
                     <WalletCards className="size-3.5" />
@@ -231,6 +240,32 @@ export default async function InstructeurProfielPage() {
                 <span className="text-sm text-slate-500 dark:text-slate-400">
                   Nog geen specialisaties toegevoegd.
                 </span>
+              )}
+            </div>
+            <div className="mt-4 grid gap-2">
+              {reviewSummary.latestReviews.length ? (
+                reviewSummary.latestReviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-[1rem] border border-slate-200 bg-white/90 p-3 dark:border-white/10 dark:bg-white/6"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                        {review.titel}
+                      </p>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {review.leerling_naam} â€¢ {review.datum}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                      {review.tekst}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1rem] border border-dashed border-slate-300 bg-white/70 p-3 text-sm leading-6 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  Zodra leerlingen afgeronde lessen beoordelen, zie je hier meteen de eerste social proof voor je profielpreview.
+                </div>
               )}
             </div>
           </div>

@@ -1,17 +1,17 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ReviewsBoard } from "@/components/learner/reviews-board";
-import { getPublicInstructors } from "@/lib/data/instructors";
+import { getLearnerReviewOpportunities } from "@/lib/data/reviews";
 
 export default async function LeerlingReviewsPage() {
-  const instructors = await getPublicInstructors();
+  const opportunities = await getLearnerReviewOpportunities();
 
   return (
     <>
       <PageHeader
         title="Reviews"
-        description="Schrijf reviews na afgeronde lessen en beheer eerder geplaatste beoordelingen."
+        description="Schrijf na afgeronde lessen een eerlijke review en help andere leerlingen sneller vertrouwen opbouwen."
       />
-      <ReviewsBoard instructors={instructors} />
+      <ReviewsBoard opportunities={opportunities} />
     </>
   );
 }

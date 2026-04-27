@@ -8,6 +8,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
+import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
 import { formatCurrency } from "@/lib/format";
 import { getRijlesType } from "@/lib/lesson-types";
 
@@ -473,9 +474,10 @@ export async function getInstructeurDashboardMetrics(): Promise<DashboardMetric[
     return instructeurMetrics;
   }
 
-  const [lessons, requests] = await Promise.all([
+  const [lessons, requests, reviewSummary] = await Promise.all([
     getInstructeurLessons(),
     getInstructeurLessonRequests(),
+    getCurrentInstructorReviewSummary(),
   ]);
 
   const openRequests = requests.filter((item) => item.status === "aangevraagd").length;
@@ -502,9 +504,13 @@ export async function getInstructeurDashboardMetrics(): Promise<DashboardMetric[
       context: "Op basis van geplande en geaccepteerde lessen",
     },
     {
-      label: "Profiel compleet",
-      waarde: `${instructeur.profiel_compleetheid ?? 0}%`,
-      context: "Werk je profiel verder af voor betere zichtbaarheid",
+      label: "Reviewscore",
+      waarde: reviewSummary.reviewCount
+        ? `${reviewSummary.averageScore.toFixed(1)} / 5`
+        : "Nog geen reviews",
+      context: reviewSummary.reviewCount
+        ? `${reviewSummary.reviewCount} zichtbare review${reviewSummary.reviewCount === 1 ? "" : "s"} op je profiel`
+        : "Na afgeronde lessen kunnen leerlingen hier social proof toevoegen",
     },
   ];
 }
