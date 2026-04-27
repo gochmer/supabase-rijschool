@@ -1308,16 +1308,16 @@ export function PackageStudio({
             />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="package_cover">Coverbeeld</Label>
+            <Label htmlFor="package_cover">Pakketfoto</Label>
             <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                    Geef je pakket een eigen beeldlaag
+                    Geef je pakket een eigen foto
                   </p>
                   <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                    JPG, PNG, WebP of AVIF tot 5 MB. Deze cover komt terug in het dashboard en op
-                    de openbare pakketkaarten.
+                    JPG, PNG, WebP of AVIF tot 5 MB. Deze pakketfoto komt terug in het dashboard
+                    en op de openbare pakketkaarten.
                   </p>
                 </div>
                 {coverPreviewUrl ? (
@@ -1329,7 +1329,7 @@ export function PackageStudio({
                     disabled={isBusy}
                   >
                     <X className="size-4" />
-                    Verwijder cover
+                    Verwijder foto
                   </Button>
                 ) : null}
               </div>
@@ -1376,7 +1376,7 @@ export function PackageStudio({
               ) : (
                 <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3 text-xs font-medium tracking-[0.18em] text-slate-500 uppercase">
                   <ImagePlus className="size-4" />
-                  Cover optioneel
+                  Nog geen pakketfoto
                 </div>
               )}
               <div className="p-4">
@@ -1405,7 +1405,7 @@ export function PackageStudio({
                     </div>
                     <p className="mt-1 text-sm leading-7 text-slate-600">
                       {beschrijving ||
-                        "Zo ziet je gekozen icoon, kleurthema en eventuele cover er straks uit op je pakketkaart."}
+                        "Zo ziet je gekozen icoon, kleurthema en eventuele pakketfoto er straks uit op je pakketkaart."}
                     </p>
                     {praktijkExamenPrijs.trim() ? (
                       <p className="mt-2 text-sm font-medium text-slate-700">
@@ -1441,8 +1441,8 @@ export function PackageStudio({
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm leading-7 text-slate-500">
-            Tip: maak aparte trajecten voor auto, motor en vrachtwagen, zodat leerlingen direct
-            op de juiste pagina en bij het juiste aanbod landen.
+            Tip: geef elk pakket een eigen foto, zodat leerlingen sneller vertrouwen voelen en je
+            aanbod direct professioneler oogt.
           </p>
           <Button
             className="h-11 rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white"
@@ -1547,7 +1547,22 @@ export function PackageStudio({
                         )}
                       />
                     </div>
-                  ) : null}
+                  ) : (
+                    <div
+                      className={cn(
+                        "mb-4 flex h-40 flex-col items-center justify-center rounded-[1.35rem] border border-dashed text-center",
+                        isLeadCard
+                          ? "border-white/18 bg-white/6 text-white/74"
+                          : "border-slate-200 bg-slate-50/90 text-slate-500 dark:border-white/10 dark:bg-white/6 dark:text-slate-300"
+                      )}
+                    >
+                      <ImagePlus className="size-7" />
+                      <p className="mt-3 text-sm font-semibold">Nog geen pakketfoto</p>
+                      <p className="mt-1 max-w-[16rem] text-xs leading-6">
+                        Open dit pakket en voeg een foto toe om je kaart sterker te maken.
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -1609,9 +1624,21 @@ export function PackageStudio({
                         </p>
                       ) : null}
                     </div>
-                    <Badge variant={isActive ? "success" : "info"}>
-                      {isActive ? "actief" : "gepauzeerd"}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant={isActive ? "success" : "info"}>
+                        {isActive ? "actief" : "gepauzeerd"}
+                      </Badge>
+                      <Badge
+                        className={cn(
+                          "border",
+                          isLeadCard
+                            ? "border-white/16 bg-white/10 text-white"
+                            : "border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/8 dark:text-slate-200"
+                        )}
+                      >
+                        {pkg.cover_url ? "Foto ingesteld" : "Nog geen foto"}
+                      </Badge>
+                    </div>
                   </div>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1711,8 +1738,22 @@ export function PackageStudio({
                       onClick={() => openEditDialog(pkg)}
                       disabled={isBusy}
                     >
+                      <ImagePlus className="size-4" />
+                      Foto wijzigen
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "rounded-full",
+                        isLeadCard
+                          ? "border-white/20 bg-white/10 text-white hover:bg-white/16 hover:text-white"
+                          : "border-slate-200 bg-white"
+                      )}
+                      onClick={() => openEditDialog(pkg)}
+                      disabled={isBusy}
+                    >
                       <Edit3 className="size-4" />
-                      Bewerken
+                      Inhoud wijzigen
                     </Button>
                     <Button
                       variant="outline"
@@ -1764,9 +1805,9 @@ export function PackageStudio({
         <DialogContent className="max-w-xl border border-slate-200 bg-white p-0 shadow-[0_32px_90px_-54px_rgba(15,23,42,0.36)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white dark:shadow-[0_32px_90px_-54px_rgba(15,23,42,0.72)]">
           <div className="p-5">
             <DialogHeader>
-              <DialogTitle className="text-slate-950 dark:text-white">Pakket bewerken</DialogTitle>
+              <DialogTitle className="text-slate-950 dark:text-white">Pakketinformatie en foto bewerken</DialogTitle>
               <DialogDescription className="text-slate-600 dark:text-slate-300">
-                Werk naam, badge, prijs, lessen en omschrijving bij zonder het pakket opnieuw te maken.
+                Werk naam, prijs, lessen, beschrijving en pakketfoto bij zonder het pakket opnieuw te maken.
               </DialogDescription>
             </DialogHeader>
 
@@ -1887,16 +1928,16 @@ export function PackageStudio({
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="edit_package_cover">Coverbeeld</Label>
+                <Label htmlFor="edit_package_cover">Pakketfoto</Label>
                 <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/5">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                        Werk de zichtbare cover van dit pakket bij
+                        Werk de pakketfoto van dit pakket bij
                       </p>
                       <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                        Upload een nieuwe afbeelding of haal de huidige cover weg als je weer
-                        terug wilt naar de pure icon-stijl.
+                        Upload een nieuwe afbeelding of haal de huidige pakketfoto weg als je
+                        weer terug wilt naar de pure icon-stijl.
                       </p>
                     </div>
                     {editCoverPreviewUrl ? (
@@ -1908,7 +1949,7 @@ export function PackageStudio({
                         disabled={isBusy}
                       >
                         <X className="size-4" />
-                        Verwijder cover
+                        Verwijder foto
                       </Button>
                     ) : null}
                   </div>
@@ -1955,7 +1996,7 @@ export function PackageStudio({
                   ) : (
                     <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3 text-xs font-medium tracking-[0.18em] text-slate-500 uppercase">
                       <ImagePlus className="size-4" />
-                      Cover optioneel
+                      Nog geen pakketfoto
                     </div>
                   )}
                   <div className="p-4">
@@ -1984,7 +2025,7 @@ export function PackageStudio({
                         </div>
                         <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
                           {editBeschrijving ||
-                            "Controleer direct of je gekozen pakketidentiteit en cover samen goed aanvoelen."}
+                            "Controleer direct of je gekozen pakketidentiteit en pakketfoto samen goed aanvoelen."}
                         </p>
                         {editPraktijkExamenPrijs.trim() ? (
                           <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-200">

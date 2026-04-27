@@ -569,7 +569,7 @@ async function run() {
         )}\n\nPaginafragment:\n${pageText}\n\n${error}`
       );
     }
-    await publicPage.getByText("1 reviews").waitFor({ timeout: 15_000 });
+    await publicPage.getByText(/uit 1 reviews/).waitFor({ timeout: 15_000 });
 
     const instructorContext = await browser.newContext();
     const instructorPage = await instructorContext.newPage();

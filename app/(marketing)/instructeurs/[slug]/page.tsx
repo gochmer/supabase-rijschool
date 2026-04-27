@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowRight,
   CalendarClock,
+  CheckCircle2,
   MapPin,
   ShieldCheck,
   Star,
@@ -51,6 +52,18 @@ function getInstructorFocus(instructor: { specialisaties: string[] }) {
 
 function formatPriceLabel(price: number | null) {
   return price && price > 0 ? formatCurrency(price) : "Op aanvraag";
+}
+
+function getPackageFallbackCover(lessonType?: string | null) {
+  if (lessonType === "motor") {
+    return "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=1200&q=80";
+  }
+
+  if (lessonType === "vrachtwagen") {
+    return "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1200&q=80";
+  }
+
+  return "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80";
 }
 
 export default async function InstructeurDetailPage({
@@ -352,28 +365,47 @@ export default async function InstructeurDetailPage({
                         pkg.cover_focus_x,
                         pkg.cover_focus_y
                       );
+                      const displayCoverUrl =
+                        pkg.cover_url ?? getPackageFallbackCover(pkg.les_type);
                       const isPrimaryPackage = pkg.uitgelicht || index === 0;
+                      const packagePoints = [
+                        pkg.lessen
+                          ? `${pkg.lessen} lessen als duidelijke basis`
+                          : "Flexibel opgebouwd rond jouw tempo",
+                        pkg.labels?.[0]
+                          ? `${pkg.labels[0]} als extra focus in dit traject`
+                          : pkg.praktijk_examen_prijs !== null &&
+                              pkg.praktijk_examen_prijs !== undefined
+                            ? "Praktijk-examen kan apart worden toegevoegd"
+                            : "Boekingen en voortgang blijven netjes gekoppeld",
+                      ];
 
                       return (
                         <HoverTilt
                           key={pkg.id}
-                          className="relative rounded-[1.45rem] [perspective:1200px]"
+                          className="relative h-full rounded-[1.45rem] [perspective:1200px]"
                         >
                           <Card
-                            className={`overflow-hidden border p-0 shadow-[0_22px_60px_-38px_rgba(15,23,42,0.22)] ${
+                            className={`group relative flex h-full min-h-[27rem] flex-col overflow-hidden border p-0 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] transition-[transform,box-shadow,border-color] duration-500 ${
                               isPrimaryPackage
-                                ? visual.featuredCardClass
-                                : visual.softCardClass
+                                ? `${visual.featuredCardClass} hover:shadow-[0_38px_110px_-48px_rgba(14,165,233,0.42)]`
+                                : `${visual.softCardClass} hover:shadow-[0_36px_100px_-44px_rgba(15,23,42,0.2)]`
                             }`}
                           >
-                            {pkg.cover_url ? (
-                              <div className="relative h-28 overflow-hidden">
+                            {displayCoverUrl ? (
+                              <div
+                                className={`relative z-10 mx-4 mt-4 h-28 overflow-hidden rounded-[1.1rem] border ${
+                                  isPrimaryPackage
+                                    ? "border-white/10"
+                                    : "border-slate-200/80 dark:border-white/10"
+                                }`}
+                              >
                                 <Image
-                                  src={pkg.cover_url}
+                                  src={displayCoverUrl}
                                   alt={`Cover voor ${pkg.naam}`}
                                   fill
                                   sizes="(max-width: 1280px) 100vw, 50vw"
-                                  className="object-cover"
+                                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                                   style={{ objectPosition: coverObjectPosition }}
                                 />
                                 <div
@@ -386,40 +418,44 @@ export default async function InstructeurDetailPage({
                               </div>
                             ) : null}
 
-                            <CardContent className="space-y-4 p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <p className="text-[1rem] font-semibold text-slate-950 dark:text-white">
-                                      {pkg.naam}
-                                    </p>
-                                    <Badge
-                                      className={
-                                        isPrimaryPackage
-                                          ? visual.featuredBadgeClass
-                                          : visual.softBadgeClass
-                                      }
-                                    >
-                                      {getRijlesTypeLabel(pkg.les_type)}
-                                    </Badge>
-                                    {pkg.uitgelicht ? (
-                                      <Badge className={visual.featuredBadgeClass}>
-                                        Uitgelicht
-                                      </Badge>
-                                    ) : null}
-                                  </div>
-                                  <p
-                                    className={`mt-2 line-clamp-2 text-[13px] leading-6 ${
+                            <CardHeader className="relative z-10 space-y-3 px-4 pb-3">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <Badge
+                                  className={`border px-2 py-0.5 text-[9px] tracking-[0.14em] ${
+                                    isPrimaryPackage
+                                      ? visual.featuredBadgeClass
+                                      : visual.softBadgeClass
+                                  }`}
+                                >
+                                  {getRijlesTypeLabel(pkg.les_type)}
+                                </Badge>
+                                {pkg.badge ? (
+                                  <Badge
+                                    className={`border px-2 py-0.5 text-[9px] tracking-[0.14em] ${
                                       isPrimaryPackage
-                                        ? "text-white/76"
-                                        : "text-slate-600 dark:text-slate-300"
+                                        ? visual.featuredBadgeClass
+                                        : visual.softBadgeClass
                                     }`}
                                   >
-                                    {pkg.beschrijving}
-                                  </p>
-                                </div>
+                                    {pkg.badge}
+                                  </Badge>
+                                ) : null}
+                                {pkg.uitgelicht ? (
+                                  <Badge
+                                    className={`border px-2 py-0.5 text-[9px] tracking-[0.14em] ${
+                                      isPrimaryPackage
+                                        ? visual.featuredBadgeClass
+                                        : visual.softBadgeClass
+                                    }`}
+                                  >
+                                    Uitgelicht
+                                  </Badge>
+                                ) : null}
+                              </div>
+
+                              <div className="flex items-start gap-2.5">
                                 <div
-                                  className={`flex size-10 shrink-0 items-center justify-center rounded-[1rem] ${
+                                  className={`flex size-9 shrink-0 items-center justify-center rounded-[1rem] ${
                                     isPrimaryPackage
                                       ? visual.featuredIconClass
                                       : visual.softIconClass
@@ -427,46 +463,141 @@ export default async function InstructeurDetailPage({
                                 >
                                   <visual.Icon className="size-4" />
                                 </div>
+                                <div className="min-w-0">
+                                  <CardTitle
+                                    className={`text-[1rem] ${
+                                      isPrimaryPackage
+                                        ? "text-white"
+                                        : "text-slate-950 dark:text-white"
+                                    }`}
+                                  >
+                                    {pkg.naam}
+                                  </CardTitle>
+                                  <CardDescription
+                                    className={`mt-1.5 line-clamp-2 text-[13px] leading-6 ${
+                                      isPrimaryPackage
+                                        ? "text-white/72"
+                                        : "text-slate-600 dark:text-slate-300"
+                                    }`}
+                                  >
+                                    {pkg.beschrijving}
+                                  </CardDescription>
+                                </div>
+                              </div>
+                            </CardHeader>
+
+                            <CardContent className="relative z-10 flex flex-1 flex-col space-y-3.5 px-4 pb-4">
+                              <div>
+                                <p
+                                  className={`text-[1.75rem] font-semibold ${
+                                    isPrimaryPackage
+                                      ? "text-white"
+                                      : "text-slate-950 dark:text-white"
+                                  }`}
+                                >
+                                  {formatPriceLabel(Number(pkg.prijs ?? 0))}
+                                </p>
+                                <p
+                                  className={`mt-1 text-[12px] ${
+                                    isPrimaryPackage
+                                      ? "text-white/70"
+                                      : "text-slate-500 dark:text-slate-300"
+                                  }`}
+                                >
+                                  {pkg.lessen
+                                    ? `${pkg.lessen} lessen inbegrepen`
+                                    : "Persoonlijk samengesteld traject"}
+                                </p>
+                                {pkg.praktijk_examen_prijs !== null &&
+                                pkg.praktijk_examen_prijs !== undefined ? (
+                                  <p
+                                    className={`mt-1 text-[12px] font-medium ${
+                                      isPrimaryPackage
+                                        ? "text-white/78"
+                                        : "text-slate-700 dark:text-slate-200"
+                                    }`}
+                                  >
+                                    Praktijk-examen{" "}
+                                    {formatPriceLabel(Number(pkg.praktijk_examen_prijs))}
+                                  </p>
+                                ) : null}
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2">
-                                <div
-                                  className={`rounded-[0.95rem] px-3 py-2.5 ${
-                                    isPrimaryPackage ? "bg-white/10" : "bg-white/90"
-                                  }`}
-                                >
-                                  <p
-                                    className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${
+                              <div
+                                className={`grid gap-1.5 rounded-[1.05rem] p-2.5 ${
+                                  isPrimaryPackage
+                                    ? "border border-white/10 bg-white/8"
+                                    : "border border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/6"
+                                }`}
+                              >
+                                <div className="grid gap-1.5 sm:grid-cols-2">
+                                  <div
+                                    className={`rounded-[0.85rem] px-2.5 py-2 ${
                                       isPrimaryPackage
-                                        ? "text-white/65"
-                                        : "text-slate-500 dark:text-slate-400"
+                                        ? "bg-white/10 text-white"
+                                        : "bg-white text-slate-950 dark:bg-white/6 dark:text-white"
                                     }`}
                                   >
-                                    Prijs
-                                  </p>
-                                  <p className="mt-1 text-[14px] font-semibold text-slate-950 dark:text-white">
-                                    {formatPriceLabel(Number(pkg.prijs ?? 0))}
-                                  </p>
+                                    <p
+                                      className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${
+                                        isPrimaryPackage
+                                          ? "text-white/62"
+                                          : "text-slate-500 dark:text-slate-400"
+                                      }`}
+                                    >
+                                      Prijs
+                                    </p>
+                                    <p className="mt-1 text-[13px] font-semibold">
+                                      {formatPriceLabel(Number(pkg.prijs ?? 0))}
+                                    </p>
+                                  </div>
+
+                                  <div
+                                    className={`rounded-[0.85rem] px-2.5 py-2 ${
+                                      isPrimaryPackage
+                                        ? "bg-white/10 text-white"
+                                        : "bg-white text-slate-950 dark:bg-white/6 dark:text-white"
+                                    }`}
+                                  >
+                                    <p
+                                      className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${
+                                        isPrimaryPackage
+                                          ? "text-white/62"
+                                          : "text-slate-500 dark:text-slate-400"
+                                      }`}
+                                    >
+                                      Inhoud
+                                    </p>
+                                    <p className="mt-1 text-[13px] font-semibold">
+                                      {pkg.lessen ? `${pkg.lessen} lessen` : "Maatwerk traject"}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div
-                                  className={`rounded-[0.95rem] px-3 py-2.5 ${
-                                    isPrimaryPackage ? "bg-white/10" : "bg-white/90"
-                                  }`}
-                                >
-                                  <p
-                                    className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${
-                                      isPrimaryPackage
-                                        ? "text-white/65"
-                                        : "text-slate-500 dark:text-slate-400"
-                                    }`}
-                                  >
-                                    Lessen
-                                  </p>
-                                  <p className="mt-1 text-[14px] font-semibold text-slate-950 dark:text-white">
-                                    {pkg.lessen || "Flexibel"}
-                                  </p>
+
+                                <div className="grid gap-1.5">
+                                  {packagePoints.map((item) => (
+                                    <div
+                                      key={item}
+                                      className={`flex items-start gap-2 rounded-[0.85rem] px-2.5 py-2 text-[12px] leading-5 ${
+                                        isPrimaryPackage
+                                          ? "bg-white/6 text-white/82"
+                                          : "bg-white text-slate-600 dark:bg-white/6 dark:text-slate-300"
+                                      }`}
+                                    >
+                                      <CheckCircle2
+                                        className={`mt-0.5 size-4 shrink-0 ${
+                                          isPrimaryPackage
+                                            ? "text-sky-200"
+                                            : "text-emerald-500 dark:text-emerald-300"
+                                        }`}
+                                      />
+                                      <span>{item}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
+
+                              <div className="mt-auto" />
 
                               <LessonRequestDialog
                                 instructorName={instructor.volledige_naam}
@@ -474,9 +605,13 @@ export default async function InstructeurDetailPage({
                                 selectedPackage={pkg}
                                 availableSlots={planningAccess.canViewAgenda ? slots : []}
                                 triggerLabel="Vraag dit pakket aan"
-                                triggerClassName="h-10 w-full text-[13px]"
+                                triggerClassName="!h-10 !w-full !rounded-full !text-[13px]"
                               />
                             </CardContent>
+
+                            {isPrimaryPackage ? (
+                              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_28%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.14),transparent_30%)]" />
+                            ) : null}
                           </Card>
                         </HoverTilt>
                       );
