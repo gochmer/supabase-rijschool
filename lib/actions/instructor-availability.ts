@@ -30,6 +30,7 @@ type CreateAvailabilitySlotInput = {
   beschikbaar?: boolean;
   lesduurMinuten?: number;
   bufferMinuten?: number;
+  maxLessenPerDag?: number;
 };
 
 type UpdateAvailabilityStatusInput = {
@@ -593,6 +594,11 @@ export async function createAvailabilitySlotAction(
     Number.isFinite(bufferMinutenRaw) && bufferMinutenRaw >= 0 && bufferMinutenRaw <= 120
       ? bufferMinutenRaw
       : 0;
+  const maxLessenPerDagRaw = Number.parseInt(String(input.maxLessenPerDag ?? 0), 10);
+  const maxLessenPerDag =
+    Number.isFinite(maxLessenPerDagRaw) && maxLessenPerDagRaw >= 1 && maxLessenPerDagRaw <= 12
+      ? maxLessenPerDagRaw
+      : 0;
   const selectedWeekdays = Array.from(
     new Set(
       requestedWeekdays
@@ -770,6 +776,13 @@ export async function createAvailabilitySlotAction(
     }
 
     for (const currentDate of baseDates) {
+      const dailyPlannedSlots: {
+        instructeur_id: string;
+        start_at: string;
+        eind_at: string;
+        beschikbaar: boolean;
+        dateLabel: string;
+      }[] = [];
       const startAt = createAvailabilityTimestamp(currentDate, startTijd);
       const eindAt = createAvailabilityTimestamp(currentDate, eindTijd);
 
@@ -836,7 +849,7 @@ export async function createAvailabilitySlotAction(
           };
         }
 
-        plannedSlots.push(...beforePauseSlots.slots, ...afterPauseSlots.slots);
+        dailyPlannedSlots.push(...beforePauseSlots.slots, ...afterPauseSlots.slots);
       } else {
         const windowSlots = buildPlannedSlotsForWindow({
           instructeurId: access.instructeur.id,
@@ -855,8 +868,12 @@ export async function createAvailabilitySlotAction(
           };
         }
 
-        plannedSlots.push(...windowSlots.slots);
+        dailyPlannedSlots.push(...windowSlots.slots);
       }
+
+      plannedSlots.push(
+        ...(maxLessenPerDag > 0 ? dailyPlannedSlots.slice(0, maxLessenPerDag) : dailyPlannedSlots)
+      );
     }
   } catch {
     return {

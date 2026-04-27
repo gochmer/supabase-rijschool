@@ -23,7 +23,6 @@ import {
 import { toast } from "sonner";
 
 import {
-  applyAvailabilityTemplateAction,
   createAvailabilitySlotAction,
   deleteAvailabilitySeriesAction,
   deleteAvailabilitySlotAction,
@@ -37,7 +36,6 @@ import {
   updateAvailabilityWeekRuleAction,
   updateAvailabilityWindowAction,
 } from "@/lib/actions/instructor-availability";
-import { availabilityTemplates } from "@/lib/availability-templates";
 import {
   addDaysToDateValue,
   formatAvailabilityDuration,
@@ -410,6 +408,8 @@ const breakPresets = [
   { label: "Korte pauze", start: "15:30", end: "15:45" },
 ] as const;
 
+const DAILY_LESSON_CAP_STORAGE_KEY = "availability-daily-lesson-cap";
+
 function formatSelectedWeekdays(weekdays: number[]) {
   if (!weekdays.length) {
     return "";
@@ -421,6 +421,10 @@ function formatSelectedWeekdays(weekdays: number[]) {
     .join(", ");
 }
 
+function formatWeekdayNameFromIso(isoValue: string) {
+  return new Intl.DateTimeFormat("nl-NL", { weekday: "long" }).format(new Date(isoValue));
+}
+
 export function AvailabilityManager({
   slots,
   pricePerLesson = 0,
@@ -430,8 +434,8 @@ export function AvailabilityManager({
 }) {
   const [compact, setCompact] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [insightView, setInsightView] = useState<"health" | "commercial" | "suggestions">(
-    "health"
+  const [insightView, setInsightView] = useState<"rooster" | "health" | "suggestions">(
+    "rooster"
   );
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(slots[0]?.id ?? null);
   const [datum, setDatum] = useState(getTodayValue);
@@ -448,6 +452,13 @@ export function AvailabilityManager({
   const [useLessonCadence, setUseLessonCadence] = useState(false);
   const [lessonDurationMinutes, setLessonDurationMinutes] = useState("90");
   const [bufferMinutes, setBufferMinutes] = useState("15");
+  const [dailyLessonCap, setDailyLessonCap] = useState(() => {
+    if (typeof window === "undefined") {
+      return "0";
+    }
+
+    return window.localStorage.getItem(DAILY_LESSON_CAP_STORAGE_KEY) ?? "0";
+  });
   const [visibilityFilter, setVisibilityFilter] = useState("alles");
   const [confirmAction, setConfirmAction] = useState<null | "delete-slot" | "delete-series">(
     null
@@ -477,6 +488,10 @@ export function AvailabilityManager({
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(DAILY_LESSON_CAP_STORAGE_KEY, dailyLessonCap);
+  }, [dailyLessonCap]);
 
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedSlotId) ?? entries[0] ?? null,
@@ -532,6 +547,7 @@ export function AvailabilityManager({
   const isBlockingMode = createMode === "afwezig";
   const lessonDurationValue = Number.parseInt(lessonDurationMinutes, 10) || 0;
   const bufferValue = Number.parseInt(bufferMinutes, 10) || 0;
+  const dailyLessonCapValue = Number.parseInt(dailyLessonCap, 10) || 0;
   const nextWeekEnd = useMemo(
     () => addDaysToDateValue(nextWeekStart, 7),
     [nextWeekStart]
@@ -659,6 +675,14 @@ export function AvailabilityManager({
     useBreakWindow,
     useLessonCadence,
   ]);
+  const cadencePreviewAfterCap =
+    dailyLessonCapValue > 0
+      ? Math.min(cadencePreviewCount, dailyLessonCapValue)
+      : cadencePreviewCount;
+  const dailyLessonCapWillTrim =
+    useLessonCadence &&
+    dailyLessonCapValue > 0 &&
+    cadencePreviewCount > dailyLessonCapValue;
   const currentWeekActiveEntries = useMemo(
     () =>
       entries.filter((entry) => {
@@ -764,20 +788,121 @@ export function AvailabilityManager({
     const weekday = getAvailabilityWeekdayNumber(entry.startAt);
     return weekday === 6 || weekday === 7;
   });
-  const nextWeekPrimeTimeSlots = nextWeekActiveEntries.filter((entry) => {
-    const weekday = getAvailabilityWeekdayNumber(entry.startAt);
-    const startMinutes = timeValueToMinutes(formatAvailabilityTime(entry.startAt));
-    const endMinutes = timeValueToMinutes(formatAvailabilityTime(entry.endAt));
-
-    const isEvening =
-      startMinutes < timeValueToMinutes("21:00") && endMinutes > timeValueToMinutes("18:00");
-    const isWeekend = weekday === 6 || weekday === 7;
-
-    return isEvening || isWeekend;
-  }).length;
   const nextWeekDaySpread = new Set(
     nextWeekActiveEntries.map((entry) => getAvailabilityWeekdayNumber(entry.startAt))
   ).size;
+  const recurringRuleSummaries = useMemo(() => {
+    const seenRuleIds = new Set<string>();
+
+    return entries
+      .filter((entry) => entry.source === "weekrooster" && entry.weekroosterId)
+      .sort((left, right) => left.startAt.localeCompare(right.startAt))
+      .flatMap((entry) => {
+        const ruleId = entry.weekroosterId;
+
+        if (!ruleId || seenRuleIds.has(ruleId)) {
+          return [];
+        }
+
+        seenRuleIds.add(ruleId);
+
+        const window = buildLinkedAvailabilityWindow(entries, entry.id);
+        const startAt = window?.startAt ?? entry.startAt;
+        const endAt = window?.endAt ?? entry.endAt;
+
+        return [
+          {
+            ruleId,
+            slotId: entry.id,
+            weekdayNumber: getAvailabilityWeekdayNumber(startAt),
+            dayLabel: formatWeekdayNameFromIso(startAt),
+            timeLabel: `${formatAvailabilityTime(startAt)} - ${formatAvailabilityTime(endAt)}`,
+            pauseLabel:
+              window?.pauseStartAt && window.pauseEndAt
+                ? `${formatAvailabilityTime(window.pauseStartAt)} - ${formatAvailabilityTime(window.pauseEndAt)}`
+                : null,
+            beschikbaar: entry.beschikbaar,
+          },
+        ];
+      })
+      .sort((left, right) => left.weekdayNumber - right.weekdayNumber);
+  }, [entries]);
+  const upcomingExceptionWindows = useMemo(() => {
+    const seenSlotIds = new Set<string>();
+
+    return entries
+      .filter((entry) => {
+        if (entry.source !== "slot") {
+          return false;
+        }
+
+        const dateValue = getAvailabilityDateValue(entry.startAt);
+        return dateValue >= currentWeekStart && dateValue < addDaysToDateValue(nextWeekStart, 21);
+      })
+      .sort((left, right) => left.startAt.localeCompare(right.startAt))
+      .flatMap((entry) => {
+        if (seenSlotIds.has(entry.id)) {
+          return [];
+        }
+
+        const window = buildLinkedAvailabilityWindow(entries, entry.id);
+
+        if (!window) {
+          return [];
+        }
+
+        window.slots.forEach((slot) => {
+          seenSlotIds.add(slot.id);
+        });
+
+        return [
+          {
+            key: window.slots.map((slot) => slot.id).join("|"),
+            slotId: window.slots[0]?.id ?? entry.id,
+            dayLabel: window.slots[0]?.dag ?? entry.dag,
+            momentLabel: `${formatAvailabilityTime(window.startAt)} - ${formatAvailabilityTime(window.endAt)}`,
+            beschikbaar: window.slots[0]?.beschikbaar ?? entry.beschikbaar,
+            kindLabel:
+              window.slots[0]?.beschikbaar ?? entry.beschikbaar
+                ? "Los beschikbaar blok"
+                : "Afwezig of dicht",
+          },
+        ];
+      })
+      .slice(0, 6);
+  }, [currentWeekStart, entries, nextWeekStart]);
+  const nextWeekDailyLoads = useMemo(() => {
+    const counts = new Map<string, { dateValue: string; dayLabel: string; count: number }>();
+
+    nextWeekActiveEntries.forEach((entry) => {
+      const dateValue = getAvailabilityDateValue(entry.startAt);
+      const current = counts.get(dateValue);
+
+      if (current) {
+        current.count += 1;
+        return;
+      }
+
+      counts.set(dateValue, {
+        dateValue,
+        dayLabel: entry.dag,
+        count: 1,
+      });
+    });
+
+    return Array.from(counts.values()).sort((left, right) => {
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+
+      return left.dateValue.localeCompare(right.dateValue);
+    });
+  }, [nextWeekActiveEntries]);
+  const highestDailyLoad = nextWeekDailyLoads[0] ?? null;
+  const daysOverDailyCap =
+    dailyLessonCapValue > 0
+      ? nextWeekDailyLoads.filter((day) => day.count > dailyLessonCapValue)
+      : [];
   const capacityDeltaMinutes = nextWeekTotalMinutes - currentWeekTotalMinutes;
   const nextWeekHealthScore = Math.max(
     18,
@@ -1020,6 +1145,7 @@ export function AvailabilityManager({
                 description: `Als al je open momenten worden geboekt, ligt je plafond voor volgende week op ${formatCurrency(nextWeekRevenuePotential)} ${revenueDelta === 0 ? "en dat is gelijk aan deze week" : revenueDelta > 0 ? `(${formatCurrency(revenueDelta)} hoger dan deze week)` : `(${formatCurrency(Math.abs(revenueDelta))} lager dan deze week)`}.`,
             },
         ];
+  const combinedPlanningInsights = [...nextWeekHealthInsights, ...revenueInsights].slice(0, 5);
   const hasWeekCopySuggestion =
     currentWeekActiveEntries.length > 0 &&
     nextWeekActiveEntries.length < currentWeekActiveEntries.length;
@@ -1079,6 +1205,10 @@ export function AvailabilityManager({
           !isBlockingMode && useLessonCadence ? lessonDurationValue : undefined,
         bufferMinuten:
           !isBlockingMode && useLessonCadence ? bufferValue : undefined,
+        maxLessenPerDag:
+          !isBlockingMode && useLessonCadence && dailyLessonCapValue > 0
+            ? dailyLessonCapValue
+            : undefined,
       });
 
       if (result.success) {
@@ -1096,26 +1226,6 @@ export function AvailabilityManager({
   function handleApplyShiftPreset(start: string, end: string) {
     setStartTijd(start);
     setEindTijd(end);
-  }
-
-  function handleUseSelectedSlotAsTemplate() {
-    if (!selectedEntry) {
-      return;
-    }
-
-    const selectedStart = new Date(selectedEntry.startAt);
-    const selectedEnd = new Date(selectedEntry.endAt);
-
-    setDatum(toDateInputValue(selectedStart));
-    setEindDatum(toDateInputValue(selectedEnd));
-    setStartTijd(toTimeInputValue(selectedStart));
-    setEindTijd(toTimeInputValue(selectedEnd));
-    setRepeatWeeks("1");
-    setSelectedWeekdays([]);
-    setUseBreakWindow(false);
-    setCreateMode(selectedEntry.beschikbaar ? "beschikbaar" : "afwezig");
-    setUseLessonCadence(false);
-    toast.success("Het geselecteerde slot staat nu als template in het formulier.");
   }
 
   function handleToggleWeekday(weekday: number) {
@@ -1363,22 +1473,6 @@ export function AvailabilityManager({
     });
   }
 
-  function handleApplyTemplate(templateId: string) {
-    startTransition(async () => {
-      const result = await applyAvailabilityTemplateAction({
-        templateId,
-        startDatum: datum,
-        repeatWeeks: repeatCount,
-      });
-
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
   function handleDuplicateCurrentWeekToNextWeek() {
     startTransition(async () => {
       const result = await duplicateAvailabilityWeekAction({
@@ -1448,8 +1542,8 @@ export function AvailabilityManager({
               Bouw je rooster, buffers en afwezigheid rustig op
             </h2>
             <p className="max-w-3xl text-[13px] leading-6 text-slate-600">
-              Stel hier boekbare werktijden in, blokkeer afwezigheid of verdeel je dag direct
-              in lesblokken met buffer. Daarna zie je elk moment terug in je agenda.
+              Zet hier je werkuren open, blokkeer afwezigheid of verdeel een dag direct in
+              lesblokken. Alles komt daarna meteen terug in je agenda.
             </p>
           </div>
           <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
@@ -1469,8 +1563,8 @@ export function AvailabilityManager({
                     Kies type blok, datum of werkweek, tijd en eventuele herhaling
                   </h3>
                   <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                    Sleep straks in de agenda of vul hieronder handmatig je werktijden in.
-                    Je kunt hier ook direct niet-boekbare tijd of vakantie blokkeren.
+                    Vul je tijden hier handmatig in of sleep straks direct in de agenda.
+                    Je kunt hier ook meteen afwezigheid of vakantie blokkeren.
                   </p>
                 </div>
                 <Badge className="border border-slate-200 bg-white text-slate-700">
@@ -1688,7 +1782,7 @@ export function AvailabilityManager({
 
                   {useLessonCadence ? (
                     <>
-                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-700">
                             Lesduur
@@ -1718,6 +1812,22 @@ export function AvailabilityManager({
                             <option value="15">15 minuten</option>
                             <option value="20">20 minuten</option>
                             <option value="30">30 minuten</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700">
+                            Max lessen per dag
+                          </label>
+                          <select
+                            value={dailyLessonCap}
+                            onChange={(event) => setDailyLessonCap(event.target.value)}
+                            className="native-select h-10 w-full rounded-[0.9rem] px-3 text-[13px]"
+                          >
+                            <option value="0">Geen limiet</option>
+                            <option value="4">4 lessen</option>
+                            <option value="5">5 lessen</option>
+                            <option value="6">6 lessen</option>
+                            <option value="8">8 lessen</option>
                           </select>
                         </div>
                       </div>
@@ -1754,7 +1864,9 @@ export function AvailabilityManager({
 
                       <p className="mt-2.5 text-[13px] leading-6 text-slate-500">
                         {cadencePreviewCount > 0
-                          ? `${cadencePreviewCount} boekbare lesblok${cadencePreviewCount === 1 ? "" : "ken"} passen in dit tijdvak${useBreakWindow && hasBreakPreview ? ", rekening houdend met je pauze" : ""}.`
+                          ? dailyLessonCapWillTrim
+                            ? `${cadencePreviewCount} lesblokken passen in dit tijdvak, maar je daglimiet bewaart er ${cadencePreviewAfterCap}.`
+                            : `${cadencePreviewCount} boekbare lesblok${cadencePreviewCount === 1 ? "" : "ken"} passen in dit tijdvak${useBreakWindow && hasBreakPreview ? ", rekening houdend met je pauze" : ""}.`
                           : "Binnen dit tijdvak past nog geen geldig lesblok. Verleng je werktijd of kies een kortere lesduur."}
                       </p>
                     </>
@@ -1980,83 +2092,6 @@ export function AvailabilityManager({
                     {duration} min
                   </Button>
                 ))}
-                {selectedEntry ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full border-slate-200 bg-white"
-                    onClick={handleUseSelectedSlotAsTemplate}
-                  >
-                    <CopyPlus className="size-4" />
-                    Gebruik geselecteerd blok
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                    Templates
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                    Gebruik vaste patronen zonder opnieuw alles in te voeren
-                  </h3>
-                  <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-600">
-                    Templates starten in de week van de gekozen datum en nemen dezelfde
-                    herhaling over als je huidige instelling.
-                  </p>
-                </div>
-                <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
-                  Startweek {datum}
-                </Badge>
-              </div>
-
-              <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                {availabilityTemplates.map((template) => (
-                  <div
-                    key={template.id}
-                    className="rounded-[1rem] border border-slate-200 bg-white p-3 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-base font-semibold text-slate-950">
-                          {template.title}
-                        </p>
-                        <p className="mt-1 text-sm leading-7 text-slate-600">
-                          {template.description}
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-slate-600 uppercase">
-                        {template.badge}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {template.blocks.map((block) => (
-                        <span
-                          key={`${template.id}-${block.label}`}
-                          className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
-                        >
-                          {block.label}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-4">
-                      <Button
-                        variant="outline"
-                        className="h-10 w-full rounded-full border-slate-200 bg-white"
-                        onClick={() => handleApplyTemplate(template.id)}
-                        disabled={isPending}
-                      >
-                        <CalendarPlus2 className="size-4" />
-                        Template toepassen
-                      </Button>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
@@ -2101,26 +2136,6 @@ export function AvailabilityManager({
               </div>
             </div>
 
-            <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
-              <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                Werkwijze
-              </p>
-              <div className="mt-3 space-y-3 text-sm leading-7 text-slate-600">
-                <p>1. Kies of je tijd opent, splitst in lesblokken of juist blokkeert.</p>
-                <p>2. Controleer in de agenda of alles op de juiste dag en tijd staat.</p>
-                <p>3. Beheer daarna losse blokken of hele reeksen vanuit het geselecteerde slot.</p>
-              </div>
-              <div className="mt-4 rounded-[1.2rem] border border-sky-100 bg-sky-50/70 p-3">
-                <p className="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase">
-                  Huidige focus
-                </p>
-                <p className="mt-2 text-sm leading-7 text-slate-700">
-                  {selectedEntry
-                    ? `${selectedEntry.shortDay} - ${selectedEntry.tijdvak}`
-                    : "Nog geen tijdslot geselecteerd. Kies straks een blok in je agenda voor snelle beheeracties."}
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -2624,321 +2639,6 @@ export function AvailabilityManager({
               )}
             </div>
 
-            <div className="hidden rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                    Beschikbaarheidshealth
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                    Zie hoe sterk je volgende week staat
-                  </h3>
-                  <p className="mt-1 text-sm leading-7 text-slate-600">
-                    We kijken naar volume, spreiding en prime-time dekking zodat je sneller ziet
-                    waar nog winst ligt.
-                  </p>
-                </div>
-                <Badge className={cn("border", nextWeekHealthBadge.className)}>
-                  {nextWeekHealthBadge.label} - {nextWeekHealthScore}/100
-                </Badge>
-              </div>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className={cn("h-full rounded-full", nextWeekHealthBadge.barClassName)}
-                  style={{ width: `${nextWeekHealthScore}%` }}
-                />
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {[
-                  {
-                    label: "Open uren",
-                    value: formatMinutesLabel(nextWeekTotalMinutes),
-                    hint: "Volgende week",
-                  },
-                  {
-                    label: "Actieve dagen",
-                    value: `${nextWeekDaySpread} ${nextWeekDaySpread === 1 ? "dag" : "dagen"}`,
-                    hint: "Verspreiding",
-                  },
-                  {
-                    label: "Trend",
-                    value: formatMinutesDeltaLabel(capacityDeltaMinutes),
-                    hint: "Vs deze week",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-[0.9rem] border border-white/80 bg-white/90 p-2.5 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]"
-                  >
-                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                      {item.label}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">{item.value}</p>
-                    <p className="mt-1 text-xs text-slate-500">{item.hint}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {nextWeekHealthInsights.map((insight) => (
-                  <div
-                    key={insight.title}
-                    className={cn(
-                      "rounded-[1.2rem] border p-4",
-                      insight.tone === "good"
-                        ? "border-emerald-200 bg-emerald-50/70"
-                        : insight.tone === "watch"
-                          ? "border-amber-200 bg-amber-50/80"
-                          : "border-slate-200 bg-white/90"
-                    )}
-                  >
-                    <p
-                      className={cn(
-                        "text-[11px] font-semibold tracking-[0.16em] uppercase",
-                        insight.tone === "good"
-                          ? "text-emerald-700"
-                          : insight.tone === "watch"
-                            ? "text-amber-700"
-                            : "text-slate-500"
-                      )}
-                    >
-                      {insight.eyebrow}
-                    </p>
-                    <p className="mt-2 font-semibold text-slate-950">{insight.title}</p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      {insight.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="hidden rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                    Commerciële vooruitblik
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                    Zie wat je open agenda ongeveer kan opleveren
-                  </h3>
-                  <p className="mt-1 text-sm leading-7 text-slate-600">
-                    Deze indicatie combineert je actieve slots, prijs per les en spreiding in de
-                    komende week.
-                  </p>
-                </div>
-                <Badge className={cn("border", bookingChanceTone.className)}>
-                  Boekingskans {bookingChanceTone.label} - {bookingChanceScore}%
-                </Badge>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {[
-                  {
-                    label: "Prijs per les",
-                    value: pricePerLesson > 0 ? formatCurrency(pricePerLesson) : "Nog leeg",
-                    hint: "Profielprijs",
-                  },
-                  {
-                    label: "Verwachte boekingen",
-                    value:
-                      nextWeekActiveEntries.length > 0 ? `${projectedBookings}` : "0",
-                    hint: "Indicatief voor volgende week",
-                  },
-                  {
-                    label: "Realistische weekomzet",
-                    value:
-                      pricePerLesson > 0 ? formatCurrency(projectedRevenue) : "Vul prijs in",
-                    hint: "Bij huidige openstelling",
-                  },
-                  {
-                    label: "Vol potentieel",
-                    value:
-                      pricePerLesson > 0
-                        ? formatCurrency(nextWeekRevenuePotential)
-                        : "Nog niet berekend",
-                    hint: "Als alle open slots boeken",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-[0.9rem] border border-white/80 bg-white/90 p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]"
-                  >
-                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                      {item.label}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">{item.value}</p>
-                    <p className="mt-1 text-xs text-slate-500">{item.hint}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-3 rounded-[0.9rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(14,165,233,0.08),rgba(59,130,246,0.12),rgba(255,255,255,0.9))] p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="border border-slate-200 bg-white text-slate-700">
-                    Stretch-potentieel {pricePerLesson > 0 ? formatCurrency(stretchRevenue) : "beschikbaar na prijs"}
-                  </Badge>
-                  <Badge className="border border-white/80 bg-white/80 text-slate-700">
-                    {nextWeekPrimeTimeSlots} prime-time {nextWeekPrimeTimeSlots === 1 ? "slot" : "slots"}
-                  </Badge>
-                </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Prime-time telt hier als avond of weekend. Juist die momenten verhogen vaak je
-                  boekingskans bij leerlingen met werk, studie of gezinsdrukte.
-                </p>
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {revenueInsights.map((insight) => (
-                  <div
-                    key={insight.title}
-                    className={cn(
-                      "rounded-[1.2rem] border p-4",
-                      insight.tone === "good"
-                        ? "border-emerald-200 bg-emerald-50/70"
-                        : insight.tone === "watch"
-                          ? "border-amber-200 bg-amber-50/80"
-                          : "border-slate-200 bg-white/90"
-                    )}
-                  >
-                    <p
-                      className={cn(
-                        "text-[11px] font-semibold tracking-[0.16em] uppercase",
-                        insight.tone === "good"
-                          ? "text-emerald-700"
-                          : insight.tone === "watch"
-                            ? "text-amber-700"
-                            : "text-slate-500"
-                      )}
-                    >
-                      {insight.eyebrow}
-                    </p>
-                    <p className="mt-2 font-semibold text-slate-950">{insight.title}</p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      {insight.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="hidden rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                    Slimme suggesties
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                    Snelle acties op basis van je planning
-                  </h3>
-                  <p className="mt-1 text-sm leading-7 text-slate-600">
-                    Deze voorstellen kijken naar gaten in je komende planning en vullen die met
-                    een klik.
-                  </p>
-                </div>
-                <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
-                  Live advies
-                </Badge>
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {currentWeekActiveEntries.length > 0 &&
-                nextWeekActiveEntries.length < currentWeekActiveEntries.length ? (
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="font-semibold text-slate-950">
-                      Volgende week heeft minder open blokken dan deze week
-                    </p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Deze week heeft {currentWeekActiveEntries.length} actieve blokken en
-                      volgende week {nextWeekActiveEntries.length}. Je kunt de actieve blokken
-                      van deze week in een keer doorschuiven.
-                    </p>
-                    <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        className="h-10 rounded-full border-slate-200 bg-white"
-                        onClick={handleDuplicateCurrentWeekToNextWeek}
-                        disabled={isPending}
-                      >
-                        <CopyPlus className="size-4" />
-                        Dupliceer deze week naar volgende week
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {nextWeekEveningSuggestion ? (
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="font-semibold text-slate-950">
-                      Open een extra avondslot volgende week
-                    </p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Je avondplanning kan sterker. Voeg direct {nextWeekEveningSuggestion.label} toe
-                      om beter zichtbaar te zijn voor leerlingen na werk of studie.
-                    </p>
-                    <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        className="h-10 rounded-full border-slate-200 bg-white"
-                        onClick={handleApplyEveningSuggestion}
-                        disabled={isPending}
-                      >
-                        <CalendarPlus2 className="size-4" />
-                        Avondslot toevoegen
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {nextWeekWeekendSuggestion ? (
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="font-semibold text-slate-950">
-                      Je weekend heeft nog ruimte
-                    </p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Weekendslots trekken vaak leerlingen aan die doordeweeks minder flexibel
-                      zijn. Voeg direct {nextWeekWeekendSuggestion.label} toe.
-                    </p>
-                    <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        className="h-10 rounded-full border-slate-200 bg-white"
-                        onClick={handleApplyWeekendSuggestion}
-                        disabled={isPending}
-                      >
-                        <CalendarPlus2 className="size-4" />
-                        Weekendblok toevoegen
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {!(
-                  (currentWeekActiveEntries.length > 0 &&
-                    nextWeekActiveEntries.length < currentWeekActiveEntries.length) ||
-                  nextWeekEveningSuggestion ||
-                  nextWeekWeekendSuggestion
-                ) ? (
-                  <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-white p-3 text-sm leading-6 text-slate-600">
-                    Je komende planning ziet er nu mooi in balans uit. Zodra er gaten ontstaan,
-                    verschijnen hier automatisch nieuwe suggesties.
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="hidden rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/80 p-3">
-              <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                Tip
-              </p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">
-                In de weekweergave kun je ook slepen om datum en tijden meteen in het formulier
-                te zetten. Combineer dat met een herhaling als je vaste maandag- of zaterdagblokken
-                wilt openen.
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -2947,25 +2647,29 @@ export function AvailabilityManager({
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <p className="text-xs font-semibold tracking-[0.22em] text-primary uppercase">
-              Stap 3 - Inzichten en advies
+              Stap 3 - Rooster en advies
             </p>
             <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
-              Bekijk alleen de inzichten die je nu nodig hebt
+              Houd ritme, uitzonderingen en verbeterkansen bij elkaar
             </h3>
             <p className="max-w-3xl text-sm leading-7 text-slate-600">
-              Health, omzet en slimme suggesties staan nu los van je agenda. Daardoor voelt de
-              planning rustiger en kun je gerichter schakelen.
+              Je vaste weekrooster, losse uitzonderingen en de belangrijkste inzichten staan hier
+              compacter onder elkaar, zodat je sneller ziet waar je nog wilt bijsturen.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {[
-              { key: "health", label: "Health", meta: `${nextWeekHealthScore}/100` },
               {
-                key: "commercial",
-                label: "Omzet",
+                key: "rooster",
+                label: "Rooster",
                 meta:
-                  pricePerLesson > 0 ? formatCurrency(projectedRevenue) : "Prijs ontbreekt",
+                  recurringRuleSummaries.length > 0
+                    ? `${recurringRuleSummaries.length} vast`
+                    : upcomingExceptionWindows.length > 0
+                      ? `${upcomingExceptionWindows.length} los`
+                      : "Nog leeg",
               },
+              { key: "health", label: "Health", meta: `${nextWeekHealthScore}/100` },
               {
                 key: "suggestions",
                 label: "Acties",
@@ -2976,7 +2680,7 @@ export function AvailabilityManager({
                 key={tab.key}
                 type="button"
                 onClick={() =>
-                  setInsightView(tab.key as "health" | "commercial" | "suggestions")
+                  setInsightView(tab.key as "rooster" | "health" | "suggestions")
                 }
                 className={cn(
                   "rounded-full border px-4 py-2 text-sm font-medium transition-all",
@@ -2991,115 +2695,284 @@ export function AvailabilityManager({
           </div>
         </div>
 
-        {insightView === "health" ? (
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-            <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                    Beschikbaarheidshealth
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                    Zie hoe sterk je volgende week staat
-                  </h3>
-                  <p className="mt-1 text-sm leading-7 text-slate-600">
-                    We kijken naar volume, spreiding en prime-time dekking zodat je sneller ziet
-                    waar nog winst ligt.
-                  </p>
-                </div>
-                <Badge className={cn("border", nextWeekHealthBadge.className)}>
-                  {nextWeekHealthBadge.label} - {nextWeekHealthScore}/100
-                </Badge>
-              </div>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className={cn("h-full rounded-full", nextWeekHealthBadge.barClassName)}
-                  style={{ width: `${nextWeekHealthScore}%` }}
-                />
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {[
-                  {
-                    label: "Open uren",
-                    value: formatMinutesLabel(nextWeekTotalMinutes),
-                    hint: "Volgende week",
-                  },
-                  {
-                    label: "Actieve dagen",
-                    value: `${nextWeekDaySpread} ${nextWeekDaySpread === 1 ? "dag" : "dagen"}`,
-                    hint: "Verspreiding",
-                  },
-                  {
-                    label: "Trend",
-                    value: formatMinutesDeltaLabel(capacityDeltaMinutes),
-                    hint: "Vs deze week",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-[0.9rem] border border-white/80 bg-white/90 p-2.5 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]"
-                  >
-                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                      {item.label}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">{item.value}</p>
-                    <p className="mt-1 text-xs text-slate-500">{item.hint}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              {nextWeekHealthInsights.map((insight) => (
-                <div
-                  key={insight.title}
-                  className={cn(
-                    "rounded-[1.2rem] border p-4",
-                    insight.tone === "good"
-                      ? "border-emerald-200 bg-emerald-50/70"
-                      : insight.tone === "watch"
-                        ? "border-amber-200 bg-amber-50/80"
-                        : "border-slate-200 bg-white/90"
-                  )}
-                >
-                  <p
-                    className={cn(
-                      "text-[11px] font-semibold tracking-[0.16em] uppercase",
-                      insight.tone === "good"
-                        ? "text-emerald-700"
-                        : insight.tone === "watch"
-                          ? "text-amber-700"
-                          : "text-slate-500"
-                    )}
-                  >
-                    {insight.eyebrow}
-                  </p>
-                  <p className="mt-2 font-semibold text-slate-950">{insight.title}</p>
-                  <p className="mt-1 text-sm leading-7 text-slate-600">{insight.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {insightView === "commercial" ? (
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)]">
+        {insightView === "rooster" ? (
+          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
             <div className="space-y-4">
               <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Commerciele vooruitblik
+                      Standaard weekrooster
                     </p>
                     <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                      Zie wat je open agenda ongeveer kan opleveren
+                      Dit zijn je vaste terugkerende werktijden
                     </h3>
                     <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Deze indicatie combineert je actieve slots, prijs per les en spreiding in de
-                      komende week.
+                      Klik een regel open als je die vaste weekplanning direct wilt aanpassen.
                     </p>
+                  </div>
+                  <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
+                    {recurringRuleSummaries.length
+                      ? `${recurringRuleSummaries.length} vaste dagen`
+                      : "Nog leeg"}
+                  </Badge>
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {recurringRuleSummaries.length ? (
+                    recurringRuleSummaries.map((rule) => (
+                      <button
+                        key={rule.ruleId}
+                        type="button"
+                        onClick={() => setSelectedSlotId(rule.slotId)}
+                        className="rounded-[0.95rem] border border-white/80 bg-white/90 p-3 text-left shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-950 capitalize">
+                              {rule.dayLabel}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-600">{rule.timeLabel}</p>
+                            {rule.pauseLabel ? (
+                              <p className="mt-1 text-xs text-slate-500">
+                                Pauze {rule.pauseLabel}
+                              </p>
+                            ) : null}
+                          </div>
+                          <span
+                            className={cn(
+                              "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                              rule.beschikbaar
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-slate-200 bg-slate-100 text-slate-700"
+                            )}
+                          >
+                            {rule.beschikbaar ? "Boekbaar" : "Dicht"}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-white p-3 text-sm leading-6 text-slate-600">
+                      Je hebt nog geen vaste weekplanning. Kies bij herhaling voor
+                      <span className="font-semibold text-slate-950">
+                        {" "}vaste weekplanning
+                      </span>{" "}
+                      als je standaard werkdagen wekelijks wilt laten terugkomen.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                      Uitzonderingen en losse blokken
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                      Eenmalige aanvullingen of blokkades
+                    </h3>
+                    <p className="mt-1 text-sm leading-7 text-slate-600">
+                      Handig om snel te zien wat afwijkt van je vaste weekritme.
+                    </p>
+                  </div>
+                  <Badge className="border border-slate-200 bg-slate-50 text-slate-700">
+                    {upcomingExceptionWindows.length
+                      ? `${upcomingExceptionWindows.length} zichtbaar`
+                      : "Rustig"}
+                  </Badge>
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {upcomingExceptionWindows.length ? (
+                    upcomingExceptionWindows.map((entry) => (
+                      <button
+                        key={entry.key}
+                        type="button"
+                        onClick={() => setSelectedSlotId(entry.slotId)}
+                        className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3 text-left transition-colors hover:border-slate-300 hover:bg-white"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-950">
+                              {entry.dayLabel}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-600">{entry.momentLabel}</p>
+                            <p className="mt-1 text-xs text-slate-500">{entry.kindLabel}</p>
+                          </div>
+                          <span
+                            className={cn(
+                              "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                              entry.beschikbaar
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-slate-200 bg-slate-100 text-slate-700"
+                            )}
+                          >
+                            {entry.beschikbaar ? "Open" : "Dicht"}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-slate-50/70 p-3 text-sm leading-6 text-slate-600">
+                      Er staan nu geen losse uitzonderingen op korte termijn. Dat betekent meestal
+                      dat je agenda vooral op je vaste weekritme draait.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
+                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                  Max lessen per dag
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
+                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                      Gekozen limiet
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {dailyLessonCapValue > 0 ? `${dailyLessonCapValue} per dag` : "Geen limiet"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Geldt direct voor nieuwe lesblokken met buffer.
+                    </p>
+                  </div>
+                  <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
+                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                      Piek volgende week
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {highestDailyLoad
+                        ? `${highestDailyLoad.count} lesblok${highestDailyLoad.count === 1 ? "" : "ken"}`
+                        : "Nog leeg"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {highestDailyLoad ? highestDailyLoad.dayLabel : "Geen actieve lesdag gevonden"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  {dailyLessonCapValue > 0 ? (
+                    daysOverDailyCap.length ? (
+                      <div className="rounded-[0.95rem] border border-amber-200 bg-amber-50/80 p-3">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="mt-0.5 size-4 text-amber-700" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-slate-950">
+                              Een paar dagen gaan boven je gekozen limiet
+                            </p>
+                            <div className="text-sm leading-6 text-slate-600">
+                              {daysOverDailyCap.slice(0, 3).map((day) => (
+                                <p key={day.dateValue}>
+                                  {day.dayLabel}: {day.count} lesblokken
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-[0.95rem] border border-emerald-200 bg-emerald-50/80 p-3 text-sm leading-6 text-slate-700">
+                        Je volgende week blijft binnen je gekozen daglimiet. Dat geeft meestal een
+                        rustiger rooster en minder overvolle dagen.
+                      </div>
+                    )
+                  ) : (
+                    <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm leading-6 text-slate-600">
+                      Kies hier een limiet als je minder volle lesdagen wilt plannen of jezelf wat
+                      meer lucht wilt geven tussen drukke dagen.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/80 p-3">
+                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                  Tip
+                </p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  Gebruik je vaste weekplanning voor je normale ritme en voeg losse blokken alleen
+                  toe voor uitzonderingen zoals extra avonden, vrije dagen of vakanties.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {insightView === "health" ? (
+          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]">
+            <div className="space-y-4">
+              <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                      Beschikbaarheidshealth
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                      Zie hoe sterk je volgende week staat
+                    </h3>
+                    <p className="mt-1 text-sm leading-7 text-slate-600">
+                      We kijken vooral naar volume, spreiding en prime-time dekking.
+                    </p>
+                  </div>
+                  <Badge className={cn("border", nextWeekHealthBadge.className)}>
+                    {nextWeekHealthBadge.label} - {nextWeekHealthScore}/100
+                  </Badge>
+                </div>
+
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={cn("h-full rounded-full", nextWeekHealthBadge.barClassName)}
+                    style={{ width: `${nextWeekHealthScore}%` }}
+                  />
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {[
+                    {
+                      label: "Open uren",
+                      value: formatMinutesLabel(nextWeekTotalMinutes),
+                      hint: "Volgende week",
+                    },
+                    {
+                      label: "Actieve dagen",
+                      value: `${nextWeekDaySpread} ${nextWeekDaySpread === 1 ? "dag" : "dagen"}`,
+                      hint: "Verspreiding",
+                    },
+                    {
+                      label: "Trend",
+                      value: formatMinutesDeltaLabel(capacityDeltaMinutes),
+                      hint: "Vs deze week",
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-[0.9rem] border border-white/80 bg-white/90 p-2.5 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]"
+                    >
+                      <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-slate-950">{item.value}</p>
+                      <p className="mt-1 text-xs text-slate-500">{item.hint}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                      Commercieel beeld
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                      Wat je open agenda ongeveer kan opleveren
+                    </h3>
                   </div>
                   <Badge className={cn("border", bookingChanceTone.className)}>
                     Boekingskans {bookingChanceTone.label} - {bookingChanceScore}%
@@ -3116,13 +2989,13 @@ export function AvailabilityManager({
                     {
                       label: "Verwachte boekingen",
                       value: nextWeekActiveEntries.length > 0 ? `${projectedBookings}` : "0",
-                      hint: "Indicatief voor volgende week",
+                      hint: "Indicatief",
                     },
                     {
-                      label: "Realistische weekomzet",
+                      label: "Weekomzet",
                       value:
                         pricePerLesson > 0 ? formatCurrency(projectedRevenue) : "Vul prijs in",
-                      hint: "Bij huidige openstelling",
+                      hint: "Realistisch",
                     },
                     {
                       label: "Vol potentieel",
@@ -3130,12 +3003,12 @@ export function AvailabilityManager({
                         pricePerLesson > 0
                           ? formatCurrency(nextWeekRevenuePotential)
                           : "Nog niet berekend",
-                      hint: "Als alle open slots boeken",
+                      hint: "Als alles boekt",
                     },
                   ].map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-[0.9rem] border border-white/80 bg-white/90 p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]"
+                      className="rounded-[0.9rem] border border-slate-200 bg-slate-50/70 p-3"
                     >
                       <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                         {item.label}
@@ -3146,29 +3019,12 @@ export function AvailabilityManager({
                   ))}
                 </div>
               </div>
-
-              <div className="rounded-[0.9rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(14,165,233,0.08),rgba(59,130,246,0.12),rgba(255,255,255,0.9))] p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="border border-slate-200 bg-white text-slate-700">
-                    Stretch-potentieel{" "}
-                    {pricePerLesson > 0 ? formatCurrency(stretchRevenue) : "beschikbaar na prijs"}
-                  </Badge>
-                  <Badge className="border border-white/80 bg-white/80 text-slate-700">
-                    {nextWeekPrimeTimeSlots} prime-time{" "}
-                    {nextWeekPrimeTimeSlots === 1 ? "slot" : "slots"}
-                  </Badge>
-                </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Prime-time telt hier als avond of weekend. Juist die momenten verhogen vaak je
-                  boekingskans bij leerlingen met werk, studie of gezinsdrukte.
-                </p>
-              </div>
             </div>
 
             <div className="grid gap-3">
-              {revenueInsights.map((insight) => (
+              {combinedPlanningInsights.map((insight) => (
                 <div
-                  key={insight.title}
+                  key={`${insight.eyebrow}-${insight.title}`}
                   className={cn(
                     "rounded-[1.2rem] border p-4",
                     insight.tone === "good"
@@ -3210,8 +3066,7 @@ export function AvailabilityManager({
                     Snelle acties op basis van je planning
                   </h3>
                   <p className="mt-1 text-sm leading-7 text-slate-600">
-                    Deze voorstellen kijken naar gaten in je komende planning en vullen die met
-                    een klik.
+                    Gebruik deze knoppen alleen als er echt een logisch gat of kans ligt.
                   </p>
                 </div>
                 <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -3226,9 +3081,9 @@ export function AvailabilityManager({
                       Volgende week heeft minder open blokken dan deze week
                     </p>
                     <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Deze week heeft {currentWeekActiveEntries.length} actieve blokken en
-                      volgende week {nextWeekActiveEntries.length}. Je kunt de actieve blokken van
-                      deze week in een keer doorschuiven.
+                      Deze week heeft {currentWeekActiveEntries.length} actieve blokken en volgende
+                      week {nextWeekActiveEntries.length}. Je kunt de actieve blokken van deze week
+                      in één keer doorschuiven.
                     </p>
                     <div className="mt-3">
                       <Button
@@ -3250,8 +3105,8 @@ export function AvailabilityManager({
                       Open een extra avondslot volgende week
                     </p>
                     <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Je avondplanning kan sterker. Voeg direct {nextWeekEveningSuggestion.label} toe
-                      om beter zichtbaar te zijn voor leerlingen na werk of studie.
+                      Voeg direct {nextWeekEveningSuggestion.label} toe om beter zichtbaar te zijn
+                      voor leerlingen na werk of studie.
                     </p>
                     <div className="mt-3">
                       <Button
@@ -3271,8 +3126,8 @@ export function AvailabilityManager({
                   <div className="rounded-[0.95rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]">
                     <p className="font-semibold text-slate-950">Je weekend heeft nog ruimte</p>
                     <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Weekendslots trekken vaak leerlingen aan die doordeweeks minder flexibel
-                      zijn. Voeg direct {nextWeekWeekendSuggestion.label} toe.
+                      Voeg direct {nextWeekWeekendSuggestion.label} toe als je meer flexibiliteit
+                      voor leerlingen wilt tonen.
                     </p>
                     <div className="mt-3">
                       <Button
@@ -3290,8 +3145,8 @@ export function AvailabilityManager({
 
                 {!smartSuggestionCount ? (
                   <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-white p-3 text-sm leading-6 text-slate-600">
-                    Je komende planning ziet er nu mooi in balans uit. Zodra er gaten ontstaan,
-                    verschijnen hier automatisch nieuwe suggesties.
+                    Je komende planning ziet er nu mooi in balans uit. Zodra er weer gaten
+                    ontstaan, verschijnen hier automatisch nieuwe suggesties.
                   </div>
                 ) : null}
               </div>
@@ -3300,12 +3155,12 @@ export function AvailabilityManager({
             <div className="space-y-4">
               <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
                 <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                  Wanneer gebruiken
+                  Wanneer slim
                 </p>
                 <div className="mt-3 space-y-3 text-sm leading-7 text-slate-600">
-                  <p>Gebruik dupliceren als volgende week minder volume heeft dan deze week.</p>
-                  <p>Kies een avondslot als je meer prime-time beschikbaarheid wilt tonen.</p>
-                  <p>Voeg een weekendblok toe als doordeweekse leerlingen moeilijk kunnen plannen.</p>
+                  <p>Gebruik dupliceren alleen als volgende week echt minder volume heeft.</p>
+                  <p>Kies een avondslot als je prime-time zichtbaarheid mist.</p>
+                  <p>Voeg een weekendblok toe als doordeweekse leerlingen weinig ruimte hebben.</p>
                 </div>
               </div>
 
@@ -3314,8 +3169,8 @@ export function AvailabilityManager({
                   Tip
                 </p>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Combineer een slimme suggestie met een herhaling als je merkt dat dezelfde gaten
-                  vaker terugkomen. Zo bouw je sneller een stabiel weekritme op.
+                  Combineer een slimme suggestie daarna met je vaste weekplanning, zodat losse
+                  noodgrepen niet ongemerkt je standaardritme worden.
                 </p>
               </div>
             </div>
