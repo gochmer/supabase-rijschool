@@ -49,7 +49,7 @@ import {
   getStartOfWeekDateValue,
 } from "@/lib/availability";
 import { formatCurrency } from "@/lib/format";
-import type { BeschikbaarheidSlot } from "@/lib/types";
+import type { BeschikbaarheidSlot, Les } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,17 @@ type AvailabilityEntry = {
   durationLabel: string;
   source: "slot" | "weekrooster";
   weekroosterId: string | null;
+};
+
+type BookedLessonEntry = {
+  id: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+  status: Les["status"];
+  learnerName: string;
+  location: string;
+  timeLabel: string;
 };
 
 type LinkedAvailabilityWindow = {
@@ -117,9 +128,32 @@ function createAvailabilityEntry(slot: BeschikbaarheidSlot): AvailabilityEntry |
   };
 }
 
+function createBookedLessonEntry(lesson: Les): BookedLessonEntry | null {
+  if (!lesson.start_at || !lesson.end_at) {
+    return null;
+  }
+
+  return {
+    id: lesson.id,
+    title: lesson.titel,
+    startAt: lesson.start_at,
+    endAt: lesson.end_at,
+    status: lesson.status,
+    learnerName: lesson.leerling_naam || "Leerling",
+    location: lesson.locatie || "Locatie volgt nog",
+    timeLabel: formatAvailabilityMoment(lesson.start_at, lesson.end_at),
+  };
+}
+
 function isAvailabilityEntry(
   entry: AvailabilityEntry | null
 ): entry is AvailabilityEntry {
+  return entry !== null;
+}
+
+function isBookedLessonEntry(
+  entry: BookedLessonEntry | null
+): entry is BookedLessonEntry {
   return entry !== null;
 }
 
@@ -303,20 +337,6 @@ function addMinutesToTimeValue(timeValue: string, minutesToAdd: number) {
   return `${pad(nextHours)}:${pad(nextMinutes)}`;
 }
 
-function getWeekRange() {
-  const now = new Date();
-  const currentDay = now.getDay();
-  const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() + distanceToMonday);
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 7);
-
-  return { startOfWeek, endOfWeek };
-}
-
 function timeValueToMinutes(timeValue: string) {
   const [hours, minutes] = timeValue
     .split(":")
@@ -427,9 +447,11 @@ function formatWeekdayNameFromIso(isoValue: string) {
 
 export function AvailabilityManager({
   slots,
+  lessons = [],
   pricePerLesson = 0,
 }: {
   slots: BeschikbaarheidSlot[];
+  lessons?: Les[];
   pricePerLesson?: number;
 }) {
   const [compact, setCompact] = useState(false);
@@ -478,6 +500,20 @@ export function AvailabilityManager({
         .filter(isAvailabilityEntry)
         .sort((left, right) => left.startAt.localeCompare(right.startAt)),
     [slots]
+  );
+  const bookedLessons = useMemo(
+    () =>
+      lessons
+        .filter(
+          (lesson) =>
+            (lesson.status === "geaccepteerd" || lesson.status === "ingepland") &&
+            Boolean(lesson.start_at) &&
+            Boolean(lesson.end_at)
+        )
+        .map(createBookedLessonEntry)
+        .filter(isBookedLessonEntry)
+        .sort((left, right) => left.startAt.localeCompare(right.startAt)),
+    [lessons]
   );
 
   useEffect(() => {
@@ -590,8 +626,8 @@ export function AvailabilityManager({
     selectedEntry?.source === "weekrooster" && Boolean(selectedEntry.weekroosterId);
 
   const events = useMemo<EventInput[]>(
-    () =>
-      filteredEntries.map((entry) => ({
+    () => [
+      ...filteredEntries.map((entry) => ({
         id: entry.id,
         title: entry.beschikbaar ? "Boekbaar" : "Niet boekbaar",
         start: entry.startAt,
@@ -602,15 +638,36 @@ export function AvailabilityManager({
         classNames: entry.beschikbaar
           ? ["lesson-calendar-event--availability"]
           : ["lesson-calendar-event--availability", "lesson-calendar-event--availability-muted"],
+        extendedProps: {
+          kind: "availability",
+        },
       })),
-    [filteredEntries]
+      ...bookedLessons.map((lesson) => ({
+        id: `lesson-${lesson.id}`,
+        title: `Les - ${lesson.learnerName}`,
+        start: lesson.startAt,
+        end: lesson.endAt,
+        backgroundColor: "#fef3c7",
+        borderColor: "#f59e0b",
+        textColor: "#78350f",
+        classNames: ["lesson-calendar-event--request"],
+        extendedProps: {
+          kind: "lesson",
+        },
+      })),
+    ],
+    [bookedLessons, filteredEntries]
   );
 
-  const { startOfWeek, endOfWeek } = useMemo(() => getWeekRange(), []);
   const dashboardHorizonEnd = useMemo(
     () => new Date(new Date().getTime() + 56 * 24 * 60 * 60_000),
     []
   );
+  const bookedLessonCount = bookedLessons.filter((lesson) => {
+    const start = new Date(lesson.startAt);
+    return start <= dashboardHorizonEnd;
+  }).length;
+  const nextBookedLesson = bookedLessons[0] ?? null;
   const activeCount = entries.filter((entry) => {
     const start = new Date(entry.startAt);
     return entry.beschikbaar && start <= dashboardHorizonEnd;
@@ -618,10 +675,6 @@ export function AvailabilityManager({
   const hiddenCount = entries.filter((entry) => {
     const start = new Date(entry.startAt);
     return !entry.beschikbaar && start <= dashboardHorizonEnd;
-  }).length;
-  const weeklyCount = entries.filter((entry) => {
-    const start = new Date(entry.startAt);
-    return start >= startOfWeek && start < endOfWeek;
   }).length;
   const isOngoingWeekSchedule = repeatWeeks === "ongoing";
   const repeatCount =
@@ -1532,8 +1585,8 @@ export function AvailabilityManager({
 
   return (
     <div className="availability-manager space-y-4">
-      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
+        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
               Stap 1 - Tijd openen
@@ -1542,8 +1595,7 @@ export function AvailabilityManager({
               Bouw je rooster, buffers en afwezigheid rustig op
             </h2>
             <p className="max-w-3xl text-[13px] leading-6 text-slate-600">
-              Zet hier je werkuren open, blokkeer afwezigheid of verdeel een dag direct in
-              lesblokken. Alles komt daarna meteen terug in je agenda.
+              Zet werkuren open, blokkeer afwezigheid of verdeel een dag direct in lesblokken.
             </p>
           </div>
           <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
@@ -1563,8 +1615,7 @@ export function AvailabilityManager({
                     Kies type blok, datum of werkweek, tijd en eventuele herhaling
                   </h3>
                   <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                    Vul je tijden hier handmatig in of sleep straks direct in de agenda.
-                    Je kunt hier ook meteen afwezigheid of vakantie blokkeren.
+                    Vul tijden in of blokkeer meteen afwezigheid en vakantie.
                   </p>
                 </div>
                 <Badge className="border border-slate-200 bg-white text-slate-700">
@@ -1577,8 +1628,7 @@ export function AvailabilityManager({
                   <div>
                     <p className="text-[13px] font-semibold text-slate-950">Type planning</p>
                     <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      Kies of je tijd openzet voor leerlingen of juist bewust blokkeert als
-                      afwezig, vakantie of gesloten moment.
+                      Kies of dit blok boekbaar is of juist intern dicht blijft.
                     </p>
                   </div>
                 </div>
@@ -1650,8 +1700,7 @@ export function AvailabilityManager({
                       </Button>
                     </div>
                     <p className="mt-2.5 text-[13px] leading-6 text-slate-600">
-                      Gebruik `van-tot` voor meivakantie, vrije weken of langere afwezigheid
-                      zonder elke dag los te blokkeren.
+                      Handig voor langere afwezigheid zonder elke dag los te blokkeren.
                     </p>
                   </div>
                 ) : null}
@@ -1731,9 +1780,8 @@ export function AvailabilityManager({
                     <p className="text-sm font-semibold text-slate-950">
                       Snelle werkdag-presets
                     </p>
-                    <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-600">
-                      Zet met een klik een veelgebruikte werktijd klaar en verfijn daarna
-                      eventueel de details.
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+                      Zet met één klik een veelgebruikte werktijd klaar.
                     </p>
                   </div>
                 </div>
@@ -1762,8 +1810,7 @@ export function AvailabilityManager({
                         Lesblokken en buffer
                       </p>
                       <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                        Laat een groter werkblok automatisch opdelen in kleinere boekbare lessen,
-                        met optioneel rust of reistijd ertussen.
+                        Deel een groter werkblok automatisch op in kleinere boekbare lessen.
                       </p>
                     </div>
                     <Button
@@ -1871,10 +1918,9 @@ export function AvailabilityManager({
                       </p>
                     </>
                   ) : (
-                    <p className="mt-2.5 text-[13px] leading-6 text-slate-500">
-                      Handig als je liever met vaste lesblokken werkt dan met een groot open
-                      werkblok.
-                    </p>
+                      <p className="mt-2.5 text-[13px] leading-6 text-slate-500">
+                        Handig als je liever met vaste lesblokken werkt.
+                      </p>
                   )}
                 </div>
               ) : null}
@@ -1886,8 +1932,7 @@ export function AvailabilityManager({
                       Werkdagen instellen
                     </p>
                       <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      Selecteer een of meer werkdagen als je dezelfde werktijden in een week of
-                      reeks wilt openen.
+                      Selecteer werkdagen als je dezelfde tijden in een week of reeks wilt openen.
                     </p>
                   </div>
                   {isWeekScheduleMode ? (
@@ -1962,9 +2007,8 @@ export function AvailabilityManager({
                     <p className="text-sm font-semibold text-slate-950">
                       Pauzemoment inplannen
                     </p>
-                    <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-600">
-                      Laat je werkdag automatisch opsplitsen in twee boekbare blokken, bijvoorbeeld
-                      rondom lunch of een korte rustpauze.
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+                      Splits je werkdag automatisch in twee boekbare blokken met een pauze ertussen.
                     </p>
                   </div>
                   <Button
@@ -2030,9 +2074,8 @@ export function AvailabilityManager({
                     </p>
                   </>
                 ) : (
-                  <p className="mt-3 text-sm leading-7 text-slate-500">
-                    Handig als je een lunch, schoolrun of korte adempauze in je rooster wilt
-                    meenemen zonder alles los op te knippen.
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    Handig voor lunch of een korte rustpauze zonder alles los op te knippen.
                   </p>
                 )}
               </div>
@@ -2114,8 +2157,8 @@ export function AvailabilityManager({
                     icon: CalendarDays,
                   },
                   {
-                    label: "Deze week",
-                    value: `${weeklyCount}`,
+                    label: "Ingeplande lessen",
+                    value: `${bookedLessonCount}`,
                     icon: CalendarClock,
                   },
                   { label: "Niet boekbaar", value: `${hiddenCount}`, icon: EyeOff },
@@ -2140,8 +2183,8 @@ export function AvailabilityManager({
         </div>
       </div>
 
-      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
               Stap 2 - Agenda beheren
@@ -2150,8 +2193,7 @@ export function AvailabilityManager({
               Bekijk je agenda en beheer je tijdsloten vanuit een vaste plek
             </h3>
             <p className="max-w-3xl text-[13px] leading-6 text-slate-600">
-              Gebruik de kalender als hoofdweergave. Klik op een bestaand slot om rechts de
-              details en acties rustig bij elkaar te zien.
+              Gebruik de kalender als hoofdweergave en beheer rechts je geselecteerde blok.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -2168,15 +2210,14 @@ export function AvailabilityManager({
             <Badge className="border border-slate-200 bg-slate-100 text-slate-700">
               Niet boekbaar intern
             </Badge>
+            <Badge className="border border-amber-200 bg-amber-50 text-amber-700">
+              {bookedLessonCount} les{bookedLessonCount === 1 ? "" : "sen"} ingepland
+            </Badge>
           </div>
         </div>
 
         <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_20rem]">
           <div className="min-w-0 space-y-4">
-            <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm leading-7 text-slate-600">
-              Sleep in de weekweergave om datum en tijden meteen in het formulier te zetten. Dat
-              is de snelste manier om vaste maandag- of zaterdagblokken te openen.
-            </div>
             <div className="lesson-calendar-shell rounded-[1.2rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-2.5">
               <div className="lesson-calendar lesson-calendar--default">
                 <FullCalendar
@@ -2227,10 +2268,58 @@ export function AvailabilityManager({
                   eventOrder="start,-duration,title"
                   events={events}
                   select={handleCalendarSelect}
-                  eventClick={(info) => setSelectedSlotId(info.event.id)}
+                  eventClick={(info) => {
+                    if (info.event.extendedProps.kind !== "availability") {
+                      return;
+                    }
+
+                    setSelectedSlotId(info.event.id);
+                  }}
                 />
               </div>
             </div>
+
+            {bookedLessons.length ? (
+              <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                      Geplande lessen
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Deze momenten blokkeren automatisch je boekbare agenda.
+                    </p>
+                  </div>
+                  {nextBookedLesson ? (
+                    <Badge className="border border-amber-200 bg-amber-50 text-amber-700">
+                      Volgende: {nextBookedLesson.timeLabel}
+                    </Badge>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 grid gap-2">
+                  {bookedLessons.slice(0, 3).map((lesson) => (
+                    <div
+                      key={lesson.id}
+                      className="rounded-[0.95rem] border border-white bg-white/92 px-3 py-2.5 shadow-[0_14px_30px_-26px_rgba(15,23,42,0.18)]"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-950">
+                          {lesson.learnerName}
+                        </p>
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-amber-700 uppercase">
+                          {lesson.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-700">{lesson.timeLabel}</p>
+                      <p className="mt-1 text-[13px] text-slate-500">
+                        {lesson.title} · {lesson.location}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-4 self-start 2xl:sticky 2xl:top-6">
@@ -2314,8 +2403,8 @@ export function AvailabilityManager({
                         <p className="mt-2 text-sm font-semibold text-slate-950">
                           Pas werktijd en pauze direct aan
                         </p>
-                        <p className="mt-1 text-sm leading-7 text-slate-600">
-                          Werk hier meteen je tijden bij. De agenda ververst direct zodra je opslaat.
+                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                          Werk tijden en pauze direct bij. De agenda ververst na opslaan.
                         </p>
                       </div>
                       {selectedWorkWindow ? (
@@ -2643,18 +2732,17 @@ export function AvailabilityManager({
         </div>
       </div>
 
-      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <p className="text-xs font-semibold tracking-[0.22em] text-primary uppercase">
               Stap 3 - Rooster en advies
             </p>
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
-              Houd ritme, uitzonderingen en verbeterkansen bij elkaar
+            <h3 className="text-xl font-semibold tracking-tight text-slate-950">
+              Houd ritme, uitzonderingen en inzichten bij elkaar
             </h3>
-            <p className="max-w-3xl text-sm leading-7 text-slate-600">
-              Je vaste weekrooster, losse uitzonderingen en de belangrijkste inzichten staan hier
-              compacter onder elkaar, zodat je sneller ziet waar je nog wilt bijsturen.
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              Je vaste weekrooster, losse uitzonderingen en de belangrijkste inzichten staan hier compact onder elkaar.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -2696,8 +2784,8 @@ export function AvailabilityManager({
         </div>
 
         {insightView === "rooster" ? (
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-            <div className="space-y-4">
+          <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+            <div className="space-y-3">
               <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
@@ -2718,7 +2806,7 @@ export function AvailabilityManager({
                   </Badge>
                 </div>
 
-                <div className="mt-4 grid gap-3">
+                <div className="mt-3 grid gap-2.5">
                   {recurringRuleSummaries.length ? (
                     recurringRuleSummaries.map((rule) => (
                       <button
@@ -2784,7 +2872,7 @@ export function AvailabilityManager({
                   </Badge>
                 </div>
 
-                <div className="mt-4 grid gap-3">
+                <div className="mt-3 grid gap-2.5">
                   {upcomingExceptionWindows.length ? (
                     upcomingExceptionWindows.map((entry) => (
                       <button
@@ -2824,7 +2912,7 @@ export function AvailabilityManager({
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
                 <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                   Max lessen per dag
@@ -2891,15 +2979,6 @@ export function AvailabilityManager({
                 </div>
               </div>
 
-              <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                  Tip
-                </p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Gebruik je vaste weekplanning voor je normale ritme en voeg losse blokken alleen
-                  toe voor uitzonderingen zoals extra avonden, vrije dagen of vakanties.
-                </p>
-              </div>
             </div>
           </div>
         ) : null}
@@ -3065,8 +3144,8 @@ export function AvailabilityManager({
                   <h3 className="mt-2 text-lg font-semibold text-slate-950">
                     Snelle acties op basis van je planning
                   </h3>
-                  <p className="mt-1 text-sm leading-7 text-slate-600">
-                    Gebruik deze knoppen alleen als er echt een logisch gat of kans ligt.
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Alleen zichtbaar als er echt een logisch gat of kans ligt.
                   </p>
                 </div>
                 <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -3152,27 +3231,8 @@ export function AvailabilityManager({
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
-                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                  Wanneer slim
-                </p>
-                <div className="mt-3 space-y-3 text-sm leading-7 text-slate-600">
-                  <p>Gebruik dupliceren alleen als volgende week echt minder volume heeft.</p>
-                  <p>Kies een avondslot als je prime-time zichtbaarheid mist.</p>
-                  <p>Voeg een weekendblok toe als doordeweekse leerlingen weinig ruimte hebben.</p>
-                </div>
-              </div>
-
-              <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                  Tip
-                </p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Combineer een slimme suggestie daarna met je vaste weekplanning, zodat losse
-                  noodgrepen niet ongemerkt je standaardritme worden.
-                </p>
-              </div>
+            <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm leading-6 text-slate-600">
+              Combineer losse suggesties daarna weer met je vaste weekplanning, zodat je standaardritme rustig blijft.
             </div>
           </div>
         ) : null}

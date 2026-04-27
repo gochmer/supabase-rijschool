@@ -385,6 +385,59 @@ export async function notifyInstructorAboutNewRequest({
   });
 }
 
+export async function notifyInstructorAboutDirectBooking({
+  supabase,
+  instructeurId,
+  leerlingNaam,
+  voorkeursdatum,
+  tijdvak,
+  pakketNaam,
+  aanvraagType,
+  lesType,
+  bericht,
+}: {
+  supabase: ServerSupabase;
+  instructeurId: string;
+  leerlingNaam: string;
+  voorkeursdatum: string;
+  tijdvak: string;
+  pakketNaam?: string | null;
+  aanvraagType?: LesAanvraagType | string | null;
+  lesType?: RijlesType | string | null;
+  bericht?: string | null;
+}) {
+  const instructor = await getInstructorContactById(supabase, instructeurId);
+  const requestLabel = getRequestLabel({ pakketNaam, aanvraagType, lesType });
+  const title = "Directe boeking ontvangen";
+  const text = `${leerlingNaam} heeft ${requestLabel.toLowerCase()} direct ingepland op ${voorkeursdatum} (${tijdvak}).`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: instructor?.id,
+    title,
+    text,
+    type: "succes",
+  });
+
+  await deliverNotificationEmail({
+    to: instructor?.email,
+    subject: `Nieuwe directe boeking van ${leerlingNaam}`,
+    eyebrow: "Direct ingepland",
+    intro: `${leerlingNaam} heeft ${requestLabel.toLowerCase()} direct vastgezet in je agenda.`,
+    details: [
+      { label: "Leerling", value: leerlingNaam },
+      { label: "Type", value: requestLabel },
+      { label: "Datum", value: voorkeursdatum },
+      { label: "Tijdvak", value: tijdvak },
+      ...(bericht?.trim()
+        ? [{ label: "Toelichting", value: bericht.trim() }]
+        : []),
+    ],
+    ctaPath: "/instructeur/lessen",
+    ctaLabel: "Open je lessen",
+  });
+}
+
 export async function notifyLearnerAboutRequestDecision({
   supabase,
   leerlingId,

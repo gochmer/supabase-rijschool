@@ -155,7 +155,7 @@ export function InstructorAvailabilityPlanner({
           </h3>
           <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
             Bekijk de actuele agenda van de instructeur, klik een beschikbaar blok aan en
-            verstuur je aanvraag direct op het juiste moment.
+            plan jezelf direct in op een moment dat echt vrij is.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -274,7 +274,7 @@ export function InstructorAvailabilityPlanner({
                     Flow
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">
-                    Dit moment wordt direct als gekozen slot meegestuurd in je aanvraag.
+                    Dit moment wordt direct vastgezet zodra je bevestigt.
                   </p>
                 </div>
               </div>
@@ -285,8 +285,9 @@ export function InstructorAvailabilityPlanner({
                 instructorName={instructorName}
                 instructorSlug={instructorSlug}
                 availableSlots={slots}
+                directBookingEnabled
                 defaultSlotId={selectedEntry?.id}
-                triggerLabel="Plan dit moment"
+                triggerLabel="Boek dit moment"
                 triggerClassName="w-full"
               />
               <LessonRequestDialog
@@ -294,8 +295,9 @@ export function InstructorAvailabilityPlanner({
                 instructorSlug={instructorSlug}
                 requestType="proefles"
                 availableSlots={slots}
+                directBookingEnabled
                 defaultSlotId={selectedEntry?.id}
-                triggerLabel="Plan dit moment als proefles"
+                triggerLabel="Boek dit moment als proefles"
                 triggerVariant="secondary"
                 triggerClassName="w-full"
               />

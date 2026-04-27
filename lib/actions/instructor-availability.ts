@@ -14,6 +14,13 @@ import {
   getAvailabilitySeriesKey,
 } from "@/lib/availability";
 import { getWeekdayNumberFromDateValue } from "@/lib/availability-week-rules";
+import {
+  ACTIVE_BOOKED_LESSON_STATUSES,
+  createBookingWindowFromLesson,
+  getIsoDayBounds,
+  hasBookingConflict,
+  type BookingWindow,
+} from "@/lib/booking-availability";
 import { getAvailabilityTemplateById } from "@/lib/availability-templates";
 import { getCurrentInstructeurRecord, ensureCurrentUserContext } from "@/lib/data/profiles";
 import { createServerClient } from "@/lib/supabase/server";
@@ -510,6 +517,36 @@ async function findAvailabilityConflicts(
     };
   }
 
+  const { dayStartAt } = getIsoDayBounds(orderedSlots[0].start_at);
+  const { dayEndAt } = getIsoDayBounds(
+    orderedSlots[orderedSlots.length - 1].eind_at
+  );
+  const { data: lessonRows, error: lessonError } = await supabase
+    .from("lessen")
+    .select("id, titel, start_at, duur_minuten, status")
+    .eq("instructeur_id", instructeurId)
+    .in("status", [...ACTIVE_BOOKED_LESSON_STATUSES])
+    .gte("start_at", dayStartAt)
+    .lte("start_at", dayEndAt);
+
+  if (lessonError) {
+    return {
+      success: false as const,
+      message: "De lesoverlapcontrole kon niet worden uitgevoerd.",
+    };
+  }
+
+  const lessonWindows = ((lessonRows ?? [])
+    .map((lesson) =>
+      createBookingWindowFromLesson({
+        startAt: lesson.start_at,
+        durationMinutes: lesson.duur_minuten,
+        status: lesson.status,
+        label: lesson.titel,
+      })
+    )
+    .filter(Boolean) as BookingWindow[]);
+
   const conflictingDates = Array.from(
     new Set(
       orderedSlots
@@ -523,7 +560,11 @@ async function findAvailabilityConflicts(
               new Date(existing.start_at).getTime() < new Date(slot.eind_at).getTime() &&
               new Date(existing.eind_at).getTime() > new Date(slot.start_at).getTime()
             );
-          })
+          }) ||
+          hasBookingConflict(
+            { startAt: slot.start_at, endAt: slot.eind_at },
+            lessonWindows
+          )
         )
         .map((slot) => slot.dateLabel)
     )
@@ -541,7 +582,11 @@ async function findAvailabilityConflicts(
               new Date(existing.start_at).getTime() < new Date(slot.eind_at).getTime() &&
               new Date(existing.eind_at).getTime() > new Date(slot.start_at).getTime()
             );
-          })
+          }) ||
+          hasBookingConflict(
+            { startAt: slot.start_at, endAt: slot.eind_at },
+            lessonWindows
+          )
         )
         .map((slot) => getPlannedAvailabilitySlotKey(slot))
     )

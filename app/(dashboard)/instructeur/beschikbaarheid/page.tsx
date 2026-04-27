@@ -1,11 +1,13 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { AvailabilityManager } from "@/components/instructor/availability-manager";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
+import { getInstructeurLessons } from "@/lib/data/lesson-requests";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
 
 export default async function BeschikbaarheidPage() {
-  const [slots, instructeur] = await Promise.all([
+  const [slots, lessons, instructeur] = await Promise.all([
     getCurrentInstructorAvailability(),
+    getInstructeurLessons(),
     getCurrentInstructeurRecord(),
   ]);
 
@@ -17,6 +19,7 @@ export default async function BeschikbaarheidPage() {
       />
       <AvailabilityManager
         slots={slots}
+        lessons={lessons}
         pricePerLesson={Number(instructeur?.prijs_per_les ?? 0)}
       />
     </>

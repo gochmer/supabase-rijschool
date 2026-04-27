@@ -227,6 +227,7 @@ export default async function InstructeurDetailPage({
                         instructorSlug={instructor.slug}
                         requestType="proefles"
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
+                        directBookingEnabled={planningAccess.canViewAgenda}
                         triggerLabel="Plan proefles"
                         triggerClassName="h-9 px-5 text-[13px]"
                       />
@@ -235,6 +236,7 @@ export default async function InstructeurDetailPage({
                         instructorSlug={instructor.slug}
                         selectedPackage={primaryPackage}
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
+                        directBookingEnabled={planningAccess.canViewAgenda}
                         triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
                         triggerVariant="secondary"
                         triggerClassName="h-9 px-5 text-[13px]"
@@ -266,7 +268,7 @@ export default async function InstructeurDetailPage({
                         </p>
                         <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                           {planningAccess.canViewAgenda
-                            ? "Je kunt nu direct een geschikt moment kiezen uit de agenda van deze instructeur."
+                            ? "Je kunt nu direct een geschikt moment kiezen en meteen laten inplannen in de agenda van deze instructeur."
                             : planningAccess.hasActiveRelationship
                               ? "Je traject is al actief. Zodra deze instructeur plannen voor jou vrijgeeft, verschijnt de agenda hieronder."
                               : "Vraag eerst een proefles of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."}
@@ -588,6 +590,7 @@ export default async function InstructeurDetailPage({
                                 instructorSlug={instructor.slug}
                                 selectedPackage={pkg}
                                 availableSlots={planningAccess.canViewAgenda ? slots : []}
+                                directBookingEnabled={planningAccess.canViewAgenda}
                                 triggerLabel="Vraag dit pakket aan"
                                 triggerClassName="!h-9 !w-full !rounded-full !text-[13px]"
                               />

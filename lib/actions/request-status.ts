@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getLessonEndAt } from "@/lib/booking-availability";
 import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
+import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
 import {
   ensureCurrentUserContext,
   getCurrentInstructeurRecord,
@@ -107,6 +109,15 @@ async function ensureLessonForAcceptedRequest(
     };
   }
 
+  const endAt = getLessonEndAt(startAt, durationMinutes);
+
+  if (!endAt) {
+    return {
+      success: false,
+      message: "De eindtijd van deze aanvraag kon niet worden bepaald.",
+    };
+  }
+
   const supabase = await createServerClient();
   const { data: existingLesson } = await supabase
     .from("lessen")
@@ -118,6 +129,23 @@ async function ensureLessonForAcceptedRequest(
 
   if (existingLesson) {
     return { success: true };
+  }
+
+  const schedulingConflict = await findSchedulingConflict({
+    instructorId: request.instructeur_id,
+    learnerId: request.leerling_id,
+    startAt,
+    endAt,
+    ignoreRequestId: request.id,
+    includeRequestHolds: false,
+    supabase,
+  });
+
+  if (schedulingConflict.hasConflict) {
+    return {
+      success: false,
+      message: schedulingConflict.message,
+    };
   }
 
   const locationId = await resolveLocationSelection(input);

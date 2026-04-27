@@ -10,10 +10,19 @@ import {
   formatAvailabilityWindow,
 } from "@/lib/availability";
 import { buildRecurringAvailabilitySlots } from "@/lib/availability-week-rules";
+import {
+  ACTIVE_BOOKED_LESSON_STATUSES,
+  ACTIVE_REQUEST_HOLD_STATUSES,
+  createBookingWindowFromLesson,
+  createBookingWindowFromRequest,
+  filterBookableAvailabilitySlots,
+  type BookingWindow,
+} from "@/lib/booking-availability";
 import type {
   BeschikbaarheidSlot,
   BeschikbaarheidWeekrooster,
   InstructeurProfiel,
+  LesStatus,
   RijlesType,
   Review,
   TransmissieType,
@@ -41,6 +50,25 @@ type DbInstructorRow = {
   profiel_compleetheid: number | null;
   specialisaties: string[] | null;
   profielfoto_kleur: string | null;
+};
+
+type InstructorBookedLessonRow = {
+  id: string;
+  instructeur_id?: string | null;
+  titel: string;
+  start_at: string | null;
+  duur_minuten: number;
+  status: LesStatus;
+};
+
+type InstructorRequestHoldRow = {
+  id: string;
+  instructeur_id?: string | null;
+  voorkeursdatum: string | null;
+  tijdvak: string | null;
+  status: LesStatus;
+  pakket_naam_snapshot: string | null;
+  aanvraag_type: string | null;
 };
 
 const gradientPalette = [
@@ -114,6 +142,20 @@ function mapInstructor(
         : "concept",
     profiel_voltooid: row.profiel_compleetheid ?? base?.profiel_voltooid ?? 0,
   };
+}
+
+function appendBookingWindow(
+  map: Map<string, BookingWindow[]>,
+  instructorId: string | null | undefined,
+  window: BookingWindow | null
+) {
+  if (!instructorId || !window) {
+    return;
+  }
+
+  const existingWindows = map.get(instructorId) ?? [];
+  existingWindows.push(window);
+  map.set(instructorId, existingWindows);
 }
 
 export async function getPublicInstructors() {
@@ -267,13 +309,22 @@ export async function getInstructorAvailability(
   }
 
   const supabase = await createServerClient();
-  const [{ data: slots, error }, { data: ruleRows }] = await Promise.all([
+  const todayIso = new Date().toISOString();
+  const todayDateValue = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date());
+  const [
+    { data: slots, error },
+    { data: ruleRows },
+    { data: lessonRows },
+    { data: requestRows },
+  ] = await Promise.all([
     supabase
       .from("beschikbaarheid")
       .select("id, start_at, eind_at, beschikbaar")
       .eq("instructeur_id", instructor.id)
       .eq("beschikbaar", true)
-      .gte("eind_at", new Date().toISOString())
+      .gte("eind_at", todayIso)
       .order("start_at", { ascending: true })
       .limit(24),
     supabase
@@ -284,6 +335,22 @@ export async function getInstructorAvailability(
       .eq("instructeur_id", instructor.id)
       .eq("actief", true)
       .eq("beschikbaar", true),
+    (supabase
+      .from("lessen")
+      .select("id, titel, start_at, duur_minuten, status")
+      .eq("instructeur_id", instructor.id)
+      .in("status", [...ACTIVE_BOOKED_LESSON_STATUSES])
+      .gte("start_at", todayIso)) as unknown as Promise<{
+      data: InstructorBookedLessonRow[] | null;
+    }>,
+    (supabase
+      .from("lesaanvragen")
+      .select("id, voorkeursdatum, tijdvak, status, pakket_naam_snapshot, aanvraag_type")
+      .eq("instructeur_id", instructor.id)
+      .in("status", [...ACTIVE_REQUEST_HOLD_STATUSES])
+      .gte("voorkeursdatum", todayDateValue)) as unknown as Promise<{
+      data: InstructorRequestHoldRow[] | null;
+    }>,
   ]);
 
   if (error) {
@@ -306,7 +373,32 @@ export async function getInstructorAvailability(
     concreteSlots,
   });
 
-  return [...concreteSlots, ...recurringSlots]
+  const bookingWindows = [
+    ...((lessonRows ?? [])
+      .map((lesson) =>
+        createBookingWindowFromLesson({
+          startAt: lesson.start_at,
+          durationMinutes: lesson.duur_minuten,
+          status: lesson.status,
+          label: lesson.titel,
+        })
+      )
+      .filter(Boolean) as BookingWindow[]),
+    ...((requestRows ?? [])
+      .map((request) =>
+        createBookingWindowFromRequest({
+          preferredDate: request.voorkeursdatum,
+          timeSlot: request.tijdvak,
+          status: request.status,
+          label:
+            request.pakket_naam_snapshot ??
+            (request.aanvraag_type === "proefles" ? "Proefles" : "Aanvraag"),
+        })
+      )
+      .filter(Boolean) as BookingWindow[]),
+  ];
+
+  return filterBookableAvailabilitySlots([...concreteSlots, ...recurringSlots], bookingWindows)
     .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
     .slice(0, 24);
 }
@@ -321,13 +413,22 @@ export async function getPublicInstructorAvailabilityMap(
   }
 
   const supabase = await createServerClient();
-  const [{ data: slotRows, error }, { data: ruleRows }] = await Promise.all([
+  const todayIso = new Date().toISOString();
+  const todayDateValue = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date());
+  const [
+    { data: slotRows, error },
+    { data: ruleRows },
+    { data: lessonRows },
+    { data: requestRows },
+  ] = await Promise.all([
     supabase
       .from("beschikbaarheid")
       .select("id, instructeur_id, start_at, eind_at, beschikbaar")
       .in("instructeur_id", uniqueInstructorIds)
       .eq("beschikbaar", true)
-      .gte("eind_at", new Date().toISOString())
+      .gte("eind_at", todayIso)
       .order("start_at", { ascending: true }),
     supabase
       .from("beschikbaarheid_weekroosters")
@@ -337,6 +438,24 @@ export async function getPublicInstructorAvailabilityMap(
       .in("instructeur_id", uniqueInstructorIds)
       .eq("actief", true)
       .eq("beschikbaar", true),
+    (supabase
+      .from("lessen")
+      .select("id, instructeur_id, titel, start_at, duur_minuten, status")
+      .in("instructeur_id", uniqueInstructorIds)
+      .in("status", [...ACTIVE_BOOKED_LESSON_STATUSES])
+      .gte("start_at", todayIso)) as unknown as Promise<{
+      data: InstructorBookedLessonRow[] | null;
+    }>,
+    (supabase
+      .from("lesaanvragen")
+      .select(
+        "id, instructeur_id, voorkeursdatum, tijdvak, status, pakket_naam_snapshot, aanvraag_type"
+      )
+      .in("instructeur_id", uniqueInstructorIds)
+      .in("status", [...ACTIVE_REQUEST_HOLD_STATUSES])
+      .gte("voorkeursdatum", todayDateValue)) as unknown as Promise<{
+      data: InstructorRequestHoldRow[] | null;
+    }>,
   ]);
 
   if (error) {
@@ -367,6 +486,35 @@ export async function getPublicInstructorAvailabilityMap(
 
     return accumulator;
   }, {});
+  const bookingWindowsByInstructor = new Map<string, BookingWindow[]>();
+
+  for (const lesson of lessonRows ?? []) {
+    appendBookingWindow(
+      bookingWindowsByInstructor,
+      lesson.instructeur_id,
+      createBookingWindowFromLesson({
+        startAt: lesson.start_at,
+        durationMinutes: lesson.duur_minuten,
+        status: lesson.status,
+        label: lesson.titel,
+      })
+    );
+  }
+
+  for (const request of requestRows ?? []) {
+    appendBookingWindow(
+      bookingWindowsByInstructor,
+      request.instructeur_id,
+      createBookingWindowFromRequest({
+        preferredDate: request.voorkeursdatum,
+        timeSlot: request.tijdvak,
+        status: request.status,
+        label:
+          request.pakket_naam_snapshot ??
+          (request.aanvraag_type === "proefles" ? "Proefles" : "Aanvraag"),
+      })
+    );
+  }
 
   return uniqueInstructorIds.reduce<Record<string, BeschikbaarheidSlot[]>>(
     (accumulator, instructorId) => {
@@ -378,7 +526,10 @@ export async function getPublicInstructorAvailabilityMap(
         concreteSlots,
       });
 
-      const mergedSlots = [...concreteSlots, ...recurringSlots]
+      const mergedSlots = filterBookableAvailabilitySlots(
+        [...concreteSlots, ...recurringSlots],
+        bookingWindowsByInstructor.get(instructorId) ?? []
+      )
         .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
         .slice(0, 3);
 
