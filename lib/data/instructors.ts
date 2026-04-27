@@ -17,7 +17,10 @@ import type {
   RijlesType,
   Review,
 } from "@/lib/types";
-import { getReviewStatsByInstructorIds } from "@/lib/data/reviews";
+import {
+  getLatestVisibleReviewsByInstructorIds,
+  getReviewStatsByInstructorIds,
+} from "@/lib/data/reviews";
 import { createServerClient } from "@/lib/supabase/server";
 
 type DbInstructorRow = {
@@ -64,7 +67,8 @@ function mapInstructor(
   reviewStats?: {
     reviewCount: number;
     averageScore: number;
-  }
+  },
+  latestReview?: InstructeurProfiel["recente_review"]
 ): InstructeurProfiel {
   const base = instructeurs.find((item) => item.slug === row.slug);
   const resolvedReviewCount =
@@ -90,6 +94,7 @@ function mapInstructor(
     prijs_per_les: toNumber(row.prijs_per_les, base?.prijs_per_les ?? 0),
     beoordeling: resolvedRating,
     aantal_reviews: resolvedReviewCount,
+    recente_review: latestReview ?? null,
     transmissie: row.transmissie || base?.transmissie || "beide",
     steden: row.werkgebied?.length ? row.werkgebied : base?.steden || [],
     specialisaties:
@@ -123,10 +128,17 @@ export async function getPublicInstructors() {
   }
 
   const instructorIds = rows.map((row) => row.id);
-  const reviewStatsMap = await getReviewStatsByInstructorIds(instructorIds);
+  const [reviewStatsMap, latestReviewMap] = await Promise.all([
+    getReviewStatsByInstructorIds(instructorIds),
+    getLatestVisibleReviewsByInstructorIds(instructorIds),
+  ]);
 
   return rows.map((row) =>
-    mapInstructor(row as DbInstructorRow, reviewStatsMap.get(row.id))
+    mapInstructor(
+      row as DbInstructorRow,
+      reviewStatsMap.get(row.id),
+      latestReviewMap.get(row.id)
+    )
   );
 }
 
@@ -179,6 +191,7 @@ export async function getInstructorReviews(slug: string): Promise<Review[]> {
     .from("reviews")
     .select("id, score, titel, tekst, created_at, leerling_naam_snapshot")
     .eq("instructeur_id", instructor.id)
+    .eq("verborgen", false)
     .order("created_at", { ascending: false });
 
   if (error || !reviewRows?.length) {

@@ -480,7 +480,7 @@ export async function getAdminReviews() {
   const { data: rows } = await supabase
     .from("reviews")
     .select(
-      "id, leerling_id, instructeur_id, score, titel, tekst, created_at, moderatie_status, verborgen"
+      "id, leerling_id, instructeur_id, score, titel, tekst, created_at, moderatie_status, moderatie_notitie, verborgen"
     )
     .order("created_at", { ascending: false })
     .limit(50);
@@ -495,6 +495,7 @@ export async function getAdminReviews() {
       tekst: review.tekst,
       datum: review.datum,
       moderatieStatus: "zichtbaar",
+      moderatieNotitie: null,
     }));
   }
 
@@ -543,6 +544,7 @@ export async function getAdminReviews() {
     tekst: row.tekst || "",
     datum: formatDate(row.created_at),
     moderatieStatus: row.verborgen ? "verborgen" : row.moderatie_status || "zichtbaar",
+    moderatieNotitie: row.moderatie_notitie || null,
   }));
 }
 

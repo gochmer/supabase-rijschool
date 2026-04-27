@@ -512,5 +512,12 @@ export async function getInstructeurDashboardMetrics(): Promise<DashboardMetric[
         ? `${reviewSummary.reviewCount} zichtbare review${reviewSummary.reviewCount === 1 ? "" : "s"} op je profiel`
         : "Na afgeronde lessen kunnen leerlingen hier social proof toevoegen",
     },
+    {
+      label: "Reviews",
+      waarde: `${reviewSummary.reviewCount}`,
+      context: reviewSummary.latestReviews[0]
+        ? `Laatste review: ${reviewSummary.latestReviews[0].titel}`
+        : "Nog geen zichtbare reviews op je publieke profiel",
+    },
   ];
 }

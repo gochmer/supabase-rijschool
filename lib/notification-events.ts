@@ -517,3 +517,64 @@ export async function notifyLearnerAboutLessonChange({
     ctaLabel: "Open je lesoverzicht",
   });
 }
+
+export async function notifyLearnerToLeaveReview({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  datum,
+  tijd,
+  lesTitel,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  datum: string;
+  tijd: string;
+  lesTitel: string;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  if (!learner?.id) {
+    return;
+  }
+
+  const title = "Laat een review achter";
+  const text = `${instructeurNaam} heeft ${lesTitel.toLowerCase()} op ${datum} om ${tijd} afgerond. Deel kort hoe de les voelde en help andere leerlingen kiezen.`;
+
+  const { data: existingNotification } = await supabase
+    .from("notificaties")
+    .select("id")
+    .eq("profiel_id", learner.id)
+    .eq("titel", title)
+    .eq("tekst", text)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingNotification) {
+    return;
+  }
+
+  await createInAppNotification({
+    supabase,
+    profileId: learner.id,
+    title,
+    text,
+    type: "succes",
+  });
+
+  await deliverNotificationEmail({
+    to: learner.email,
+    subject: "Je les is afgerond - laat een review achter",
+    eyebrow: "Review reminder",
+    intro: `${instructeurNaam} heeft je les afgerond. Met een korte review help je andere leerlingen sneller vertrouwen opbouwen.`,
+    details: [
+      { label: "Instructeur", value: instructeurNaam },
+      { label: "Les", value: lesTitel },
+      { label: "Datum", value: datum },
+      { label: "Tijd", value: tijd },
+    ],
+    ctaPath: "/leerling/reviews",
+    ctaLabel: "Laat een review achter",
+  });
+}

@@ -38,6 +38,7 @@ export interface InstructeurProfiel extends Profiel {
   prijs_per_les: number;
   beoordeling: number;
   aantal_reviews: number;
+  recente_review?: ReviewPreview | null;
   transmissie: TransmissieType;
   steden: string[];
   specialisaties: string[];
@@ -47,6 +48,15 @@ export interface InstructeurProfiel extends Profiel {
 }
 
 export interface Review {
+  id: string;
+  leerling_naam: string;
+  score: number;
+  titel: string;
+  tekst: string;
+  datum: string;
+}
+
+export interface ReviewPreview {
   id: string;
   leerling_naam: string;
   score: number;

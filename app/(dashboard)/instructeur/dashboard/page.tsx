@@ -95,7 +95,7 @@ export default async function InstructeurDashboardPage() {
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}

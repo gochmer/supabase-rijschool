@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getCurrentLeerlingRecord, getCurrentRole } from "@/lib/data/profiles";
+import {
+  ensureCurrentUserContext,
+  getCurrentLeerlingRecord,
+  getCurrentRole,
+} from "@/lib/data/profiles";
 import { createServerClient } from "@/lib/supabase/server";
 
 type SaveLearnerReviewInput = {
@@ -178,8 +182,11 @@ export async function saveLearnerReviewAction(input: SaveLearnerReviewInput) {
 }
 
 export async function updateReviewModerationAction(
-  reviewId: string,
-  moderatieStatus: "zichtbaar" | "verborgen" | "gemarkeerd"
+  input: {
+    reviewId: string;
+    moderatieStatus: "zichtbaar" | "verborgen" | "gemarkeerd";
+    moderatieNotitie?: string | null;
+  }
 ) {
   const role = await getCurrentRole();
 
@@ -190,21 +197,25 @@ export async function updateReviewModerationAction(
     };
   }
 
+  const context = await ensureCurrentUserContext();
   const supabase = await createServerClient();
   const { data: reviewRow } = await supabase
     .from("reviews")
     .select("id, instructeur_id")
-    .eq("id", reviewId)
+    .eq("id", input.reviewId)
     .maybeSingle();
+  const moderationNote = sanitizeText(input.moderatieNotitie ?? "");
 
   const { error } = await supabase
     .from("reviews")
     .update({
-      moderatie_status: moderatieStatus,
-      verborgen: moderatieStatus === "verborgen",
+      moderatie_status: input.moderatieStatus,
+      verborgen: input.moderatieStatus === "verborgen",
       moderated_at: new Date().toISOString(),
-    })
-    .eq("id", reviewId);
+      moderatie_notitie: moderationNote || null,
+      moderated_by: context?.profile?.id ?? null,
+    } as never)
+    .eq("id", input.reviewId);
 
   if (error) {
     return {
@@ -230,6 +241,11 @@ export async function updateReviewModerationAction(
 
   return {
     success: true,
-    message: "Reviewstatus bijgewerkt.",
+    message:
+      input.moderatieStatus === "verborgen"
+        ? "Review is verborgen."
+        : input.moderatieStatus === "gemarkeerd"
+          ? "Review is gemarkeerd voor opvolging."
+          : "Review is weer zichtbaar.",
   };
 }

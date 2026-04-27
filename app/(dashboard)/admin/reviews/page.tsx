@@ -14,6 +14,14 @@ import { getAdminReviews } from "@/lib/data/admin";
 
 export default async function AdminReviewsPage() {
   const reviews = await getAdminReviews();
+  const moderationSummary = {
+    zichtbaar: reviews.filter((review) => review.moderatieStatus === "zichtbaar")
+      .length,
+    gemarkeerd: reviews.filter((review) => review.moderatieStatus === "gemarkeerd")
+      .length,
+    verborgen: reviews.filter((review) => review.moderatieStatus === "verborgen")
+      .length,
+  };
 
   return (
     <>
@@ -21,11 +29,47 @@ export default async function AdminReviewsPage() {
         title="Reviews beheren"
         description="Modereren, analyseren en opvolgen van beoordelingen en geschreven feedback."
       />
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          {
+            label: "Zichtbaar",
+            value: moderationSummary.zichtbaar,
+            tone: "success" as const,
+            context: "Publiek zichtbaar op profielen en kaarten",
+          },
+          {
+            label: "Gemarkeerd",
+            value: moderationSummary.gemarkeerd,
+            tone: "warning" as const,
+            context: "Nog zichtbaar, maar intern gemarkeerd",
+          },
+          {
+            label: "Verborgen",
+            value: moderationSummary.verborgen,
+            tone: "danger" as const,
+            context: "Tijdelijk niet zichtbaar voor bezoekers",
+          },
+        ].map((item) => (
+          <Card
+            key={item.label}
+            className="border-0 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))]"
+          >
+            <CardHeader className="pb-2">
+              <CardDescription>{item.label}</CardDescription>
+              <CardTitle className="text-3xl">{item.value}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 text-sm text-muted-foreground dark:text-slate-300">
+              {item.context}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <div className="grid gap-4">
-        {reviews.map((review) => (
+        {reviews.length ? reviews.map((review) => (
           <Card
             key={review.id}
-            className="border-0 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)]"
+            className="border-0 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))]"
           >
             <CardHeader>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -55,13 +99,31 @@ export default async function AdminReviewsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm leading-7 text-muted-foreground">
+              <p className="text-sm leading-7 text-muted-foreground dark:text-slate-300">
                 {review.tekst || "Geen toelichting toegevoegd."}
               </p>
-              <ReviewModerationActions reviewId={review.id} />
+              {review.moderatieNotitie ? (
+                <div className="rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
+                    Interne moderatienotitie
+                  </p>
+                  <p className="mt-2">{review.moderatieNotitie}</p>
+                </div>
+              ) : null}
+              <ReviewModerationActions
+                reviewId={review.id}
+                currentStatus={review.moderatieStatus}
+                currentNote={review.moderatieNotitie}
+              />
             </CardContent>
           </Card>
-        ))}
+        )) : (
+          <Card className="border border-dashed border-slate-300 bg-slate-50/80 shadow-none dark:border-white/12 dark:bg-white/5">
+            <CardContent className="p-6 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Er staan nog geen reviews klaar voor moderatie.
+            </CardContent>
+          </Card>
+        )}
       </div>
     </>
   );

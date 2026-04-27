@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Review } from "@/lib/types";
+import type { Review, ReviewPreview } from "@/lib/types";
 import { getCurrentInstructeurRecord, getCurrentLeerlingRecord } from "@/lib/data/profiles";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -12,6 +12,7 @@ type ReviewStatRow = {
 
 type PublicReviewRow = {
   id: string;
+  instructeur_id?: string;
   score: number;
   titel: string | null;
   tekst: string | null;
@@ -88,6 +89,17 @@ function formatReviewScoreLabel(score: number) {
   return roundReviewScore(score).toFixed(1);
 }
 
+function mapReviewPreview(row: PublicReviewRow): ReviewPreview {
+  return {
+    id: row.id,
+    leerling_naam: row.leerling_naam_snapshot || "Leerling",
+    score: Number(row.score ?? 0),
+    titel: row.titel || `Review ${formatReviewScoreLabel(Number(row.score ?? 0))}`,
+    tekst: row.tekst || "",
+    datum: formatReviewDate(row.created_at),
+  };
+}
+
 export async function getReviewStatsByInstructorIds(instructorIds: string[]) {
   const uniqueInstructorIds = Array.from(new Set(instructorIds.filter(Boolean)));
 
@@ -157,15 +169,40 @@ export async function getCurrentInstructorReviewSummary(): Promise<InstructorRev
   return {
     averageScore: stats.averageScore,
     reviewCount: stats.reviewCount,
-    latestReviews: ((latestReviewRows ?? []) as PublicReviewRow[]).map((row) => ({
-      id: row.id,
-      leerling_naam: row.leerling_naam_snapshot || "Leerling",
-      score: Number(row.score ?? 0),
-      titel: row.titel || `Review ${formatReviewScoreLabel(Number(row.score ?? 0))}`,
-      tekst: row.tekst || "",
-      datum: formatReviewDate(row.created_at),
-    })),
+    latestReviews: ((latestReviewRows ?? []) as PublicReviewRow[]).map(mapReviewPreview),
   };
+}
+
+export async function getLatestVisibleReviewsByInstructorIds(
+  instructorIds: string[]
+) {
+  const uniqueInstructorIds = Array.from(new Set(instructorIds.filter(Boolean)));
+
+  if (!uniqueInstructorIds.length) {
+    return new Map<string, ReviewPreview>();
+  }
+
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("reviews")
+    .select(
+      "id, instructeur_id, score, titel, tekst, created_at, leerling_naam_snapshot"
+    )
+    .in("instructeur_id", uniqueInstructorIds)
+    .eq("verborgen", false)
+    .order("created_at", { ascending: false });
+
+  const previewMap = new Map<string, ReviewPreview>();
+
+  for (const row of (data ?? []) as PublicReviewRow[]) {
+    if (!row.instructeur_id || previewMap.has(row.instructeur_id)) {
+      continue;
+    }
+
+    previewMap.set(row.instructeur_id, mapReviewPreview(row));
+  }
+
+  return previewMap;
 }
 
 export async function getLearnerReviewOpportunities(): Promise<

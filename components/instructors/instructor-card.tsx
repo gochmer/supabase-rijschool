@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Gauge, ShieldCheck, Sparkles, Star, Trophy, Zap } from "lucide-react";
+import {
+  ArrowUpRight,
+  Gauge,
+  MessageSquareQuote,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Trophy,
+  Zap,
+} from "lucide-react";
 
 import { FavoriteButton } from "@/components/instructors/favorite-button";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
@@ -98,6 +107,16 @@ function formatPackagePriceLabel(price: number) {
   return price > 0 ? formatCurrency(price) : "Op aanvraag";
 }
 
+function getReviewExcerpt(value: string) {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized.length > 96 ? `${normalized.slice(0, 93)}...` : normalized;
+}
+
 function shouldIgnoreCardNavigation(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -157,6 +176,7 @@ export function InstructorCard({
     packageOptions.find((pkg) => pkg.id === resolvedSelectedPackageId) ??
     packageOptions[0] ??
     null;
+  const reviewPreview = instructor.recente_review ?? null;
 
   function handleCardNavigation() {
     router.push(detailHref);
@@ -297,6 +317,30 @@ export function InstructorCard({
                 {instructor.bio}
               </p>
             </div>
+
+            {reviewPreview ? (
+              <div className="rounded-[1.15rem] border border-orange-200/16 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(249,115,22,0.14))] px-3.5 py-3 shadow-[0_18px_32px_-26px_rgba(0,0,0,0.18)]">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] text-orange-100 uppercase">
+                    <MessageSquareQuote className="size-3.5" />
+                    Laatste review
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-orange-200/24 bg-orange-100/92 px-2 py-0.5 text-[9px] font-semibold text-red-900">
+                    <Star className="size-3 fill-current text-current" />
+                    {reviewPreview.score}/5
+                  </span>
+                </div>
+                <p className="mt-2 text-[12px] font-semibold text-white">
+                  {reviewPreview.titel}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-stone-300">
+                  &ldquo;{getReviewExcerpt(reviewPreview.tekst)}&rdquo;
+                </p>
+                <p className="mt-1.5 text-[10px] text-stone-400">
+                  {reviewPreview.leerling_naam} • {reviewPreview.datum}
+                </p>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] text-stone-400 uppercase">
@@ -457,6 +501,30 @@ export function InstructorCard({
           <p className="line-clamp-3 text-[12px] leading-5 text-muted-foreground dark:text-slate-300 sm:min-h-[3.15rem]">
             {instructor.bio}
           </p>
+
+          {reviewPreview ? (
+            <div className="rounded-[0.95rem] border border-amber-100 bg-amber-50/70 px-3 py-2.5 shadow-[0_10px_20px_-18px_rgba(245,158,11,0.24)] dark:border-amber-300/12 dark:bg-amber-400/8 dark:shadow-[0_10px_20px_-18px_rgba(15,23,42,0.4)]">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-100">
+                  <MessageSquareQuote className="size-3" />
+                  Social proof
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white/90 px-2 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-300/16 dark:bg-white/8 dark:text-amber-100">
+                  <Star className="size-3 fill-current text-current" />
+                  {reviewPreview.score}/5
+                </span>
+              </div>
+              <p className="mt-1.5 text-[11px] font-semibold text-slate-950 dark:text-white">
+                {reviewPreview.titel}
+              </p>
+              <p className="mt-1 text-[11px] leading-[1.45] text-slate-600 dark:text-slate-300">
+                &ldquo;{getReviewExcerpt(reviewPreview.tekst)}&rdquo;
+              </p>
+              <p className="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                {reviewPreview.leerling_naam} • {reviewPreview.datum}
+              </p>
+            </div>
+          ) : null}
 
           <div className="flex min-h-[2rem] flex-wrap content-start gap-1">
             {instructor.specialisaties.slice(0, 3).map((tag) => (

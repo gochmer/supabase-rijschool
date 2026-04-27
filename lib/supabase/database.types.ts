@@ -745,6 +745,8 @@ export type Database = {
           leerling_naam_snapshot: string | null
           les_id: string | null
           moderated_at: string | null
+          moderated_by: string | null
+          moderatie_notitie: string | null
           moderatie_status: string
           score: number
           tekst: string | null
@@ -759,6 +761,8 @@ export type Database = {
           leerling_naam_snapshot?: string | null
           les_id?: string | null
           moderated_at?: string | null
+          moderated_by?: string | null
+          moderatie_notitie?: string | null
           moderatie_status?: string
           score: number
           tekst?: string | null
@@ -773,6 +777,8 @@ export type Database = {
           leerling_naam_snapshot?: string | null
           les_id?: string | null
           moderated_at?: string | null
+          moderated_by?: string | null
+          moderatie_notitie?: string | null
           moderatie_status?: string
           score?: number
           tekst?: string | null
@@ -799,6 +805,13 @@ export type Database = {
             columns: ["les_id"]
             isOneToOne: false
             referencedRelation: "lessen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

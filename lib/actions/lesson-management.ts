@@ -11,7 +11,10 @@ import {
   appendRequestUpdateMessage,
   extractLessonRequestReference,
 } from "@/lib/lesson-request-flow";
-import { notifyLearnerAboutLessonChange } from "@/lib/notification-events";
+import {
+  notifyLearnerAboutLessonChange,
+  notifyLearnerToLeaveReview,
+} from "@/lib/notification-events";
 import { createServerClient } from "@/lib/supabase/server";
 import type { LesStatus } from "@/lib/types";
 
@@ -113,7 +116,7 @@ export async function updateLessonAction(input: UpdateLessonInput) {
   const supabase = await createServerClient();
   const { data: lesson } = (await supabase
     .from("lessen")
-    .select("id, leerling_id, instructeur_id, notities")
+    .select("id, leerling_id, instructeur_id, notities, status, titel")
     .eq("id", input.lessonId)
     .eq("instructeur_id", instructeur.id)
     .maybeSingle()) as unknown as {
@@ -123,6 +126,8 @@ export async function updateLessonAction(input: UpdateLessonInput) {
           leerling_id: string | null;
           instructeur_id: string | null;
           notities: string | null;
+          status: LesStatus;
+          titel: string;
         }
       | null;
   };
@@ -176,16 +181,38 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     input.reason
   );
 
-  await notifyLearnerAboutLessonChange({
-    supabase,
-    leerlingId: lesson.leerling_id,
-    instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
-    datum: input.datum,
-    tijd: input.tijd,
-    locatie: locationSummary,
-    status: input.status,
-    reason: input.reason,
-  });
+  if (input.status === "afgerond") {
+    const shouldPromptForReview = lesson.status !== "afgerond";
+    const { data: existingReview } = shouldPromptForReview
+      ? await supabase
+          .from("reviews")
+          .select("id")
+          .eq("les_id", lesson.id)
+          .maybeSingle()
+      : { data: null };
+
+    if (shouldPromptForReview && !existingReview) {
+      await notifyLearnerToLeaveReview({
+        supabase,
+        leerlingId: lesson.leerling_id,
+        instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
+        datum: input.datum,
+        tijd: input.tijd,
+        lesTitel: lesson.titel,
+      });
+    }
+  } else {
+    await notifyLearnerAboutLessonChange({
+      supabase,
+      leerlingId: lesson.leerling_id,
+      instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
+      datum: input.datum,
+      tijd: input.tijd,
+      locatie: locationSummary,
+      status: input.status,
+      reason: input.reason,
+    });
+  }
 
   revalidatePath("/instructeur/dashboard");
   revalidatePath("/instructeur/lessen");
