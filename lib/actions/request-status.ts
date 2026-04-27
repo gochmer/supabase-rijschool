@@ -3,11 +3,15 @@
 import { revalidatePath } from "next/cache";
 
 import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
-import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import {
+  ensureCurrentUserContext,
+  getCurrentInstructeurRecord,
+} from "@/lib/data/profiles";
 import {
   appendRequestUpdateMessage,
   buildLessonRequestReference,
 } from "@/lib/lesson-request-flow";
+import { notifyLearnerAboutRequestDecision } from "@/lib/notification-events";
 import { createServerClient } from "@/lib/supabase/server";
 import type { LesStatus } from "@/lib/types";
 
@@ -80,31 +84,6 @@ function getLessonTitle(request: LessonRequestForScheduling) {
   return "Rijles";
 }
 
-async function createNotification({
-  profileId,
-  title,
-  text,
-  type = "info",
-}: {
-  profileId: string | null | undefined;
-  title: string;
-  text: string;
-  type?: "info" | "succes" | "waarschuwing";
-}) {
-  if (!profileId) {
-    return;
-  }
-
-  const supabase = await createServerClient();
-  await supabase.from("notificaties").insert({
-    profiel_id: profileId,
-    titel: title,
-    tekst: text,
-    type,
-    ongelezen: true,
-  } as never);
-}
-
 async function ensureLessonForAcceptedRequest(
   request: LessonRequestForScheduling,
   input: LocationSelectionInput
@@ -167,9 +146,10 @@ async function ensureLessonForAcceptedRequest(
 export async function updateLessonRequestStatusAction(
   input: UpdateLessonRequestStatusInput
 ) {
+  const context = await ensureCurrentUserContext();
   const instructeur = await getCurrentInstructeurRecord();
 
-  if (!instructeur) {
+  if (!context || !instructeur) {
     return {
       success: false,
       message: "Alleen ingelogde instructeurs kunnen aanvragen bijwerken.",
@@ -245,28 +225,17 @@ export async function updateLessonRequestStatusAction(
     };
   }
 
-  if (request.leerling_id) {
-    const { data: leerling } = await supabase
-      .from("leerlingen")
-      .select("profile_id")
-      .eq("id", request.leerling_id)
-      .maybeSingle();
-
-    await createNotification({
-      profileId: leerling?.profile_id,
-      title:
-        input.status === "geaccepteerd"
-          ? "Je aanvraag is geaccepteerd"
-          : "Je aanvraag is geweigerd",
-      text:
-        input.status === "geaccepteerd"
-          ? "De instructeur heeft je aanvraag geaccepteerd. De les staat nu klaar om verder ingepland te worden."
-          : input.reason?.trim()
-            ? `De instructeur heeft je aanvraag geweigerd. Reden: ${input.reason.trim()}`
-            : "De instructeur heeft je aanvraag geweigerd.",
-      type: input.status === "geaccepteerd" ? "succes" : "waarschuwing",
-    });
-  }
+  await notifyLearnerAboutRequestDecision({
+    supabase,
+    leerlingId: request.leerling_id,
+    instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
+    status: input.status,
+    voorkeursdatum: request.voorkeursdatum,
+    tijdvak: request.tijdvak,
+    pakketNaam: request.pakket_naam_snapshot,
+    aanvraagType: request.aanvraag_type,
+    reason: input.reason,
+  });
 
   revalidatePath("/instructeur/aanvragen");
   revalidatePath("/instructeur/dashboard");

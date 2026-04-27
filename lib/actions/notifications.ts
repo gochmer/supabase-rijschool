@@ -5,6 +5,17 @@ import { revalidatePath } from "next/cache";
 import { ensureCurrentUserContext } from "@/lib/data/profiles";
 import { createServerClient } from "@/lib/supabase/server";
 
+function revalidateNotificationSurfaces() {
+  [
+    "/leerling/dashboard",
+    "/instructeur/dashboard",
+    "/admin/dashboard",
+    "/leerling/instellingen",
+    "/instructeur/instellingen",
+    "/admin/instellingen",
+  ].forEach((path) => revalidatePath(path));
+}
+
 export async function markNotificationReadAction(notificationId: string) {
   const context = await ensureCurrentUserContext();
 
@@ -29,8 +40,7 @@ export async function markNotificationReadAction(notificationId: string) {
     };
   }
 
-  revalidatePath("/leerling/dashboard");
-  revalidatePath("/instructeur/dashboard");
+  revalidateNotificationSurfaces();
 
   return {
     success: true,
@@ -62,8 +72,7 @@ export async function markAllNotificationsReadAction() {
     };
   }
 
-  revalidatePath("/leerling/dashboard");
-  revalidatePath("/instructeur/dashboard");
+  revalidateNotificationSurfaces();
 
   return {
     success: true,

@@ -3,11 +3,15 @@
 import { revalidatePath } from "next/cache";
 
 import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
-import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import {
+  ensureCurrentUserContext,
+  getCurrentInstructeurRecord,
+} from "@/lib/data/profiles";
 import {
   appendRequestUpdateMessage,
   extractLessonRequestReference,
 } from "@/lib/lesson-request-flow";
+import { notifyLearnerAboutLessonChange } from "@/lib/notification-events";
 import { createServerClient } from "@/lib/supabase/server";
 import type { LesStatus } from "@/lib/types";
 
@@ -28,31 +32,6 @@ function toLocalDateTime(dateString: string, timeString: string) {
   }
 
   return `${dateString}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00`;
-}
-
-async function createNotification({
-  profileId,
-  title,
-  text,
-  type = "info",
-}: {
-  profileId: string | null | undefined;
-  title: string;
-  text: string;
-  type?: "info" | "succes" | "waarschuwing";
-}) {
-  if (!profileId) {
-    return;
-  }
-
-  const supabase = await createServerClient();
-  await supabase.from("notificaties").insert({
-    profiel_id: profileId,
-    titel: title,
-    tekst: text,
-    type,
-    ongelezen: true,
-  } as never);
 }
 
 async function syncLinkedRequestStatus(
@@ -96,9 +75,10 @@ async function syncLinkedRequestStatus(
 }
 
 export async function updateLessonAction(input: UpdateLessonInput) {
+  const context = await ensureCurrentUserContext();
   const instructeur = await getCurrentInstructeurRecord();
 
-  if (!instructeur) {
+  if (!context || !instructeur) {
     return {
       success: false,
       message: "Alleen ingelogde instructeurs kunnen lessen bijwerken.",
@@ -155,6 +135,22 @@ export async function updateLessonAction(input: UpdateLessonInput) {
   }
 
   const locationId = await resolveLocationSelection(input);
+  const locationRow =
+    locationId
+      ? (
+          await supabase
+            .from("locaties")
+            .select("naam, stad")
+            .eq("id", locationId)
+            .maybeSingle()
+        ).data
+      : null;
+  const locationSummary =
+    input.newLocationName?.trim() && input.newLocationCity?.trim()
+      ? `${input.newLocationName.trim()}, ${input.newLocationCity.trim()}`
+      : locationRow
+        ? `${locationRow.naam}, ${locationRow.stad}`
+        : "Locatie volgt nog";
 
   const { error } = await supabase
     .from("lessen")
@@ -180,32 +176,16 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     input.reason
   );
 
-  if (lesson.leerling_id) {
-    const { data: leerling } = await supabase
-      .from("leerlingen")
-      .select("profile_id")
-      .eq("id", lesson.leerling_id)
-      .maybeSingle();
-
-    const statusText =
-      input.status === "afgerond"
-        ? `Je les is afgerond.`
-        : input.status === "geannuleerd"
-          ? `Je les is geannuleerd.${input.reason?.trim() ? ` Reden: ${input.reason.trim()}` : ""}`
-          : `Je les is bijgewerkt naar ${input.datum} om ${input.tijd}.`;
-
-    await createNotification({
-      profileId: leerling?.profile_id,
-      title:
-        input.status === "geannuleerd"
-          ? "Je les is geannuleerd"
-          : input.status === "afgerond"
-            ? "Je les is afgerond"
-            : "Je les is bijgewerkt",
-      text: statusText,
-      type: input.status === "geannuleerd" ? "waarschuwing" : "info",
-    });
-  }
+  await notifyLearnerAboutLessonChange({
+    supabase,
+    leerlingId: lesson.leerling_id,
+    instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
+    datum: input.datum,
+    tijd: input.tijd,
+    locatie: locationSummary,
+    status: input.status,
+    reason: input.reason,
+  });
 
   revalidatePath("/instructeur/dashboard");
   revalidatePath("/instructeur/lessen");
@@ -220,40 +200,4 @@ export async function updateLessonAction(input: UpdateLessonInput) {
         ? "De les is geannuleerd."
         : "De les is bijgewerkt.",
   };
-}
-
-export async function createLessonNotificationForAcceptedRequest({
-  leerlingId,
-  instructeurProfileId,
-  title,
-  text,
-}: {
-  leerlingId: string | null;
-  instructeurProfileId?: string | null;
-  title: string;
-  text: string;
-}) {
-  const supabase = await createServerClient();
-
-  if (leerlingId) {
-    const { data: leerling } = await supabase
-      .from("leerlingen")
-      .select("profile_id")
-      .eq("id", leerlingId)
-      .maybeSingle();
-
-    await createNotification({
-      profileId: leerling?.profile_id,
-      title,
-      text,
-      type: "succes",
-    });
-  }
-
-  await createNotification({
-    profileId: instructeurProfileId,
-    title: "Aanvraag verwerkt",
-    text: "Je hebt een aanvraag geaccepteerd en automatisch als les klaargezet.",
-    type: "succes",
-  });
 }

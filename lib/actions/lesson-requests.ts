@@ -16,6 +16,7 @@ import {
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
 import { appendRequestUpdateMessage } from "@/lib/lesson-request-flow";
+import { notifyInstructorAboutNewRequest } from "@/lib/notification-events";
 import { createServerClient } from "@/lib/supabase/server";
 
 type CreateLessonRequestInput = {
@@ -475,6 +476,18 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
       message: "De lesaanvraag kon niet worden opgeslagen.",
     };
   }
+
+  await notifyInstructorAboutNewRequest({
+    supabase,
+    instructeurId: instructeur.id,
+    leerlingNaam: context.profile?.volledige_naam || "Leerling",
+    voorkeursdatum,
+    tijdvak,
+    pakketNaam: selectedPackage?.naam ?? null,
+    aanvraagType: selectedPackage ? "pakket" : requestType,
+    lesType: selectedPackage?.les_type ?? null,
+    bericht: input.bericht?.trim() || null,
+  });
 
   revalidateLessonRequestPaths(input.instructorSlug);
 

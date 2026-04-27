@@ -1,4 +1,4 @@
-import { Sparkles, Zap } from "lucide-react";
+import { BellRing, Sparkles, Zap } from "lucide-react";
 
 import { getAdminActivityFeed } from "@/lib/data/admin";
 import { getCurrentNotifications } from "@/lib/data/notifications";
@@ -10,6 +10,7 @@ import { CommandPalette } from "@/components/dashboard/command-palette";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { RoleRedirectNotice } from "@/components/dashboard/role-redirect-notice";
 import { Logo } from "@/components/logo";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
@@ -192,6 +193,41 @@ export async function DashboardShell({
               : "border border-white/50 bg-white/36 backdrop-blur-sm dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.46),rgba(15,23,42,0.32),rgba(15,23,42,0.42))] dark:backdrop-blur-md"
           )}
         >
+          <div
+            className={cn(
+              "sticky top-2 z-20 flex flex-col gap-3 rounded-[1.6rem] border px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between",
+              isLearner
+                ? "border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(148,163,184,0.07),rgba(15,23,42,0.24))]"
+                : "border-white/70 bg-white/76 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]"
+            )}
+          >
+            <div className="min-w-0">
+              <div
+                className={cn(
+                  "flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] uppercase",
+                  isLearner ? "text-slate-300" : "text-primary dark:text-sky-300"
+                )}
+              >
+                <BellRing className="size-3.5" />
+                Algemene dashboardheader
+              </div>
+              <p
+                className={cn(
+                  "mt-1 text-sm leading-6",
+                  isLearner ? "text-slate-200" : "text-slate-700 dark:text-slate-200"
+                )}
+              >
+                {notifications.filter((item) => item.ongelezen).length
+                  ? `${notifications.filter((item) => item.ongelezen).length} ongelezen melding(en) vragen aandacht.`
+                  : "Geen open meldingen. Je dashboard is bijgewerkt en rustig."}
+              </p>
+            </div>
+
+            <NotificationDropdown
+              notifications={notifications}
+              surface={isLearner ? "urban" : "default"}
+            />
+          </div>
           <RoleRedirectNotice role={role} />
           {children}
         </main>
