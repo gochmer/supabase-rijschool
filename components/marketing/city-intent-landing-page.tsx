@@ -3,6 +3,8 @@ import { ArrowRight, CheckCircle2, Flame, GaugeCircle, Star } from "lucide-react
 
 import { InstructorCard } from "@/components/instructors/instructor-card";
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +16,17 @@ import {
 } from "@/components/ui/card";
 import {
   getSeoCityIntentConfig,
+  getSeoCityIntentFaqItems,
   getSeoCityIntentPath,
+  getSeoCityIntentNarrative,
+  getSeoCityIntentRouteLabel,
   seoCityIntents,
   type SeoCityIntent,
 } from "@/lib/seo-city-intents";
 import {
-  getSeoCityVariantLabel,
   getSeoCityVariantPath,
+  getSeoCityVariantRouteLabel,
+  seoCityConfigs,
   type SeoCityConfig,
 } from "@/lib/seo-cities";
 import type { InstructeurProfiel, Pakket } from "@/lib/types";
@@ -50,6 +56,15 @@ export function CityIntentLandingPage({
     return null;
   }
 
+  const faqItems = getSeoCityIntentFaqItems(city, intent);
+  const localNarrative = getSeoCityIntentNarrative(city, intent);
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Rijschool", href: "/instructeurs" },
+    { label: city.name, href: `/rijschool/${city.slug}` },
+    { label: config.label, href: getSeoCityIntentPath(city.slug, intent) },
+  ];
+  const itemListTitle = `Top instructeurs voor ${config.searchLabel} in ${city.name}`;
   const totalPackages = Object.values(packagesByInstructorId).reduce(
     (total, packages) => total + packages.length,
     0
@@ -61,70 +76,78 @@ export function CityIntentLandingPage({
       ).toFixed(1)
     : null;
 
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: config.faqQuestion(city),
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: config.faqAnswer(city),
-        },
-      },
-    ],
-  };
-
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: siteUrl,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: config.label,
-        item: `${siteUrl}/instructeurs`,
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: `${config.label} ${city.name}`,
-        item: `${siteUrl}${getSeoCityIntentPath(city.slug, intent)}`,
-      },
-    ],
-  };
-
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
+    name: itemListTitle,
+    itemListOrder: "https://schema.org/ItemListOrderAscending",
+    numberOfItems: instructors.slice(0, 12).length,
     itemListElement: instructors.slice(0, 12).map((instructor, index) => ({
       "@type": "ListItem",
       position: index + 1,
-      url: `${siteUrl}/instructeurs/${instructor.slug}`,
-      name: instructor.volledige_naam,
+      item: {
+        "@type": "Person",
+        name: instructor.volledige_naam,
+        url: `${siteUrl}/instructeurs/${instructor.slug}`,
+      },
     })),
+  };
+
+  const serviceJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: `${config.label} ${city.name}`,
+    serviceType: config.label,
+    description: config.heroIntro(city),
+    url: `${siteUrl}${getSeoCityIntentPath(city.slug, intent)}`,
+    areaServed: {
+      "@type": "City",
+      name: city.name,
+    },
+    provider: {
+      "@type": "Organization",
+      name: "RijBasis",
+      url: siteUrl,
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: `${config.label} in ${city.name}`,
+      numberOfItems: totalPackages,
+    },
+  };
+
+  const localBusinessJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: `RijBasis ${city.name}`,
+    url: `${siteUrl}${getSeoCityIntentPath(city.slug, intent)}`,
+    description: config.heroIntro(city),
+    areaServed: {
+      "@type": "City",
+      name: city.name,
+    },
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: city.name,
+      addressRegion: city.provinceLabel,
+      addressCountry: "NL",
+    },
+    knowsAbout: [config.label, city.name, config.searchLabel, "rijles"],
   };
 
   return (
     <div className="pb-20">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
       />
 
       <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
@@ -133,6 +156,7 @@ export function CityIntentLandingPage({
           <Reveal className="rounded-[2.5rem] border border-white/80 bg-white/92 p-6 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.22)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.62)] sm:p-8">
             <div className="grid gap-8 xl:grid-cols-[0.95fr_1.05fr] xl:items-start">
               <div className="space-y-6">
+                <SeoBreadcrumbs items={breadcrumbItems} />
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="border border-sky-100 bg-sky-50 text-sky-700">
                     {config.label} {city.name}
@@ -225,6 +249,21 @@ export function CityIntentLandingPage({
 
       <section className="site-shell mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
         <Reveal className="space-y-5">
+          {localNarrative ? (
+            <Card className="border border-white/80 bg-white/90 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+              <CardHeader>
+                <CardTitle>{localNarrative.title}</CardTitle>
+                <CardDescription>
+                  Unieke lokale context voor {config.searchLabel} in {city.name}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                <p>{localNarrative.body}</p>
+                <p>{localNarrative.support}</p>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl space-y-3">
               <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
@@ -240,7 +279,7 @@ export function CityIntentLandingPage({
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" className="rounded-full">
                 <Link href={getSeoCityVariantPath(city.slug, "general")}>
-                  {getSeoCityVariantLabel(city.name, "general")}
+                  {getSeoCityVariantRouteLabel(city.name, "general")}
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -282,63 +321,18 @@ export function CityIntentLandingPage({
       </section>
 
       <section className="site-shell mx-auto w-full px-4 pt-4 sm:px-6 lg:px-8">
-        <Reveal className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <Reveal className="grid gap-5">
           <Card className="border border-white/80 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
             <CardHeader>
-              <CardTitle>{config.faqQuestion(city)}</CardTitle>
+              <CardTitle>Andere routes in {city.name}</CardTitle>
               <CardDescription>
-                Zoekopdrachten zoals &quot;{config.searchLabel} {city.name}&quot; zijn vaak warmer dan brede zoektermen.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
-              <p>{config.faqAnswer(city)}</p>
-              <p>
-                Door hier lokale profielen, reviews en pakketten te combineren, krijgt deze intentpagina meer SEO-diepte en een veel logischere doorklik voor echte bezoekers.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-white/80 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-            <CardHeader>
-              <CardTitle>Meer SEO-routes rondom {city.name}</CardTitle>
-              <CardDescription>
-                Interne links tussen stadspagina&apos;s en intentpagina&apos;s versterken topical authority.
+                Sterke interne links tussen intentpagina&apos;s en stadspagina&apos;s helpen Google en bezoekers sneller de juiste route binnen {city.name} te vinden.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-300">
-                  Andere intenten in {city.name}
-                </p>
-                <div className="grid gap-2">
-                  {seoCityIntents
-                    .filter((entry) => entry !== intent)
-                    .map((entry) => {
-                      const entryConfig = getSeoCityIntentConfig(entry);
-
-                      if (!entryConfig) {
-                        return null;
-                      }
-
-                      return (
-                        <Link
-                          key={entry}
-                          href={getSeoCityIntentPath(city.slug, entry)}
-                          className="flex items-center justify-between rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/16 dark:hover:text-white"
-                        >
-                          <span>
-                            {entryConfig.label} {city.name}
-                          </span>
-                          <ArrowRight className="size-4" />
-                        </Link>
-                      );
-                    })}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-300">
-                  Klassieke lokale routes
+                  Andere routes in {city.name}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {(["general", "automaat", "schakel", "motor", "vrachtwagen"] as const).map(
@@ -348,17 +342,59 @@ export function CityIntentLandingPage({
                         href={getSeoCityVariantPath(city.slug, entry)}
                         className="flex items-center justify-between rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/16 dark:hover:text-white"
                       >
-                        <span>{getSeoCityVariantLabel(city.name, entry)}</span>
+                        <span>{getSeoCityVariantRouteLabel(city.name, entry)}</span>
                         <ArrowRight className="size-4" />
                       </Link>
                     )
                   )}
+                  {seoCityIntents
+                    .filter((entry) => entry !== intent)
+                    .map((entry) => {
+                      return (
+                        <Link
+                          key={entry}
+                          href={getSeoCityIntentPath(city.slug, entry)}
+                          className="flex items-center justify-between rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/16 dark:hover:text-white"
+                        >
+                          <span>{getSeoCityIntentRouteLabel(city.name, entry)}</span>
+                          <ArrowRight className="size-4" />
+                        </Link>
+                      );
+                    })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-300">
+                  Andere steden voor {config.searchLabel}
+                </p>
+                <div className="grid gap-2">
+                  {seoCityConfigs
+                    .filter((entry) => entry.slug !== city.slug)
+                    .slice(0, 6)
+                    .map((entry) => (
+                      <Link
+                        key={`${intent}-${entry.slug}`}
+                        href={getSeoCityIntentPath(entry.slug, intent)}
+                        className="flex items-center justify-between rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/16 dark:hover:text-white"
+                      >
+                        <span>{getSeoCityIntentRouteLabel(entry.name, intent)}</span>
+                        <ArrowRight className="size-4" />
+                      </Link>
+                    ))}
                 </div>
               </div>
             </CardContent>
           </Card>
         </Reveal>
       </section>
+
+      <MarketingFaqSection
+        eyebrow={`Veelgestelde vragen ${city.name}`}
+        title={`Veelgestelde vragen over ${config.searchLabel} in ${city.name}`}
+        description={`Deze lokale intent-FAQ geeft extra context over ${config.searchLabel} in ${city.name}, helpt bezoekers sneller kiezen en versterkt tegelijk de rich-result kansen van deze SEO-pagina.`}
+        items={faqItems}
+      />
     </div>
   );
 }

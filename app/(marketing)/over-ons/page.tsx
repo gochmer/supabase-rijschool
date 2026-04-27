@@ -2,6 +2,7 @@ import { CheckCircle2, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 import { Reveal, SignatureLine } from "@/components/marketing/homepage-motion";
 import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { SectionHeading } from "@/components/section-heading";
 import {
   Card,
@@ -101,6 +102,11 @@ const aboutFaqItems = [
 ];
 
 export default function OverOnsPage() {
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Over ons", href: "/over-ons" },
+  ];
+
   return (
     <div className="pb-20">
       <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
@@ -108,6 +114,7 @@ export default function OverOnsPage() {
         <div className="site-shell relative mx-auto w-full py-12 lg:py-20">
           <div className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
             <Reveal className="space-y-8 lg:pr-6">
+              <SeoBreadcrumbs items={breadcrumbItems} />
               <SectionHeading
                 eyebrow="Over ons"
                 title="RijBasis is gebouwd voor rijscholen die kwaliteit willen uitstralen in elke stap van het traject."

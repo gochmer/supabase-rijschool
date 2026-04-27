@@ -125,6 +125,20 @@ export default async function HomePage() {
                       </div>
                     )
                   )}
+                  </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline" className="rounded-full">
+                    <Link href="/vergelijk/automaat-vs-schakel">
+                      Vergelijk automaat vs schakel
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="rounded-full">
+                    <Link href="/vergelijk/spoedcursus-vs-regulier">
+                      Vergelijk spoedcursus vs regulier
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
                 </div>
                 <div className="flex items-start gap-3 rounded-[1.25rem] bg-slate-50 px-4 py-3 dark:bg-white/6">
                   <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">

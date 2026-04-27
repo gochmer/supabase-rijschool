@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { InstructorCard } from "@/components/instructors/instructor-card";
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +63,14 @@ export function LessonTypePage({
 }: LessonTypePageProps) {
   const activeOption = rijlesTypeOptions.find((option) => option.value === lessonType);
   const packagesByInstructorId = groupPackagesByInstructorId(packages);
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Instructeurs", href: "/instructeurs" },
+    {
+      label: activeOption?.label ?? getRijlesTypeLabel(lessonType),
+      href: activeOption?.href ?? "/instructeurs",
+    },
+  ];
 
   return (
     <div className="pb-20">
@@ -71,6 +80,7 @@ export function LessonTypePage({
           <Reveal className="rounded-[2.5rem] border border-white/80 bg-white/90 p-6 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.22)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.62)] sm:p-8">
             <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
               <div className="space-y-6">
+                <SeoBreadcrumbs items={breadcrumbItems} />
                 <div className="flex flex-wrap gap-2">
                   {rijlesTypeOptions.map((option) => (
                     <Link

@@ -12,6 +12,7 @@ import { InstructorAvailabilityPlanner } from "@/components/instructors/instruct
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
 import { BrandRouteScene } from "@/components/marketing/brand-route-scene";
 import { HoverTilt, Reveal, SignatureLine } from "@/components/marketing/homepage-motion";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { ReviewReportDialog } from "@/components/reviews/review-report-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -115,12 +116,18 @@ export default async function InstructeurDetailPage({
       text: "Je kunt wel direct een aanvraag of proefles starten zonder de agenda al te zien.",
     },
   ];
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Instructeurs", href: "/instructeurs" },
+    { label: instructor.volledige_naam, href: `/instructeurs/${instructor.slug}` },
+  ];
 
   return (
     <div className="pb-20">
       <section className="relative overflow-hidden px-4 pt-10 sm:px-6 lg:px-8">
         <div className="absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.18),transparent_22%),radial-gradient(circle_at_84%_16%,rgba(29,78,216,0.18),transparent_24%),radial-gradient(circle_at_56%_58%,rgba(249,115,22,0.12),transparent_22%)]" />
         <div className="site-shell relative mx-auto w-full py-10 lg:py-18">
+          <SeoBreadcrumbs items={breadcrumbItems} className="mb-6" />
           <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
             <div className="space-y-8">
               <Reveal className="rounded-[2.45rem] border border-white/70 bg-white/84 p-6 shadow-[0_32px_100px_-50px_rgba(15,23,42,0.35)] backdrop-blur sm:p-8">

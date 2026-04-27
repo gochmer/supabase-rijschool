@@ -4,6 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 
 import { Reveal } from "@/components/marketing/homepage-motion";
 import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { PackageMatchmaker } from "@/components/packages/package-matchmaker";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +47,15 @@ const packagesFaqItems = [
 
 export default async function PakkettenPage() {
   const packages = await getPublicPackages();
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Pakketten", href: "/pakketten" },
+  ];
 
   return (
     <div className="pb-20">
       <section className="site-shell mx-auto w-full px-4 pb-6 pt-14 sm:px-6 sm:pt-16 lg:px-8">
+        <SeoBreadcrumbs items={breadcrumbItems} className="mb-4" />
         <div className="mb-4 flex flex-wrap gap-2">
           {rijlesTypeOptions.map((option) => (
             <Link

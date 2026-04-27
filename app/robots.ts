@@ -20,6 +20,7 @@ export default function robots(): MetadataRoute.Robots {
         "/faalangst/",
         "/opfriscursus/",
         "/praktijkexamen/",
+        "/vergelijk",
         "/tips",
       ],
       disallow: ["/admin/", "/dashboard/", "/instructeur/", "/leerling/", "/auth/"],

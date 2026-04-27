@@ -3,6 +3,7 @@ import { ArrowRight, BookOpenText, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,11 @@ export const metadata: Metadata = {
 };
 
 export default function TipsOverviewPage() {
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Tips", href: "/tips" },
+  ];
+
   return (
     <div className="pb-20">
       <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
@@ -45,6 +51,7 @@ export default function TipsOverviewPage() {
         <div className="site-shell relative mx-auto w-full py-10 lg:py-16">
           <Reveal className="rounded-[2.4rem] border border-white/80 bg-white/92 p-6 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.22)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.62)] sm:p-8">
             <div className="max-w-4xl space-y-5">
+              <SeoBreadcrumbs items={breadcrumbItems} />
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="border border-sky-100 bg-sky-50 text-sky-700">
                   SEO kennisbank
@@ -149,6 +156,22 @@ export default function TipsOverviewPage() {
               <div>Meer topical authority rond rijles, examenfocus en proeflessen.</div>
               <div>Sterkere interne links naar stadspagina&apos;s en intentroutes.</div>
               <div>Extra ingang voor bezoekers die nog via een informatievraag binnenkomen.</div>
+            </CardContent>
+            <CardContent className="grid gap-2 pt-0 sm:grid-cols-2">
+              <Link
+                href="/vergelijk/automaat-vs-schakel"
+                className="flex items-center justify-between rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/16 dark:hover:text-white"
+              >
+                <span>Automaat vs schakel vergelijken</span>
+                <ArrowRight className="size-4" />
+              </Link>
+              <Link
+                href="/vergelijk/spoedcursus-vs-regulier"
+                className="flex items-center justify-between rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/16 dark:hover:text-white"
+              >
+                <span>Spoedcursus vs regulier</span>
+                <ArrowRight className="size-4" />
+              </Link>
             </CardContent>
           </Card>
         </Reveal>

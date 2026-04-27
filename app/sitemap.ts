@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { seoComparisonPages } from "@/lib/seo-comparisons";
 import { seoCityConfigs } from "@/lib/seo-cities";
 import { seoTipArticles } from "@/lib/seo-tips";
 
@@ -12,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/pakketten",
     "/motor",
     "/vrachtwagen",
+    "/vergelijk",
     "/over-ons",
     "/contact",
   ];
@@ -39,6 +41,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const praktijkexamenCityRoutes = seoCityConfigs.map(
     (city) => `/praktijkexamen/${city.slug}`
   );
+  const comparisonRoutes = seoComparisonPages.map(
+    (comparison) => `/vergelijk/${comparison.slug}`
+  );
   const tipRoutes = ["/tips", ...seoTipArticles.map((article) => `/tips/${article.slug}`)];
 
   return [
@@ -54,6 +59,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...faalangstCityRoutes,
     ...opfriscursusCityRoutes,
     ...praktijkexamenCityRoutes,
+    ...comparisonRoutes,
     ...tipRoutes,
   ].map((path) => ({
     url: `${siteUrl}${path}`,
@@ -70,6 +76,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       path.startsWith("/faalangst/") ||
       path.startsWith("/opfriscursus/") ||
       path.startsWith("/praktijkexamen/") ||
+      path.startsWith("/vergelijk/") ||
       path.startsWith("/tips/")
         ? "weekly"
         : "monthly",
@@ -87,6 +94,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             path.startsWith("/faalangst/") ||
             path.startsWith("/opfriscursus/") ||
             path.startsWith("/praktijkexamen/") ||
+            path.startsWith("/vergelijk/") ||
             path.startsWith("/tips/")
           ? 0.9
           : 0.8,

@@ -2,6 +2,7 @@ import { CheckCircle2, Clock3, Mail, MapPin, PhoneCall } from "lucide-react";
 
 import { Reveal, SignatureLine } from "@/components/marketing/homepage-motion";
 import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { SectionHeading } from "@/components/section-heading";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,6 +100,11 @@ const contactFaqItems = [
 ];
 
 export default function ContactPage() {
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Contact", href: "/contact" },
+  ];
+
   return (
     <div className="pb-20">
       <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
@@ -106,6 +112,7 @@ export default function ContactPage() {
         <div className="site-shell relative mx-auto w-full py-12 lg:py-20">
           <div className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
             <Reveal className="space-y-8 lg:pr-6">
+              <SeoBreadcrumbs items={breadcrumbItems} />
               <SectionHeading
                 eyebrow="Contact"
                 title="Praat met een team dat net zoveel aandacht heeft voor uitstraling als voor gebruiksgemak."

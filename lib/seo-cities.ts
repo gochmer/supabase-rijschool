@@ -20,6 +20,10 @@ export type SeoCityConfig = {
   highlightLines: string[];
   faqTitle: string;
   faqAnswer: string;
+  localTrafficInsight: string;
+  localAutomaatInsight: string;
+  localExamInsight: string;
+  localComfortInsight: string;
 };
 
 type SeoCityVariantContent = {
@@ -37,6 +41,17 @@ type SeoCityVariantContent = {
   faqQuestion: string;
   faqAnswer: string;
   emptyState: string;
+};
+
+export type SeoFaqItem = {
+  question: string;
+  answer: string;
+};
+
+export type SeoCityNarrative = {
+  title: string;
+  body: string;
+  support: string;
 };
 
 export const seoCityVariants: SeoCityVariant[] = [
@@ -71,6 +86,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Waarom een aparte rijschoolpagina voor Amsterdam?",
     faqAnswer:
       "Omdat leerlingen vaak specifiek zoeken op stad. Hier zie je direct instructeurs die actief zijn in Amsterdam, zonder ruis van andere regio's.",
+    localTrafficInsight:
+      "Rijlessen in Amsterdam voelen vaak drukker door tramverkeer, fietsers, smalle straten en veel onverwachte verkeersmomenten. Daardoor zoeken leerlingen hier vaker naar instructeurs die rustig blijven opbouwen en sterk zijn in stadsverkeer.",
+    localAutomaatInsight:
+      "In Amsterdam kiezen relatief veel leerlingen voor automaat, juist omdat stop-and-go verkeer, drukke kruisingen en beperkte ruimte al genoeg aandacht vragen zonder extra schakeldruk.",
+    localExamInsight:
+      "Voor examentraining in Amsterdam is routekennis extra waardevol. Leerlingen willen vaak sneller vertrouwen opbouwen in gemengd verkeer en bekende lastige punten rond drukke stadsdelen.",
+    localComfortInsight:
+      "Bij proefles, faalangst of opfriscursus is in Amsterdam vooral behoefte aan overzicht, rust en een instructeur die de druk van de stad stap voor stap kleiner maakt.",
   },
   {
     slug: "rotterdam",
@@ -95,6 +118,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Wat zie je op de rijschoolpagina voor Rotterdam?",
     faqAnswer:
       "Alleen instructeurs die lesgeven in Rotterdam of omliggende deelgebieden binnen hun werkgebied. Daardoor sluit het aanbod direct beter aan op lokale zoekintentie.",
+    localTrafficInsight:
+      "Rijlessen in Rotterdam draaien vaak om brede wegen, ringverkeer, rijstrookwissels en een hoger tempo. Daardoor zoeken bezoekers hier vaak naar duidelijke instructeurs met structuur en veel verkeersinzicht.",
+    localAutomaatInsight:
+      "In Rotterdam is automaat extra aantrekkelijk voor leerlingen die vooral rust willen houden in druk verkeer en op brede stadsroutes waar veel tegelijk gebeurt.",
+    localExamInsight:
+      "Spoedcursussen en examengerichte trajecten zijn in Rotterdam populair, juist omdat veel leerlingen tempo willen maken zonder grip te verliezen in drukke verkeerssituaties.",
+    localComfortInsight:
+      "Voor proefles, faalangst of opfriscursus werkt in Rotterdam een kalme opbouw extra goed. Een rustige instructeur maakt het verschil in een stad waar verkeer snel intens kan aanvoelen.",
   },
   {
     slug: "den-haag",
@@ -119,6 +150,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Voor wie is deze Den Haag pagina handig?",
     faqAnswer:
       "Voor leerlingen die gericht zoeken naar een rijschool in Den Haag en meteen lokale instructeurs, reviews en pakketten willen vergelijken.",
+    localTrafficInsight:
+      "Rijlessen in Den Haag combineren vaak stadsverkeer, veel fietsers, tramlijnen en routes richting omliggende examenstukken. Daardoor is lokale variatie hier een belangrijk onderdeel van goede lesopbouw.",
+    localAutomaatInsight:
+      "Automaat rijles in Den Haag spreekt vaak leerlingen aan die minder druk willen ervaren in een stad waar veel verkeerssoorten tegelijk om aandacht vragen.",
+    localExamInsight:
+      "Examengerichte lessen in Den Haag vragen vaak om een goede mix van stadscontrole, anticiperen en routekennis richting omliggende gebieden waar het verkeersbeeld snel verandert.",
+    localComfortInsight:
+      "Bij proeflessen en faalangsttrajecten werkt Den Haag goed met een instructeur die rustig kan schakelen tussen drukke stadsmomenten en veiligere opbouwstukken rondom de stad.",
   },
   {
     slug: "utrecht",
@@ -144,6 +183,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Wat maakt de Utrecht stadspagina waardevol?",
     faqAnswer:
       "Je ziet alleen relevant lokaal aanbod voor Utrecht, waardoor de pagina beter aansluit op hoe mensen zoeken en sneller vertrouwen opbouwt.",
+    localTrafficInsight:
+      "In Utrecht zijn rijlessen vaak compact en dynamisch: veel fietsers, binnenstedelijke drukte en snelle overgangen tussen rustige woonwijken en drukkere hoofdroutes.",
+    localAutomaatInsight:
+      "In Utrecht kiezen veel leerlingen bewust voor automaat om sneller rust te voelen in druk stadsverkeer en om de eerste lessen eenvoudiger te houden.",
+    localExamInsight:
+      "Spoedcursussen en examengerichte trajecten zijn in Utrecht populair bij leerlingen die tempo willen maken, bijvoorbeeld door studieplanning of een concrete examendoelstelling.",
+    localComfortInsight:
+      "Voor proefles, faalangst en opfriscursus is Utrecht sterk wanneer de instructeur duidelijk structuur brengt in een stad waar drukte en overzicht dicht naast elkaar liggen.",
   },
   {
     slug: "eindhoven",
@@ -168,6 +215,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Waarom werkt een stadspagina voor Eindhoven goed?",
     faqAnswer:
       "Bezoekers die op Eindhoven zoeken krijgen direct relevante instructeurs en pakketten te zien, wat beter converteert dan een algemene landelijke pagina.",
+    localTrafficInsight:
+      "Rijlessen in Eindhoven hebben vaak een praktisch karakter: stadsverkeer, ringwegen en routes richting bedrijvigheid en omliggende woongebieden lopen hier logisch in elkaar over.",
+    localAutomaatInsight:
+      "Automaat is in Eindhoven vaak interessant voor leerlingen die comfort zoeken in dagelijkse verkeersstromen en liever snel vertrouwen opbouwen dan eerst veel schakeldruk ervaren.",
+    localExamInsight:
+      "Examengerichte trajecten in Eindhoven sluiten vaak goed aan op leerlingen die gericht willen plannen rond werk, studie of een strak examenmoment.",
+    localComfortInsight:
+      "Voor opfriscursus of proefles is Eindhoven aantrekkelijk omdat instructeurs hier vaak een rustige, praktische opbouw kunnen combineren met goed voorspelbare routes.",
   },
   {
     slug: "groningen",
@@ -192,6 +247,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Wat maakt de Groningen pagina waardevol?",
     faqAnswer:
       "Leerlingen die op Groningen zoeken willen snel zien wie daar echt actief is. Deze pagina maakt die lokale keuze veel directer.",
+    localTrafficInsight:
+      "Rijlessen in Groningen vragen vaak veel aandacht voor fietsers, compacte stadsroutes en goed kijken in een verkeersbeeld dat snel verandert maar niet altijd gehaast voelt.",
+    localAutomaatInsight:
+      "Automaat in Groningen is vaak populair bij leerlingen die een rustige start willen maken en liever eerst verkeersinzicht opbouwen voordat techniek te veel aandacht vraagt.",
+    localExamInsight:
+      "Voor examentraining in Groningen draait het vaak minder om pure drukte en meer om scherp anticiperen, goede kijktechniek en netjes omgaan met gemengd verkeer.",
+    localComfortInsight:
+      "Bij proefles, faalangst en opfriscursus helpt Groningen vaak juist door de combinatie van overzichtelijke stukken en voldoende echte stadssituaties om zelfvertrouwen op te bouwen.",
   },
   {
     slug: "tilburg",
@@ -216,6 +279,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Waarom een aparte Tilburg rijschoolpagina?",
     faqAnswer:
       "Omdat lokale zoekopdrachten in Tilburg anders werken dan landelijke vergelijkingen. Deze pagina sluit beter aan op echte regionale intentie.",
+    localTrafficInsight:
+      "Rijlessen in Tilburg voelen vaak overzichtelijker dan in de grootste steden, maar vragen wel om goede controle op doorstroming, wijkwissels en consistente verkeerswaarneming.",
+    localAutomaatInsight:
+      "Automaat rijles in Tilburg spreekt vaak leerlingen aan die vooral comfortabel en stabiel willen starten, zonder direct veel techniek tegelijk te hoeven verwerken.",
+    localExamInsight:
+      "Examengerichte lessen in Tilburg zijn populair bij leerlingen die duidelijke structuur zoeken en gericht willen werken aan een stabiele route richting het praktijkexamen.",
+    localComfortInsight:
+      "Voor proefles en opfriscursus werkt Tilburg sterk met instructeurs die rustig kunnen opbouwen en leerlingen snel laten voelen dat de route haalbaar en duidelijk is.",
   },
   {
     slug: "breda",
@@ -240,6 +311,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Wat levert de Breda stadspagina op?",
     faqAnswer:
       "Een betere match tussen lokale zoekers en relevante instructeurs, waardoor bezoekers sneller vertrouwen krijgen en doorklikken.",
+    localTrafficInsight:
+      "Rijlessen in Breda draaien vaak om een prettige mix van binnenstad, woonwijken en toegangswegen, waardoor leerlingen zowel overzicht als echte verkeersvariatie nodig hebben.",
+    localAutomaatInsight:
+      "In Breda kiezen veel leerlingen voor automaat wanneer ze snel comfort willen voelen en liever eerst verkeersritme dan schakelen centraal zetten.",
+    localExamInsight:
+      "Spoed- en examengerichte trajecten in Breda werken goed voor leerlingen die duidelijk willen plannen en doelgericht naar een examendatum toewerken.",
+    localComfortInsight:
+      "Bij proefles, faalangst en opfriscursus helpt Breda vooral wanneer de instructeur het verkeer behapbaar maakt en stap voor stap laat zien waar de rust zit.",
   },
   {
     slug: "arnhem",
@@ -264,6 +343,14 @@ export const seoCityConfigs: SeoCityConfig[] = [
     faqTitle: "Waarom is Arnhem als SEO-pagina interessant?",
     faqAnswer:
       "Omdat veel bezoekers direct zoeken op stad. Met een lokale Arnhem pagina wordt het aanbod relevanter en sterker vindbaar.",
+    localTrafficInsight:
+      "Rijlessen in Arnhem voelen anders door hoogteverschillen, bruggen en routewisselingen die meer voertuigcontrole vragen dan in een volledig vlakke stad.",
+    localAutomaatInsight:
+      "Automaat rijles in Arnhem is voor veel leerlingen aantrekkelijk omdat hellingen, bochten en brugovergangen dan minder techniekstress geven in de eerste fase.",
+    localExamInsight:
+      "Examengerichte lessen in Arnhem vragen vaak om extra aandacht voor voertuigbeheersing, kijkgedrag en het combineren van stadsverkeer met routevariatie.",
+    localComfortInsight:
+      "Voor proeflessen en opfriscursussen is Arnhem sterk wanneer een instructeur de hoogteverschillen en verkeerswisselingen rustig opbouwt en daardoor veel vertrouwen geeft.",
   },
 ];
 
@@ -328,6 +415,25 @@ export function getSeoCityVariantLabel(
       return `Motor ${cityName}`;
     case "vrachtwagen":
       return `Vrachtwagen ${cityName}`;
+    case "general":
+    default:
+      return `Rijschool ${cityName}`;
+  }
+}
+
+export function getSeoCityVariantRouteLabel(
+  cityName: string,
+  variant: SeoCityVariant = "general"
+) {
+  switch (variant) {
+    case "automaat":
+      return `Automaat rijles ${cityName}`;
+    case "schakel":
+      return `Schakel rijles ${cityName}`;
+    case "motor":
+      return `Motorrijles ${cityName}`;
+    case "vrachtwagen":
+      return `Vrachtwagen rijles ${cityName}`;
     case "general":
     default:
       return `Rijschool ${cityName}`;
@@ -440,3 +546,73 @@ export function getSeoCityVariantMetadata(
     canonicalPath: content.pagePath,
   };
 }
+
+export function getSeoCityVariantFaqItems(
+  city: SeoCityConfig,
+  variant: SeoCityVariant = "general"
+): SeoFaqItem[] {
+  const content = getSeoCityVariantContent(city, variant);
+
+  return [
+    {
+      question: content.faqQuestion,
+      answer: content.faqAnswer,
+    },
+    {
+      question: `Hoe vergelijk ik ${content.collectionLabel.toLowerCase()} in ${city.name}?`,
+      answer: `Kijk in ${city.name} niet alleen naar prijs, maar ook naar reviews, lesstijl, regio en pakketten. Juist die combinatie helpt om sneller de juiste instructeur te kiezen.`,
+    },
+    {
+      question: `Kan ik in ${city.name} ook andere rijlesroutes naast ${content.collectionLabel.toLowerCase()} bekijken?`,
+      answer: `Ja. Op de stadspagina voor ${city.name} linkt RijBasis ook door naar automaat, schakel, proefles, spoedcursus, faalangst en andere lokale routes zodat bezoekers breder kunnen vergelijken.`,
+    },
+    {
+      question: `Waarom werkt een lokale pagina voor ${city.name} beter dan een algemene rijschoollijst?`,
+      answer: `Omdat zoekers op ${city.name} meestal al een concrete regio in gedachten hebben. Door alleen relevant lokaal aanbod, reviews en pakketten te tonen, voelt de pagina duidelijker en conversiegerichter.`,
+    },
+    {
+      question: `Zijn er op deze pagina ook reviews en pakketten voor ${city.name} zichtbaar?`,
+      answer: `Ja. De lokale pagina voor ${city.name} combineert instructeurs, zichtbare reviewscore en pakketten op een plek, zodat bezoekers niet eerst meerdere losse pagina's hoeven te openen.`,
+    },
+  ];
+}
+
+export function getSeoCityVariantNarrative(
+  city: SeoCityConfig,
+  variant: SeoCityVariant = "general"
+): SeoCityNarrative {
+  switch (variant) {
+    case "automaat":
+      return {
+        title: `Waarom automaat rijles in ${city.name} vaak anders wordt gekozen`,
+        body: city.localAutomaatInsight,
+        support: `${city.localComfortInsight} Daardoor voelt automaat in ${city.name} voor veel starters als een logischere eerste stap.`,
+      };
+    case "schakel":
+      return {
+        title: `Waarom schakel rijles in ${city.name} om meer verkeersgevoel vraagt`,
+        body: city.localTrafficInsight,
+        support: `Wie in ${city.name} voor schakel kiest, zoekt vaak extra controle en wil tegelijk leren omgaan met lokale drukte, ritme en voertuigbeheersing.`,
+      };
+    case "motor":
+      return {
+        title: `Waarom motorrijles in ${city.name} eigen lokale voorbereiding vraagt`,
+        body: city.localTrafficInsight,
+        support: `Voor motorrijles in ${city.name} telt extra hoe snel je leert kijken, anticiperen en vertrouwen houdt in een wisselend lokaal verkeersbeeld.`,
+      };
+    case "vrachtwagen":
+      return {
+        title: `Waarom vrachtwagen rijles in ${city.name} baat heeft bij lokale routekennis`,
+        body: city.localExamInsight,
+        support: `In ${city.name} helpt lokale kennis van doorstroming, ruimte en verkeersritme om vrachtwagenlessen veel doelgerichter op te bouwen.`,
+      };
+    case "general":
+    default:
+      return {
+        title: `Wat rijlessen in ${city.name} net anders maakt`,
+        body: city.localTrafficInsight,
+        support: `${city.localComfortInsight} Daardoor zoeken bezoekers in ${city.name} vaak niet alleen een lage prijs, maar vooral een lesstijl die echt past bij de stad.`,
+      };
+  }
+}
+

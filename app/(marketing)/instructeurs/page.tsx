@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { InstructorFinder } from "@/components/instructors/instructor-finder";
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { getFavoriteInstructorIds } from "@/lib/data/favorites";
 import { getPublicInstructorsByLessonType } from "@/lib/data/instructors";
@@ -18,11 +19,16 @@ export default async function InstructeursPage() {
     instructorIds,
     "auto"
   );
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Instructeurs", href: "/instructeurs" },
+  ];
 
   return (
     <div className="pb-20">
       <section className="site-shell mx-auto w-full px-4 pb-10 pt-14 sm:px-6 sm:pt-16 lg:px-8">
         <Reveal className="space-y-4">
+          <SeoBreadcrumbs items={breadcrumbItems} />
           <div className="rounded-[1.2rem] border border-slate-200 bg-white/88 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_18px_44px_-34px_rgba(15,23,42,0.42)]">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1.5">

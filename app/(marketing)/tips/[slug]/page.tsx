@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,30 +91,11 @@ export default async function TipArticlePage({
     },
   };
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: siteUrl,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Tips",
-        item: `${siteUrl}/tips`,
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: article.title,
-        item: `${siteUrl}/tips/${article.slug}`,
-      },
-    ],
-  };
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Tips", href: "/tips" },
+    { label: article.title, href: `/tips/${article.slug}` },
+  ];
 
   return (
     <div className="pb-20">
@@ -121,16 +103,13 @@ export default async function TipArticlePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
 
       <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
         <div className="absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_16%_14%,rgba(56,189,248,0.18),transparent_22%),radial-gradient(circle_at_84%_18%,rgba(249,115,22,0.16),transparent_22%)]" />
         <div className="site-shell relative mx-auto w-full py-10 lg:py-16">
           <Reveal className="rounded-[2.4rem] border border-white/80 bg-white/92 p-6 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.22)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.62)] sm:p-8">
             <div className="max-w-4xl space-y-5">
+              <SeoBreadcrumbs items={breadcrumbItems} />
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="border border-sky-100 bg-sky-50 text-sky-700">
                   {article.category}
