@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import {
   ensureCurrentUserContext,
+  getCurrentInstructeurRecord,
   getCurrentLeerlingRecord,
   getCurrentRole,
 } from "@/lib/data/profiles";
@@ -14,6 +15,16 @@ type SaveLearnerReviewInput = {
   score: number;
   title: string;
   text: string;
+};
+
+type SaveInstructorReviewReplyInput = {
+  reviewId: string;
+  text: string;
+};
+
+type SubmitReviewReportInput = {
+  reviewId: string;
+  reason: string;
 };
 
 function sanitizeText(value: string) {
@@ -49,6 +60,40 @@ function validateReviewInput(input: SaveLearnerReviewInput) {
     title,
     text,
   };
+}
+
+function validateReplyInput(input: SaveInstructorReviewReplyInput) {
+  const text = sanitizeText(input.text);
+
+  if (!input.reviewId) {
+    return { error: "De review ontbreekt." };
+  }
+
+  if (text.length < 8) {
+    return {
+      error:
+        "Schrijf een iets duidelijker antwoord van minimaal 8 tekens.",
+    };
+  }
+
+  return { text };
+}
+
+function validateReportInput(input: SubmitReviewReportInput) {
+  const reason = sanitizeText(input.reason);
+
+  if (!input.reviewId) {
+    return { error: "De review ontbreekt." };
+  }
+
+  if (reason.length < 10) {
+    return {
+      error:
+        "Geef een korte toelichting van minimaal 10 tekens mee bij je melding.",
+    };
+  }
+
+  return { reason };
 }
 
 async function revalidateReviewPaths(instructorSlug?: string | null) {
@@ -236,6 +281,16 @@ export async function updateReviewModerationAction(
     instructorSlug = instructorRow?.slug ?? null;
   }
 
+  await supabase
+    .from("review_reports")
+    .update({
+      status: "beoordeeld",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: context?.profile?.id ?? null,
+    } as never)
+    .eq("review_id", input.reviewId)
+    .eq("status", "nieuw");
+
   revalidatePath("/admin/reviews");
   await revalidateReviewPaths(instructorSlug);
 
@@ -247,5 +302,170 @@ export async function updateReviewModerationAction(
         : input.moderatieStatus === "gemarkeerd"
           ? "Review is gemarkeerd voor opvolging."
           : "Review is weer zichtbaar.",
+  };
+}
+
+export async function saveInstructorReviewReplyAction(
+  input: SaveInstructorReviewReplyInput
+) {
+  const role = await getCurrentRole();
+
+  if (role !== "instructeur") {
+    return {
+      success: false,
+      message: "Alleen instructeurs kunnen reageren op reviews.",
+    };
+  }
+
+  const validation = validateReplyInput(input);
+
+  if ("error" in validation) {
+    return {
+      success: false,
+      message: validation.error,
+    };
+  }
+
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return {
+      success: false,
+      message: "Je instructeursprofiel kon niet worden geladen.",
+    };
+  }
+
+  const context = await ensureCurrentUserContext();
+  const supabase = await createServerClient();
+  const { data: reviewRow, error: reviewError } = await supabase
+    .from("reviews")
+    .select("id, instructeur_id")
+    .eq("id", input.reviewId)
+    .maybeSingle();
+
+  if (reviewError || !reviewRow) {
+    return {
+      success: false,
+      message: "De review kon niet worden gevonden.",
+    };
+  }
+
+  if (reviewRow.instructeur_id !== instructeur.id) {
+    return {
+      success: false,
+      message: "Je kunt alleen reageren op reviews van je eigen profiel.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("reviews")
+    .update({
+      antwoord_tekst: validation.text,
+      antwoord_datum: new Date().toISOString(),
+      answered_by: context?.profile?.id ?? null,
+    } as never)
+    .eq("id", input.reviewId);
+
+  if (error) {
+    return {
+      success: false,
+      message: "Je antwoord kon niet worden opgeslagen.",
+    };
+  }
+
+  const { data: instructorRow } = await supabase
+    .from("instructeurs")
+    .select("slug")
+    .eq("id", instructeur.id)
+    .maybeSingle();
+
+  await revalidateReviewPaths(instructorRow?.slug ?? instructeur.slug);
+
+  return {
+    success: true,
+    message: "Je reactie staat nu zichtbaar bij de review.",
+  };
+}
+
+export async function submitReviewReportAction(input: SubmitReviewReportInput) {
+  const context = await ensureCurrentUserContext();
+
+  if (!context) {
+    return {
+      success: false,
+      message: "Log eerst in om een review te rapporteren.",
+    };
+  }
+
+  const validation = validateReportInput(input);
+
+  if ("error" in validation) {
+    return {
+      success: false,
+      message: validation.error,
+    };
+  }
+
+  const supabase = await createServerClient();
+  const { data: reviewRow, error: reviewError } = await supabase
+    .from("reviews")
+    .select("id, instructeur_id, leerling_id")
+    .eq("id", input.reviewId)
+    .maybeSingle();
+
+  if (reviewError || !reviewRow) {
+    return {
+      success: false,
+      message: "De review kon niet worden gevonden.",
+    };
+  }
+
+  if (context.role === "leerling") {
+    const leerling = await getCurrentLeerlingRecord();
+
+    if (leerling?.id && leerling.id === reviewRow.leerling_id) {
+      return {
+        success: false,
+        message: "Je kunt je eigen review niet rapporteren.",
+      };
+    }
+  }
+
+  if (context.role === "instructeur") {
+    const instructeur = await getCurrentInstructeurRecord();
+
+    if (instructeur?.id && instructeur.id === reviewRow.instructeur_id) {
+      return {
+        success: false,
+        message: "Gebruik moderatie of support voor reviews op je eigen profiel.",
+      };
+    }
+  }
+
+  const { error } = await supabase.from("review_reports").insert({
+    review_id: input.reviewId,
+    reporter_profile_id: context.user.id,
+    reden: validation.reason,
+  } as never);
+
+  if (error) {
+    const duplicateReport =
+      error.code === "23505" ||
+      error.message?.toLowerCase().includes("unique") ||
+      error.message?.toLowerCase().includes("duplicate");
+
+    return {
+      success: false,
+      message: duplicateReport
+        ? "Je hebt deze review al gemeld."
+        : "Je melding kon niet worden opgeslagen.",
+    };
+  }
+
+  revalidatePath("/admin/reviews");
+
+  return {
+    success: true,
+    message: "Bedankt. Deze review is gemeld voor beoordeling.",
   };
 }

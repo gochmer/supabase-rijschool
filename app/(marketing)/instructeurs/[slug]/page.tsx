@@ -12,6 +12,7 @@ import { InstructorAvailabilityPlanner } from "@/components/instructors/instruct
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
 import { BrandRouteScene } from "@/components/marketing/brand-route-scene";
 import { HoverTilt, Reveal, SignatureLine } from "@/components/marketing/homepage-motion";
+import { ReviewReportDialog } from "@/components/reviews/review-report-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ import {
   getPublicInstructorBySlug,
 } from "@/lib/data/instructors";
 import { formatAvailabilityMoment } from "@/lib/availability";
+import { ensureCurrentUserContext } from "@/lib/data/profiles";
 import { getPublicInstructorPackages } from "@/lib/data/packages";
 import { getCurrentLearnerSchedulingAccessForInstructorSlug } from "@/lib/data/student-scheduling";
 import { formatCurrency, getInitials } from "@/lib/format";
@@ -57,10 +59,11 @@ export default async function InstructeurDetailPage({
     notFound();
   }
 
-  const [reviews, packages, planningAccess] = await Promise.all([
+  const [reviews, packages, planningAccess, currentUserContext] = await Promise.all([
     getInstructorReviews(slug),
     getPublicInstructorPackages(slug),
     getCurrentLearnerSchedulingAccessForInstructorSlug(slug),
+    ensureCurrentUserContext(),
   ]);
   const slots = planningAccess.canViewAgenda
     ? await getInstructorAvailability(slug)
@@ -507,12 +510,35 @@ export default async function InstructeurDetailPage({
                                   {review.leerling_naam} • {review.datum}
                                 </p>
                               </div>
-                              <Badge variant="warning">{review.score} sterren</Badge>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="warning">{review.score} sterren</Badge>
+                                  {currentUserContext ? (
+                                    <ReviewReportDialog
+                                      reviewId={review.id}
+                                      reviewTitle={review.titel}
+                                    />
+                                  ) : null}
+                                </div>
                             </div>
-                            <p className="mt-3 text-sm leading-7 text-slate-600">
-                              {review.tekst}
-                            </p>
-                          </div>
+                              <p className="mt-3 text-sm leading-7 text-slate-600">
+                                {review.tekst}
+                              </p>
+                              {review.antwoord_tekst ? (
+                                <div className="mt-3 rounded-[1.15rem] border border-sky-100 bg-sky-50/80 p-4">
+                                  <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase">
+                                    Reactie van instructeur
+                                  </p>
+                                  <p className="mt-2 text-sm leading-7 text-slate-700">
+                                    {review.antwoord_tekst}
+                                  </p>
+                                  {review.antwoord_datum ? (
+                                    <p className="mt-1 text-xs text-slate-500">
+                                      Geplaatst op {review.antwoord_datum}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
                         </HoverTilt>
                       ))
                     ) : (

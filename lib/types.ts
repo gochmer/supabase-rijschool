@@ -54,6 +54,10 @@ export interface Review {
   titel: string;
   tekst: string;
   datum: string;
+  antwoord_tekst?: string | null;
+  antwoord_datum?: string | null;
+  rapport_count?: number;
+  laatste_rapport_reden?: string | null;
 }
 
 export interface ReviewPreview {

@@ -189,7 +189,9 @@ export async function getInstructorReviews(slug: string): Promise<Review[]> {
   const supabase = await createServerClient();
   const { data: reviewRows, error } = await supabase
     .from("reviews")
-    .select("id, score, titel, tekst, created_at, leerling_naam_snapshot")
+    .select(
+      "id, score, titel, tekst, created_at, leerling_naam_snapshot, antwoord_tekst, antwoord_datum"
+    )
     .eq("instructeur_id", instructor.id)
     .eq("verborgen", false)
     .order("created_at", { ascending: false });
@@ -209,6 +211,14 @@ export async function getInstructorReviews(slug: string): Promise<Review[]> {
       month: "long",
       year: "numeric",
     }).format(new Date(row.created_at)),
+    antwoord_tekst: row.antwoord_tekst || null,
+    antwoord_datum: row.antwoord_datum
+      ? new Intl.DateTimeFormat("nl-NL", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).format(new Date(row.antwoord_datum))
+      : null,
   }));
 }
 

@@ -519,5 +519,20 @@ export async function getInstructeurDashboardMetrics(): Promise<DashboardMetric[
         ? `Laatste review: ${reviewSummary.latestReviews[0].titel}`
         : "Nog geen zichtbare reviews op je publieke profiel",
     },
+    {
+      label: "Reactiegraad",
+      waarde: `${reviewSummary.replyRate}%`,
+      context: reviewSummary.reviewCount
+        ? `${reviewSummary.repliedCount} van ${reviewSummary.reviewCount} reviews heeft al een instructeurreply`
+        : "Replies worden zichtbaar zodra je eerste review binnenkomt",
+    },
+    {
+      label: "Laatste 30 dagen",
+      waarde: `${reviewSummary.recentThirtyDayCount}`,
+      context:
+        reviewSummary.recentThirtyDayCount > 0
+          ? "Nieuwe reviews in de afgelopen maand"
+          : "Nog geen nieuwe reviewactiviteit in de afgelopen maand",
+    },
   ];
 }

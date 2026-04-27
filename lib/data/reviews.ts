@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { Review, ReviewPreview } from "@/lib/types";
-import { getCurrentInstructeurRecord, getCurrentLeerlingRecord } from "@/lib/data/profiles";
+import {
+  getCurrentInstructeurRecord,
+  getCurrentLeerlingRecord,
+} from "@/lib/data/profiles";
 import { createServerClient } from "@/lib/supabase/server";
 
 type ReviewStatRow = {
@@ -18,6 +21,8 @@ type PublicReviewRow = {
   tekst: string | null;
   created_at: string;
   leerling_naam_snapshot: string | null;
+  antwoord_tekst?: string | null;
+  antwoord_datum?: string | null;
 };
 
 type LessonReviewOpportunityRow = {
@@ -37,10 +42,21 @@ type ExistingLessonReviewRow = {
   created_at: string;
 };
 
+type ReviewReportAggregateRow = {
+  review_id: string;
+  reden: string | null;
+  created_at: string;
+};
+
 export type InstructorReviewSummary = {
   averageScore: number;
   reviewCount: number;
   latestReviews: Review[];
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  repliedCount: number;
+  replyRate: number;
+  reportedCount: number;
+  recentThirtyDayCount: number;
 };
 
 export type LearnerReviewOpportunity = {
@@ -89,6 +105,16 @@ function formatReviewScoreLabel(score: number) {
   return roundReviewScore(score).toFixed(1);
 }
 
+function createEmptyDistribution(): Record<1 | 2 | 3 | 4 | 5, number> {
+  return {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  };
+}
+
 function mapReviewPreview(row: PublicReviewRow): ReviewPreview {
   return {
     id: row.id,
@@ -98,6 +124,60 @@ function mapReviewPreview(row: PublicReviewRow): ReviewPreview {
     tekst: row.tekst || "",
     datum: formatReviewDate(row.created_at),
   };
+}
+
+function mapReview(
+  row: PublicReviewRow,
+  reportMeta?: {
+    reportCount: number;
+    latestReason: string | null;
+  }
+): Review {
+  return {
+    id: row.id,
+    leerling_naam: row.leerling_naam_snapshot || "Leerling",
+    score: Number(row.score ?? 0),
+    titel: row.titel || `Review ${formatReviewScoreLabel(Number(row.score ?? 0))}`,
+    tekst: row.tekst || "",
+    datum: formatReviewDate(row.created_at),
+    antwoord_tekst: row.antwoord_tekst || null,
+    antwoord_datum: row.antwoord_datum ? formatReviewDate(row.antwoord_datum) : null,
+    rapport_count: reportMeta?.reportCount ?? 0,
+    laatste_rapport_reden: reportMeta?.latestReason ?? null,
+  };
+}
+
+async function getReviewReportMetaByReviewIds(reviewIds: string[]) {
+  const uniqueReviewIds = Array.from(new Set(reviewIds.filter(Boolean)));
+
+  if (!uniqueReviewIds.length) {
+    return new Map<string, { reportCount: number; latestReason: string | null }>();
+  }
+
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("review_reports")
+    .select("review_id, reden, created_at")
+    .in("review_id", uniqueReviewIds)
+    .order("created_at", { ascending: false });
+
+  const reportMap = new Map<string, { reportCount: number; latestReason: string | null }>();
+
+  for (const row of (data ?? []) as ReviewReportAggregateRow[]) {
+    const current = reportMap.get(row.review_id);
+
+    if (!current) {
+      reportMap.set(row.review_id, {
+        reportCount: 1,
+        latestReason: row.reden || null,
+      });
+      continue;
+    }
+
+    current.reportCount += 1;
+  }
+
+  return reportMap;
 }
 
 export async function getReviewStatsByInstructorIds(instructorIds: string[]) {
@@ -145,6 +225,11 @@ export async function getCurrentInstructorReviewSummary(): Promise<InstructorRev
       averageScore: 0,
       reviewCount: 0,
       latestReviews: [],
+      distribution: createEmptyDistribution(),
+      repliedCount: 0,
+      replyRate: 0,
+      reportedCount: 0,
+      recentThirtyDayCount: 0,
     };
   }
 
@@ -155,21 +240,73 @@ export async function getCurrentInstructorReviewSummary(): Promise<InstructorRev
 
   const { data: latestReviewRows } = await supabase
     .from("reviews")
-    .select("id, score, titel, tekst, created_at, leerling_naam_snapshot")
+    .select(
+      "id, score, titel, tekst, created_at, leerling_naam_snapshot, antwoord_tekst, antwoord_datum"
+    )
     .eq("instructeur_id", instructeur.id)
     .eq("verborgen", false)
     .order("created_at", { ascending: false })
-    .limit(2);
+    .limit(3);
+
+  const { data: allVisibleReviewRows } = await supabase
+    .from("reviews")
+    .select(
+      "id, score, titel, tekst, created_at, leerling_naam_snapshot, antwoord_tekst, antwoord_datum"
+    )
+    .eq("instructeur_id", instructeur.id)
+    .eq("verborgen", false)
+    .order("created_at", { ascending: false });
 
   const stats = statsMap.get(instructeur.id) ?? {
     reviewCount: 0,
     averageScore: 0,
   };
 
+  const allReviews = (allVisibleReviewRows ?? []) as PublicReviewRow[];
+  const distribution = createEmptyDistribution();
+  let repliedCount = 0;
+  let recentThirtyDayCount = 0;
+
+  for (const row of allReviews) {
+    const score = Math.min(5, Math.max(1, Number(row.score ?? 0))) as
+      | 1
+      | 2
+      | 3
+      | 4
+      | 5;
+    distribution[score] += 1;
+
+    if (row.antwoord_tekst?.trim()) {
+      repliedCount += 1;
+    }
+
+    const createdAt = new Date(row.created_at).getTime();
+    if (createdAt >= Date.now() - 30 * 24 * 60 * 60 * 1000) {
+      recentThirtyDayCount += 1;
+    }
+  }
+
+  const reportMetaMap = await getReviewReportMetaByReviewIds(
+    allReviews.map((review) => review.id)
+  );
+  const reportedCount = Array.from(reportMetaMap.values()).reduce(
+    (total, entry) => total + entry.reportCount,
+    0
+  );
+
   return {
     averageScore: stats.averageScore,
     reviewCount: stats.reviewCount,
-    latestReviews: ((latestReviewRows ?? []) as PublicReviewRow[]).map(mapReviewPreview),
+    latestReviews: ((latestReviewRows ?? []) as PublicReviewRow[]).map((row) =>
+      mapReview(row, reportMetaMap.get(row.id))
+    ),
+    distribution,
+    repliedCount,
+    replyRate: stats.reviewCount
+      ? Math.round((repliedCount / stats.reviewCount) * 100)
+      : 0,
+    reportedCount,
+    recentThirtyDayCount,
   };
 }
 

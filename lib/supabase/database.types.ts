@@ -738,6 +738,9 @@ export type Database = {
       }
       reviews: {
         Row: {
+          answered_by: string | null
+          antwoord_datum: string | null
+          antwoord_tekst: string | null
           created_at: string
           id: string
           instructeur_id: string
@@ -754,6 +757,9 @@ export type Database = {
           verborgen: boolean
         }
         Insert: {
+          answered_by?: string | null
+          antwoord_datum?: string | null
+          antwoord_tekst?: string | null
           created_at?: string
           id?: string
           instructeur_id: string
@@ -770,6 +776,9 @@ export type Database = {
           verborgen?: boolean
         }
         Update: {
+          answered_by?: string | null
+          antwoord_datum?: string | null
+          antwoord_tekst?: string | null
           created_at?: string
           id?: string
           instructeur_id?: string
@@ -786,6 +795,13 @@ export type Database = {
           verborgen?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "reviews_answered_by_fkey"
+            columns: ["answered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reviews_instructeur_id_fkey"
             columns: ["instructeur_id"]
@@ -810,6 +826,61 @@ export type Database = {
           {
             foreignKeyName: "reviews_moderated_by_fkey"
             columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reden: string
+          reporter_profile_id: string
+          review_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reden: string
+          reporter_profile_id: string
+          review_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reden?: string
+          reporter_profile_id?: string
+          review_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_reports_reporter_profile_id_fkey"
+            columns: ["reporter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

@@ -21,6 +21,14 @@ export default async function AdminReviewsPage() {
       .length,
     verborgen: reviews.filter((review) => review.moderatieStatus === "verborgen")
       .length,
+    gemeld: reviews.filter((review) => review.reportCount > 0).length,
+    replies: reviews.filter((review) => Boolean(review.antwoordTekst?.trim())).length,
+    gemiddeldeScore: reviews.length
+      ? (
+          reviews.reduce((total, review) => total + Number(review.score), 0) /
+          reviews.length
+        ).toFixed(1)
+      : "0.0",
   };
 
   return (
@@ -29,7 +37,7 @@ export default async function AdminReviewsPage() {
         title="Reviews beheren"
         description="Modereren, analyseren en opvolgen van beoordelingen en geschreven feedback."
       />
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {[
           {
             label: "Zichtbaar",
@@ -48,6 +56,24 @@ export default async function AdminReviewsPage() {
             value: moderationSummary.verborgen,
             tone: "danger" as const,
             context: "Tijdelijk niet zichtbaar voor bezoekers",
+          },
+          {
+            label: "Gemeld",
+            value: moderationSummary.gemeld,
+            tone: "warning" as const,
+            context: "Reviews met minstens één gebruikersmelding",
+          },
+          {
+            label: "Replies",
+            value: moderationSummary.replies,
+            tone: "info" as const,
+            context: "Reviews waarop de instructeur al heeft gereageerd",
+          },
+          {
+            label: "Gem. score",
+            value: moderationSummary.gemiddeldeScore,
+            tone: "success" as const,
+            context: "Gemiddelde van alle reviews in moderatie",
           },
         ].map((item) => (
           <Card
@@ -80,13 +106,19 @@ export default async function AdminReviewsPage() {
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="warning" className="gap-1">
-                    <Star className="size-3.5 fill-current" />
-                    {review.score}/5
-                  </Badge>
-                  <Badge
-                    variant={
-                      review.moderatieStatus === "verborgen"
+                    <Badge variant="warning" className="gap-1">
+                      <Star className="size-3.5 fill-current" />
+                      {review.score}/5
+                    </Badge>
+                    {review.reportCount ? (
+                      <Badge variant="danger">
+                        {review.reportCount} melding
+                        {review.reportCount === 1 ? "" : "en"}
+                      </Badge>
+                    ) : null}
+                    <Badge
+                      variant={
+                        review.moderatieStatus === "verborgen"
                         ? "danger"
                         : review.moderatieStatus === "gemarkeerd"
                           ? "warning"
@@ -102,6 +134,33 @@ export default async function AdminReviewsPage() {
               <p className="text-sm leading-7 text-muted-foreground dark:text-slate-300">
                 {review.tekst || "Geen toelichting toegevoegd."}
               </p>
+              {review.antwoordTekst ? (
+                <div className="rounded-[1rem] border border-sky-100 bg-sky-50/90 px-4 py-3 text-sm leading-6 text-sky-900 dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">
+                  <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-100">
+                    Instructeur reply
+                  </p>
+                  <p className="mt-2">{review.antwoordTekst}</p>
+                </div>
+              ) : null}
+              {review.reportCount ? (
+                <div className="rounded-[1rem] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm leading-6 text-amber-950 dark:border-amber-300/16 dark:bg-amber-400/10 dark:text-amber-100">
+                  <p className="text-[10px] font-semibold tracking-[0.18em] text-amber-700 uppercase dark:text-amber-100">
+                    Gebruikersmeldingen
+                  </p>
+                  <p className="mt-2">
+                    {review.reportCount} melding
+                    {review.reportCount === 1 ? "" : "en"} ontvangen
+                    {review.latestReportStatus
+                      ? ` • laatste status: ${review.latestReportStatus}`
+                      : ""}
+                  </p>
+                  {review.latestReportReason ? (
+                    <p className="mt-1 text-sm leading-6">
+                      Laatste reden: {review.latestReportReason}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               {review.moderatieNotitie ? (
                 <div className="rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
                   <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">

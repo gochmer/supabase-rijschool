@@ -14,6 +14,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { AvatarUploadCard } from "@/components/profile/avatar-upload-card";
+import { InstructorReviewReplyDialog } from "@/components/reviews/instructor-review-reply-dialog";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getCurrentInstructeurRecord, getCurrentProfile } from "@/lib/data/profiles";
+import { getInstructorReviews } from "@/lib/data/instructors";
 import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
 import { formatCurrency, formatStars, getInitials } from "@/lib/format";
 import { instructorColorOptions } from "@/lib/instructor-profile";
@@ -48,6 +50,9 @@ export default async function InstructeurProfielPage() {
     getCurrentInstructeurRecord(),
     getCurrentInstructorReviewSummary(),
   ]);
+  const publicReviews = instructor?.slug
+    ? await getInstructorReviews(instructor.slug)
+    : [];
 
   const completionScore = Number(instructor?.profiel_compleetheid ?? 0);
   const safeScore = Math.min(100, Math.max(0, completionScore));
@@ -347,8 +352,135 @@ export default async function InstructeurProfielPage() {
               ))}
             </div>
           </section>
+
+          <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
+            <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
+              Review analytics
+            </p>
+            <div className="mt-3 grid gap-2">
+              {[
+                {
+                  label: "Gemiddelde score",
+                  value: reviewSummary.reviewCount
+                    ? `${formatStars(reviewSummary.averageScore)}`
+                    : "Nog geen score",
+                },
+                {
+                  label: "Reactiegraad",
+                  value: `${reviewSummary.replyRate}%`,
+                },
+                {
+                  label: "Laatste 30 dagen",
+                  value: `${reviewSummary.recentThirtyDayCount} review${reviewSummary.recentThirtyDayCount === 1 ? "" : "s"}`,
+                },
+                {
+                  label: "Gemeld",
+                  value: `${reviewSummary.reportedCount}`,
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between gap-3 rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm dark:bg-white/6"
+                >
+                  <span className="text-slate-600 dark:text-slate-300">
+                    {item.label}
+                  </span>
+                  <span className="font-semibold text-slate-950 dark:text-white">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 space-y-2">
+              {[5, 4, 3, 2, 1].map((score) => {
+                const count = reviewSummary.distribution[score as 1 | 2 | 3 | 4 | 5];
+                const width =
+                  reviewSummary.reviewCount > 0
+                    ? Math.max(8, Math.round((count / reviewSummary.reviewCount) * 100))
+                    : 0;
+
+                return (
+                  <div key={score} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <span>{score} sterren</span>
+                      <span>{count}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#2563eb,#38bdf8)]"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </div>
       </div>
+
+      <Card className="border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(15,23,42,0.96))] dark:text-white dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
+        <CardHeader>
+          <CardTitle className="text-slate-950 dark:text-white">
+            Reviews en replies
+          </CardTitle>
+          <CardDescription className="text-slate-600 dark:text-slate-300">
+            Reageer op reviews zodat toekomstige leerlingen zien hoe jij communiceert en opvolgt.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          {publicReviews.length ? (
+            publicReviews.map((review) => (
+              <div
+                key={review.id}
+                className="rounded-[1.15rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                        {review.titel}
+                      </p>
+                      <Badge variant="warning">{review.score}/5</Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {review.leerling_naam} • {review.datum}
+                    </p>
+                  </div>
+                  <InstructorReviewReplyDialog
+                    reviewId={review.id}
+                    reviewerName={review.leerling_naam}
+                    reviewTitle={review.titel}
+                    initialReply={review.antwoord_tekst}
+                  />
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  {review.tekst}
+                </p>
+                {review.antwoord_tekst ? (
+                  <div className="mt-3 rounded-[1rem] border border-sky-100 bg-sky-50/70 p-3 dark:border-sky-300/16 dark:bg-sky-400/10">
+                    <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-100">
+                      Jouw reply
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
+                      {review.antwoord_tekst}
+                    </p>
+                    {review.antwoord_datum ? (
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Gepubliceerd op {review.antwoord_datum}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ))
+          ) : (
+            <div className="rounded-[1.15rem] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-sm leading-6 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">
+              Zodra leerlingen reviews plaatsen, kun je hier ook direct reageren.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

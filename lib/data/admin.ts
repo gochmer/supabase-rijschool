@@ -480,7 +480,7 @@ export async function getAdminReviews() {
   const { data: rows } = await supabase
     .from("reviews")
     .select(
-      "id, leerling_id, instructeur_id, score, titel, tekst, created_at, moderatie_status, moderatie_notitie, verborgen"
+      "id, leerling_id, instructeur_id, score, titel, tekst, created_at, moderatie_status, moderatie_notitie, verborgen, antwoord_tekst"
     )
     .order("created_at", { ascending: false })
     .limit(50);
@@ -496,18 +496,31 @@ export async function getAdminReviews() {
       datum: review.datum,
       moderatieStatus: "zichtbaar",
       moderatieNotitie: null,
+      antwoordTekst: null,
+      reportCount: 0,
+      latestReportReason: null,
+      latestReportStatus: null,
     }));
   }
 
   const leerlingIds = rows.map((row) => row.leerling_id);
   const instructeurIds = rows.map((row) => row.instructeur_id);
+  const reviewIds = rows.map((row) => row.id);
 
-  const [{ data: leerlingen }, { data: instructeursRows }] = await Promise.all([
+  const [{ data: leerlingen }, { data: instructeursRows }, { data: reviewReports }] =
+    await Promise.all([
     supabase.from("leerlingen").select("id, profile_id").in("id", leerlingIds),
     supabase
       .from("instructeurs")
       .select("id, profile_id")
       .in("id", instructeurIds),
+    reviewIds.length
+      ? supabase
+          .from("review_reports")
+          .select("review_id, reden, status, created_at")
+          .in("review_id", reviewIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
 
   const profileIds = [
@@ -531,21 +544,49 @@ export async function getAdminReviews() {
   const profileMap = new Map(
     (profiles ?? []).map((item) => [item.id, item.volledige_naam])
   );
+  const reportMap = new Map<
+    string,
+    { count: number; latestReason: string | null; latestStatus: string | null }
+  >();
 
-  return rows.map((row) => ({
-    id: row.id,
-    leerling:
-      profileMap.get(leerlingMap.get(row.leerling_id) ?? "") ?? "Leerling",
-    instructeur:
-      profileMap.get(instructeurMap.get(row.instructeur_id) ?? "") ??
-      "Instructeur",
-    score: `${row.score}`,
-    titel: row.titel || "Review",
-    tekst: row.tekst || "",
-    datum: formatDate(row.created_at),
-    moderatieStatus: row.verborgen ? "verborgen" : row.moderatie_status || "zichtbaar",
-    moderatieNotitie: row.moderatie_notitie || null,
-  }));
+  for (const row of reviewReports ?? []) {
+    const current = reportMap.get(row.review_id);
+
+    if (!current) {
+      reportMap.set(row.review_id, {
+        count: 1,
+        latestReason: row.reden ?? null,
+        latestStatus: row.status ?? null,
+      });
+      continue;
+    }
+
+    current.count += 1;
+  }
+
+  return rows.map((row) => {
+    const reportMeta = reportMap.get(row.id);
+
+    return {
+      id: row.id,
+      leerling:
+        profileMap.get(leerlingMap.get(row.leerling_id) ?? "") ?? "Leerling",
+      instructeur:
+        profileMap.get(instructeurMap.get(row.instructeur_id) ?? "") ??
+        "Instructeur",
+      score: `${row.score}`,
+      titel: row.titel || "Review",
+      tekst: row.tekst || "",
+      datum: formatDate(row.created_at),
+      moderatieStatus:
+        row.verborgen ? "verborgen" : row.moderatie_status || "zichtbaar",
+      moderatieNotitie: row.moderatie_notitie || null,
+      antwoordTekst: row.antwoord_tekst || null,
+      reportCount: reportMeta?.count ?? 0,
+      latestReportReason: reportMeta?.latestReason ?? null,
+      latestReportStatus: reportMeta?.latestStatus ?? null,
+    };
+  });
 }
 
 export async function getAdminPackages() {
