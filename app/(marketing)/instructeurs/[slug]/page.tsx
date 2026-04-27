@@ -1,17 +1,17 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
+  ArrowRight,
   CalendarClock,
   MapPin,
   ShieldCheck,
-  Sparkles,
   Star,
 } from "lucide-react";
 
 import { InstructorAvailabilityPlanner } from "@/components/instructors/instructor-availability-planner";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
-import { BrandRouteScene } from "@/components/marketing/brand-route-scene";
-import { HoverTilt, Reveal, SignatureLine } from "@/components/marketing/homepage-motion";
+import { AutomaticInternalLinks } from "@/components/marketing/automatic-internal-links";
+import { HoverTilt, Reveal } from "@/components/marketing/homepage-motion";
 import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { ReviewReportDialog } from "@/components/reviews/review-report-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -23,19 +23,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatAvailabilityMoment } from "@/lib/availability";
 import {
   getInstructorAvailability,
   getInstructorReviews,
   getPublicInstructorBySlug,
 } from "@/lib/data/instructors";
-import { formatAvailabilityMoment } from "@/lib/availability";
-import { ensureCurrentUserContext } from "@/lib/data/profiles";
 import { getPublicInstructorPackages } from "@/lib/data/packages";
+import { ensureCurrentUserContext } from "@/lib/data/profiles";
 import { getCurrentLearnerSchedulingAccessForInstructorSlug } from "@/lib/data/student-scheduling";
 import { formatCurrency, getInitials } from "@/lib/format";
 import { getRijlesTypeLabel, rijlesTypeOptions } from "@/lib/lesson-types";
 import { getPackageCoverObjectPosition } from "@/lib/package-covers";
 import { getPackageVisualConfig } from "@/lib/package-visuals";
+import { normalizeCityForSlug } from "@/lib/seo-cities";
 
 function transmissionLabel(value: string) {
   if (value === "automaat") return "Automaat";
@@ -46,6 +47,10 @@ function transmissionLabel(value: string) {
 function getInstructorFocus(instructor: { specialisaties: string[] }) {
   const focus = instructor.specialisaties.slice(0, 2).join(" en ");
   return focus || "persoonlijke begeleiding";
+}
+
+function formatPriceLabel(price: number | null) {
+  return price && price > 0 ? formatCurrency(price) : "Op aanvraag";
 }
 
 export default async function InstructeurDetailPage({
@@ -66,9 +71,11 @@ export default async function InstructeurDetailPage({
     getCurrentLearnerSchedulingAccessForInstructorSlug(slug),
     ensureCurrentUserContext(),
   ]);
+
   const slots = planningAccess.canViewAgenda
     ? await getInstructorAvailability(slug)
     : [];
+
   const packageTypeCount = new Set(packages.map((pkg) => pkg.les_type)).size;
   const packageGroups = rijlesTypeOptions
     .map((option) => ({
@@ -76,10 +83,19 @@ export default async function InstructeurDetailPage({
       packages: packages.filter((pkg) => pkg.les_type === option.value),
     }))
     .filter((group) => group.packages.length > 0);
+
   const primaryPackage =
     packageTypeCount <= 1
       ? packages.find((pkg) => pkg.uitgelicht) ?? packages[0] ?? null
-      : null;
+      : packages.find((pkg) => pkg.uitgelicht) ?? packages[0] ?? null;
+
+  const packagePriceCandidates = packages
+    .map((pkg) => Number(pkg.prijs ?? 0))
+    .filter((price) => Number.isFinite(price) && price > 0);
+  const startingPackagePrice = packagePriceCandidates.length
+    ? Math.min(...packagePriceCandidates)
+    : 0;
+
   const nextPlanningMoment = planningAccess.canViewAgenda
     ? slots[0]?.start_at && slots[0]?.eind_at
       ? formatAvailabilityMoment(slots[0].start_at, slots[0].eind_at)
@@ -89,33 +105,18 @@ export default async function InstructeurDetailPage({
     : planningAccess.hasActiveRelationship
       ? "Wordt zichtbaar zodra deze instructeur zelf plannen voor jou vrijgeeft"
       : "Komt beschikbaar zodra je traject met deze instructeur actief is";
+
   const planningStateLabel = planningAccess.canViewAgenda
-    ? "Vrijgegeven"
+    ? "Zelf plannen staat aan"
     : planningAccess.hasActiveRelationship
       ? "Wacht op vrijgave"
       : "Nog afgeschermd";
-  const planningSignals = [
-    { label: "Planningstatus", value: planningStateLabel },
-    { label: "Werkgebied", value: `${instructor.steden.length} regio's` },
-    { label: "Lesvorm", value: transmissionLabel(instructor.transmissie) },
-  ];
-  const planningHighlights = [
-    {
-      icon: CalendarClock,
-      title: "Agenda pas na relatie",
-      text: "De agenda wordt pas zichtbaar zodra je echt verdergaat met deze instructeur.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Instructeur beslist",
-      text: "De instructeur kan per leerling aanzetten of zelf inplannen wel of niet mag.",
-    },
-    {
-      icon: MapPin,
-      title: "Rustige flow",
-      text: "Je kunt wel direct een aanvraag of proefles starten zonder de agenda al te zien.",
-    },
-  ];
+
+  const averageScoreLabel = `${instructor.beoordeling.toFixed(1)}/5`;
+  const citySlug = instructor.steden[0]
+    ? normalizeCityForSlug(instructor.steden[0])
+    : undefined;
+
   const breadcrumbItems = [
     { label: "Home", href: "/" },
     { label: "Instructeurs", href: "/instructeurs" },
@@ -123,224 +124,275 @@ export default async function InstructeurDetailPage({
   ];
 
   return (
-    <div className="pb-20">
+    <div className="pb-16">
       <section className="relative overflow-hidden px-4 pt-10 sm:px-6 lg:px-8">
-        <div className="absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.18),transparent_22%),radial-gradient(circle_at_84%_16%,rgba(29,78,216,0.18),transparent_24%),radial-gradient(circle_at_56%_58%,rgba(249,115,22,0.12),transparent_22%)]" />
-        <div className="site-shell relative mx-auto w-full py-10 lg:py-18">
-          <SeoBreadcrumbs items={breadcrumbItems} className="mb-6" />
-          <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
-            <div className="space-y-8">
-              <Reveal className="rounded-[2.45rem] border border-white/70 bg-white/84 p-6 shadow-[0_32px_100px_-50px_rgba(15,23,42,0.35)] backdrop-blur sm:p-8">
-                <div className="flex flex-col gap-6 sm:flex-row">
+        <div className="absolute inset-x-0 top-0 h-[26rem] bg-[radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.18),transparent_22%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.16),transparent_24%),radial-gradient(circle_at_56%_64%,rgba(249,115,22,0.12),transparent_24%)]" />
+        <div className="site-shell relative mx-auto w-full py-8 lg:py-12">
+          <SeoBreadcrumbs items={breadcrumbItems} className="mb-5" />
+
+          <Reveal className="overflow-hidden rounded-[2.2rem] border border-white/80 bg-white/92 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.28)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.88),rgba(15,23,42,0.96))]">
+            <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
+              <div className="p-5 sm:p-7">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
                   <div
-                    className={`flex size-24 items-center justify-center rounded-[2rem] bg-gradient-to-br ${instructor.profielfoto_kleur} text-2xl font-semibold text-white shadow-[0_22px_46px_-26px_rgba(15,23,42,0.48)]`}
+                    className={`flex size-24 shrink-0 items-center justify-center rounded-[1.9rem] bg-gradient-to-br ${instructor.profielfoto_kleur} text-2xl font-semibold text-white shadow-[0_22px_46px_-28px_rgba(15,23,42,0.42)]`}
                   >
                     {getInitials(instructor.volledige_naam)}
                   </div>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/80 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-sky-700/95 uppercase shadow-[0_14px_30px_-24px_rgba(15,23,42,0.12)]">
-                        <Sparkles className="size-3.5" />
+
+                  <div className="min-w-0 flex-1 space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className="border border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">
                         Instructeur profiel
-                      </div>
-                      <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
+                      </Badge>
+                      <Badge className="border border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-200">
+                        {transmissionLabel(instructor.transmissie)}
+                      </Badge>
+                      {instructor.beoordeling >= 4.9 ? (
+                        <Badge className="border border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-300/16 dark:bg-emerald-400/10 dark:text-emerald-100">
+                          Top beoordeeld
+                        </Badge>
+                      ) : null}
+                      {instructor.status === "goedgekeurd" ? (
+                        <Badge className="border border-violet-100 bg-violet-50 text-violet-700 dark:border-violet-300/16 dark:bg-violet-400/10 dark:text-violet-100">
+                          Geverifieerd
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    <div>
+                      <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[2.8rem]">
                         {instructor.volledige_naam}
                       </h1>
-                      <p className="mt-2 text-base text-slate-600">
-                        {instructor.steden.join(" • ")}
+                      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
+                        {instructor.steden.join(" / ")}
                       </p>
-                      <div className="mt-4">
-                        <SignatureLine className="h-px w-32 rounded-full" />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-violet-100 bg-violet-50/90 px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:border-violet-300/16 dark:bg-violet-400/10 dark:text-violet-100">
+                        <Star className="size-3.5 fill-current text-current" />
+                        {averageScoreLabel}
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
+                        {instructor.aantal_reviews} reviews
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
+                        {instructor.ervaring_jaren} jaar ervaring
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                        <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                          Vanaf
+                        </p>
+                        <p className="mt-1 text-[1.05rem] font-semibold text-slate-950 dark:text-white">
+                          {formatPriceLabel(startingPackagePrice || instructor.prijs_per_les)}
+                        </p>
+                      </div>
+                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                        <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                          Werkgebied
+                        </p>
+                        <p className="mt-1 text-[1.05rem] font-semibold text-slate-950 dark:text-white">
+                          {instructor.steden.length} regio&apos;s
+                        </p>
+                      </div>
+                      <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                        <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                          Lesstijl
+                        </p>
+                        <p className="mt-1 text-[1.05rem] font-semibold text-slate-950 dark:text-white">
+                          {getInstructorFocus(instructor)}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {instructor.specialisaties.map((tag) => (
-                        <Badge key={tag}>{tag}</Badge>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
-                      <span className="inline-flex items-center gap-1">
-                        <Star className="size-4 fill-amber-400 text-amber-400" />
-                        {instructor.beoordeling} ({instructor.aantal_reviews} reviews)
-                      </span>
-                      <span>{instructor.ervaring_jaren} jaar ervaring</span>
-                      <span>{transmissionLabel(instructor.transmissie)}</span>
+                    <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:flex-wrap">
+                      <LessonRequestDialog
+                        instructorName={instructor.volledige_naam}
+                        instructorSlug={instructor.slug}
+                        requestType="proefles"
+                        availableSlots={planningAccess.canViewAgenda ? slots : []}
+                        triggerLabel="Plan proefles"
+                        triggerClassName="h-10 px-5 text-[13px]"
+                      />
+                      <LessonRequestDialog
+                        instructorName={instructor.volledige_naam}
+                        instructorSlug={instructor.slug}
+                        selectedPackage={primaryPackage}
+                        availableSlots={planningAccess.canViewAgenda ? slots : []}
+                        triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
+                        triggerVariant="secondary"
+                        triggerClassName="h-10 px-5 text-[13px]"
+                      />
+                      <Button asChild variant="outline" className="h-10 rounded-full px-5 text-[13px]">
+                        <a href="#pakketten-en-trajecten">
+                          Scroll naar pakketten
+                          <ArrowRight className="size-4" />
+                        </a>
+                      </Button>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-8 grid gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.08fr)]">
-                  <div className="rounded-[1.55rem] border border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)]">
-                    <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Prijs per les
-                    </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
-                      {formatCurrency(instructor.prijs_per_les)}
-                    </p>
+              <div className="border-t border-slate-200 bg-slate-50/85 p-5 dark:border-white/10 dark:bg-white/[0.04] sm:p-7 xl:border-l xl:border-t-0">
+                <div className="space-y-4">
+                  <div className="rounded-[1.5rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,0.96),rgba(224,242,254,0.88),rgba(255,255,255,0.92))] p-4 shadow-[0_22px_50px_-34px_rgba(14,165,233,0.22)] dark:border-sky-300/14 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.72),rgba(8,47,73,0.52),rgba(14,165,233,0.18))] dark:shadow-[0_22px_50px_-34px_rgba(15,23,42,0.5)]">
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-sky-700 dark:bg-white/10 dark:text-sky-100">
+                        <CalendarClock className="size-4" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-100">
+                          Planningstatus
+                        </p>
+                        <p className="text-base font-semibold text-slate-950 dark:text-white">
+                          {planningStateLabel}
+                        </p>
+                        <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
+                          {planningAccess.canViewAgenda
+                            ? "Je kunt nu direct een geschikt moment kiezen uit de agenda van deze instructeur."
+                            : planningAccess.hasActiveRelationship
+                              ? "Je traject is al actief. Zodra deze instructeur plannen voor jou vrijgeeft, verschijnt de agenda hieronder."
+                              : "Vraag eerst een proefles of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-[1.55rem] border border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)]">
-                    <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Werkgebied
-                    </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
-                      {instructor.steden.length} regio&apos;s
-                    </p>
-                  </div>
-                  <div className="rounded-[1.55rem] border border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)]">
-                    <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Profielkwaliteit
-                    </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
-                      {instructor.profiel_voltooid}% compleet
-                    </p>
-                  </div>
-                  <div className="rounded-[1.7rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,0.96),rgba(224,242,254,0.88),rgba(255,255,255,0.92))] p-4 shadow-[0_20px_46px_-34px_rgba(14,165,233,0.24)]">
-                    <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase">
-                      Vervolgplanning
-                    </p>
-                    <p className="mt-2 text-[15px] font-semibold leading-6 text-slate-950">
-                      {planningAccess.canViewAgenda
-                        ? "Je mag nu zelf een moment kiezen uit de agenda van deze instructeur."
-                        : planningAccess.hasActiveRelationship
-                          ? "Je traject is al actief. Zodra deze instructeur zelf plannen vrijgeeft, verschijnt de agenda hier."
-                          : "Vraag eerst een proefles of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."}
-                    </p>
-                    <div className="mt-3 rounded-[1.1rem] border border-white/70 bg-white/80 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                      <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase">
-                        {planningAccess.canViewAgenda ? "Eerstvolgende planning" : "Planningstatus"}
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div className="rounded-[1.25rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                      <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                        Eerstvolgende moment
                       </p>
-                      <p className="mt-1 text-[13px] font-semibold text-slate-950">
+                      <p className="mt-1 text-[13px] font-semibold leading-6 text-slate-950 dark:text-white">
                         {nextPlanningMoment}
                       </p>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button asChild className="rounded-full px-5">
-                        <a href="#plan-afspraak">
-                          {planningAccess.canViewAgenda
-                            ? "Bekijk agenda"
-                            : "Bekijk hoe planning vrijkomt"}
-                        </a>
-                      </Button>
-                      <Button asChild variant="outline" className="rounded-full px-5">
-                        <a href="#pakketten-en-trajecten">Bekijk pakketten eerst</a>
-                      </Button>
+                    <div className="rounded-[1.25rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                      <div className="flex items-start gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
+                          <ShieldCheck className="size-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                            Agenda pas zichtbaar na relatie
+                          </p>
+                          <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                            De instructeur bepaalt per leerling wanneer zelf inplannen open mag.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-[1.25rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                      <div className="flex items-start gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
+                          <MapPin className="size-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                            Rustige flow
+                          </p>
+                          <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                            Eerst vertrouwen, daarna pas agenda en vervolgplanning.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
-                <p className="mt-8 max-w-3xl text-base leading-8 text-slate-600">
-                  {instructor.bio}
-                </p>
-              </Reveal>
+      <section
+        id="pakketten-en-trajecten"
+        className="site-shell mx-auto w-full scroll-mt-28 px-4 py-6 sm:px-6 lg:px-8"
+      >
+        <Reveal className="space-y-4">
+          <div className="max-w-3xl space-y-2">
+            <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
+              Pakketten
+            </p>
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+              Kies een traject dat past bij je doel en tempo.
+            </h2>
+            <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
+              De pakketten staan nu vooraan in de flow, zodat je eerst kunt bepalen welk
+              traject logisch voelt en daarna direct kunt aanvragen.
+            </p>
+          </div>
 
-              <Reveal delay={0.06}>
-                <Card
-                  id="pakketten-en-trajecten"
-                  className="scroll-mt-28 border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)]"
-                >
-                  <CardHeader>
-                    <CardTitle>Pakketten en trajecten</CardTitle>
-                    <CardDescription>
-                      Bekijk hoe deze instructeur zijn begeleiding heeft opgebouwd, van intake
-                      tot examenfocus.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-3">
-                      {[
-                        {
-                          label: "Lesstijl",
-                          value:
-                            instructor.specialisaties.slice(0, 2).join(" • ") ||
-                            "Persoonlijke begeleiding",
-                        },
-                        {
-                          label: "Werkgebied",
-                          value: instructor.steden.join(" • "),
-                        },
-                        {
-                          label: "Planning",
-                          value:
-                            planningAccess.canViewAgenda
-                              ? "Zelf plannen staat aan"
-                              : planningAccess.hasActiveRelationship
-                                ? "Wacht op vrijgave van instructeur"
-                                : "Wordt later in het traject vrijgegeven",
-                        },
-                      ].map((item) => (
-                        <div
-                          key={item.label}
-                          className="rounded-[1.05rem] border border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] p-3 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)]"
+          {packageGroups.length ? (
+            <div className="space-y-5">
+              {packageGroups.map((group) => (
+                <div key={group.value} className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <Badge className="border border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">
+                      {group.label}
+                    </Badge>
+                    <p className="text-sm text-slate-500 dark:text-slate-300">
+                      {group.description}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    {group.packages.map((pkg, index) => {
+                      const visual = getPackageVisualConfig(
+                        pkg.icon_key,
+                        pkg.visual_theme
+                      );
+                      const coverObjectPosition = getPackageCoverObjectPosition(
+                        pkg.cover_position,
+                        pkg.cover_focus_x,
+                        pkg.cover_focus_y
+                      );
+                      const isPrimaryPackage = pkg.uitgelicht || index === 0;
+
+                      return (
+                        <HoverTilt
+                          key={pkg.id}
+                          className="relative rounded-[1.45rem] [perspective:1200px]"
                         >
-                          <p className="text-[9px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                            {item.label}
-                          </p>
-                          <p className="mt-1.5 text-[13px] leading-6 font-medium text-slate-950">
-                            {item.value}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-6">
-                      {packageGroups.length ? (
-                        packageGroups.map((group) => (
-                          <div key={group.value} className="space-y-4">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <Badge className="border border-sky-100 bg-sky-50 text-sky-700">
-                                {group.label}
-                              </Badge>
-                              <p className="text-sm text-slate-500">
-                                {group.description}
-                              </p>
-                            </div>
-                            <div className="grid gap-3 xl:grid-cols-2">
-                              {group.packages.map((pkg, index) => {
-                          const visual = getPackageVisualConfig(
-                            pkg.icon_key,
-                            pkg.visual_theme
-                          );
-                          const coverObjectPosition = getPackageCoverObjectPosition(
-                            pkg.cover_position,
-                            pkg.cover_focus_x,
-                            pkg.cover_focus_y
-                          );
-                          const isPrimaryPackage = pkg.uitgelicht || index === 0;
-
-                          return (
-                            <div
-                              key={pkg.id}
-                              className={`relative rounded-[1.2rem] border p-4 shadow-[0_22px_56px_-36px_rgba(15,23,42,0.18)] ${
-                                isPrimaryPackage
-                                  ? visual.featuredCardClass
+                          <Card
+                            className={`overflow-hidden border p-0 shadow-[0_22px_60px_-38px_rgba(15,23,42,0.22)] ${
+                              isPrimaryPackage
+                                ? visual.featuredCardClass
                                 : visual.softCardClass
-                              }`}
-                            >
-                              {pkg.cover_url ? (
-                                <div className="relative mb-3 h-28 overflow-hidden rounded-[1rem]">
-                                  <Image
-                                    src={pkg.cover_url}
-                                    alt={`Cover voor ${pkg.naam}`}
-                                    fill
-                                    sizes="(max-width: 1280px) 100vw, 50vw"
-                                    className="object-cover"
-                                    style={{ objectPosition: coverObjectPosition }}
-                                  />
-                                  <div
-                                    className={`absolute inset-0 ${
-                                      isPrimaryPackage
-                                        ? "bg-gradient-to-t from-slate-950/70 via-slate-950/18 to-transparent"
-                                        : "bg-gradient-to-t from-slate-950/35 via-slate-950/10 to-transparent"
-                                    }`}
-                                  />
-                                </div>
-                              ) : null}
-                              <div className="relative z-10 flex items-start justify-between gap-2.5">
-                                <div>
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                    <p className="text-[1rem] font-semibold">{pkg.naam}</p>
+                            }`}
+                          >
+                            {pkg.cover_url ? (
+                              <div className="relative h-28 overflow-hidden">
+                                <Image
+                                  src={pkg.cover_url}
+                                  alt={`Cover voor ${pkg.naam}`}
+                                  fill
+                                  sizes="(max-width: 1280px) 100vw, 50vw"
+                                  className="object-cover"
+                                  style={{ objectPosition: coverObjectPosition }}
+                                />
+                                <div
+                                  className={`absolute inset-0 ${
+                                    isPrimaryPackage
+                                      ? "bg-gradient-to-t from-slate-950/72 via-slate-950/18 to-transparent"
+                                      : "bg-gradient-to-t from-slate-950/35 via-slate-950/10 to-transparent"
+                                  }`}
+                                />
+                              </div>
+                            ) : null}
+
+                            <CardContent className="space-y-4 p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-[1rem] font-semibold text-slate-950 dark:text-white">
+                                      {pkg.naam}
+                                    </p>
                                     <Badge
                                       className={
                                         isPrimaryPackage
@@ -355,42 +407,19 @@ export default async function InstructeurDetailPage({
                                         Uitgelicht
                                       </Badge>
                                     ) : null}
-                                    {pkg.badge ? (
-                                      <Badge
-                                        className={
-                                          isPrimaryPackage
-                                            ? visual.featuredBadgeClass
-                                            : visual.softBadgeClass
-                                        }
-                                      >
-                                        {pkg.badge}
-                                      </Badge>
-                                    ) : null}
                                   </div>
                                   <p
-                                    className={`mt-1.5 text-[13px] leading-6 ${
+                                    className={`mt-2 line-clamp-2 text-[13px] leading-6 ${
                                       isPrimaryPackage
                                         ? "text-white/76"
-                                        : "text-slate-600"
+                                        : "text-slate-600 dark:text-slate-300"
                                     }`}
                                   >
                                     {pkg.beschrijving}
                                   </p>
-                                  {pkg.praktijk_examen_prijs !== null &&
-                                  pkg.praktijk_examen_prijs !== undefined ? (
-                                    <p
-                                      className={`mt-2 text-[12px] font-medium ${
-                                        isPrimaryPackage
-                                          ? "text-white/80"
-                                          : "text-slate-700"
-                                      }`}
-                                    >
-                                      Praktijk-examen {formatCurrency(pkg.praktijk_examen_prijs)}
-                                    </p>
-                                  ) : null}
                                 </div>
                                 <div
-                                  className={`flex size-9 shrink-0 items-center justify-center rounded-[1rem] ${
+                                  className={`flex size-10 shrink-0 items-center justify-center rounded-[1rem] ${
                                     isPrimaryPackage
                                       ? visual.featuredIconClass
                                       : visual.softIconClass
@@ -400,272 +429,171 @@ export default async function InstructeurDetailPage({
                                 </div>
                               </div>
 
-                              <div className="relative z-10 mt-3 grid gap-1.5 sm:grid-cols-2">
+                              <div className="grid grid-cols-2 gap-2">
                                 <div
-                                  className={`rounded-[0.9rem] p-3 ${
-                                    isPrimaryPackage ? "bg-white/10" : "bg-white"
+                                  className={`rounded-[0.95rem] px-3 py-2.5 ${
+                                    isPrimaryPackage ? "bg-white/10" : "bg-white/90"
                                   }`}
                                 >
                                   <p
                                     className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${
                                       isPrimaryPackage
                                         ? "text-white/65"
-                                        : "text-slate-500"
+                                        : "text-slate-500 dark:text-slate-400"
                                     }`}
                                   >
                                     Prijs
                                   </p>
-                                  <p className="mt-1 text-[15px] font-semibold">
-                                    {pkg.prijs ? formatCurrency(pkg.prijs) : "Op aanvraag"}
+                                  <p className="mt-1 text-[14px] font-semibold text-slate-950 dark:text-white">
+                                    {formatPriceLabel(Number(pkg.prijs ?? 0))}
                                   </p>
                                 </div>
                                 <div
-                                  className={`rounded-[0.9rem] p-3 ${
-                                    isPrimaryPackage ? "bg-white/10" : "bg-white"
+                                  className={`rounded-[0.95rem] px-3 py-2.5 ${
+                                    isPrimaryPackage ? "bg-white/10" : "bg-white/90"
                                   }`}
                                 >
                                   <p
                                     className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${
                                       isPrimaryPackage
                                         ? "text-white/65"
-                                        : "text-slate-500"
+                                        : "text-slate-500 dark:text-slate-400"
                                     }`}
                                   >
                                     Lessen
                                   </p>
-                                  <p className="mt-1 text-[15px] font-semibold">
+                                  <p className="mt-1 text-[14px] font-semibold text-slate-950 dark:text-white">
                                     {pkg.lessen || "Flexibel"}
                                   </p>
                                 </div>
                               </div>
 
-                              <div
-                                className={`relative z-10 mt-3 rounded-[0.95rem] p-3 ${
-                                  isPrimaryPackage ? "bg-white/10" : "bg-white"
-                                }`}
-                              >
-                                <div className="flex items-start gap-2.5">
-                                  <ShieldCheck
-                                    className={`mt-1 size-4 ${
-                                      isPrimaryPackage ? "text-white/72" : "text-primary"
-                                    }`}
-                                  />
-                                  <p
-                                    className={`text-[12px] leading-6 ${
-                                      isPrimaryPackage
-                                        ? "text-white/76"
-                                        : "text-slate-600"
-                                    }`}
-                                  >
-                                    Past bij {instructor.volledige_naam} als je begeleiding zoekt
-                                    met focus op {getInstructorFocus(instructor)}.
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="relative z-10 mt-4">
-                                <LessonRequestDialog
-                                  instructorName={instructor.volledige_naam}
-                                  instructorSlug={instructor.slug}
-                                  selectedPackage={pkg}
-                                  availableSlots={planningAccess.canViewAgenda ? slots : []}
-                                  triggerLabel="Vraag dit pakket aan"
-                                  triggerClassName="h-9 w-full text-[13px]"
-                                />
-                              </div>
-
-                              {isPrimaryPackage ? (
-                                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.2),transparent_28%),radial-gradient(circle_at_80%_78%,rgba(255,255,255,0.12),transparent_28%)]" />
-                              ) : null}
-                            </div>
-                          );
-                              })}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="rounded-[1.75rem] border border-dashed border-border bg-slate-50/80 p-6 text-sm leading-7 text-slate-600 xl:col-span-2">
-                          Deze instructeur heeft nog geen losse trajecten gepubliceerd. Je kunt
-                          wel direct een lesaanvraag of proefles starten.
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Reveal>
-
-              <Reveal delay={0.08}>
-                <Card className="border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)]">
-                  <CardHeader>
-                    <CardTitle>Reviews van leerlingen</CardTitle>
-                    <CardDescription>
-                      Echte ervaringen na afgeronde lessen en trajecten.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {reviews.length ? (
-                      reviews.map((review) => (
-                        <HoverTilt
-                          key={review.id}
-                          className="relative rounded-[1.75rem] [perspective:1200px]"
-                        >
-                          <div className="rounded-[1.75rem] border border-border/70 bg-slate-50/80 p-5">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                              <div>
-                                <p className="font-semibold text-slate-950">{review.titel}</p>
-                                <p className="text-sm text-slate-500">
-                                  {review.leerling_naam} • {review.datum}
-                                </p>
-                              </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Badge variant="warning">{review.score} sterren</Badge>
-                                  {currentUserContext ? (
-                                    <ReviewReportDialog
-                                      reviewId={review.id}
-                                      reviewTitle={review.titel}
-                                    />
-                                  ) : null}
-                                </div>
-                            </div>
-                              <p className="mt-3 text-sm leading-7 text-slate-600">
-                                {review.tekst}
-                              </p>
-                              {review.antwoord_tekst ? (
-                                <div className="mt-3 rounded-[1.15rem] border border-sky-100 bg-sky-50/80 p-4">
-                                  <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase">
-                                    Reactie van instructeur
-                                  </p>
-                                  <p className="mt-2 text-sm leading-7 text-slate-700">
-                                    {review.antwoord_tekst}
-                                  </p>
-                                  {review.antwoord_datum ? (
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      Geplaatst op {review.antwoord_datum}
-                                    </p>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
+                              <LessonRequestDialog
+                                instructorName={instructor.volledige_naam}
+                                instructorSlug={instructor.slug}
+                                selectedPackage={pkg}
+                                availableSlots={planningAccess.canViewAgenda ? slots : []}
+                                triggerLabel="Vraag dit pakket aan"
+                                triggerClassName="h-10 w-full text-[13px]"
+                              />
+                            </CardContent>
+                          </Card>
                         </HoverTilt>
-                      ))
-                    ) : (
-                      <div className="rounded-[1.75rem] border border-dashed border-border bg-slate-50/80 p-6 text-sm leading-7 text-slate-600">
-                        Er zijn nog geen reviews beschikbaar voor dit profiel.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Reveal>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
+          ) : (
+            <Card className="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50/80 p-6 text-sm leading-7 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">
+              Deze instructeur heeft nog geen losse trajecten gepubliceerd. Je kunt wel direct
+              een lesaanvraag of proefles starten.
+            </Card>
+          )}
+        </Reveal>
+      </section>
 
-            <div className="space-y-6 xl:sticky xl:top-24 xl:self-start">
-              <Reveal delay={0.1} className="relative overflow-hidden rounded-[2.5rem] bg-[linear-gradient(145deg,rgba(15,23,42,1),rgba(30,64,175,0.95),rgba(14,165,233,0.88))] px-6 py-6 text-white shadow-[0_38px_110px_-52px_rgba(15,23,42,0.75)] sm:px-7 sm:py-7 xl:min-h-[31rem] xl:px-8 xl:py-8">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.1),transparent_28%)]" />
-                <div className="absolute inset-y-0 right-0 left-[44%] hidden xl:block opacity-80">
-                  <BrandRouteScene showPanels={false} />
+      <section className="site-shell mx-auto w-full px-4 py-2 sm:px-6 lg:px-8">
+        <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+          <Reveal>
+            <Card className="rounded-[1.8rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+              <CardHeader className="pb-3">
+                <CardTitle>Profiel en lesstijl</CardTitle>
+                <CardDescription>
+                  Zo geeft {instructor.volledige_naam} vorm aan de begeleiding.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm leading-8 text-slate-600 dark:text-slate-300 sm:text-[15px]">
+                  {instructor.bio}
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {instructor.specialisaties.map((tag) => (
+                    <Badge key={tag}>{tag}</Badge>
+                  ))}
                 </div>
-                <div className="relative flex h-full flex-col justify-between gap-8">
-                  <div className="max-w-[26rem] space-y-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[10px] font-semibold tracking-[0.22em] text-sky-200 uppercase">
-                        Vervolgplanning
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    {
+                      label: "Werkgebied",
+                      value: instructor.steden.join(" / "),
+                    },
+                    {
+                      label: "Transmissie",
+                      value: transmissionLabel(instructor.transmissie),
+                    },
+                    {
+                      label: "Focus",
+                      value: getInstructorFocus(instructor),
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-3 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6"
+                    >
+                      <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                        {item.label}
                       </p>
-                      <span className="rounded-full border border-white/18 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-white/78 uppercase">
-                        Na vrijgave
-                      </span>
+                      <p className="mt-1.5 text-[13px] leading-6 font-medium text-slate-950 dark:text-white">
+                        {item.value}
+                      </p>
                     </div>
-                    <h2 className="max-w-[13ch] text-3xl font-semibold leading-tight sm:text-[2.05rem]">
-                      {planningAccess.canViewAgenda
-                        ? "Je agenda-toegang staat open. Kies nu zelf een passend moment."
-                        : "De agenda opent pas zodra jouw traject actief is en de instructeur dit vrijgeeft."}
-                    </h2>
-                    <p className="max-w-[28rem] text-sm leading-7 text-white/72 sm:text-[15px]">
-                      {planningAccess.canViewAgenda
-                        ? "Je ziet nu alleen de momenten die deze instructeur voor jou open heeft gezet. Zo blijft plannen rustig en gericht."
-                        : "Eerst vraag je een pakket of proefles aan. Zodra je echt verdergaat met deze instructeur kan hij of zij zelf inplannen voor jou aanzetten."}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {planningSignals.map((item) => (
-                        <span
-                          key={item.label}
-                          className="rounded-full border border-white/16 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/78"
-                        >
-                          <span className="font-semibold text-white">{item.label}</span>{" "}
-                          {item.value}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid gap-3 xl:max-w-[28rem]">
-                    {planningHighlights.map((item) => (
-                      <div
-                        key={item.title}
-                        className="rounded-[1.6rem] border border-white/12 bg-white/10 p-4 backdrop-blur"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/12">
-                            <item.icon className="size-4" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-white">{item.title}</p>
-                            <p className="mt-1 text-sm leading-7 text-white/72">
-                              {item.text}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <LessonRequestDialog
-                      instructorName={instructor.volledige_naam}
-                      instructorSlug={instructor.slug}
-                      selectedPackage={primaryPackage}
-                      availableSlots={planningAccess.canViewAgenda ? slots : []}
-                      triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
-                    />
-                    <LessonRequestDialog
-                      instructorName={instructor.volledige_naam}
-                      instructorSlug={instructor.slug}
-                      requestType="proefles"
-                      availableSlots={planningAccess.canViewAgenda ? slots : []}
-                      triggerLabel="Plan proefles"
-                      triggerVariant="secondary"
-                    />
-                  </div>
+                  ))}
                 </div>
-              </Reveal>
+              </CardContent>
+            </Card>
+          </Reveal>
 
-              <div id="plan-afspraak" className="scroll-mt-28">
-                <Reveal delay={0.14}>
-                  {planningAccess.canViewAgenda ? (
-                    <InstructorAvailabilityPlanner
-                      instructorName={instructor.volledige_naam}
-                      instructorSlug={instructor.slug}
-                      slots={slots}
-                    />
-                  ) : (
-                    <Card className="border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)]">
-                      <CardHeader>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={planningAccess.hasActiveRelationship ? "warning" : "info"}>
-                            {planningAccess.hasActiveRelationship
-                              ? "Wacht op vrijgave"
-                              : "Nog afgeschermd"}
-                          </Badge>
-                        </div>
-                        <CardTitle>
+          <div id="plan-afspraak" className="scroll-mt-28">
+            <Reveal delay={0.06}>
+              <div className="space-y-4">
+                <div className="max-w-3xl space-y-2">
+                  <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
+                    Beschikbaarheid
+                  </p>
+                  <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                    Bekijk hoe planning voor deze instructeur werkt.
+                  </h2>
+                  <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
+                    De planner blijft hetzelfde, maar staat nu rustiger in de flow na profiel en
+                    pakketten.
+                  </p>
+                </div>
+
+                {planningAccess.canViewAgenda ? (
+                  <InstructorAvailabilityPlanner
+                    instructorName={instructor.volledige_naam}
+                    instructorSlug={instructor.slug}
+                    slots={slots}
+                  />
+                ) : (
+                  <Card className="rounded-[1.8rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+                    <CardHeader className="pb-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant={planningAccess.hasActiveRelationship ? "warning" : "info"}
+                        >
                           {planningAccess.hasActiveRelationship
-                            ? "Agenda wacht nog op vrijgave van de instructeur"
-                            : "Agenda wordt pas zichtbaar zodra je traject actief is"}
-                        </CardTitle>
-                        <CardDescription>
-                          {planningAccess.hasActiveRelationship
-                            ? "Je bent al gekoppeld aan deze instructeur. Zodra zelf inplannen voor jou wordt aangezet, verschijnen hier de beschikbare momenten."
-                            : "De agenda blijft bewust verborgen tot je echt verdergaat met deze instructeur. Daarna kan de instructeur per leerling zelf bepalen of plannen wordt vrijgegeven."}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="grid gap-3 md:grid-cols-3">
+                            ? "Wacht op vrijgave"
+                            : "Nog afgeschermd"}
+                        </Badge>
+                      </div>
+                      <CardTitle>
+                        {planningAccess.hasActiveRelationship
+                          ? "Je traject is actief, maar de agenda wacht nog op vrijgave"
+                          : "De agenda opent zodra je traject met deze instructeur actief is"}
+                      </CardTitle>
+                      <CardDescription>
+                        {planningAccess.hasActiveRelationship
+                          ? "Zodra deze instructeur zelf inplannen voor jou aanzet, verschijnen hier de beschikbare momenten."
+                          : "Eerst vraag je een proefles of pakket aan. Daarna kan de instructeur plannen vrijgeven wanneer dat logisch is."}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-3 md:grid-cols-3">
                         {[
                           {
                             label: "Stap 1",
@@ -673,18 +601,18 @@ export default async function InstructeurDetailPage({
                           },
                           {
                             label: "Stap 2",
-                            value: "Werk verder in een actief traject",
+                            value: "Ga verder in een actief traject",
                           },
                           {
                             label: "Stap 3",
-                            value: "De instructeur zet zelf inplannen aan",
+                            value: "De instructeur zet zelf plannen aan",
                           },
                         ].map((item) => (
                           <div
                             key={item.label}
-                            className="rounded-[1.1rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                            className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/6"
                           >
-                            <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                            <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                               {item.label}
                             </p>
                             <p className="mt-2 text-[13px] leading-6 font-medium text-slate-950 dark:text-white">
@@ -692,14 +620,124 @@ export default async function InstructeurDetailPage({
                             </p>
                           </div>
                         ))}
-                      </CardContent>
-                    </Card>
-                  )}
-                </Reveal>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <LessonRequestDialog
+                          instructorName={instructor.volledige_naam}
+                          instructorSlug={instructor.slug}
+                          selectedPackage={primaryPackage}
+                          availableSlots={[]}
+                          triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
+                          triggerClassName="h-10 text-[13px]"
+                        />
+                        <LessonRequestDialog
+                          instructorName={instructor.volledige_naam}
+                          instructorSlug={instructor.slug}
+                          requestType="proefles"
+                          availableSlots={[]}
+                          triggerLabel="Plan proefles"
+                          triggerVariant="secondary"
+                          triggerClassName="h-10 text-[13px]"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-            </div>
+            </Reveal>
           </div>
         </div>
+      </section>
+
+      <section className="site-shell mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
+        <Reveal className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-3xl space-y-2">
+              <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
+                Reviews
+              </p>
+              <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                Echte ervaringen van leerlingen.
+              </h2>
+              <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
+                Compacte reviewkaarten met score, titel, korte tekst en eventuele reactie van
+                de instructeur.
+              </p>
+            </div>
+            <div className="rounded-full border border-slate-200 bg-white/92 px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6 dark:text-slate-200">
+              {averageScoreLabel} uit {instructor.aantal_reviews} reviews
+            </div>
+          </div>
+
+          {reviews.length ? (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {reviews.map((review) => (
+                <HoverTilt key={review.id} className="relative rounded-[1.45rem] [perspective:1200px]">
+                  <Card className="rounded-[1.45rem] border border-slate-200/80 bg-white/92 shadow-[0_22px_56px_-38px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_22px_56px_-38px_rgba(15,23,42,0.5)]">
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 font-semibold text-slate-950 dark:text-white">
+                            {review.titel}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {review.leerling_naam} / {review.datum}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="warning">{review.score} sterren</Badge>
+                          {currentUserContext ? (
+                            <ReviewReportDialog
+                              reviewId={review.id}
+                              reviewTitle={review.titel}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <p className="line-clamp-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                        {review.tekst}
+                      </p>
+
+                      {review.antwoord_tekst ? (
+                        <div className="rounded-[1rem] border border-sky-100 bg-sky-50/80 p-3 dark:border-sky-300/12 dark:bg-sky-400/10">
+                          <p className="text-[10px] font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-100">
+                            Reactie van instructeur
+                          </p>
+                          <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-200">
+                            {review.antwoord_tekst}
+                          </p>
+                          {review.antwoord_datum ? (
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                              Geplaatst op {review.antwoord_datum}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                </HoverTilt>
+              ))}
+            </div>
+          ) : (
+            <Card className="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50/80 p-6 text-sm leading-7 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">
+              Er zijn nog geen reviews beschikbaar voor dit profiel.
+            </Card>
+          )}
+        </Reveal>
+      </section>
+
+      <section className="site-shell mx-auto w-full px-4 pt-2 sm:px-6 lg:px-8">
+        <Reveal>
+          <AutomaticInternalLinks
+            citySlug={citySlug}
+            currentPath={`/instructeurs/${instructor.slug}`}
+            title="Verder vergelijken"
+            description={`Sterke interne links rond ${instructor.steden[0] ?? "deze regio"} die bezoekers en zoekmachines helpen om logisch door te klikken.`}
+            limit={8}
+          />
+        </Reveal>
       </section>
     </div>
   );
