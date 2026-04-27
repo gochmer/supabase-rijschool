@@ -16,11 +16,13 @@ import type {
   InstructeurProfiel,
   RijlesType,
   Review,
+  TransmissieType,
 } from "@/lib/types";
 import {
   getLatestVisibleReviewsByInstructorIds,
   getReviewStatsByInstructorIds,
 } from "@/lib/data/reviews";
+import { normalizeCityForSlug } from "@/lib/seo-cities";
 import { createServerClient } from "@/lib/supabase/server";
 
 type DbInstructorRow = {
@@ -172,6 +174,39 @@ export async function getPublicInstructorsByLessonType(lesType: RijlesType) {
   );
 
   return allInstructors.filter((instructor) => supportedInstructorIds.has(instructor.id));
+}
+
+export async function getPublicInstructorsByCity(
+  citySlug: string,
+  lesType: RijlesType = "auto"
+) {
+  const instructors = await getPublicInstructorsByLessonType(lesType);
+
+  return instructors.filter((instructor) =>
+    instructor.steden.some((city) => normalizeCityForSlug(city) === citySlug)
+  );
+}
+
+export async function getPublicInstructorsByCityAndTransmission(
+  citySlug: string,
+  transmission: Extract<TransmissieType, "automaat" | "handgeschakeld">,
+  lesType: RijlesType = "auto"
+) {
+  const cityInstructors = await getPublicInstructorsByCity(citySlug, lesType);
+
+  return cityInstructors.filter((instructor) => {
+    if (transmission === "automaat") {
+      return (
+        instructor.transmissie === "automaat" ||
+        instructor.transmissie === "beide"
+      );
+    }
+
+    return (
+      instructor.transmissie === "handgeschakeld" ||
+      instructor.transmissie === "beide"
+    );
+  });
 }
 
 export async function getPublicInstructorBySlug(slug: string) {

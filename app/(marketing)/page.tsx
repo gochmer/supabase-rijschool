@@ -5,12 +5,31 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
 import { Reveal } from "@/components/marketing/homepage-motion";
 import { FeaturedInstructorsCarousel } from "@/components/marketing/featured-instructors-carousel";
 import { InstructorSearchCard } from "@/components/marketing/instructor-search-card";
 import { Button } from "@/components/ui/button";
 import { getPublicInstructorsByLessonType } from "@/lib/data/instructors";
 import { getPublicInstructorPackageMap } from "@/lib/data/packages";
+
+const homeFaqItems = [
+  {
+    question: "Hoe kies ik sneller de juiste rijinstructeur?",
+    answer:
+      "Start met regio, transmissie, reviewscore en prijs, en kijk daarna pas naar de fijnere stijlverschillen. Zo blijft de keuze rustig en logisch.",
+  },
+  {
+    question: "Is automaat of schakel beter voor mij?",
+    answer:
+      "Dat hangt af van je doel, vertrouwen en voertuigkeuze later. Daarom hebben we aparte routes voor automaat, schakel en lokale intentpagina's.",
+  },
+  {
+    question: "Waarom zijn reviews en profielen zo belangrijk?",
+    answer:
+      "Nieuwe leerlingen bouwen sneller vertrouwen op als ze echte social proof zien en meteen snappen hoe een instructeur werkt, plant en begeleidt.",
+  },
+];
 
 export default async function HomePage() {
   const featuredInstructors = (await getPublicInstructorsByLessonType("auto")).slice(0, 6);
@@ -141,6 +160,9 @@ export default async function HomePage() {
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>
+                  <Button asChild size="lg" variant="outline" className="h-11 rounded-full border-white/14 bg-white/6 text-white hover:bg-white/10 hover:text-white">
+                    <Link href="/tips">Lees tips en lokale artikelen</Link>
+                  </Button>
                 </div>
                 <p className="mt-3 text-[11px] leading-5 text-white/72">
                   Eerst vergelijken, daarna aanvragen. Zo blijft de route helder vanaf de eerste
@@ -151,6 +173,13 @@ export default async function HomePage() {
           </div>
         </Reveal>
       </section>
+
+      <MarketingFaqSection
+        eyebrow="Veelgestelde vragen"
+        title="Snelle antwoorden voor leerlingen die gericht willen kiezen"
+        description="Deze vragen spelen vaak vroeg in de funnel en helpen bezoekers sneller richting een instructeur, proefles of pakket."
+        items={homeFaqItems}
+      />
     </div>
   );
 }

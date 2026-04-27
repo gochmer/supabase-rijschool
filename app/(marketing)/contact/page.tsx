@@ -1,6 +1,7 @@
 import { CheckCircle2, Clock3, Mail, MapPin, PhoneCall } from "lucide-react";
 
 import { Reveal, SignatureLine } from "@/components/marketing/homepage-motion";
+import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
 import { SectionHeading } from "@/components/section-heading";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,6 +78,24 @@ const formSignals = [
   "Voor leerlingen, instructeurs en rijscholen",
   "Snel opvolgen zonder ruis",
   "Heldere terugkoppeling vanuit een vast team",
+];
+
+const contactFaqItems = [
+  {
+    question: "Hoe snel krijg ik antwoord op mijn bericht?",
+    answer:
+      "Meestal binnen één werkdag. Voor vragen over onboarding, support of samenwerkingen proberen we zo snel mogelijk een eerste duidelijke reactie te geven.",
+  },
+  {
+    question: "Kan ik ook contact opnemen als ik nog aan het oriënteren ben?",
+    answer:
+      "Ja, juist dan. We kunnen helpen bij vragen over pakketten, instructeurpresentatie, platforminrichting en wat logisch is voor jouw situatie.",
+  },
+  {
+    question: "Is deze contactpagina alleen voor leerlingen?",
+    answer:
+      "Nee. Leerlingen, instructeurs, rijscholen en samenwerkingspartners kunnen hier allemaal dezelfde nette supportroute gebruiken.",
+  },
 ];
 
 export default function ContactPage() {
@@ -290,6 +309,13 @@ export default function ContactPage() {
           </Reveal>
         </div>
       </section>
+
+      <MarketingFaqSection
+        eyebrow="Contact vragen"
+        title="Veelgestelde vragen over support en contact"
+        description="Deze laag helpt bezoekers sneller te begrijpen wanneer ze contact opnemen, wat ze mogen verwachten en hoe snel er meestal wordt gereageerd."
+        items={contactFaqItems}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { CheckCircle2, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 import { Reveal, SignatureLine } from "@/components/marketing/homepage-motion";
+import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
 import { SectionHeading } from "@/components/section-heading";
 import {
   Card,
@@ -78,6 +79,24 @@ const approachCards = [
   {
     title: "Voor het merk",
     text: "Een premium uitstraling die vertrouwen geeft nog voor de eerste les is geboekt.",
+  },
+];
+
+const aboutFaqItems = [
+  {
+    question: "Voor wie is RijBasis gebouwd?",
+    answer:
+      "Voor leerlingen die rustig willen kiezen, instructeurs die meer grip willen op hun planning en profiel, en admins die kwaliteit en support overzichtelijk willen beheren.",
+  },
+  {
+    question: "Waarom focust RijBasis zo sterk op uitstraling?",
+    answer:
+      "Omdat vertrouwen al ontstaat vóór de eerste les. Een premium, duidelijke presentatie verhoogt niet alleen gebruiksgemak maar ook conversie.",
+  },
+  {
+    question: "Wat maakt het platform anders dan losse tools?",
+    answer:
+      "Planning, pakketten, reviews, support en profielkwaliteit zitten hier in één flow. Daardoor voelt het rustiger en professioneler voor alle rollen.",
   },
 ];
 
@@ -230,6 +249,13 @@ export default function OverOnsPage() {
           </div>
         </Reveal>
       </section>
+
+      <MarketingFaqSection
+        eyebrow="Over RijBasis"
+        title="Veelgestelde vragen over het platform en de visie erachter"
+        description="Ook deze pagina helpt SEO-technisch, omdat bezoekers en zoekmachines beter begrijpen voor wie RijBasis is gebouwd en waarom het platform anders aanvoelt."
+        items={aboutFaqItems}
+      />
     </div>
   );
 }

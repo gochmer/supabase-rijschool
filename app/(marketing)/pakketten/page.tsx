@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
 import { PackageMatchmaker } from "@/components/packages/package-matchmaker";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,24 @@ const advisorSignals = [
   "Persoonlijk afgestemd op niveau en tempo",
   "Duidelijk aanbod zonder ruis",
   "Sterker keuzegevoel voor nieuwe leerlingen",
+];
+
+const packagesFaqItems = [
+  {
+    question: "Waarom zijn er verschillende rijlespakketten?",
+    answer:
+      "Niet elke leerling start op hetzelfde niveau. Door pakketten te splitsen op tempo, examendruk en type begeleiding wordt vergelijken duidelijker en eerlijker.",
+  },
+  {
+    question: "Wat zit meestal in een pakket inbegrepen?",
+    answer:
+      "Meestal een aantal lessen, een duidelijke prijsstructuur en soms extra onderdelen zoals examenfocus of praktijk-examenprijs.",
+  },
+  {
+    question: "Wanneer kies ik beter een proefles dan direct een pakket?",
+    answer:
+      "Als je eerst wilt voelen of de instructeur en lesstijl passen. Daarna kun je veel gerichter kiezen welk pakket logisch is.",
+  },
 ];
 
 export default async function PakkettenPage() {
@@ -341,6 +360,13 @@ export default async function PakkettenPage() {
           </div>
         </Reveal>
       </section>
+
+      <MarketingFaqSection
+        eyebrow="Pakket vragen"
+        title="Veelgestelde vragen over rijlespakketten"
+        description="Sterke pakketpagina's geven niet alleen aanbod, maar beantwoorden ook de twijfels die vaak vlak voor een keuze spelen."
+        items={packagesFaqItems}
+      />
     </div>
   );
 }
