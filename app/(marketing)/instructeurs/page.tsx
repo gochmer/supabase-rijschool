@@ -1,13 +1,31 @@
 import Link from "next/link";
+import { ArrowRight, CarFront, MapPinned, SearchCheck, Sparkles } from "lucide-react";
 
 import { InstructorFinder } from "@/components/instructors/instructor-finder";
 import { Reveal } from "@/components/marketing/homepage-motion";
 import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getFavoriteInstructorIds } from "@/lib/data/favorites";
 import { getPublicInstructorsByLessonType } from "@/lib/data/instructors";
 import { getPublicInstructorPackageMap } from "@/lib/data/packages";
 import { seoCityConfigs } from "@/lib/seo-cities";
+
+const primaryCities = seoCityConfigs.slice(0, 6);
+const featuredCities = seoCityConfigs.slice(0, 4);
+const compactCities = seoCityConfigs.slice(0, 3);
+
+function SeoLinkPill({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.2)] transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/18 dark:hover:text-white"
+    >
+      {children}
+      <ArrowRight className="size-3.5" />
+    </Link>
+  );
+}
 
 export default async function InstructeursPage() {
   const [liveInstructors, favoriteInstructorIds] = await Promise.all([
@@ -26,221 +44,192 @@ export default async function InstructeursPage() {
 
   return (
     <div className="pb-20">
-      <section className="site-shell mx-auto w-full px-4 pb-10 pt-14 sm:px-6 sm:pt-16 lg:px-8">
-        <Reveal className="space-y-4">
-          <SeoBreadcrumbs items={breadcrumbItems} />
-          <div className="rounded-[1.2rem] border border-slate-200 bg-white/88 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_18px_44px_-34px_rgba(15,23,42,0.42)]">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
-                  Categorie
-                </p>
-                <h1 className="text-xl font-semibold text-slate-950 dark:text-white">
-                  Deze pagina toont alleen auto-instructeurs en autopakketten.
-                </h1>
-                <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                  Zoek je motorrijles of vrachtwagen? Die hebben een eigen route met alleen
-                  passend aanbod uit die categorie.
-                </p>
-              </div>
+      <section className="relative overflow-hidden px-4 pb-10 pt-12 sm:px-6 sm:pt-16 lg:px-8">
+        <div className="absolute inset-x-0 top-0 h-[32rem] bg-[radial-gradient(circle_at_14%_16%,rgba(56,189,248,0.2),transparent_24%),radial-gradient(circle_at_86%_12%,rgba(29,78,216,0.18),transparent_26%),radial-gradient(circle_at_58%_64%,rgba(249,115,22,0.1),transparent_24%)]" />
+        <div className="site-shell relative mx-auto w-full">
+          <Reveal className="space-y-6">
+            <SeoBreadcrumbs items={breadcrumbItems} />
 
-              <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline" size="sm" className="rounded-full">
-                  <Link href="/motor">Naar motor</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="rounded-full">
-                  <Link href="/vrachtwagen">Naar vrachtwagen</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
+            <div className="overflow-hidden rounded-[2.5rem] border border-white/80 bg-white/92 p-6 shadow-[0_32px_100px_-54px_rgba(15,23,42,0.32)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.88),rgba(15,23,42,0.96))] sm:p-8">
+              <div className="grid gap-8 xl:grid-cols-[1fr_0.95fr] xl:items-end">
+                <div className="max-w-4xl space-y-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="border border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">
+                      Auto-instructeurs
+                    </Badge>
+                    <Badge className="border border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-200">
+                      {liveInstructors.length} profielen
+                    </Badge>
+                    <Badge className="border border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-200">
+                      Pakketten, reviews en beschikbaarheid
+                    </Badge>
+                  </div>
 
-          <div className="rounded-[1.2rem] border border-slate-200 bg-white/88 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_18px_44px_-34px_rgba(15,23,42,0.42)]">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
-                  Populaire steden
-                </p>
-                <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-                  Lokale SEO-routes voor rijschool, automaat, schakel en specialistische lessen
-                </h2>
-                <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                  Zoek je direct in een specifieke stad, op automaat of op een specialistisch traject? Open dan een lokale route met alleen relevant aanbod uit die regio.
-                </p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="flex flex-wrap gap-2">
-                  {seoCityConfigs.slice(0, 6).map((city) => (
-                    <Button
-                      key={`city-${city.slug}`}
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                    >
-                      <Link href={`/rijschool/${city.slug}`}>{city.name}</Link>
-                    </Button>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {seoCityConfigs.slice(0, 4).map((city) => (
-                    <Button
-                      key={`automatic-${city.slug}`}
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                    >
-                      <Link href={`/automaat/${city.slug}`}>
-                        Automaat {city.name}
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
+                      Vergelijk rijinstructeurs
+                    </p>
+                    <h1 className="mt-4 max-w-[16ch] text-4xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[3.3rem]">
+                      Vind een rijinstructeur die past bij je stad, budget en rijdoel.
+                    </h1>
+                    <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">
+                      Vergelijk auto-instructeurs op regio, prijs, beoordeling, transmissie, pakketten en specialisaties. Wil je motor- of vrachtwagenrijles? Gebruik dan de aparte routes voor passend aanbod.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2.5">
+                    <Button asChild className="rounded-full">
+                      <Link href="#instructeurs-overzicht">
+                        Start vergelijken
+                        <SearchCheck className="size-4" />
                       </Link>
                     </Button>
-                  ))}
+                    <Button asChild variant="outline" className="rounded-full">
+                      <Link href="/motor">Motorrijles bekijken</Link>
+                    </Button>
+                    <Button asChild variant="outline" className="rounded-full">
+                      <Link href="/vrachtwagen">Vrachtwagen bekijken</Link>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {seoCityConfigs.slice(0, 4).map((city) => (
-                    <Button
-                      key={`manual-${city.slug}`}
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
+
+                <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                  {[
+                    {
+                      icon: CarFront,
+                      label: "Categorie",
+                      value: "Auto",
+                      text: "Alleen auto-instructeurs en autopakketten op deze pagina.",
+                    },
+                    {
+                      icon: MapPinned,
+                      label: "Lokale routes",
+                      value: `${seoCityConfigs.length}+ steden`,
+                      text: "Stadspagina’s voor lokale zoekopdrachten en snelle matching.",
+                    },
+                    {
+                      icon: Sparkles,
+                      label: "Slim kiezen",
+                      value: "Filters + reviews",
+                      text: "Gebruik social proof, prijs en specialisaties voor een betere keuze.",
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"
                     >
-                      <Link href={`/schakel/${city.slug}`}>
-                        Schakel {city.name}
-                      </Link>
-                    </Button>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {seoCityConfigs.slice(0, 3).map((city) => (
-                    <Button
-                      key={`motor-${city.slug}`}
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                    >
-                      <Link href={`/motor/${city.slug}`}>Motor {city.name}</Link>
-                    </Button>
-                  ))}
-                  {seoCityConfigs.slice(0, 3).map((city) => (
-                    <Button
-                      key={`truck-${city.slug}`}
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                    >
-                      <Link href={`/vrachtwagen/${city.slug}`}>
-                        Vrachtwagen {city.name}
-                      </Link>
-                    </Button>
+                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-300">
+                        <item.icon className="size-4" />
+                        <p className="text-[10px] font-semibold tracking-[0.18em] uppercase">
+                          {item.label}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
+                        {item.value}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {item.text}
+                      </p>
+                    </div>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
+        </div>
+      </section>
 
-          <div className="rounded-[1.2rem] border border-slate-200 bg-white/88 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_18px_44px_-34px_rgba(15,23,42,0.42)]">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
-                  Zoekintentie pagina&apos;s
-                </p>
-                <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
-                  Extra SEO-routes voor warme zoekintentie en langere zoekopdrachten
-                </h2>
-                <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                  Dit zijn de pagina&apos;s waarop mensen vaak binnenkomen als ze al dichter op een beslissing zitten of heel gericht zoeken naar een bepaald traject.
-                </p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-4">
-                {seoCityConfigs.slice(0, 4).map((city) => (
-                  <Button
-                    key={`spoed-${city.slug}`}
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    <Link href={`/spoedcursus/${city.slug}`}>
-                      Spoed {city.name}
-                    </Link>
-                  </Button>
-                ))}
-                {seoCityConfigs.slice(0, 4).map((city) => (
-                  <Button
-                    key={`trial-${city.slug}`}
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    <Link href={`/proefles/${city.slug}`}>
-                      Proefles {city.name}
-                    </Link>
-                  </Button>
-                ))}
-                {seoCityConfigs.slice(0, 4).map((city) => (
-                  <Button
-                    key={`exam-${city.slug}`}
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                    >
-                      <Link href={`/examengericht/${city.slug}`}>
-                        Examengericht {city.name}
-                      </Link>
-                    </Button>
-                ))}
-                {seoCityConfigs.slice(0, 3).map((city) => (
-                  <Button
-                    key={`fear-${city.slug}`}
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    <Link href={`/faalangst/${city.slug}`}>
-                      Faalangst {city.name}
-                    </Link>
-                  </Button>
-                ))}
-                {seoCityConfigs.slice(0, 3).map((city) => (
-                  <Button
-                    key={`refresh-${city.slug}`}
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    <Link href={`/opfriscursus/${city.slug}`}>
-                      Opfriscursus {city.name}
-                    </Link>
-                  </Button>
-                ))}
-                {seoCityConfigs.slice(0, 3).map((city) => (
-                  <Button
-                    key={`exam-focus-${city.slug}`}
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    <Link href={`/praktijkexamen/${city.slug}`}>
-                      Praktijkexamen {city.name}
-                    </Link>
-                  </Button>
-                ))}
-                <Button asChild variant="outline" size="sm" className="rounded-full">
-                  <Link href="/tips">Naar SEO tips</Link>
-                </Button>
-              </div>
+      <section className="site-shell mx-auto w-full px-4 pb-8 sm:px-6 lg:px-8">
+        <Reveal className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-[1.6rem] border border-white/70 bg-white/90 p-5 shadow-[0_24px_70px_-44px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase">
+              Populaire steden
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+              Start lokaal met rijschool, automaat, schakel, motor of vrachtwagen.
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              Deze routes geven bezoekers en zoekmachines direct context per stad en lestype.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {primaryCities.map((city) => (
+                <SeoLinkPill key={`city-${city.slug}`} href={`/rijschool/${city.slug}`}>
+                  {city.name}
+                </SeoLinkPill>
+              ))}
+              {featuredCities.map((city) => (
+                <SeoLinkPill key={`automatic-${city.slug}`} href={`/automaat/${city.slug}`}>
+                  Automaat {city.name}
+                </SeoLinkPill>
+              ))}
+              {featuredCities.map((city) => (
+                <SeoLinkPill key={`manual-${city.slug}`} href={`/schakel/${city.slug}`}>
+                  Schakel {city.name}
+                </SeoLinkPill>
+              ))}
+              {compactCities.map((city) => (
+                <SeoLinkPill key={`motor-${city.slug}`} href={`/motor/${city.slug}`}>
+                  Motor {city.name}
+                </SeoLinkPill>
+              ))}
+              {compactCities.map((city) => (
+                <SeoLinkPill key={`truck-${city.slug}`} href={`/vrachtwagen/${city.slug}`}>
+                  Vrachtwagen {city.name}
+                </SeoLinkPill>
+              ))}
             </div>
           </div>
 
+          <div className="rounded-[1.6rem] border border-white/70 bg-white/90 p-5 shadow-[0_24px_70px_-44px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase">
+              Zoekintentie routes
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+              Snelle routes voor leerlingen die al gerichter zoeken.
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              Gebruik deze pagina’s voor zoekopdrachten met hogere intentie zoals proefles, spoedcursus, faalangst en praktijkexamen.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {featuredCities.map((city) => (
+                <SeoLinkPill key={`spoed-${city.slug}`} href={`/spoedcursus/${city.slug}`}>
+                  Spoed {city.name}
+                </SeoLinkPill>
+              ))}
+              {featuredCities.map((city) => (
+                <SeoLinkPill key={`trial-${city.slug}`} href={`/proefles/${city.slug}`}>
+                  Proefles {city.name}
+                </SeoLinkPill>
+              ))}
+              {featuredCities.map((city) => (
+                <SeoLinkPill key={`exam-${city.slug}`} href={`/examengericht/${city.slug}`}>
+                  Examengericht {city.name}
+                </SeoLinkPill>
+              ))}
+              {compactCities.map((city) => (
+                <SeoLinkPill key={`fear-${city.slug}`} href={`/faalangst/${city.slug}`}>
+                  Faalangst {city.name}
+                </SeoLinkPill>
+              ))}
+              {compactCities.map((city) => (
+                <SeoLinkPill key={`refresh-${city.slug}`} href={`/opfriscursus/${city.slug}`}>
+                  Opfriscursus {city.name}
+                </SeoLinkPill>
+              ))}
+              {compactCities.map((city) => (
+                <SeoLinkPill key={`exam-focus-${city.slug}`} href={`/praktijkexamen/${city.slug}`}>
+                  Praktijkexamen {city.name}
+                </SeoLinkPill>
+              ))}
+              <SeoLinkPill href="/vergelijk">Vergelijkhub</SeoLinkPill>
+              <SeoLinkPill href="/tips">SEO tips</SeoLinkPill>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      <section id="instructeurs-overzicht" className="site-shell mx-auto w-full px-4 pb-10 sm:px-6 lg:px-8">
+        <Reveal>
           <InstructorFinder
             instructors={liveInstructors}
             favoriteInstructorIds={favoriteInstructorIds}
