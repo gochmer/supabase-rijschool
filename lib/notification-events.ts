@@ -324,7 +324,7 @@ async function deliverNotificationEmail({
     ctaHref,
   });
 
-  await sendEmail({
+  return sendEmail({
     to,
     subject,
     html,
@@ -571,6 +571,52 @@ export async function notifyLearnerAboutLessonChange({
   });
 }
 
+export async function notifyLearnerAboutLessonAttendance({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  datum,
+  tijd,
+  reason,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  datum: string;
+  tijd: string;
+  reason?: string | null;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  const title = "Je les staat als afwezig geregistreerd";
+  const text = reason?.trim()
+    ? `${instructeurNaam} heeft je les van ${datum} om ${tijd} als afwezig gemarkeerd. Reden: ${reason.trim()}`
+    : `${instructeurNaam} heeft je les van ${datum} om ${tijd} als afwezig gemarkeerd.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: learner?.id,
+    title,
+    text,
+    type: "waarschuwing",
+  });
+
+  await deliverNotificationEmail({
+    to: learner?.email,
+    subject: title,
+    eyebrow: "Afwezig bevestigd",
+    intro: `${instructeurNaam} heeft je lesmoment als afwezig afgesloten.`,
+    details: [
+      { label: "Instructeur", value: instructeurNaam },
+      { label: "Datum", value: datum },
+      { label: "Tijd", value: tijd },
+      ...(reason?.trim() ? [{ label: "Reden", value: reason.trim() }] : []),
+    ],
+    ctaPath: "/leerling/boekingen",
+    ctaLabel: "Open je lesoverzicht",
+  });
+}
+
 export async function notifyLearnerToLeaveReview({
   supabase,
   leerlingId,
@@ -629,5 +675,67 @@ export async function notifyLearnerToLeaveReview({
     ],
     ctaPath: "/leerling/reviews",
     ctaLabel: "Laat een review achter",
+  });
+}
+
+export async function sendLearnerLessonReminderEmail({
+  to,
+  instructeurNaam,
+  datum,
+  tijd,
+  locatie,
+  lesTitel,
+}: {
+  to: string | null | undefined;
+  instructeurNaam: string;
+  datum: string;
+  tijd: string;
+  locatie: string;
+  lesTitel: string;
+}) {
+  return deliverNotificationEmail({
+    to,
+    subject: "Herinnering: je les is morgen",
+    eyebrow: "Lesherinnering",
+    intro: `${lesTitel} staat over ongeveer 24 uur gepland. Zo stap je morgen rustig en goed voorbereid in.`,
+    details: [
+      { label: "Instructeur", value: instructeurNaam },
+      { label: "Datum", value: datum },
+      { label: "Tijd", value: tijd },
+      { label: "Locatie", value: locatie || "Locatie volgt nog" },
+    ],
+    ctaPath: "/leerling/boekingen",
+    ctaLabel: "Open je lesoverzicht",
+  });
+}
+
+export async function sendInstructorLessonReminderEmail({
+  to,
+  leerlingNaam,
+  datum,
+  tijd,
+  locatie,
+  lesTitel,
+}: {
+  to: string | null | undefined;
+  leerlingNaam: string;
+  datum: string;
+  tijd: string;
+  locatie: string;
+  lesTitel: string;
+}) {
+  return deliverNotificationEmail({
+    to,
+    subject: `Herinnering: ${lesTitel.toLowerCase()} is morgen`,
+    eyebrow: "Lesherinnering",
+    intro: `${lesTitel} met ${leerlingNaam} staat over ongeveer 24 uur gepland.`,
+    details: [
+      { label: "Leerling", value: leerlingNaam },
+      { label: "Datum", value: datum },
+      { label: "Tijd", value: tijd },
+      { label: "Locatie", value: locatie || "Locatie volgt nog" },
+    ],
+    ctaPath: "/instructeur/lessen",
+    ctaLabel: "Open je lessen",
   });
 }

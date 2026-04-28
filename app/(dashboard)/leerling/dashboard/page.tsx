@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
+import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
 import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { QuickActionGrid } from "@/components/dashboard/quick-action-grid";
@@ -23,6 +24,9 @@ export default async function LeerlingDashboardPage() {
   ]);
 
   const upcomingLessons = lessons.slice(0, 4);
+  const nextLesson = lessons.find((lesson) =>
+    ["geaccepteerd", "ingepland"].includes(lesson.status)
+  );
   const pendingRequests = requests.filter((item) => item.status === "aangevraagd");
   const acceptedRequests = requests.filter((item) =>
     ["geaccepteerd", "ingepland"].includes(item.status)
@@ -83,6 +87,16 @@ export default async function LeerlingDashboardPage() {
               "Een duidelijk profiel helpt instructeurs sneller en beter reageren op je aanvraag.",
           },
         ]}
+      />
+
+      <LessonFocusCard
+        lesson={nextLesson}
+        title="Aankomende lesfocus"
+        description={
+          nextLesson
+            ? `Je eerstvolgende moment met ${nextLesson.instructeur_naam} staat klaar. Voeg hem toe aan je agenda of open meteen je route.`
+            : undefined
+        }
       />
 
       <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">

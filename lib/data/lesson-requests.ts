@@ -270,7 +270,9 @@ export async function getLeerlingLessons(): Promise<Les[]> {
   const supabase = await createServerClient();
   const { data: rows, error } = await supabase
     .from("lessen")
-    .select("id, titel, start_at, duur_minuten, status, locatie_id, instructeur_id")
+    .select(
+      "id, titel, start_at, duur_minuten, status, locatie_id, instructeur_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at"
+    )
     .eq("leerling_id", leerling.id)
     .order("start_at", { ascending: true });
 
@@ -331,6 +333,11 @@ export async function getLeerlingLessons(): Promise<Les[]> {
     end_at: getEndAt(row.start_at, row.duur_minuten),
     duur_minuten: row.duur_minuten ?? 60,
     status: row.status,
+    attendance_status: row.aanwezigheid_status,
+    attendance_confirmed_at: row.aanwezigheid_bevestigd_at,
+    attendance_reason: row.afwezigheids_reden,
+    lesson_note: row.lesnotitie,
+    reminder_24h_sent_at: row.herinnering_24h_verstuurd_at,
     locatie: row.locatie_id ? locatieMap.get(row.locatie_id) ?? "Nog onbekend" : "Nog onbekend",
     locatie_id: row.locatie_id,
     leerling_naam: "",
@@ -355,7 +362,9 @@ export async function getInstructeurLessons(): Promise<Les[]> {
   );
   const { data: rows, error } = await supabase
     .from("lessen")
-    .select("id, titel, start_at, duur_minuten, status, locatie_id, leerling_id")
+    .select(
+      "id, titel, start_at, duur_minuten, status, locatie_id, leerling_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at"
+    )
     .in("instructeur_id", instructorIds)
     .order("start_at", { ascending: true });
 
@@ -413,6 +422,11 @@ export async function getInstructeurLessons(): Promise<Les[]> {
     end_at: getEndAt(row.start_at, row.duur_minuten),
     duur_minuten: row.duur_minuten ?? 60,
     status: row.status,
+    attendance_status: row.aanwezigheid_status,
+    attendance_confirmed_at: row.aanwezigheid_bevestigd_at,
+    attendance_reason: row.afwezigheids_reden,
+    lesson_note: row.lesnotitie,
+    reminder_24h_sent_at: row.herinnering_24h_verstuurd_at,
     locatie: row.locatie_id ? locatieMap.get(row.locatie_id) ?? "Nog onbekend" : "Nog onbekend",
     locatie_id: row.locatie_id,
     leerling_naam:

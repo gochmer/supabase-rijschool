@@ -4,6 +4,8 @@ import { CalendarDays, Clock3, MapPin } from "lucide-react";
 import { LessonCalendar } from "@/components/calendar/lesson-calendar";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
+import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
+import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
 import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { TrendCard } from "@/components/dashboard/trend-card";
@@ -13,6 +15,10 @@ import {
   getLeerlingLessonRequests,
   getLeerlingLessons,
 } from "@/lib/data/lesson-requests";
+import {
+  getLessonAttendanceLabel,
+  getLessonAttendanceVariant,
+} from "@/lib/lesson-utilities";
 
 function getRequestLabel(request: {
   aanvraag_type?: "algemeen" | "pakket" | "proefles";
@@ -118,6 +124,17 @@ export default async function LeerlingBoekingenPage() {
         ))}
       </div>
 
+      <LessonFocusCard
+        lesson={nextLesson}
+        tone="urban"
+        title="Je eerstvolgende les"
+        description={
+          nextLesson
+            ? `Praktisch lesmoment met ${nextLesson.instructeur_naam}. Voeg hem toe aan je agenda of open direct je route.`
+            : undefined
+        }
+      />
+
       <LessonCalendar
         lessons={lessons}
         requests={requests}
@@ -170,21 +187,79 @@ export default async function LeerlingBoekingenPage() {
           emptyTitle="Nog geen lesaanvragen"
           emptyDescription="Zodra je een aanvraag verstuurt, verschijnt hier automatisch je volledige statusoverzicht."
         />
-        <DataTableCard
-          tone="urban"
-          title="Geplande lessen"
-          description="Je bevestigde lessen en de afspraken die al voor je klaarstaan."
-          headers={["Les", "Datum", "Locatie", "Status"]}
-          rows={lessons.map((lesson) => [
-            lesson.titel,
-            `${lesson.datum} om ${lesson.tijd}`,
-            lesson.locatie,
-            lesson.status,
-          ])}
-          badgeColumns={[3]}
-          emptyTitle="Nog geen bevestigde lessen"
-          emptyDescription="Geaccepteerde boekingen en ingeplande ritten worden hier direct zichtbaar."
-        />
+        <div className="space-y-4">
+          <div className={urbanCardClassName}>
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold text-white">Geplande lessen</h3>
+              <p className="mt-1 text-[13px] leading-6 text-slate-300">
+                Voeg bevestigde lessen toe aan je agenda of open direct je route.
+              </p>
+            </div>
+
+            {lessons.length ? (
+              <div className="grid gap-3">
+                {lessons.slice(0, 4).map((lesson) => (
+                  <div
+                    key={lesson.id}
+                    className="rounded-[1.1rem] border border-white/10 bg-white/6 p-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-white">{lesson.titel}</p>
+                        <p className="mt-1 text-[13px] text-slate-300">
+                          {lesson.datum} om {lesson.tijd}
+                        </p>
+                        <p className="mt-1 text-[12px] text-slate-400">
+                          {lesson.locatie}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="info">{lesson.status}</Badge>
+                        <Badge
+                          variant={getLessonAttendanceVariant(
+                            lesson.attendance_status
+                          )}
+                        >
+                          {getLessonAttendanceLabel(lesson.attendance_status)}
+                        </Badge>
+                      </div>
+                    </div>
+                    {lesson.lesson_note?.trim() ? (
+                      <p className="mt-2 text-[12px] leading-6 text-slate-300">
+                        Coachnotitie: {lesson.lesson_note.trim()}
+                      </p>
+                    ) : null}
+                    <LessonQuickActions
+                      lesson={lesson}
+                      tone="urban"
+                      className="mt-3"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm leading-7 text-slate-300">
+                Geaccepteerde boekingen en ingeplande ritten worden hier direct zichtbaar.
+              </p>
+            )}
+          </div>
+
+          <DataTableCard
+            tone="urban"
+            title="Lessenoverzicht"
+            description="Je bevestigde lessen en de afspraken die al voor je klaarstaan."
+            headers={["Les", "Datum", "Locatie", "Status"]}
+            rows={lessons.map((lesson) => [
+              lesson.titel,
+              `${lesson.datum} om ${lesson.tijd}`,
+              lesson.locatie,
+              lesson.status,
+            ])}
+            badgeColumns={[3]}
+            emptyTitle="Nog geen bevestigde lessen"
+            emptyDescription="Geaccepteerde boekingen en ingeplande ritten worden hier direct zichtbaar."
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">

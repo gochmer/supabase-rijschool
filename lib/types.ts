@@ -10,6 +10,7 @@ export type LesStatus =
   | "ingepland"
   | "afgerond"
   | "geannuleerd";
+export type LessonAttendanceStatus = "onbekend" | "aanwezig" | "afwezig";
 
 export type LesAanvraagType = "algemeen" | "pakket" | "proefles";
 
@@ -78,6 +79,11 @@ export interface Les {
   end_at?: string | null;
   duur_minuten: number;
   status: LesStatus;
+  attendance_status?: LessonAttendanceStatus | null;
+  attendance_confirmed_at?: string | null;
+  attendance_reason?: string | null;
+  lesson_note?: string | null;
+  reminder_24h_sent_at?: string | null;
   locatie: string;
   locatie_id?: string | null;
   leerling_naam: string;

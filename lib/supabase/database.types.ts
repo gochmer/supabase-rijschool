@@ -518,10 +518,17 @@ export type Database = {
       }
       lessen: {
         Row: {
+          afwezigheids_reden: string | null
+          aanwezigheid_bevestigd_at: string | null
+          aanwezigheid_status:
+            | Database["public"]["Enums"]["les_aanwezigheid_status"]
+            | null
           created_at: string
           duur_minuten: number
+          herinnering_24h_verstuurd_at: string | null
           id: string
           instructeur_id: string | null
+          lesnotitie: string | null
           leerling_id: string | null
           locatie_id: string | null
           notities: string | null
@@ -530,10 +537,17 @@ export type Database = {
           titel: string
         }
         Insert: {
+          afwezigheids_reden?: string | null
+          aanwezigheid_bevestigd_at?: string | null
+          aanwezigheid_status?:
+            | Database["public"]["Enums"]["les_aanwezigheid_status"]
+            | null
           created_at?: string
           duur_minuten?: number
+          herinnering_24h_verstuurd_at?: string | null
           id?: string
           instructeur_id?: string | null
+          lesnotitie?: string | null
           leerling_id?: string | null
           locatie_id?: string | null
           notities?: string | null
@@ -542,10 +556,17 @@ export type Database = {
           titel: string
         }
         Update: {
+          afwezigheids_reden?: string | null
+          aanwezigheid_bevestigd_at?: string | null
+          aanwezigheid_status?:
+            | Database["public"]["Enums"]["les_aanwezigheid_status"]
+            | null
           created_at?: string
           duur_minuten?: number
+          herinnering_24h_verstuurd_at?: string | null
           id?: string
           instructeur_id?: string | null
+          lesnotitie?: string | null
           leerling_id?: string | null
           locatie_id?: string | null
           notities?: string | null
@@ -968,11 +989,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_due_lesson_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          instructeur_email: string | null
+          instructeur_naam: string | null
+          instructeur_profiel_id: string | null
+          leerling_email: string | null
+          leerling_naam: string | null
+          leerling_profiel_id: string | null
+          les_datum: string | null
+          les_tijd: string | null
+          les_titel: string | null
+          lesson_id: string | null
+          locatie: string | null
+          start_at: string | null
+        }[]
+      }
     }
     Enums: {
       betaal_status: "open" | "in_afwachting" | "betaald" | "mislukt"
       gebruikersrol: "leerling" | "instructeur" | "admin"
+      les_aanwezigheid_status: "onbekend" | "aanwezig" | "afwezig"
       les_status:
         | "aangevraagd"
         | "geaccepteerd"
@@ -1110,6 +1148,7 @@ export const Constants = {
     Enums: {
       betaal_status: ["open", "in_afwachting", "betaald", "mislukt"],
       gebruikersrol: ["leerling", "instructeur", "admin"],
+      les_aanwezigheid_status: ["onbekend", "aanwezig", "afwezig"],
       les_status: [
         "aangevraagd",
         "geaccepteerd",

@@ -4,10 +4,18 @@ import { useMemo, useState } from "react";
 
 import type { Les, LesAanvraag, LocationOption } from "@/lib/types";
 import { LessonCalendar } from "@/components/calendar/lesson-calendar";
+import { LessonAttendanceActions } from "@/components/dashboard/lesson-attendance-actions";
 import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
+import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
+import { LessonNoteEditor } from "@/components/dashboard/lesson-note-editor";
+import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  getLessonAttendanceLabel,
+  getLessonAttendanceVariant,
+} from "@/lib/lesson-utilities";
 
 export function LessonsBoard({
   lessons,
@@ -23,7 +31,7 @@ export function LessonsBoard({
 
   const filteredLessons = useMemo(() => {
     return lessons.filter((lesson) => {
-      const matchesQuery = `${lesson.titel} ${lesson.leerling_naam} ${lesson.locatie}`
+      const matchesQuery = `${lesson.titel} ${lesson.leerling_naam} ${lesson.locatie} ${lesson.lesson_note ?? ""} ${lesson.attendance_reason ?? ""}`
         .toLowerCase()
         .includes(query.toLowerCase());
       const matchesStatus =
@@ -42,6 +50,14 @@ export function LessonsBoard({
       return matchesQuery && matchesStatus;
     });
   }, [query, requests, statusFilter]);
+
+  const nextPlannedLesson = useMemo(
+    () =>
+      filteredLessons.find((lesson) =>
+        ["geaccepteerd", "ingepland"].includes(lesson.status)
+      ) ?? null,
+    [filteredLessons]
+  );
 
   return (
     <div className="space-y-5">
@@ -68,6 +84,16 @@ export function LessonsBoard({
           </select>
         </div>
       </div>
+
+      <LessonFocusCard
+        lesson={nextPlannedLesson}
+        title="Volgende les in focus"
+        description={
+          nextPlannedLesson
+            ? `Praktisch overzicht voor ${nextPlannedLesson.leerling_naam}. Voeg de les toe aan je agenda of open de route direct.`
+            : undefined
+        }
+      />
 
       <LessonCalendar
         lessons={filteredLessons}
@@ -100,6 +126,9 @@ export function LessonsBoard({
                   >
                     {lesson.status}
                   </Badge>
+                  <Badge variant={getLessonAttendanceVariant(lesson.attendance_status)}>
+                    {getLessonAttendanceLabel(lesson.attendance_status)}
+                  </Badge>
                 </div>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                   {lesson.datum} om {lesson.tijd} • {lesson.leerling_naam}
@@ -107,6 +136,11 @@ export function LessonsBoard({
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {lesson.locatie}
                 </p>
+                <LessonQuickActions lesson={lesson} className="mt-3" />
+                <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                  <LessonAttendanceActions lesson={lesson} />
+                  <LessonNoteEditor lesson={lesson} />
+                </div>
               </div>
               <LessonEditDialog
                 lesson={lesson}

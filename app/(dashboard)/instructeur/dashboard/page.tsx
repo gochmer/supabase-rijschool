@@ -10,7 +10,10 @@ import {
   UserRoundCog,
 } from "lucide-react";
 
+import { LessonAttendanceActions } from "@/components/dashboard/lesson-attendance-actions";
 import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
+import { LessonNoteEditor } from "@/components/dashboard/lesson-note-editor";
+import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { RequestStatusActions } from "@/components/dashboard/request-status-actions";
 import { MetricCard } from "@/components/metric-card";
@@ -23,6 +26,10 @@ import {
   getInstructeurLessons,
 } from "@/lib/data/lesson-requests";
 import { getCurrentNotifications } from "@/lib/data/notifications";
+import {
+  getLessonAttendanceLabel,
+  getLessonAttendanceVariant,
+} from "@/lib/lesson-utilities";
 
 export default async function InstructeurDashboardPage() {
   const [metrics, lessons, requests, notifications, locationOptions] =
@@ -195,6 +202,13 @@ export default async function InstructeurDashboardPage() {
                       >
                         {lesson.status}
                       </Badge>
+                      <Badge
+                        variant={getLessonAttendanceVariant(
+                          lesson.attendance_status
+                        )}
+                      >
+                        {getLessonAttendanceLabel(lesson.attendance_status)}
+                      </Badge>
                     </div>
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                       {lesson.datum} om {lesson.tijd} •{" "}
@@ -203,6 +217,11 @@ export default async function InstructeurDashboardPage() {
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       {lesson.locatie}
                     </p>
+                    <LessonQuickActions lesson={lesson} className="mt-3" />
+                    <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                      <LessonAttendanceActions lesson={lesson} />
+                      <LessonNoteEditor lesson={lesson} />
+                    </div>
                   </div>
                   <LessonEditDialog
                     lesson={lesson}
