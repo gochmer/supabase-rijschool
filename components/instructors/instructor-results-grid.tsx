@@ -2,11 +2,13 @@
 
 import { InstructorCard } from "@/components/instructors/instructor-card";
 import { Button } from "@/components/ui/button";
-import type { InstructeurProfiel, Pakket } from "@/lib/types";
+import type { BeschikbaarheidSlot, InstructeurProfiel, Pakket } from "@/lib/types";
 
 export function InstructorResultsGrid({
   instructors,
   packagesByInstructorId,
+  availableSlotsByInstructorId,
+  directBookingEnabledByInstructorId,
   favoriteInstructorIds,
   detailBasePath,
   showPackagePanel,
@@ -16,6 +18,8 @@ export function InstructorResultsGrid({
 }: {
   instructors: InstructeurProfiel[];
   packagesByInstructorId: Record<string, Pakket[]>;
+  availableSlotsByInstructorId: Record<string, BeschikbaarheidSlot[]>;
+  directBookingEnabledByInstructorId: Record<string, boolean>;
   favoriteInstructorIds: string[];
   detailBasePath: string;
   showPackagePanel: boolean;
@@ -53,6 +57,10 @@ export function InstructorResultsGrid({
           <InstructorCard
             instructor={instructor}
             packages={packagesByInstructorId[instructor.id] ?? []}
+            availableSlots={availableSlotsByInstructorId[instructor.id] ?? []}
+            directBookingEnabled={Boolean(
+              directBookingEnabledByInstructorId[instructor.id]
+            )}
             detailBasePath={detailBasePath}
             isFavorite={favoriteInstructorIds.includes(instructor.id)}
             showPackagePanel={showPackagePanel}

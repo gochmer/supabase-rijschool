@@ -118,8 +118,10 @@ export default async function InstructeurDetailPage({
       ? "Wordt zichtbaar zodra deze instructeur zelf plannen voor jou vrijgeeft"
       : "Komt beschikbaar zodra je traject met deze instructeur actief is";
 
-  const planningStateLabel = planningAccess.canViewAgenda
-    ? "Zelf plannen staat aan"
+  const planningStateLabel = planningAccess.publicBookingEnabled
+    ? "Online boeking staat aan"
+    : planningAccess.directBookingAllowed
+      ? "Zelf plannen staat aan"
     : planningAccess.hasActiveRelationship
       ? "Wacht op vrijgave"
       : "Nog afgeschermd";
@@ -168,6 +170,11 @@ export default async function InstructeurDetailPage({
                       {instructor.status === "goedgekeurd" ? (
                         <Badge className="border border-violet-100 bg-violet-50 text-violet-700 dark:border-violet-300/16 dark:bg-violet-400/10 dark:text-violet-100">
                           Geverifieerd
+                        </Badge>
+                      ) : null}
+                      {planningAccess.publicBookingEnabled ? (
+                        <Badge className="border border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-300/16 dark:bg-emerald-400/10 dark:text-emerald-100">
+                          Online boeken open
                         </Badge>
                       ) : null}
                     </div>
@@ -227,8 +234,14 @@ export default async function InstructeurDetailPage({
                         instructorSlug={instructor.slug}
                         requestType="proefles"
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
-                        directBookingEnabled={planningAccess.canViewAgenda}
-                        triggerLabel="Plan proefles"
+                        directBookingEnabled={planningAccess.directBookingAllowed}
+                        triggerLabel={
+                          planningAccess.directBookingAllowed
+                            ? "Plan proefles"
+                            : planningAccess.canViewAgenda
+                              ? "Vraag proefles op moment aan"
+                              : "Plan proefles"
+                        }
                         triggerClassName="h-9 px-5 text-[13px]"
                       />
                       <LessonRequestDialog
@@ -236,7 +249,7 @@ export default async function InstructeurDetailPage({
                         instructorSlug={instructor.slug}
                         selectedPackage={primaryPackage}
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
-                        directBookingEnabled={planningAccess.canViewAgenda}
+                        directBookingEnabled={planningAccess.directBookingAllowed}
                         triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
                         triggerVariant="secondary"
                         triggerClassName="h-9 px-5 text-[13px]"
@@ -267,8 +280,14 @@ export default async function InstructeurDetailPage({
                           {planningStateLabel}
                         </p>
                         <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                          {planningAccess.canViewAgenda
-                            ? "Je kunt nu direct een geschikt moment kiezen en meteen laten inplannen in de agenda van deze instructeur."
+                          {planningAccess.publicBookingEnabled
+                            ? planningAccess.directBookingAllowed
+                              ? "Deze instructeur laat online zelf-inschrijven toe. Kies een vrij moment uit de live agenda en zet het direct goed neer."
+                              : "Deze instructeur laat online boekbare momenten zien. Log in als leerling om een gekozen tijdvak direct of als aanvraag vast te zetten."
+                            : planningAccess.directBookingAllowed
+                              ? "Je kunt nu direct een geschikt moment kiezen en meteen laten inplannen in de agenda van deze instructeur."
+                            : planningAccess.canViewAgenda
+                              ? "Je kunt al live momenten kiezen; na bevestigen gaat precies dit kalenderblok mee als voorkeursmoment."
                             : planningAccess.hasActiveRelationship
                               ? "Je traject is al actief. Zodra deze instructeur plannen voor jou vrijgeeft, verschijnt de agenda hieronder."
                               : "Vraag eerst een proefles of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."}
@@ -293,10 +312,14 @@ export default async function InstructeurDetailPage({
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                            Agenda pas zichtbaar na relatie
+                            {planningAccess.publicBookingEnabled
+                              ? "Online boeken staat open"
+                              : "Agenda op vrijgave"}
                           </p>
                           <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                            De instructeur bepaalt per leerling wanneer zelf inplannen open mag.
+                            {planningAccess.publicBookingEnabled
+                              ? "Deze instructeur heeft publieke online boeking aangezet. Zodra je als leerling bent ingelogd, kun je precies het gekozen kalenderblok gebruiken."
+                              : "De instructeur bepaalt per leerling wanneer zelf inplannen open mag."}
                           </p>
                         </div>
                       </div>
@@ -590,7 +613,7 @@ export default async function InstructeurDetailPage({
                                 instructorSlug={instructor.slug}
                                 selectedPackage={pkg}
                                 availableSlots={planningAccess.canViewAgenda ? slots : []}
-                                directBookingEnabled={planningAccess.canViewAgenda}
+                                directBookingEnabled={planningAccess.directBookingAllowed}
                                 triggerLabel="Vraag dit pakket aan"
                                 triggerClassName="!h-9 !w-full !rounded-full !text-[13px]"
                               />
@@ -690,6 +713,8 @@ export default async function InstructeurDetailPage({
                     instructorName={instructor.volledige_naam}
                     instructorSlug={instructor.slug}
                     slots={slots}
+                    directBookingEnabled={planningAccess.directBookingAllowed}
+                    publicBookingEnabled={planningAccess.publicBookingEnabled}
                   />
                 ) : (
                   <Card className="rounded-[1.6rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
@@ -710,8 +735,8 @@ export default async function InstructeurDetailPage({
                       </CardTitle>
                       <CardDescription>
                         {planningAccess.hasActiveRelationship
-                          ? "Zodra deze instructeur zelf inplannen voor jou aanzet, verschijnen hier de beschikbare momenten."
-                          : "Eerst vraag je een proefles of pakket aan. Daarna kan de instructeur plannen vrijgeven wanneer dat logisch is."}
+                          ? "Zodra deze instructeur zelf inplannen voor jou aanzet of online boeking openzet, verschijnen hier de beschikbare momenten."
+                          : "Eerst vraag je een proefles of pakket aan. Daarna kan de instructeur plannen vrijgeven of online boeking openen wanneer dat logisch is."}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -727,7 +752,7 @@ export default async function InstructeurDetailPage({
                           },
                           {
                             label: "Stap 3",
-                            value: "De instructeur zet zelf plannen aan",
+                            value: "De instructeur zet zelf plannen of online boeking aan",
                           },
                         ].map((item) => (
                           <div

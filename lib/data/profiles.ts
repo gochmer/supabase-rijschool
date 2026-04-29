@@ -205,7 +205,7 @@ export async function getCurrentInstructeurRecord() {
 
   const supabase = await createServerClient();
   const selectColumns =
-    "id, profile_id, slug, bio, ervaring_jaren, werkgebied, prijs_per_les, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur";
+    "id, profile_id, slug, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur";
   const { data } = await supabase
     .from("instructeurs")
     .select(selectColumns)
@@ -221,6 +221,7 @@ export async function getCurrentInstructeurRecord() {
       ervaring_jaren: number | null;
       werkgebied: string[] | null;
       prijs_per_les: number | string | null;
+      online_boeken_actief: boolean | null;
       transmissie: TransmissieType | null;
       beoordeling: number | string | null;
       profiel_status: string | null;
@@ -257,6 +258,7 @@ export async function getCurrentInstructeurRecord() {
       ervaring_jaren: number | null;
       werkgebied: string[] | null;
       prijs_per_les: number | string | null;
+      online_boeken_actief: boolean | null;
       transmissie: TransmissieType | null;
       beoordeling: number | string | null;
       profiel_status: string | null;
@@ -275,16 +277,17 @@ export async function getCurrentInstructeurRecord() {
   return (fallbackData as {
     id: string;
     profile_id: string;
-    slug: string;
-    bio: string | null;
-    ervaring_jaren: number | null;
-    werkgebied: string[] | null;
-    prijs_per_les: number | string | null;
-    transmissie: TransmissieType | null;
-    beoordeling: number | string | null;
-    profiel_status: string | null;
-    profiel_compleetheid: number | null;
-    specialisaties: string[] | null;
+      slug: string;
+      bio: string | null;
+      ervaring_jaren: number | null;
+      werkgebied: string[] | null;
+      prijs_per_les: number | string | null;
+      online_boeken_actief: boolean | null;
+      transmissie: TransmissieType | null;
+      beoordeling: number | string | null;
+      profiel_status: string | null;
+      profiel_compleetheid: number | null;
+      specialisaties: string[] | null;
     profielfoto_kleur: string | null;
   } | null) ?? null;
 }

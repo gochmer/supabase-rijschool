@@ -44,6 +44,7 @@ type DbInstructorRow = {
   ervaring_jaren: number | null;
   werkgebied: string[] | null;
   prijs_per_les: number | string | null;
+  online_boeken_actief: boolean | null;
   transmissie: InstructeurProfiel["transmissie"] | null;
   beoordeling: number | string | null;
   profiel_status: string | null;
@@ -122,6 +123,7 @@ function mapInstructor(
     bio: row.bio || base?.bio || "Nog geen introductietekst toegevoegd.",
     ervaring_jaren: row.ervaring_jaren ?? base?.ervaring_jaren ?? 0,
     prijs_per_les: toNumber(row.prijs_per_les, base?.prijs_per_les ?? 0),
+    online_boeken_actief: Boolean(row.online_boeken_actief),
     beoordeling: resolvedRating,
     aantal_reviews: resolvedReviewCount,
     recente_review: latestReview ?? null,
@@ -163,7 +165,7 @@ export async function getPublicInstructors() {
   const { data: rows, error } = await supabase
     .from("instructeurs")
     .select(
-      "id, profile_id, slug, volledige_naam, avatar_url, bio, ervaring_jaren, werkgebied, prijs_per_les, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur"
+      "id, profile_id, slug, volledige_naam, avatar_url, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur"
     )
     .order("created_at", { ascending: false });
 
@@ -404,7 +406,8 @@ export async function getInstructorAvailability(
 }
 
 export async function getPublicInstructorAvailabilityMap(
-  instructorIds: string[]
+  instructorIds: string[],
+  limit = 3
 ): Promise<Record<string, BeschikbaarheidSlot[]>> {
   const uniqueInstructorIds = Array.from(new Set(instructorIds.filter(Boolean)));
 
@@ -531,7 +534,7 @@ export async function getPublicInstructorAvailabilityMap(
         bookingWindowsByInstructor.get(instructorId) ?? []
       )
         .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
-        .slice(0, 3);
+        .slice(0, limit);
 
       if (mergedSlots.length) {
         accumulator[instructorId] = mergedSlots;

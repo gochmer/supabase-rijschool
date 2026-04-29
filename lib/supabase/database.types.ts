@@ -266,19 +266,20 @@ export type Database = {
           },
         ]
       }
-      instructeurs: {
-        Row: {
-          avatar_url: string | null
-          beoordeling: number
-          bio: string | null
-          created_at: string
-          ervaring_jaren: number
-          id: string
-          prijs_per_les: number
-          profiel_compleetheid: number
-          profiel_status: string
-          profielfoto_kleur: string
-          profile_id: string
+        instructeurs: {
+          Row: {
+            avatar_url: string | null
+            beoordeling: number
+            bio: string | null
+            created_at: string
+            ervaring_jaren: number
+            id: string
+            online_boeken_actief: boolean
+            prijs_per_les: number
+            profiel_compleetheid: number
+            profiel_status: string
+            profielfoto_kleur: string
+            profile_id: string
           slug: string
           specialisaties: string[]
           transmissie: Database["public"]["Enums"]["transmissie_type"]
@@ -286,18 +287,19 @@ export type Database = {
           volledige_naam: string
           werkgebied: string[]
         }
-        Insert: {
-          avatar_url?: string | null
-          beoordeling?: number
-          bio?: string | null
-          created_at?: string
-          ervaring_jaren?: number
-          id?: string
-          prijs_per_les?: number
-          profiel_compleetheid?: number
-          profiel_status?: string
-          profielfoto_kleur?: string
-          profile_id: string
+          Insert: {
+            avatar_url?: string | null
+            beoordeling?: number
+            bio?: string | null
+            created_at?: string
+            ervaring_jaren?: number
+            id?: string
+            online_boeken_actief?: boolean
+            prijs_per_les?: number
+            profiel_compleetheid?: number
+            profiel_status?: string
+            profielfoto_kleur?: string
+            profile_id: string
           slug: string
           specialisaties?: string[]
           transmissie?: Database["public"]["Enums"]["transmissie_type"]
@@ -305,18 +307,19 @@ export type Database = {
           volledige_naam?: string
           werkgebied?: string[]
         }
-        Update: {
-          avatar_url?: string | null
-          beoordeling?: number
-          bio?: string | null
-          created_at?: string
-          ervaring_jaren?: number
-          id?: string
-          prijs_per_les?: number
-          profiel_compleetheid?: number
-          profiel_status?: string
-          profielfoto_kleur?: string
-          profile_id?: string
+          Update: {
+            avatar_url?: string | null
+            beoordeling?: number
+            bio?: string | null
+            created_at?: string
+            ervaring_jaren?: number
+            id?: string
+            online_boeken_actief?: boolean
+            prijs_per_les?: number
+            profiel_compleetheid?: number
+            profiel_status?: string
+            profielfoto_kleur?: string
+            profile_id?: string
           slug?: string
           specialisaties?: string[]
           transmissie?: Database["public"]["Enums"]["transmissie_type"]

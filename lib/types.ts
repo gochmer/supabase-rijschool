@@ -39,6 +39,7 @@ export interface InstructeurProfiel extends Profiel {
   bio: string;
   ervaring_jaren: number;
   prijs_per_les: number;
+  online_boeken_actief?: boolean;
   beoordeling: number;
   aantal_reviews: number;
   recente_review?: ReviewPreview | null;

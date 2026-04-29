@@ -349,25 +349,43 @@ async function inspectDialog(page, buttonNames) {
     throw new Error(`Geen knop gevonden voor: ${names.join(", ")}`);
   }
 
-  await button.click();
+  await button.scrollIntoViewIfNeeded();
+  await button.click({ force: true });
 
   const dialog = page.locator('[role="dialog"]').last();
   await dialog.waitFor({ state: "visible", timeout: 8_000 });
   await page.waitForTimeout(500);
 
+  const stepOneText = await dialog.innerText();
+  const nextButton = dialog.getByRole("button", { name: "Volgende stap" });
+  const hasNextStep = (await nextButton.count()) > 0;
+
+  if (hasNextStep) {
+    await nextButton.click({ force: true });
+    await page.waitForTimeout(350);
+  }
+
   const dialogText = await dialog.innerText();
+  const normalizedStepOneText = stepOneText.toLowerCase();
   const normalizedDialogText = dialogText.toLowerCase();
+  const hasLiveSlotPicker = (await dialog.locator('[role="combobox"]').count()) > 0;
+  const hasManualTimeInput = (await dialog.locator("input#tijdvak").count()) > 0;
+
   await page.keyboard.press("Escape");
   await page.waitForTimeout(350);
 
   return {
     buttonName: resolvedButtonName,
     isPackageFlow: resolvedButtonName.toLowerCase().includes("pakket"),
-    hasAvailableMoment: normalizedDialogText.includes("beschikbaar moment"),
-    hasPreviewMoments: normalizedDialogText.includes(
-      "eerstvolgende beschikbare momenten"
-    ),
+    hasAvailableMoment:
+      normalizedDialogText.includes("beschikbaar moment") ||
+      normalizedDialogText.includes("kies een open tijdvak"),
+    hasPreviewMoments:
+      normalizedStepOneText.includes("eerstvolgende beschikbare momenten") ||
+      normalizedStepOneText.includes("eerstvolgende momenten"),
     hasLiveAgendaBlock: normalizedDialogText.includes("gekozen uit live agenda"),
+    hasLiveSlotPicker,
+    hasManualTimeInput,
   };
 }
 
@@ -395,30 +413,25 @@ async function checkLearnerDialogs(page, failures) {
     "Les aanvragen",
   ]);
   assertCondition(
-    !packageDialogOnList.hasAvailableMoment,
-    "[/instructeurs] pakket-popup toont al 'Beschikbaar moment' zonder vrijgave",
+    packageDialogOnList.hasLiveSlotPicker || packageDialogOnList.hasManualTimeInput,
+    "[/instructeurs] pakket-popup toont geen bruikbare momentkeuze in stap 2",
     failures
   );
   assertCondition(
-    !packageDialogOnList.hasPreviewMoments,
-    "[/instructeurs] pakket-popup toont al 'Eerstvolgende beschikbare momenten' zonder vrijgave",
-    failures
-  );
-  assertCondition(
-    !packageDialogOnList.hasLiveAgendaBlock,
-    "[/instructeurs] pakket-popup toont al 'Gekozen uit live agenda' zonder vrijgave",
+    !(packageDialogOnList.hasLiveSlotPicker && packageDialogOnList.hasManualTimeInput),
+    "[/instructeurs] pakket-popup toont tegelijk live tijdkeuze en handmatige tijdinvoer",
     failures
   );
 
   const proeflesDialogOnList = await inspectDialog(page, "Plan proefles");
   assertCondition(
-    !proeflesDialogOnList.hasAvailableMoment,
-    "[/instructeurs] proefles-popup toont al 'Beschikbaar moment' zonder vrijgave",
+    proeflesDialogOnList.hasLiveSlotPicker || proeflesDialogOnList.hasManualTimeInput,
+    "[/instructeurs] proefles-popup toont geen bruikbare momentkeuze in stap 2",
     failures
   );
   assertCondition(
-    !proeflesDialogOnList.hasLiveAgendaBlock,
-    "[/instructeurs] proefles-popup toont al 'Gekozen uit live agenda' zonder vrijgave",
+    !(proeflesDialogOnList.hasLiveSlotPicker && proeflesDialogOnList.hasManualTimeInput),
+    "[/instructeurs] proefles-popup toont tegelijk live tijdkeuze en handmatige tijdinvoer",
     failures
   );
 
@@ -445,30 +458,25 @@ async function checkLearnerDialogs(page, failures) {
     "Les aanvragen",
   ]);
   assertCondition(
-    !packageDialogOnDetail.hasAvailableMoment,
-    `[${page.url()}] pakket-popup toont al 'Beschikbaar moment' zonder vrijgave`,
+    packageDialogOnDetail.hasLiveSlotPicker || packageDialogOnDetail.hasManualTimeInput,
+    `[${page.url()}] pakket-popup toont geen bruikbare momentkeuze in stap 2`,
     failures
   );
   assertCondition(
-    !packageDialogOnDetail.hasPreviewMoments,
-    `[${page.url()}] pakket-popup toont al 'Eerstvolgende beschikbare momenten' zonder vrijgave`,
-    failures
-  );
-  assertCondition(
-    !packageDialogOnDetail.hasLiveAgendaBlock,
-    `[${page.url()}] pakket-popup toont al 'Gekozen uit live agenda' zonder vrijgave`,
+    !(packageDialogOnDetail.hasLiveSlotPicker && packageDialogOnDetail.hasManualTimeInput),
+    `[${page.url()}] pakket-popup toont tegelijk live tijdkeuze en handmatige tijdinvoer`,
     failures
   );
 
   const proeflesDialogOnDetail = await inspectDialog(page, "Plan proefles");
   assertCondition(
-    !proeflesDialogOnDetail.hasAvailableMoment,
-    `[${page.url()}] proefles-popup toont al 'Beschikbaar moment' zonder vrijgave`,
+    proeflesDialogOnDetail.hasLiveSlotPicker || proeflesDialogOnDetail.hasManualTimeInput,
+    `[${page.url()}] proefles-popup toont geen bruikbare momentkeuze in stap 2`,
     failures
   );
   assertCondition(
-    !proeflesDialogOnDetail.hasLiveAgendaBlock,
-    `[${page.url()}] proefles-popup toont al 'Gekozen uit live agenda' zonder vrijgave`,
+    !(proeflesDialogOnDetail.hasLiveSlotPicker && proeflesDialogOnDetail.hasManualTimeInput),
+    `[${page.url()}] proefles-popup toont tegelijk live tijdkeuze en handmatige tijdinvoer`,
     failures
   );
 

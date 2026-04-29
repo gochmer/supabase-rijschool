@@ -1,13 +1,35 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { InstructorFinder } from "@/components/instructors/instructor-finder";
 import { getFavoriteInstructorIds } from "@/lib/data/favorites";
-import { getPublicInstructors } from "@/lib/data/instructors";
+import {
+  getPublicInstructorAvailabilityMap,
+  getPublicInstructors,
+} from "@/lib/data/instructors";
+import { getCurrentLearnerSchedulingAccessMapForInstructorIds } from "@/lib/data/student-scheduling";
 
 export default async function LeerlingInstructeursPage() {
   const [liveInstructors, favoriteInstructorIds] = await Promise.all([
     getPublicInstructors(),
     getFavoriteInstructorIds(),
   ]);
+  const instructorIds = liveInstructors.map((instructor) => instructor.id);
+  const schedulingAccessByInstructorId =
+    await getCurrentLearnerSchedulingAccessMapForInstructorIds(instructorIds);
+  const availableSlotsByInstructorId = await getPublicInstructorAvailabilityMap(
+    liveInstructors
+      .filter(
+        (instructor) =>
+          schedulingAccessByInstructorId[instructor.id]?.canViewAgenda
+      )
+      .map((instructor) => instructor.id),
+    12
+  );
+  const directBookingEnabledByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.directBookingAllowed,
+    ])
+  );
 
   return (
     <>
@@ -19,6 +41,8 @@ export default async function LeerlingInstructeursPage() {
         instructors={liveInstructors}
         detailBasePath="/instructeurs"
         favoriteInstructorIds={favoriteInstructorIds}
+        availableSlotsByInstructorId={availableSlotsByInstructorId}
+        directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
       />
     </>
   );

@@ -63,10 +63,14 @@ export function InstructorAvailabilityPlanner({
   instructorName,
   instructorSlug,
   slots,
+  directBookingEnabled = false,
+  publicBookingEnabled = false,
 }: {
   instructorName: string;
   instructorSlug: string;
   slots: BeschikbaarheidSlot[];
+  directBookingEnabled?: boolean;
+  publicBookingEnabled?: boolean;
 }) {
   const [compact, setCompact] = useState(false);
 
@@ -154,13 +158,24 @@ export function InstructorAvailabilityPlanner({
             Plan zelf een moment bij {instructorName}
           </h3>
           <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-            Bekijk de actuele agenda van de instructeur, klik een beschikbaar blok aan en
-            plan jezelf direct in op een moment dat echt vrij is.
+            {publicBookingEnabled
+              ? directBookingEnabled
+                ? "Deze instructeur heeft online zelf-inschrijven aangezet. Klik een beschikbaar blok aan en rond je moment af vanuit dezelfde live agenda."
+                : "Deze instructeur toont live online momenten. Log in als leerling om een gekozen blok direct te boeken of als aanvraag vast te zetten."
+              : directBookingEnabled
+                ? "Bekijk de actuele agenda van de instructeur, klik een beschikbaar blok aan en plan jezelf direct in op een moment dat echt vrij is."
+                : "Klik een beschikbaar blok aan en geef precies dat live moment door als je voorkeursmoment."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="info">Live slots</Badge>
-          <Badge variant="success">Zelf plannen</Badge>
+          <Badge variant={directBookingEnabled ? "success" : "warning"}>
+            {publicBookingEnabled
+              ? "Online boeking aan"
+              : directBookingEnabled
+                ? "Zelf plannen"
+                : "Voorkeursmoment"}
+          </Badge>
         </div>
       </div>
 
@@ -232,7 +247,11 @@ export function InstructorAvailabilityPlanner({
                 Beschikbaar
               </span>
               <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                Zelf in te plannen
+                {publicBookingEnabled
+                  ? "Online boekbaar"
+                  : directBookingEnabled
+                    ? "Zelf in te plannen"
+                    : "Als moment te kiezen"}
               </span>
             </div>
 
@@ -274,7 +293,9 @@ export function InstructorAvailabilityPlanner({
                     Flow
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">
-                    Dit moment wordt direct vastgezet zodra je bevestigt.
+                    {directBookingEnabled
+                      ? "Dit moment wordt direct vastgezet zodra je bevestigt."
+                      : "Dit tijdvak wordt als exact voorkeursmoment meegestuurd in je aanvraag."}
                   </p>
                 </div>
               </div>
@@ -285,9 +306,9 @@ export function InstructorAvailabilityPlanner({
                 instructorName={instructorName}
                 instructorSlug={instructorSlug}
                 availableSlots={slots}
-                directBookingEnabled
+                directBookingEnabled={directBookingEnabled}
                 defaultSlotId={selectedEntry?.id}
-                triggerLabel="Boek dit moment"
+                triggerLabel={directBookingEnabled ? "Boek dit moment" : "Vraag dit moment aan"}
                 triggerClassName="w-full"
               />
               <LessonRequestDialog
@@ -295,9 +316,13 @@ export function InstructorAvailabilityPlanner({
                 instructorSlug={instructorSlug}
                 requestType="proefles"
                 availableSlots={slots}
-                directBookingEnabled
+                directBookingEnabled={directBookingEnabled}
                 defaultSlotId={selectedEntry?.id}
-                triggerLabel="Boek dit moment als proefles"
+                triggerLabel={
+                  directBookingEnabled
+                    ? "Boek dit moment als proefles"
+                    : "Vraag proefles op dit moment aan"
+                }
                 triggerVariant="secondary"
                 triggerClassName="w-full"
               />

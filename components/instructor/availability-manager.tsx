@@ -2696,10 +2696,10 @@ export function AvailabilityManager({
               Stap 3 - Rooster en advies
             </p>
             <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-              Houd ritme, uitzonderingen en inzichten bij elkaar
+              Houd je vaste ritme en slimme opvolging strak bij elkaar
             </h3>
             <p className="max-w-3xl text-sm leading-6 text-slate-600">
-              Je vaste weekrooster, losse uitzonderingen en de belangrijkste inzichten staan hier compact onder elkaar.
+              Je vaste weekrooster, losse uitzonderingen en de belangrijkste signalen staan hier zonder dubbele tussenlagen onder elkaar.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -2714,7 +2714,7 @@ export function AvailabilityManager({
                       ? `${upcomingExceptionWindows.length} los`
                       : "Nog leeg",
               },
-              { key: "health", label: "Health", meta: `${nextWeekHealthScore}/100` },
+              { key: "health", label: "Inzicht", meta: `${nextWeekHealthScore}/100` },
               {
                 key: "suggestions",
                 label: "Acties",
@@ -2947,13 +2947,13 @@ export function AvailabilityManager({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Beschikbaarheidshealth
+                      Weekinzicht
                     </p>
                     <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                      Zie hoe sterk je volgende week staat
+                      Zie snel hoe je volgende week ervoor staat
                     </h3>
                     <p className="mt-1 text-sm leading-7 text-slate-600">
-                      We kijken vooral naar volume, spreiding en prime-time dekking.
+                      We kijken vooral naar volume, spreiding en avonddekking.
                     </p>
                   </div>
                   <Badge className={cn("border", nextWeekHealthBadge.className)}>
@@ -3004,10 +3004,10 @@ export function AvailabilityManager({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Commercieel beeld
+                      Boekingsbeeld
                     </p>
                     <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                      Wat je open agenda ongeveer kan opleveren
+                      Wat je open agenda ongeveer kan dragen
                     </h3>
                   </div>
                   <Badge className={cn("border", bookingChanceTone.className)}>
@@ -3091,8 +3091,7 @@ export function AvailabilityManager({
         ) : null}
 
         {insightView === "suggestions" ? (
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-            <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
+          <div className="mt-4 rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
@@ -3186,11 +3185,6 @@ export function AvailabilityManager({
                   </div>
                 ) : null}
               </div>
-            </div>
-
-            <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm leading-6 text-slate-600">
-              Combineer losse suggesties daarna weer met je vaste weekplanning, zodat je standaardritme rustig blijft.
-            </div>
           </div>
         ) : null}
       </div>

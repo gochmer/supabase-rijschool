@@ -366,11 +366,13 @@ function InstructorCardActions({
   instructor,
   selectedPackage,
   availableSlots,
+  directBookingEnabled,
 }: {
   detailHref: string;
   instructor: InstructeurProfiel;
   selectedPackage: Pakket | null;
   availableSlots: BeschikbaarheidSlot[];
+  directBookingEnabled: boolean;
 }) {
   return (
     <CardFooter className="flex-col items-stretch gap-1.5 bg-transparent px-3.5 pb-3 pt-0">
@@ -379,6 +381,7 @@ function InstructorCardActions({
         instructorSlug={instructor.slug}
         selectedPackage={selectedPackage}
         availableSlots={availableSlots}
+        directBookingEnabled={directBookingEnabled}
         triggerLabel={selectedPackage ? "Vraag pakket aan" : "Les aanvragen"}
         triggerClassName="!h-9 !rounded-full !text-[12px] !font-semibold"
       />
@@ -396,6 +399,7 @@ function InstructorCardActions({
           instructorSlug={instructor.slug}
           requestType="proefles"
           availableSlots={availableSlots}
+          directBookingEnabled={directBookingEnabled}
           triggerLabel="Plan proefles"
           triggerVariant="secondary"
           triggerClassName="!h-9 !rounded-full !text-[12px] !font-semibold"
@@ -409,6 +413,7 @@ export function InstructorCard({
   instructor,
   packages = [],
   availableSlots = [],
+  directBookingEnabled = false,
   detailBasePath = "/instructeurs",
   isFavorite = false,
   showPackagePanel = true,
@@ -417,6 +422,7 @@ export function InstructorCard({
   instructor: InstructeurProfiel;
   packages?: Pakket[];
   availableSlots?: BeschikbaarheidSlot[];
+  directBookingEnabled?: boolean;
   detailBasePath?: string;
   isFavorite?: boolean;
   showPackagePanel?: boolean;
@@ -666,6 +672,7 @@ export function InstructorCard({
               instructorSlug={instructor.slug}
               selectedPackage={selectedPackage}
               availableSlots={availableSlots}
+              directBookingEnabled={directBookingEnabled}
               triggerLabel={selectedPackage ? "Vraag pakket aan" : "Les aanvragen"}
               tone="hazard"
             />
@@ -674,6 +681,7 @@ export function InstructorCard({
               instructorSlug={instructor.slug}
               requestType="proefles"
               availableSlots={availableSlots}
+              directBookingEnabled={directBookingEnabled}
               triggerLabel="Plan proefles"
               triggerVariant="secondary"
               tone="hazard"
@@ -739,6 +747,7 @@ export function InstructorCard({
           instructor={instructor}
           selectedPackage={selectedPackage}
           availableSlots={availableSlots}
+          directBookingEnabled={directBookingEnabled}
         />
       </Card>
     </HoverTilt>

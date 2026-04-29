@@ -116,6 +116,7 @@ export function buildRecurringAvailabilitySlots(params: {
   } = params;
 
   const weekStart = getStartOfWeekDateValue(startDateValue);
+  const nowIso = new Date().toISOString();
   const normalizedConcreteSlots = concreteSlots.filter(
     (slot): slot is Required<Pick<BeschikbaarheidSlot, "id" | "start_at" | "eind_at" | "beschikbaar">> &
       Pick<BeschikbaarheidSlot, "weekrooster_id"> =>
@@ -132,6 +133,10 @@ export function buildRecurringAvailabilitySlots(params: {
         );
 
         const generatedSegments = buildRuleSegments(rule, dateValue).filter((segment) => {
+          if (segment.eind_at <= nowIso) {
+            return false;
+          }
+
           return !normalizedConcreteSlots.some((concreteSlot) => {
             if (!concreteSlot.start_at || !concreteSlot.eind_at) {
               return false;

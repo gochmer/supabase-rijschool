@@ -668,7 +668,7 @@ export async function createDirectLessonBookingAction(
 
   const { data: instructeur } = await supabase
     .from("instructeurs")
-    .select("id")
+    .select("id, online_boeken_actief")
     .eq("slug", input.instructorSlug)
     .maybeSingle();
 
@@ -684,11 +684,11 @@ export async function createDirectLessonBookingAction(
     leerling.id
   );
 
-  if (!planningAccess.selfSchedulingAllowed) {
+  if (!planningAccess.directBookingAllowed) {
     return {
       success: false,
       message:
-        "Direct inplannen staat voor jouw traject nog niet aan bij deze instructeur.",
+        "Direct online inplannen staat op dit moment nog niet aan bij deze instructeur.",
     };
   }
 

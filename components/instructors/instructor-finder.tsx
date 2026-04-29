@@ -6,19 +6,23 @@ import { InstructorFilterPanel } from "@/components/instructors/instructor-filte
 import { InstructorResultsGrid } from "@/components/instructors/instructor-results-grid";
 import { MobileFilterDrawer } from "@/components/instructors/mobile-filter-drawer";
 import { useInstructorFilters } from "@/components/instructors/use-instructor-filters";
-import type { InstructeurProfiel, Pakket } from "@/lib/types";
+import type { BeschikbaarheidSlot, InstructeurProfiel, Pakket } from "@/lib/types";
 
 export function InstructorFinder({
   instructors,
   detailBasePath = "/instructeurs",
   favoriteInstructorIds = [],
   packagesByInstructorId = {},
+  availableSlotsByInstructorId = {},
+  directBookingEnabledByInstructorId = {},
   showPackagePanel = true,
 }: {
   instructors: InstructeurProfiel[];
   detailBasePath?: string;
   favoriteInstructorIds?: string[];
   packagesByInstructorId?: Record<string, Pakket[]>;
+  availableSlotsByInstructorId?: Record<string, BeschikbaarheidSlot[]>;
+  directBookingEnabledByInstructorId?: Record<string, boolean>;
   showPackagePanel?: boolean;
 }) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -66,6 +70,8 @@ export function InstructorFinder({
       <InstructorResultsGrid
         instructors={filtered}
         packagesByInstructorId={packagesByInstructorId}
+        availableSlotsByInstructorId={availableSlotsByInstructorId}
+        directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
         favoriteInstructorIds={favoriteInstructorIds}
         detailBasePath={detailBasePath}
         showPackagePanel={showPackagePanel}

@@ -8,9 +8,13 @@ import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getFavoriteInstructorIds } from "@/lib/data/favorites";
-import { getPublicInstructorsByLessonType } from "@/lib/data/instructors";
+import {
+  getPublicInstructorAvailabilityMap,
+  getPublicInstructorsByLessonType,
+} from "@/lib/data/instructors";
 import { getPublicInstructorPackageMap } from "@/lib/data/packages";
 import { seoCityConfigs } from "@/lib/seo-cities";
+import { getCurrentLearnerSchedulingAccessMapForInstructorIds } from "@/lib/data/student-scheduling";
 
 const primaryCities = seoCityConfigs.slice(0, 6);
 const featuredCities = seoCityConfigs.slice(0, 4);
@@ -33,9 +37,25 @@ export default async function InstructeursPage() {
     getPublicInstructorsByLessonType("auto"),
     getFavoriteInstructorIds(),
   ]);
-  const packagesByInstructorId = await getPublicInstructorPackageMap(
-    liveInstructors.map((instructor) => instructor.id),
-    "auto"
+  const instructorIds = liveInstructors.map((instructor) => instructor.id);
+  const [packagesByInstructorId, schedulingAccessByInstructorId] = await Promise.all([
+    getPublicInstructorPackageMap(instructorIds, "auto"),
+    getCurrentLearnerSchedulingAccessMapForInstructorIds(instructorIds),
+  ]);
+  const availableSlotsByInstructorId = await getPublicInstructorAvailabilityMap(
+    liveInstructors
+      .filter(
+        (instructor) =>
+          schedulingAccessByInstructorId[instructor.id]?.canViewAgenda
+      )
+      .map((instructor) => instructor.id),
+    12
+  );
+  const directBookingEnabledByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.directBookingAllowed,
+    ])
   );
   const averageRating = liveInstructors.length ? (liveInstructors.reduce((total, instructor) => total + instructor.beoordeling, 0) / liveInstructors.length).toFixed(1) : null;
   const breadcrumbItems = [
@@ -100,6 +120,8 @@ export default async function InstructeursPage() {
             instructors={liveInstructors}
             favoriteInstructorIds={favoriteInstructorIds}
             packagesByInstructorId={packagesByInstructorId}
+            availableSlotsByInstructorId={availableSlotsByInstructorId}
+            directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
           />
         </Reveal>
       </section>
