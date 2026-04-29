@@ -2,11 +2,6 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { DateSelectArg, EventInput } from "@fullcalendar/core";
-import nlLocale from "@fullcalendar/core/locales/nl";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
 import {
   AlertTriangle,
   CalendarClock,
@@ -53,6 +48,7 @@ import type { BeschikbaarheidSlot, Les } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AvailabilityCalendar } from "@/components/instructor/availability-calendar";
 import {
   Dialog,
   DialogContent,
@@ -2230,61 +2226,12 @@ export function AvailabilityManager({
           <div className="min-w-0 space-y-4">
             <div className="lesson-calendar-shell rounded-[1.2rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-2.5">
               <div className="lesson-calendar lesson-calendar--default">
-                <FullCalendar
-                  key={compact ? "compact" : "wide"}
-                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                  locale={nlLocale}
-                  initialDate={selectedEntry?.startAt ?? undefined}
-                  initialView={compact ? "dayGridMonth" : "timeGridWeek"}
-                  headerToolbar={
-                    compact
-                      ? {
-                          left: "prev,next",
-                          center: "title",
-                          right: "dayGridMonth,timeGridDay",
-                        }
-                      : {
-                          left: "prev,next today",
-                          center: "title",
-                          right: "dayGridMonth,timeGridWeek,timeGridDay",
-                        }
-                  }
-                  buttonText={{
-                    today: "Vandaag",
-                    month: "Maand",
-                    week: "Week",
-                    day: "Dag",
-                  }}
-                  firstDay={1}
-                  allDaySlot={false}
-                  nowIndicator
-                  selectable
-                  selectMirror
-                  height="auto"
-                  fixedWeekCount={false}
-                  dayMaxEventRows={compact ? 2 : 3}
-                  slotMinTime="07:00:00"
-                  slotMaxTime="22:00:00"
-                  eventTimeFormat={{
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  }}
-                  slotLabelFormat={{
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  }}
-                  eventOrder="start,-duration,title"
+                <AvailabilityCalendar
+                  compact={compact}
+                  selectedEntryStartAt={selectedEntry?.startAt ?? undefined}
                   events={events}
-                  select={handleCalendarSelect}
-                  eventClick={(info) => {
-                    if (info.event.extendedProps.kind !== "availability") {
-                      return;
-                    }
-
-                    setSelectedSlotId(info.event.id);
-                  }}
+                  onSelect={handleCalendarSelect}
+                  onAvailabilityEventClick={setSelectedSlotId}
                 />
               </div>
             </div>

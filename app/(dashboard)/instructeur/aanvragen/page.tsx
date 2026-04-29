@@ -5,6 +5,7 @@ import {
   CircleAlert,
   Clock3,
   FolderCheck,
+  Sparkles,
 } from "lucide-react";
 
 import { InsightPanel } from "@/components/dashboard/insight-panel";
@@ -30,6 +31,7 @@ import {
 } from "@/lib/lesson-request-flow";
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
 import type { LesAanvraag } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function isTimelineStepActive(
   stepValue: (typeof requestStatusTimeline)[number]["value"],
@@ -187,9 +189,62 @@ export default async function AanvragenPage() {
   const packageRequests = requests.filter(
     (item) => item.aanvraag_type === "pakket"
   ).length;
+  const decisionScore = Math.min(
+    100,
+    50 + pendingRequests.length * 9 + proeflesRequests * 3 + packageRequests * 2
+  );
+  const heroSignals = [
+    {
+      label: "Nu beslissen",
+      value: `${pendingRequests.length}`,
+      hint: "Aanvragen wachten op reactie",
+      tone:
+        "border-amber-200/80 bg-amber-50/80 dark:border-amber-400/20 dark:bg-amber-500/10",
+    },
+    {
+      label: "Klaar voor les",
+      value: `${acceptedRequests.length}`,
+      hint: "Geaccepteerd of ingepland",
+      tone:
+        "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-400/20 dark:bg-emerald-500/10",
+    },
+    {
+      label: "Instroommix",
+      value: `${proeflesRequests}/${packageRequests}`,
+      hint: "Proeflessen / pakketten",
+      tone:
+        "border-slate-200/80 bg-slate-50/90 dark:border-slate-400/20 dark:bg-slate-500/10",
+    },
+  ];
+  const statCards = [
+    {
+      label: "Nu beslissen",
+      value: `${pendingRequests.length}`,
+      description: "Aanvragen die nu nog op jouw reactie wachten.",
+      tone: "from-amber-500/14 to-rose-500/10",
+    },
+    {
+      label: "Klaar voor les",
+      value: `${acceptedRequests.length}`,
+      description: "Geaccepteerd of al ingepland in het traject.",
+      tone: "from-emerald-500/12 to-cyan-500/10",
+    },
+    {
+      label: "Proeflessen",
+      value: `${proeflesRequests}`,
+      description: "Handig om snel om te zetten naar een eerste traject.",
+      tone: "from-sky-500/12 to-indigo-500/10",
+    },
+    {
+      label: "Pakketvragen",
+      value: `${packageRequests}`,
+      description: "Gericht op directe pakketconversie en vervolg.",
+      tone: "from-slate-500/12 to-sky-500/8",
+    },
+  ];
 
   return (
-    <>
+    <div className="space-y-6">
       <PageHeader
         title="Lesaanvragen"
         description="Werk open aanvragen eerst af en houd daarna rustig zicht op wat al verwerkt is."
@@ -205,63 +260,96 @@ export default async function AanvragenPage() {
         }
       />
 
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(135deg,#0f172a,#172554,#1e293b)] p-5 text-white shadow-[0_34px_120px_-62px_rgba(15,23,42,0.75)] dark:border-white/10 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_84%_18%,rgba(59,130,246,0.18),transparent_26%),radial-gradient(circle_at_70%_86%,rgba(148,163,184,0.16),transparent_24%)]" />
+        <div className="relative grid gap-5 xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase">
+              <Sparkles className="size-3.5" />
+              Aanvragen cockpit
+            </div>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Houd beslissen, plannen en opvolgen strak in één rustige flow.
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/74 sm:text-[15px]">
+              Werk eerst de open aanvragen af, lees daarna de verwerkte flow terug
+              en houd zicht op waar nieuwe proeflessen of pakketkansen binnenkomen.
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {heroSignals.map((item) => (
+                <div
+                  key={item.label}
+                  className={cn(
+                    "rounded-[1.2rem] border px-3.5 py-3 backdrop-blur",
+                    item.tone
+                  )}
+                >
+                  <p className="text-[10px] font-semibold tracking-[0.18em] text-white/68 uppercase">
+                    {item.label}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{item.value}</p>
+                  <p className="mt-1 text-xs leading-5 text-white/68">{item.hint}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[1.55rem] border border-white/14 bg-white/10 p-4 backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.2em] text-white/62 uppercase">
+                  Beslisfocus
+                </p>
+                <p className="mt-1 text-4xl font-semibold">{decisionScore}</p>
+              </div>
+              <CircleAlert className="size-8 text-sky-200" />
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/12">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8,#22c55e,#facc15)]"
+                style={{ width: `${Math.max(decisionScore, 6)}%` }}
+              />
+            </div>
+            <p className="mt-3 text-sm leading-6 text-white/70">
+              Gebaseerd op open aanvragen, geplande vervolgflow en hoeveel instroom
+              nu nog jouw reactie nodig heeft.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Nu beslissen
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
-              {pendingRequests.length}
-            </p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Aanvragen die nu nog op jouw reactie wachten.
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Klaar voor les
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
-              {acceptedRequests.length}
-            </p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Geaccepteerd of al ingepland in het traject.
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Proeflessen
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
-              {proeflesRequests}
-            </p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Handig om snel om te zetten naar een eerste traject.
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
-          <CardContent className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Pakketvragen
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
-              {packageRequests}
-            </p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Gericht op directe pakketconversie en vervolg.
-            </p>
-          </CardContent>
-        </Card>
+        {statCards.map((item) => (
+          <Card
+            key={item.label}
+            className="overflow-hidden border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
+          >
+            <CardContent className="relative p-4">
+              <div
+                className={cn(
+                  "absolute inset-x-0 top-0 h-20 bg-gradient-to-r opacity-80",
+                  item.tone
+                )}
+              />
+              <div className="relative">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  {item.label}
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  {item.description}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Tabs defaultValue="nu" className="space-y-4">
-        <TabsList className="h-auto w-full rounded-[1.4rem] bg-white/70 p-1 dark:bg-white/5">
+        <TabsList className="h-auto w-full rounded-[1.45rem] border border-white/60 bg-white/75 p-1 dark:border-white/10 dark:bg-white/5">
           <TabsTrigger value="nu" className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm">
             Nu beslissen
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
@@ -480,6 +568,6 @@ export default async function AanvragenPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 }

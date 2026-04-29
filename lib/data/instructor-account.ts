@@ -85,6 +85,17 @@ export type InstructorIncomeCockpit = {
   growthInsights: Awaited<ReturnType<typeof getInstructorGrowthInsights>>;
 };
 
+export type InstructorIncomeOverviewSection = {
+  title: string;
+  items: string[];
+};
+
+export type InstructorIncomeOverview = {
+  topStats: InstructorIncomeCockpitStat[];
+  secondaryStats: InstructorIncomeCockpitStat[];
+  overviewSignals: InstructorIncomeOverviewSection[];
+};
+
 function formatDate(dateString: string) {
   return new Intl.DateTimeFormat("nl-NL", {
     day: "numeric",
@@ -297,6 +308,156 @@ export async function getCurrentInstructorIncomeRows() {
     datum: formatDate(row.start_at ?? row.created_at),
     status: row.status,
   }));
+}
+
+export async function getCurrentInstructorIncomeOverview(): Promise<InstructorIncomeOverview> {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return {
+      topStats: [],
+      secondaryStats: [],
+      overviewSignals: [],
+    };
+  }
+
+  const lessonPrice = toAmount(instructeur.prijs_per_les);
+  const supabase = await createServerClient();
+  const [{ data: lessonRows }, { data: requestRows }, { data: packageRows }] =
+    await Promise.all([
+      supabase
+        .from("lessen")
+        .select("start_at, status")
+        .eq("instructeur_id", instructeur.id)
+        .in("status", ["geaccepteerd", "ingepland", "afgerond"]),
+      supabase
+        .from("lesaanvragen")
+        .select("id, status")
+        .eq("instructeur_id", instructeur.id),
+      supabase
+        .from("pakketten")
+        .select("id, prijs, actief")
+        .eq("instructeur_id", instructeur.id)
+        .eq("actief", true),
+    ]);
+
+  const lessons = (lessonRows ?? []) as Array<{
+    start_at: string | null;
+    status: string | null;
+  }>;
+  const openRequests = (requestRows ?? []).filter(
+    (row) => row.status === "aangevraagd"
+  ).length;
+  const activePackages = (packageRows ?? []) as Array<{
+    id: string;
+    prijs: number;
+    actief: boolean;
+  }>;
+
+  const plannedLessons = lessons.filter((lesson) =>
+    lesson.status === "ingepland" || lesson.status === "geaccepteerd"
+  );
+  const weekLessons = plannedLessons.filter((lesson) =>
+    isWithinNextDays(lesson.start_at, 7)
+  );
+  const monthCompletedLessons = lessons.filter(
+    (lesson) =>
+      lesson.status === "afgerond" && isCurrentMonth(lesson.start_at)
+  );
+
+  const packageCatalogValue = activePackages.reduce(
+    (sum, item) => sum + toAmount(item.prijs),
+    0
+  );
+
+  const topStats = [
+    {
+      label: "Verwacht deze week",
+      value: formatCurrency(weekLessons.length * lessonPrice),
+      detail: `${weekLessons.length} geplande les${weekLessons.length === 1 ? "" : "sen"} in de komende 7 dagen.`,
+    },
+    {
+      label: "Afgerond deze maand",
+      value: formatCurrency(monthCompletedLessons.length * lessonPrice),
+      detail: `${monthCompletedLessons.length} afgeronde les${monthCompletedLessons.length === 1 ? "" : "sen"} in deze kalendermaand.`,
+    },
+    {
+      label: "Open lesomzet",
+      value: formatCurrency(plannedLessons.length * lessonPrice),
+      detail: `${plannedLessons.length} ingeplande of geaccepteerde les${plannedLessons.length === 1 ? "" : "sen"} staat of staan al klaar.`,
+    },
+    {
+      label: "Open aanvragen",
+      value: `${openRequests}`,
+      detail:
+        openRequests > 0
+          ? "Nieuwe lesaanvragen wachten nog op een beslissing."
+          : "Er staan nu geen open aanvragen te wachten.",
+    },
+  ] satisfies InstructorIncomeCockpitStat[];
+
+  const secondaryStats = [
+    {
+      label: "Actieve pakketten",
+      value: `${activePackages.length}`,
+      detail:
+        activePackages.length > 0
+          ? "Je huidige aanbod staat klaar om te verkopen."
+          : "Er staan nog geen actieve pakketten open in je aanbod.",
+    },
+    {
+      label: "Aanbodwaarde",
+      value: formatCurrency(packageCatalogValue),
+      detail: "Totale waarde van je actieve pakketaanbod.",
+    },
+    {
+      label: "Prijs per les",
+      value: lessonPrice > 0 ? formatCurrency(lessonPrice) : "Nog leeg",
+      detail:
+        lessonPrice > 0
+          ? "Deze prijs wordt gebruikt in je omzetindicaties."
+          : "Vul een lesprijs in om omzet en kansen goed te zien.",
+    },
+    {
+      label: "Weekritme",
+      value: `${weekLessons.length}`,
+      detail:
+        weekLessons.length >= 5
+          ? "Je komende week heeft al een stevig lesritme."
+          : "Er ligt nog ruimte om je komende week voller te plannen.",
+    },
+  ] satisfies InstructorIncomeCockpitStat[];
+
+  const overviewSignals = [
+    {
+      title: "Wat staat sterk",
+      items: [
+        weekLessons.length
+          ? `${weekLessons.length} lessen staan al klaar voor de komende week.`
+          : "De komende week heeft nog geen stevige lesbasis.",
+        activePackages.length
+          ? `${activePackages.length} actieve pakketten ondersteunen je aanbod.`
+          : "Je aanbod kan sterker zodra er actieve pakketten zichtbaar zijn.",
+      ],
+    },
+    {
+      title: "Nu slim om te checken",
+      items: [
+        openRequests
+          ? `${openRequests} aanvraag${openRequests === 1 ? "" : "en"} wacht${openRequests === 1 ? "" : "en"} nog op opvolging.`
+          : "Er staan geen open aanvragen op je inkomstenlaag te wachten.",
+        weekLessons.length < 3
+          ? "Je komende week heeft nog ruimte voor extra lesomzet."
+          : "Je komende week heeft al een gezond ritme aan geplande lessen.",
+      ],
+    },
+  ] satisfies InstructorIncomeOverviewSection[];
+
+  return {
+    topStats,
+    secondaryStats,
+    overviewSignals,
+  };
 }
 
 export async function getCurrentInstructorIncomeCockpit(): Promise<InstructorIncomeCockpit> {
