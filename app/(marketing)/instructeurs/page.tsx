@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MapPinned, PackageCheck, SearchCheck, Star } from "lucide-react";
+import { ArrowRight, MapPinned, SearchCheck, Star } from "lucide-react";
 
 import { InstructorFinder } from "@/components/instructors/instructor-finder";
 import { Reveal } from "@/components/marketing/homepage-motion";
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { getFavoriteInstructorIds } from "@/lib/data/favorites";
 import { getPublicInstructorsByLessonType } from "@/lib/data/instructors";
 import { getPublicInstructorPackageMap } from "@/lib/data/packages";
-import { formatCurrency } from "@/lib/format";
 import { seoCityConfigs } from "@/lib/seo-cities";
 
 const primaryCities = seoCityConfigs.slice(0, 6);
@@ -34,11 +33,10 @@ export default async function InstructeursPage() {
     getPublicInstructorsByLessonType("auto"),
     getFavoriteInstructorIds(),
   ]);
-  const instructorIds = liveInstructors.map((instructor) => instructor.id);
-  const packagesByInstructorId = await getPublicInstructorPackageMap(instructorIds, "auto");
-  const allPackages = Object.values(packagesByInstructorId).flat();
-  const featuredPackages = allPackages.slice(0, 3);
-  const lowestPackagePrice = allPackages.length ? Math.min(...allPackages.map((pakket) => Number(pakket.prijs ?? 0)).filter((prijs) => prijs > 0)) : null;
+  const packagesByInstructorId = await getPublicInstructorPackageMap(
+    liveInstructors.map((instructor) => instructor.id),
+    "auto"
+  );
   const averageRating = liveInstructors.length ? (liveInstructors.reduce((total, instructor) => total + instructor.beoordeling, 0) / liveInstructors.length).toFixed(1) : null;
   const breadcrumbItems = [
     { label: "Home", href: "/" },
@@ -60,16 +58,16 @@ export default async function InstructeursPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge className="border border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">Auto-instructeurs</Badge>
                       <Badge className="border border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-200">{liveInstructors.length} profielen</Badge>
-                      <Badge className="border border-violet-100 bg-violet-50 text-violet-700 dark:border-violet-300/16 dark:bg-violet-300/10 dark:text-violet-100">Pakketten eerst</Badge>
+                      <Badge className="border border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-300/16 dark:bg-emerald-300/10 dark:text-emerald-100">Direct vergelijken</Badge>
                     </div>
                     <div>
                       <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">Vergelijk rijinstructeurs</p>
-                      <h1 className="mt-4 max-w-[16ch] text-4xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[3.3rem]">Kies eerst je pakket, daarna de instructeur die erbij past.</h1>
-                      <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">De pagina is opnieuw ingedeeld zodat je sneller begint bij prijs, traject en aanbod. Daarna kun je dieper filteren op stad, beoordeling, transmissie en specialisaties.</p>
+                      <h1 className="mt-4 max-w-[16ch] text-4xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[3.3rem]">Vergelijk instructeurs en kies wie bij jouw tempo past.</h1>
+                      <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">Filter direct op stad, beoordeling, transmissie en specialisaties. Zo kom je sneller uit bij de instructeur die echt bij je leerstijl en planning past.</p>
                     </div>
                     <div className="flex flex-wrap gap-2.5">
-                      <Button asChild className="rounded-full"><Link href="#pakketten-overzicht">Bekijk pakketten <PackageCheck className="size-4" /></Link></Button>
-                      <Button asChild variant="outline" className="rounded-full"><Link href="#instructeurs-overzicht">Filter instructeurs <SearchCheck className="size-4" /></Link></Button>
+                      <Button asChild className="rounded-full"><Link href="#instructeurs-overzicht">Bekijk instructeurs <SearchCheck className="size-4" /></Link></Button>
+                      <Button asChild variant="outline" className="rounded-full"><Link href="#instructeurs-overzicht">Open filters <SearchCheck className="size-4" /></Link></Button>
                       <Button asChild variant="outline" className="rounded-full"><Link href="/motor">Motorrijles</Link></Button>
                     </div>
                   </div>
@@ -78,7 +76,7 @@ export default async function InstructeursPage() {
                 <div className="border-t border-slate-200 bg-slate-50/80 p-6 dark:border-white/10 dark:bg-white/[0.04] sm:p-8 xl:border-l xl:border-t-0">
                   <div className="grid h-full content-center gap-3">
                     {[
-                      { icon: PackageCheck, label: "Pakketten", value: `${allPackages.length}`, text: lowestPackagePrice ? `Vanaf ${formatCurrency(lowestPackagePrice)}` : "Pakketprijzen volgen uit instructeurs" },
+                      { icon: SearchCheck, label: "Vergelijk direct", value: `${liveInstructors.length} profielen`, text: "Spring meteen naar de instructeurs die nu zichtbaar zijn" },
                       { icon: Star, label: "Gem. score", value: averageRating ? `${averageRating}/5` : "Nog leeg", text: "Gebaseerd op zichtbare reviews" },
                       { icon: MapPinned, label: "Lokale routes", value: `${seoCityConfigs.length}+ steden`, text: "Lokale SEO-routes onderaan compact verzameld" },
                     ].map((item) => (
@@ -96,41 +94,13 @@ export default async function InstructeursPage() {
         </div>
       </section>
 
-      <section id="pakketten-overzicht" className="site-shell mx-auto w-full px-4 pb-8 sm:px-6 lg:px-8">
-        <Reveal className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">Populaire pakketten</p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">Begin bij een traject dat bij je doel past.</h2>
-              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">Hier tonen we eerst een paar actieve pakketten. Daarna kun je onderaan alle instructeurs verder filteren.</p>
-            </div>
-            <Button asChild variant="outline" className="rounded-full"><Link href="/pakketten">Alle pakketten bekijken <ArrowRight className="size-4" /></Link></Button>
-          </div>
-
-          {featuredPackages.length ? (
-            <div className="grid gap-4 lg:grid-cols-3">
-              {featuredPackages.map((pakket) => (
-                <div key={pakket.id} className="rounded-[1.55rem] border border-white/70 bg-white/92 p-5 shadow-[0_24px_70px_-44px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase">{pakket.les_type ?? "Auto"}</p>
-                      <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">{pakket.naam}</h3>
-                    </div>
-                    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700 dark:border-white/10 dark:bg-white/6 dark:text-slate-200">{Number(pakket.prijs ?? 0) > 0 ? formatCurrency(Number(pakket.prijs)) : "Op aanvraag"}</div>
-                  </div>
-                  <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">{pakket.beschrijving || "Een actief rijlespakket dat je direct kunt vergelijken met instructeurs en beschikbaarheid."}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-[1.55rem] border border-dashed border-slate-300 bg-slate-50/80 p-6 text-sm leading-7 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">Er zijn nog geen actieve pakketten gevonden. Je kunt wel direct instructeurs vergelijken.</div>
-          )}
-        </Reveal>
-      </section>
-
       <section id="instructeurs-overzicht" className="site-shell mx-auto w-full px-4 pb-8 sm:px-6 lg:px-8">
         <Reveal>
-          <InstructorFinder instructors={liveInstructors} favoriteInstructorIds={favoriteInstructorIds} packagesByInstructorId={packagesByInstructorId} />
+          <InstructorFinder
+            instructors={liveInstructors}
+            favoriteInstructorIds={favoriteInstructorIds}
+            packagesByInstructorId={packagesByInstructorId}
+          />
         </Reveal>
       </section>
 

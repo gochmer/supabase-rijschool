@@ -411,6 +411,7 @@ export function InstructorCard({
   availableSlots = [],
   detailBasePath = "/instructeurs",
   isFavorite = false,
+  showPackagePanel = true,
   variant = "default",
 }: {
   instructor: InstructeurProfiel;
@@ -418,6 +419,7 @@ export function InstructorCard({
   availableSlots?: BeschikbaarheidSlot[];
   detailBasePath?: string;
   isFavorite?: boolean;
+  showPackagePanel?: boolean;
   variant?: "default" | "arcade";
 }) {
   const citiesLabel = instructor.steden.join(" / ");
@@ -426,8 +428,8 @@ export function InstructorCard({
   const router = useRouter();
   const detailHref = `${detailBasePath}/${instructor.slug}`;
   const packageOptions = useMemo(
-    () => packages.filter((pkg) => pkg.actief !== false),
-    [packages]
+    () => (showPackagePanel ? packages.filter((pkg) => pkg.actief !== false) : []),
+    [packages, showPackagePanel]
   );
   const [selectedPackageId, setSelectedPackageId] = useState(
     packageOptions[0]?.id ?? ""
@@ -719,13 +721,15 @@ export function InstructorCard({
             ))}
           </div>
 
-          <InstructorCardPackagePanel
-            packageOptions={packageOptions}
-            selectedPackage={selectedPackage}
-            selectedPackageId={selectedPackage?.id ?? ""}
-            onPackageChange={setSelectedPackageId}
-            instructor={instructor}
-          />
+          {showPackagePanel ? (
+            <InstructorCardPackagePanel
+              packageOptions={packageOptions}
+              selectedPackage={selectedPackage}
+              selectedPackageId={selectedPackage?.id ?? ""}
+              onPackageChange={setSelectedPackageId}
+              instructor={instructor}
+            />
+          ) : null}
 
           <div className="mt-auto" />
         </CardContent>

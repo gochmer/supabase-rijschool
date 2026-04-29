@@ -9,6 +9,7 @@ export function InstructorResultsGrid({
   packagesByInstructorId,
   favoriteInstructorIds,
   detailBasePath,
+  showPackagePanel,
   animationKey,
   isPending,
   onReset,
@@ -17,6 +18,7 @@ export function InstructorResultsGrid({
   packagesByInstructorId: Record<string, Pakket[]>;
   favoriteInstructorIds: string[];
   detailBasePath: string;
+  showPackagePanel: boolean;
   animationKey: string | number;
   isPending: boolean;
   onReset: () => void;
@@ -53,6 +55,7 @@ export function InstructorResultsGrid({
             packages={packagesByInstructorId[instructor.id] ?? []}
             detailBasePath={detailBasePath}
             isFavorite={favoriteInstructorIds.includes(instructor.id)}
+            showPackagePanel={showPackagePanel}
           />
         </div>
       ))}

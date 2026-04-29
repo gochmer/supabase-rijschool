@@ -13,11 +13,13 @@ export function InstructorFinder({
   detailBasePath = "/instructeurs",
   favoriteInstructorIds = [],
   packagesByInstructorId = {},
+  showPackagePanel = true,
 }: {
   instructors: InstructeurProfiel[];
   detailBasePath?: string;
   favoriteInstructorIds?: string[];
   packagesByInstructorId?: Record<string, Pakket[]>;
+  showPackagePanel?: boolean;
 }) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const {
@@ -66,6 +68,7 @@ export function InstructorFinder({
         packagesByInstructorId={packagesByInstructorId}
         favoriteInstructorIds={favoriteInstructorIds}
         detailBasePath={detailBasePath}
+        showPackagePanel={showPackagePanel}
         animationKey={animationKey}
         isPending={isPending}
         onReset={resetFilters}
