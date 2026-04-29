@@ -2,12 +2,17 @@ import Link from "next/link";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
+import { LessonCheckinPanel } from "@/components/dashboard/lesson-checkin-board";
 import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
 import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { QuickActionGrid } from "@/components/dashboard/quick-action-grid";
+import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
+import { SharedLessonCompass } from "@/components/dashboard/shared-lesson-compass";
 import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
+import { getCurrentLearnerLessonCheckinBoards } from "@/lib/data/lesson-checkins";
+import { getCurrentLearnerLessonCompassBoards } from "@/lib/data/lesson-compass";
 import {
   getLeerlingDashboardMetrics,
   getLeerlingLessonRequests,
@@ -16,12 +21,22 @@ import {
 import { getCurrentNotifications } from "@/lib/data/notifications";
 
 export default async function LeerlingDashboardPage() {
-  const [metrics, lessons, requests, notifications] = await Promise.all([
-    getLeerlingDashboardMetrics(),
-    getLeerlingLessons(),
-    getLeerlingLessonRequests(),
-    getCurrentNotifications(),
-  ]);
+  const [
+    metrics,
+    lessons,
+    requests,
+    notifications,
+    lessonCompassBoards,
+    lessonCheckinBoards,
+  ] =
+    await Promise.all([
+      getLeerlingDashboardMetrics(),
+      getLeerlingLessons(),
+      getLeerlingLessonRequests(),
+      getCurrentNotifications(),
+      getCurrentLearnerLessonCompassBoards(),
+      getCurrentLearnerLessonCheckinBoards(),
+    ]);
 
   const upcomingLessons = lessons.slice(0, 4);
   const nextLesson = lessons.find((lesson) =>
@@ -40,6 +55,7 @@ export default async function LeerlingDashboardPage() {
         description="Volg je aanvragen, geplande lessen, voortgang en meldingen vanuit één rustig overzicht."
         actions={
           <>
+            <RealtimeDashboardSync profileLabel="leerling-dashboard" />
             <Button asChild variant="outline" className="h-9 rounded-full text-[13px]">
               <Link href="/leerling/profiel">Profiel bijwerken</Link>
             </Button>
@@ -98,6 +114,13 @@ export default async function LeerlingDashboardPage() {
             : undefined
         }
       />
+
+      <SharedLessonCompass
+        boards={lessonCompassBoards.slice(0, 3)}
+        role="leerling"
+      />
+
+      <LessonCheckinPanel boards={lessonCheckinBoards} role="leerling" />
 
       <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
         <InsightPanel

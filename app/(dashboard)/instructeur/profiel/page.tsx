@@ -14,8 +14,8 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { AvatarUploadCard } from "@/components/profile/avatar-upload-card";
-import { InstructorReviewReplyDialog } from "@/components/reviews/instructor-review-reply-dialog";
 import { ProfileForm } from "@/components/profile/profile-form";
+import { InstructorReviewReplyDialog } from "@/components/reviews/instructor-review-reply-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +25,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getCurrentInstructeurRecord, getCurrentProfile } from "@/lib/data/profiles";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getInstructorReviews } from "@/lib/data/instructors";
+import { getCurrentProfile, getCurrentInstructeurRecord } from "@/lib/data/profiles";
 import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
 import { formatCurrency, formatStars, getInitials } from "@/lib/format";
 import { instructorColorOptions } from "@/lib/instructor-profile";
@@ -66,7 +67,9 @@ export default async function InstructeurProfielPage() {
     instructor?.profielfoto_kleur ?? instructorColorOptions[0].value;
   const conversionLevel = getConversionLevel(safeScore);
   const profileName = profile?.volledige_naam ?? "Instructeur";
-
+  const averageScoreLabel = reviewSummary.reviewCount
+    ? formatStars(reviewSummary.averageScore)
+    : "Nog geen score";
   const improvementTips = [
     !avatarUrl ? "Upload een echte profielfoto voor meer vertrouwen." : null,
     !profile?.volledige_naam ? "Vul je volledige naam in." : null,
@@ -100,6 +103,54 @@ export default async function InstructeurProfielPage() {
     },
   ];
 
+  const summaryCards = [
+    {
+      label: "Profielscore",
+      value: `${safeScore}%`,
+      description: conversionLevel,
+      icon: Rocket,
+    },
+    {
+      label: "Reviews",
+      value: averageScoreLabel,
+      description: reviewSummary.reviewCount
+        ? `${reviewSummary.reviewCount} review${reviewSummary.reviewCount === 1 ? "" : "s"}`
+        : "Nog geen social proof",
+      icon: Star,
+    },
+    {
+      label: "Werkgebied",
+      value: workArea.length ? `${workArea.length}` : "0",
+      description: workArea.length ? "Regio's ingevuld" : "Nog regio's toevoegen",
+      icon: MapPin,
+    },
+    {
+      label: "Open punten",
+      value: improvementTips.length ? `${improvementTips.length}` : "0",
+      description: improvementTips.length ? "Nog slim om te verfijnen" : "Profiel staat sterk",
+      icon: BadgeCheck,
+    },
+  ];
+
+  const reviewMetrics = [
+    {
+      label: "Gemiddelde score",
+      value: reviewSummary.reviewCount ? averageScoreLabel : "Nog geen score",
+    },
+    {
+      label: "Reactiegraad",
+      value: `${reviewSummary.replyRate}%`,
+    },
+    {
+      label: "Laatste 30 dagen",
+      value: `${reviewSummary.recentThirtyDayCount} review${reviewSummary.recentThirtyDayCount === 1 ? "" : "s"}`,
+    },
+    {
+      label: "Gemeld",
+      value: `${reviewSummary.reportedCount}`,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -119,22 +170,23 @@ export default async function InstructeurProfielPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.18),transparent_26%),radial-gradient(circle_at_88%_18%,rgba(56,189,248,0.24),transparent_24%),radial-gradient(circle_at_70%_86%,rgba(249,115,22,0.16),transparent_24%)]" />
         <div className="relative grid gap-7 xl:grid-cols-[1fr_auto] xl:items-end">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/78">
               <Sparkles className="size-3.5" />
               Profiel cockpit
             </div>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-              Laat leerlingen in één blik vertrouwen krijgen.
+              Laat leerlingen in een blik vertrouwen krijgen.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-white/72 sm:text-[15px]">
-              Je profiel is je verkooppagina. Maak direct duidelijk waar je lesgeeft, waar je goed in bent en waarom leerlingen voor jou moeten kiezen.
+              Je profiel is je verkooppagina. Maak direct duidelijk waar je lesgeeft,
+              waar je goed in bent en waarom leerlingen voor jou moeten kiezen.
             </p>
           </div>
 
           <div className="grid min-w-[17rem] gap-3 rounded-[1.6rem] border border-white/14 bg-white/10 p-4 backdrop-blur">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold tracking-[0.2em] text-white/62 uppercase">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/62">
                   Profielscore
                 </p>
                 <p className="mt-1 text-4xl font-semibold">{safeScore}%</p>
@@ -154,333 +206,457 @@ export default async function InstructeurProfielPage() {
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <AvatarUploadCard
-          avatarUrl={avatarUrl}
-          name={profileName}
-          fallbackClassName={fallbackColor}
-        />
-
-        <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))]">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
-                Openbare indruk
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
-                Leerling-preview
-              </h2>
-            </div>
-            <Badge
-              variant={
-                instructor?.profiel_status === "goedgekeurd" ? "success" : "warning"
-              }
-            >
-              {instructor?.profiel_status ?? "concept"}
-            </Badge>
-          </div>
-
-          <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5">
-            <div className="flex items-start gap-3">
-              <div
-                className={`relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br ${fallbackColor} text-sm font-semibold text-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.42)]`}
-              >
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt="Profielfoto"
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                  />
-                ) : (
-                  getInitials(profileName)
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-semibold text-slate-950 dark:text-white">
-                  {profile?.volledige_naam || "Naam nog invullen"}
-                </h3>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                  {workArea.length ? workArea.join(" • ") : "Werkgebied nog invullen"}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {summaryCards.map((item) => (
+          <Card
+            key={item.label}
+            className="border border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <item.icon className="size-4 text-primary" />
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  {item.label}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                    <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                    {reviewSummary.reviewCount
-                      ? formatStars(reviewSummary.averageScore)
-                      : "Nog geen reviews"}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                    <BadgeCheck className="size-3.5" />
-                    {reviewSummary.reviewCount} review
-                    {reviewSummary.reviewCount === 1 ? "" : "s"}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                    <WalletCards className="size-3.5" />
-                    {formatCurrency(Number(instructor?.prijs_per_les ?? 0))}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                    <Camera className="size-3.5" />
-                    {avatarUrl ? "Foto actief" : "Foto mist"}
-                  </span>
-                </div>
               </div>
-            </div>
-            <p className="mt-4 line-clamp-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
-              {instructor?.bio ||
-                "Schrijf een korte introductie zodat leerlingen direct snappen hoe jij lesgeeft en waarin je uitblinkt."}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {specialisaties.length ? (
-                specialisaties.slice(0, 4).map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200"
-                  >
-                    {tag}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-slate-500 dark:text-slate-400">
-                  Nog geen specialisaties toegevoegd.
-                </span>
-              )}
-            </div>
-            <div className="mt-4 grid gap-2">
-              {reviewSummary.latestReviews.length ? (
-                reviewSummary.latestReviews.map((review) => (
+              <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
+                {item.value}
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                {item.description}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Tabs defaultValue="overzicht" className="space-y-4">
+        <TabsList className="h-auto w-full rounded-[1.4rem] bg-white/70 p-1 dark:bg-white/5">
+          <TabsTrigger value="overzicht" className="min-h-10 rounded-[1rem] px-3 text-sm">
+            Overzicht
+          </TabsTrigger>
+          <TabsTrigger value="bewerken" className="min-h-10 rounded-[1rem] px-3 text-sm">
+            Bewerken
+          </TabsTrigger>
+          <TabsTrigger value="reviews" className="min-h-10 rounded-[1rem] px-3 text-sm">
+            Reviews
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overzicht" className="space-y-5">
+          <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
+            <AvatarUploadCard
+              avatarUrl={avatarUrl}
+              name={profileName}
+              fallbackClassName={fallbackColor}
+            />
+
+            <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                    Openbare indruk
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
+                    Leerling-preview
+                  </h2>
+                </div>
+                <Badge
+                  variant={
+                    instructor?.profiel_status === "goedgekeurd"
+                      ? "success"
+                      : "warning"
+                  }
+                >
+                  {instructor?.profiel_status ?? "concept"}
+                </Badge>
+              </div>
+
+              <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5">
+                <div className="flex items-start gap-3">
                   <div
-                    key={review.id}
-                    className="rounded-[1rem] border border-slate-200 bg-white/90 p-3 dark:border-white/10 dark:bg-white/6"
+                    className={`relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br ${fallbackColor} text-sm font-semibold text-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.42)]`}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                        {review.titel}
-                      </p>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {review.leerling_naam} â€¢ {review.datum}
+                    {avatarUrl ? (
+                      <Image
+                        src={avatarUrl}
+                        alt="Profielfoto"
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      getInitials(profileName)
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold text-slate-950 dark:text-white">
+                      {profile?.volledige_naam || "Naam nog invullen"}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                      {workArea.length
+                        ? workArea.join(" • ")
+                        : "Werkgebied nog invullen"}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
+                        <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                        {reviewSummary.reviewCount ? averageScoreLabel : "Nog geen reviews"}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
+                        <BadgeCheck className="size-3.5" />
+                        {reviewSummary.reviewCount} review
+                        {reviewSummary.reviewCount === 1 ? "" : "s"}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
+                        <WalletCards className="size-3.5" />
+                        {formatCurrency(Number(instructor?.prijs_per_les ?? 0))}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
+                        <Camera className="size-3.5" />
+                        {avatarUrl ? "Foto actief" : "Foto mist"}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                      {review.tekst}
-                    </p>
                   </div>
-                ))
-              ) : (
-                <div className="rounded-[1rem] border border-dashed border-slate-300 bg-white/70 p-3 text-sm leading-6 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                  Zodra leerlingen afgeronde lessen beoordelen, zie je hier meteen de eerste social proof voor je profielpreview.
                 </div>
-              )}
+                <p className="mt-4 line-clamp-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  {instructor?.bio ||
+                    "Schrijf een korte introductie zodat leerlingen direct snappen hoe jij lesgeeft en waarin je uitblinkt."}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {specialisaties.length ? (
+                    specialisaties.slice(0, 4).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200"
+                      >
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      Nog geen specialisaties toegevoegd.
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {reviewSummary.latestReviews.length ? (
+                    reviewSummary.latestReviews.slice(0, 2).map((review) => (
+                      <div
+                        key={review.id}
+                        className="rounded-[1rem] border border-slate-200 bg-white/90 p-3 dark:border-white/10 dark:bg-white/6"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                            {review.titel}
+                          </p>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {review.leerling_naam} • {review.datum}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                          {review.tekst}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[1rem] border border-dashed border-slate-300 bg-white/70 p-3 text-sm leading-6 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                      Zodra leerlingen afgeronde lessen beoordelen, zie je hier meteen
+                      de eerste social proof voor je profielpreview.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+            <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
+              <div className="flex items-center gap-2">
+                <BadgeCheck className="size-4 text-primary" />
+                <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
+                  Verbeterpunten
+                </h2>
+              </div>
+              <div className="mt-4 grid gap-2">
+                {(improvementTips.length
+                  ? improvementTips
+                  : [
+                      "Je profiel staat er sterk bij. Houd prijs, werkgebied en beschikbaarheid actueel.",
+                    ]
+                ).map((tip) => (
+                  <div
+                    key={tip}
+                    className="rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm leading-6 text-slate-700 dark:bg-white/6 dark:text-slate-300"
+                  >
+                    {tip}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="space-y-5">
+              <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Snelle check
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {quickChecks.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-white/80 px-3 py-2.5 text-sm shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6"
+                    >
+                      <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                        <item.icon className="size-4" />
+                        {item.label}
+                      </span>
+                      <span className="font-semibold text-slate-950 dark:text-white">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Review snapshot
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {reviewMetrics.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm dark:bg-white/6"
+                    >
+                      <span className="text-slate-600 dark:text-slate-300">
+                        {item.label}
+                      </span>
+                      <span className="font-semibold text-slate-950 dark:text-white">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           </div>
-        </section>
-      </div>
+        </TabsContent>
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className="border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(15,23,42,0.96))] dark:text-white dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
-          <CardHeader>
-            <CardTitle className="text-slate-950 dark:text-white">
-              Profielgegevens
-            </CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-300">
-              Deze informatie wordt zichtbaar op je openbare instructeurspagina.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProfileForm
-              role="instructeur"
-              tone="urban"
-              initialValues={{
-                volledigeNaam: profile?.volledige_naam ?? "",
-                telefoon: profile?.telefoon ?? "",
-                bio: instructor?.bio ?? "",
-                ervaringJaren: instructor?.ervaring_jaren ?? 0,
-                werkgebied: workArea.join(", "),
-                prijsPerLes: Number(instructor?.prijs_per_les ?? 0),
-                transmissie: instructor?.transmissie ?? "beide",
-                specialisaties: specialisaties.join(", "),
-                profielfotoKleur: fallbackColor,
-              }}
-            />
-          </CardContent>
-        </Card>
+        <TabsContent value="bewerken" className="space-y-5">
+          <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <Card className="border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(15,23,42,0.96))] dark:text-white dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
+              <CardHeader>
+                <CardTitle className="text-slate-950 dark:text-white">
+                  Profielgegevens
+                </CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-300">
+                  Deze informatie wordt zichtbaar op je openbare instructeurspagina.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProfileForm
+                  role="instructeur"
+                  tone="urban"
+                  initialValues={{
+                    volledigeNaam: profile?.volledige_naam ?? "",
+                    telefoon: profile?.telefoon ?? "",
+                    bio: instructor?.bio ?? "",
+                    ervaringJaren: instructor?.ervaring_jaren ?? 0,
+                    werkgebied: workArea.join(", "),
+                    prijsPerLes: Number(instructor?.prijs_per_les ?? 0),
+                    transmissie: instructor?.transmissie ?? "beide",
+                    specialisaties: specialisaties.join(", "),
+                    profielfotoKleur: fallbackColor,
+                  }}
+                />
+              </CardContent>
+            </Card>
 
-        <div className="space-y-5">
-          <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
-            <div className="flex items-center gap-2">
-              <BadgeCheck className="size-4 text-primary" />
-              <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
-                Verbeterpunten
-              </h2>
-            </div>
-            <div className="mt-4 grid gap-2">
-              {(improvementTips.length
-                ? improvementTips
-                : [
-                    "Je profiel staat er sterk bij. Houd prijs, werkgebied en beschikbaarheid actueel.",
-                  ]
-              ).map((tip) => (
-                <div
-                  key={tip}
-                  className="rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm leading-6 text-slate-700 dark:bg-white/6 dark:text-slate-300"
-                >
-                  {tip}
+            <div className="space-y-5">
+              <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
+                <div className="flex items-center gap-2">
+                  <BadgeCheck className="size-4 text-primary" />
+                  <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
+                    Nu slim om te verbeteren
+                  </h2>
                 </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-            <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
-              Snelle check
-            </p>
-            <div className="mt-3 grid gap-2">
-              {quickChecks.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between gap-3 rounded-[1rem] bg-white/80 px-3 py-2.5 text-sm shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6"
-                >
-                  <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                    <item.icon className="size-4" />
-                    {item.label}
-                  </span>
-                  <span className="font-semibold text-slate-950 dark:text-white">
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
-            <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
-              Review analytics
-            </p>
-            <div className="mt-3 grid gap-2">
-              {[
-                {
-                  label: "Gemiddelde score",
-                  value: reviewSummary.reviewCount
-                    ? `${formatStars(reviewSummary.averageScore)}`
-                    : "Nog geen score",
-                },
-                {
-                  label: "Reactiegraad",
-                  value: `${reviewSummary.replyRate}%`,
-                },
-                {
-                  label: "Laatste 30 dagen",
-                  value: `${reviewSummary.recentThirtyDayCount} review${reviewSummary.recentThirtyDayCount === 1 ? "" : "s"}`,
-                },
-                {
-                  label: "Gemeld",
-                  value: `${reviewSummary.reportedCount}`,
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between gap-3 rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm dark:bg-white/6"
-                >
-                  <span className="text-slate-600 dark:text-slate-300">
-                    {item.label}
-                  </span>
-                  <span className="font-semibold text-slate-950 dark:text-white">
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 space-y-2">
-              {[5, 4, 3, 2, 1].map((score) => {
-                const count = reviewSummary.distribution[score as 1 | 2 | 3 | 4 | 5];
-                const width =
-                  reviewSummary.reviewCount > 0
-                    ? Math.max(8, Math.round((count / reviewSummary.reviewCount) * 100))
-                    : 0;
-
-                return (
-                  <div key={score} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                      <span>{score} sterren</span>
-                      <span>{count}</span>
+                <div className="mt-4 grid gap-2">
+                  {(improvementTips.length
+                    ? improvementTips
+                    : [
+                        "Je profiel staat er sterk bij. Houd prijs, werkgebied en beschikbaarheid actueel.",
+                      ]
+                  ).map((tip) => (
+                    <div
+                      key={tip}
+                      className="rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm leading-6 text-slate-700 dark:bg-white/6 dark:text-slate-300"
+                    >
+                      {tip}
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#2563eb,#38bdf8)]"
-                        style={{ width: `${width}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        </div>
-      </div>
-
-      <Card className="border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(15,23,42,0.96))] dark:text-white dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
-        <CardHeader>
-          <CardTitle className="text-slate-950 dark:text-white">
-            Reviews en replies
-          </CardTitle>
-          <CardDescription className="text-slate-600 dark:text-slate-300">
-            Reageer op reviews zodat toekomstige leerlingen zien hoe jij communiceert en opvolgt.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          {publicReviews.length ? (
-            publicReviews.map((review) => (
-              <div
-                key={review.id}
-                className="rounded-[1.15rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                        {review.titel}
-                      </p>
-                      <Badge variant="warning">{review.score}/5</Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {review.leerling_naam} • {review.datum}
-                    </p>
-                  </div>
-                  <InstructorReviewReplyDialog
-                    reviewId={review.id}
-                    reviewerName={review.leerling_naam}
-                    reviewTitle={review.titel}
-                    initialReply={review.antwoord_tekst}
-                  />
+                  ))}
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  {review.tekst}
+              </section>
+
+              <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Basis op orde
                 </p>
-                {review.antwoord_tekst ? (
-                  <div className="mt-3 rounded-[1rem] border border-sky-100 bg-sky-50/70 p-3 dark:border-sky-300/16 dark:bg-sky-400/10">
-                    <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-100">
-                      Jouw reply
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
-                      {review.antwoord_tekst}
-                    </p>
-                    {review.antwoord_datum ? (
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        Gepubliceerd op {review.antwoord_datum}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ))
-          ) : (
-            <div className="rounded-[1.15rem] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-sm leading-6 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">
-              Zodra leerlingen reviews plaatsen, kun je hier ook direct reageren.
+                <div className="mt-3 grid gap-2">
+                  {quickChecks.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-white/80 px-3 py-2.5 text-sm shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6"
+                    >
+                      <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                        <item.icon className="size-4" />
+                        {item.label}
+                      </span>
+                      <span className="font-semibold text-slate-950 dark:text-white">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="reviews" className="space-y-5">
+          <div className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]">
+            <section className="space-y-5">
+              <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Review analytics
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {reviewMetrics.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm dark:bg-white/6"
+                    >
+                      <span className="text-slate-600 dark:text-slate-300">
+                        {item.label}
+                      </span>
+                      <span className="font-semibold text-slate-950 dark:text-white">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 space-y-2">
+                  {[5, 4, 3, 2, 1].map((score) => {
+                    const count =
+                      reviewSummary.distribution[score as 1 | 2 | 3 | 4 | 5];
+                    const width =
+                      reviewSummary.reviewCount > 0
+                        ? Math.max(
+                            8,
+                            Math.round((count / reviewSummary.reviewCount) * 100)
+                          )
+                        : 0;
+
+                    return (
+                      <div key={score} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                          <span>{score} sterren</span>
+                          <span>{count}</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#2563eb,#38bdf8)]"
+                            style={{ width: `${width}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                  Reputatie
+                </p>
+                <div className="mt-3 grid gap-2">
+                  <div className="rounded-[1rem] bg-white/80 px-3 py-3 text-sm leading-6 text-slate-700 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6 dark:text-slate-300">
+                    Reageer op sterke reviews snel, zodat nieuwe leerlingen zien dat je
+                    actief opvolgt en betrokken communiceert.
+                  </div>
+                  <div className="rounded-[1rem] bg-white/80 px-3 py-3 text-sm leading-6 text-slate-700 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6 dark:text-slate-300">
+                    Gebruik replies vooral om rust, helderheid en examengerichte begeleiding
+                    terug te laten komen.
+                  </div>
+                </div>
+              </section>
+            </section>
+
+            <Card className="border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(15,23,42,0.96))] dark:text-white dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
+              <CardHeader>
+                <CardTitle className="text-slate-950 dark:text-white">
+                  Reviews en replies
+                </CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-300">
+                  Reageer op reviews zodat toekomstige leerlingen zien hoe jij
+                  communiceert en opvolgt.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                {publicReviews.length ? (
+                  publicReviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="rounded-[1.15rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                              {review.titel}
+                            </p>
+                            <Badge variant="warning">{review.score}/5</Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {review.leerling_naam} • {review.datum}
+                          </p>
+                        </div>
+                        <InstructorReviewReplyDialog
+                          reviewId={review.id}
+                          reviewerName={review.leerling_naam}
+                          reviewTitle={review.titel}
+                          initialReply={review.antwoord_tekst}
+                        />
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {review.tekst}
+                      </p>
+                      {review.antwoord_tekst ? (
+                        <div className="mt-3 rounded-[1rem] border border-sky-100 bg-sky-50/70 p-3 dark:border-sky-300/16 dark:bg-sky-400/10">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-100">
+                            Jouw reply
+                          </p>
+                          <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
+                            {review.antwoord_tekst}
+                          </p>
+                          {review.antwoord_datum ? (
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                              Gepubliceerd op {review.antwoord_datum}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[1.15rem] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-sm leading-6 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">
+                    Zodra leerlingen reviews plaatsen, kun je hier ook direct reageren.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

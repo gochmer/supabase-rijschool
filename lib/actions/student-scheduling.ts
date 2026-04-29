@@ -41,7 +41,7 @@ export async function updateStudentSelfSchedulingAccessAction(
     return {
       success: false,
       message:
-        "Deze leerling kan pas planningstoegang krijgen zodra er een geaccepteerde aanvraag of les is.",
+        "Deze leerling kan pas planningstoegang krijgen zodra hij actief aan jouw traject of werkplek is gekoppeld.",
     };
   }
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   calculateStudentProgressPercentage,
@@ -10,32 +11,6 @@ import {
   isStudentProgressStatus,
   normalizeStudentProgressDate,
 } from "@/lib/student-progress";
-
-async function instructorHasStudentLink(
-  instructeurId: string,
-  leerlingId: string
-) {
-  const supabase = await createServerClient();
-
-  const [lessonsResult, requestsResult] = await Promise.all([
-    supabase
-      .from("lessen")
-      .select("id")
-      .eq("instructeur_id", instructeurId)
-      .eq("leerling_id", leerlingId)
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("lesaanvragen")
-      .select("id")
-      .eq("instructeur_id", instructeurId)
-      .eq("leerling_id", leerlingId)
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  return Boolean(lessonsResult.data || requestsResult.data);
-}
 
 async function syncStudentProgressPercentage(leerlingId: string) {
   const supabase = await createServerClient();
@@ -109,7 +84,10 @@ export async function saveStudentProgressAssessmentAction(input: {
     };
   }
 
-  const hasLink = await instructorHasStudentLink(instructeur.id, input.leerlingId);
+  const hasLink = await hasInstructorStudentPlanningRelationship(
+    instructeur.id,
+    input.leerlingId
+  );
 
   if (!hasLink) {
     return {
@@ -184,7 +162,10 @@ export async function clearStudentProgressAssessmentAction(input: {
     };
   }
 
-  const hasLink = await instructorHasStudentLink(instructeur.id, input.leerlingId);
+  const hasLink = await hasInstructorStudentPlanningRelationship(
+    instructeur.id,
+    input.leerlingId
+  );
 
   if (!hasLink) {
     return {
@@ -247,7 +228,10 @@ export async function saveStudentProgressLessonNoteAction(input: {
     };
   }
 
-  const hasLink = await instructorHasStudentLink(instructeur.id, input.leerlingId);
+  const hasLink = await hasInstructorStudentPlanningRelationship(
+    instructeur.id,
+    input.leerlingId
+  );
 
   if (!hasLink) {
     return {

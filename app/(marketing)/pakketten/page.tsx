@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, PackageCheck } from "lucide-react";
 
 import { Reveal } from "@/components/marketing/homepage-motion";
 import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
+import { RouteCoach } from "@/components/marketing/route-coach";
 import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { PackageMatchmaker } from "@/components/packages/package-matchmaker";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { formatCurrency } from "@/lib/format";
 import { rijlesTypeOptions } from "@/lib/lesson-types";
 import { getPackageCoverObjectPosition } from "@/lib/package-covers";
 import { getPackageVisualConfig } from "@/lib/package-visuals";
+import { seoCityConfigs } from "@/lib/seo-cities";
 import { cn } from "@/lib/utils";
 
 const advisorSignals = [
@@ -47,6 +49,10 @@ const packagesFaqItems = [
 
 export default async function PakkettenPage() {
   const packages = await getPublicPackages();
+  const routeCoachCities = seoCityConfigs.slice(0, 6).map((city) => ({
+    slug: city.slug,
+    name: city.name,
+  }));
   const cheapestPackage = packages
     .filter((pakket) => pakket.prijs > 0)
     .sort((a, b) => a.prijs - b.prijs)[0];
@@ -196,6 +202,10 @@ export default async function PakkettenPage() {
           <div className="h-px flex-1 bg-[linear-gradient(90deg,rgba(56,189,248,0.34),rgba(148,163,184,0.2),transparent)]" />
         </div>
         <PackageMatchmaker packages={packages} />
+      </section>
+
+      <section className="site-shell mx-auto w-full px-4 pb-8 pt-8 sm:px-6 lg:px-8">
+        <RouteCoach cities={routeCoachCities} />
       </section>
 
       <section className="site-shell mx-auto w-full px-4 pt-10 sm:px-6 lg:px-8">

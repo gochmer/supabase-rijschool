@@ -10,11 +10,13 @@ import {
 
 import { MarketingFaqSection } from "@/components/marketing/marketing-faq-section";
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { RouteCoach } from "@/components/marketing/route-coach";
 import { FeaturedInstructorsCarousel } from "@/components/marketing/featured-instructors-carousel";
 import { InstructorSearchCard } from "@/components/marketing/instructor-search-card";
 import { Button } from "@/components/ui/button";
 import { getPublicInstructorsByLessonType } from "@/lib/data/instructors";
 import { getPublicInstructorPackageMap } from "@/lib/data/packages";
+import { seoCityConfigs } from "@/lib/seo-cities";
 
 const homeFaqItems = [
   {
@@ -36,6 +38,10 @@ const homeFaqItems = [
 
 export default async function HomePage() {
   const featuredInstructors = (await getPublicInstructorsByLessonType("auto")).slice(0, 6);
+  const routeCoachCities = seoCityConfigs.slice(0, 6).map((city) => ({
+    slug: city.slug,
+    name: city.name,
+  }));
   const instructorIds = featuredInstructors.map((instructor) => instructor.id);
   const packagesByInstructorId = instructorIds.length
     ? await getPublicInstructorPackageMap(instructorIds, "auto")
@@ -123,6 +129,10 @@ export default async function HomePage() {
             </div>
           )}
         </Reveal>
+      </section>
+
+      <section className="site-shell mx-auto w-full px-4 pb-10 sm:px-6 lg:px-8">
+        <RouteCoach cities={routeCoachCities} />
       </section>
 
       <section className="site-shell mx-auto w-full px-4 pb-10 sm:px-6 lg:px-8">

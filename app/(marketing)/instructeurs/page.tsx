@@ -3,6 +3,7 @@ import { ArrowRight, MapPinned, PackageCheck, SearchCheck, Star } from "lucide-r
 
 import { InstructorFinder } from "@/components/instructors/instructor-finder";
 import { Reveal } from "@/components/marketing/homepage-motion";
+import { RouteCoach } from "@/components/marketing/route-coach";
 import { SeoBreadcrumbs } from "@/components/marketing/seo-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,10 @@ import { seoCityConfigs } from "@/lib/seo-cities";
 const primaryCities = seoCityConfigs.slice(0, 6);
 const featuredCities = seoCityConfigs.slice(0, 4);
 const compactCities = seoCityConfigs.slice(0, 3);
+const routeCoachCities = seoCityConfigs.slice(0, 6).map((city) => ({
+  slug: city.slug,
+  name: city.name,
+}));
 
 function SeoLinkPill({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -127,6 +132,10 @@ export default async function InstructeursPage() {
         <Reveal>
           <InstructorFinder instructors={liveInstructors} favoriteInstructorIds={favoriteInstructorIds} packagesByInstructorId={packagesByInstructorId} />
         </Reveal>
+      </section>
+
+      <section className="site-shell mx-auto w-full px-4 pb-8 sm:px-6 lg:px-8">
+        <RouteCoach cities={routeCoachCities} />
       </section>
 
       <section className="site-shell mx-auto w-full px-4 pb-10 sm:px-6 lg:px-8">

@@ -656,10 +656,12 @@ export function PackageStudio({
   packages,
   scope,
   publicProfilePath,
+  showDashboardSummary = true,
 }: {
   packages: Pakket[];
   scope: "admin" | "instructeur";
   publicProfilePath?: string;
+  showDashboardSummary?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -1100,43 +1102,47 @@ export function PackageStudio({
 
   return (
     <div className="package-studio space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          {
-            label: "Totaal pakketten",
-            value: `${packages.length}`,
-            icon: Boxes,
-          },
-          {
-            label: "Actief zichtbaar",
-            value: `${activeCount}`,
-            icon: Sparkles,
-          },
-          {
-            label: "Voertuigmix",
-            value: `${autoCount} auto / ${motorCount} motor / ${vrachtwagenCount} vrachtwagen`,
-            icon: Pin,
-          },
-          {
-            label: "Gemiddelde prijs",
-            value: packages.length ? formatCurrency(averagePrice) : "Nog leeg",
-            icon: BadgeEuro,
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="rounded-[1.45rem] border border-white/80 bg-white/88 p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_20px_60px_-40px_rgba(15,23,42,0.56)]"
-          >
-            <div className="flex items-center gap-2">
-              <item.icon className="size-4 text-sky-700" />
-              <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                {item.label}
+      {showDashboardSummary ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Totaal pakketten",
+              value: `${packages.length}`,
+              icon: Boxes,
+            },
+            {
+              label: "Actief zichtbaar",
+              value: `${activeCount}`,
+              icon: Sparkles,
+            },
+            {
+              label: "Voertuigmix",
+              value: `${autoCount} auto / ${motorCount} motor / ${vrachtwagenCount} vrachtwagen`,
+              icon: Pin,
+            },
+            {
+              label: "Gemiddelde prijs",
+              value: packages.length ? formatCurrency(averagePrice) : "Nog leeg",
+              icon: BadgeEuro,
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-[1.45rem] border border-white/80 bg-white/88 p-4 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_20px_60px_-40px_rgba(15,23,42,0.56)]"
+            >
+              <div className="flex items-center gap-2">
+                <item.icon className="size-4 text-sky-700" />
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                  {item.label}
+                </p>
+              </div>
+              <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
+                {item.value}
               </p>
             </div>
-            <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">{item.value}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="rounded-[1.9rem] border border-white/80 bg-white/90 p-5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.26)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

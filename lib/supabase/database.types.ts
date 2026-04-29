@@ -516,6 +516,60 @@ export type Database = {
           },
         ]
       }
+      leskompassen: {
+        Row: {
+          created_at: string
+          id: string
+          instructeur_focus: string | null
+          instructeur_id: string
+          instructeur_missie: string | null
+          laatste_update_door: string | null
+          leerling_confidence: number | null
+          leerling_hulpvraag: string | null
+          leerling_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instructeur_focus?: string | null
+          instructeur_id: string
+          instructeur_missie?: string | null
+          laatste_update_door?: string | null
+          leerling_confidence?: number | null
+          leerling_hulpvraag?: string | null
+          leerling_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instructeur_focus?: string | null
+          instructeur_id?: string
+          instructeur_missie?: string | null
+          laatste_update_door?: string | null
+          leerling_confidence?: number | null
+          leerling_hulpvraag?: string | null
+          leerling_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leskompassen_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leskompassen_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessen: {
         Row: {
           afwezigheids_reden: string | null

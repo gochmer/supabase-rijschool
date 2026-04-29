@@ -9,6 +9,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   calculateStudentProgressPercentage,
@@ -26,6 +27,14 @@ type InstructorStudentRequestRow = {
   status: string | null;
   pakket_naam_snapshot: string | null;
   created_at: string;
+};
+
+type InstructorStudentLinkRow = {
+  leerling_id: string | null;
+  created_at: string;
+  bron: string | null;
+  onboarding_notitie: string | null;
+  intake_checklist_keys: string[] | null;
 };
 
 type StudentSchedulingAccessRow = {
@@ -65,6 +74,11 @@ type StudentProgressLessonNoteRow = {
 type ProgressInstructorRow = {
   id: string;
   profile_id: string;
+};
+
+type StudentAuthState = {
+  accountStatus: "uitgenodigd" | "actief";
+  lastSignInAt: string | null;
 };
 
 const ACTIVE_PLANNING_REQUEST_STATUSES = [
@@ -236,7 +250,7 @@ export async function getInstructeurStudentsWorkspace() {
   }
 
   const supabase = await createServerClient();
-  const [lessonsResult, requestsResult] = (await Promise.all([
+  const [lessonsResult, requestsResult, linksResult] = (await Promise.all([
     supabase
       .from("lessen")
       .select("leerling_id, start_at, status")
@@ -247,17 +261,24 @@ export async function getInstructeurStudentsWorkspace() {
       .select("leerling_id, status, pakket_naam_snapshot, created_at")
       .eq("instructeur_id", instructeur.id)
       .not("leerling_id", "is", null),
+    supabase
+      .from("instructeur_leerling_koppelingen" as never)
+      .select("leerling_id, created_at, bron, onboarding_notitie, intake_checklist_keys")
+      .eq("instructeur_id", instructeur.id)
+      .not("leerling_id", "is", null),
   ])) as unknown as [
     { data: InstructorStudentLessonRow[] | null },
     { data: InstructorStudentRequestRow[] | null },
+    { data: InstructorStudentLinkRow[] | null },
   ];
 
   const lessonRows = lessonsResult.data ?? [];
   const requestRows = requestsResult.data ?? [];
+  const linkRows = linksResult.data ?? [];
 
   const leerlingIds = Array.from(
     new Set(
-      [...lessonRows, ...requestRows]
+      [...lessonRows, ...requestRows, ...linkRows]
         .map((row) => row.leerling_id)
         .filter((value): value is string => Boolean(value))
     )
@@ -343,6 +364,30 @@ export async function getInstructeurStudentsWorkspace() {
     ((notesResult.data ?? []) as StudentProgressLessonNoteRow[]).map((note) => ({
       ...note,
     })) ?? [];
+  const authStateMap = new Map<string, StudentAuthState>();
+
+  if (profileIds.length) {
+    const admin = await createAdminClient();
+    const authStates = await Promise.all(
+      profileIds.map(async (profileId) => {
+        const { data } = await admin.auth.admin.getUserById(profileId);
+        const user = data.user;
+        const isActive = Boolean(user?.last_sign_in_at || user?.email_confirmed_at);
+
+        return [
+          profileId,
+          {
+            accountStatus: isActive ? "actief" : "uitgenodigd",
+            lastSignInAt: user?.last_sign_in_at ?? null,
+          },
+        ] as const;
+      })
+    );
+
+    for (const [profileId, authState] of authStates) {
+      authStateMap.set(profileId, authState);
+    }
+  }
 
   const assessmentsByStudent = new Map<string, StudentProgressAssessment[]>();
 
@@ -359,6 +404,16 @@ export async function getInstructeurStudentsWorkspace() {
       pakket_naam_snapshot: string | null;
       created_at: string;
     }>
+  >();
+
+  const manualLinksByStudent = new Map<
+    string,
+    {
+      created_at: string;
+      bron: string | null;
+      onboarding_notitie: string | null;
+      intake_checklist_keys: string[];
+    }
   >();
 
   for (const request of requestRows) {
@@ -392,12 +447,26 @@ export async function getInstructeurStudentsWorkspace() {
     lessonsByStudent.set(lesson.leerling_id, current);
   }
 
+  for (const link of linkRows) {
+    if (!link.leerling_id) {
+      continue;
+    }
+
+    manualLinksByStudent.set(link.leerling_id, {
+      created_at: link.created_at,
+      bron: link.bron,
+      onboarding_notitie: link.onboarding_notitie,
+      intake_checklist_keys: link.intake_checklist_keys ?? [],
+    });
+  }
+
   const students: InstructorStudentProgressRow[] = (leerlingenRows ?? []).map((student) => {
     const profile = profileMap.get(student.profile_id);
     const studentAssessments = assessmentsByStudent.get(student.id) ?? [];
     const summary = getStudentProgressSummary(studentAssessments);
     const relatedLessons = lessonsByStudent.get(student.id) ?? [];
     const relatedRequests = requestsByStudent.get(student.id) ?? [];
+    const manualLink = manualLinksByStudent.get(student.id) ?? null;
     const nextLesson = [...relatedLessons]
       .filter((lesson) => lesson.start_at)
       .sort((left, right) =>
@@ -426,6 +495,7 @@ export async function getInstructeurStudentsWorkspace() {
       ? calculateStudentProgressPercentage(studentAssessments)
       : Number(student.voortgang_percentage ?? 0);
     const planningVrijTeGeven =
+      Boolean(manualLink) ||
       relatedLessons.length > 0 ||
       relatedRequests.some((request) =>
         ACTIVE_PLANNING_REQUEST_STATUSES.includes(
@@ -437,11 +507,13 @@ export async function getInstructeurStudentsWorkspace() {
 
     return {
       id: student.id,
+      profileId: student.profile_id,
       naam: profile?.volledige_naam ?? "Leerling",
       pakket:
         (student.pakket_id ? packageMap.get(student.pakket_id) : null) ??
         latestRequest?.pakket_naam_snapshot ??
         "Nog geen pakket",
+      pakketId: student.pakket_id ?? null,
       voortgang: computedProgress,
       volgendeLes: formatRelativeOrFallback(nextLesson?.start_at),
       volgendeLesAt: nextLesson?.start_at ?? null,
@@ -450,11 +522,21 @@ export async function getInstructeurStudentsWorkspace() {
         : "Nog geen beoordeling",
       laatsteBeoordelingAt: latestAssessmentDate,
       gekoppeldeLessen: relatedLessons.length,
-      aanvraagStatus: getRequestStatusLabel(latestRequest?.status ?? null),
+      aanvraagStatus:
+        latestRequest?.status != null
+          ? getRequestStatusLabel(latestRequest.status)
+          : manualLink
+            ? "Handmatig gekoppeld"
+            : "Actief traject",
       email: profile?.email ?? "",
       telefoon: profile?.telefoon ?? "",
       zelfInplannenToegestaan,
       planningVrijTeGeven,
+      isHandmatigGekoppeld: Boolean(manualLink),
+      onboardingNotitie: manualLink?.onboarding_notitie ?? null,
+      intakeChecklistKeys: manualLink?.intake_checklist_keys ?? [],
+      accountStatus: authStateMap.get(student.profile_id)?.accountStatus,
+      lastSignInAt: authStateMap.get(student.profile_id)?.lastSignInAt ?? null,
     };
   });
 

@@ -617,6 +617,65 @@ export async function notifyLearnerAboutLessonAttendance({
   });
 }
 
+export async function notifyLearnerAboutManualOnboarding({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  packageName,
+  selfSchedulingAllowed,
+  onboardingNote,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  packageName?: string | null;
+  selfSchedulingAllowed?: boolean;
+  onboardingNote?: string | null;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  if (!learner?.id) {
+    return;
+  }
+
+  const title = "Je bent toegevoegd door een instructeur";
+  const text = selfSchedulingAllowed
+    ? `${instructeurNaam} heeft je toegevoegd en je mag direct zelf een moment kiezen in de agenda.`
+    : `${instructeurNaam} heeft je toegevoegd aan het traject en zet de eerste les samen met je klaar.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: learner.id,
+    title,
+    text,
+    type: "succes",
+  });
+
+  await deliverNotificationEmail({
+    to: learner.email,
+    subject: title,
+    eyebrow: "Nieuw traject gestart",
+    intro: selfSchedulingAllowed
+      ? `${instructeurNaam} heeft je toegevoegd en meteen toegang gegeven om zelf een boekbaar moment te kiezen.`
+      : `${instructeurNaam} heeft je toegevoegd aan het traject en helpt je nu verder met de eerste lesplanning.`,
+    details: [
+      { label: "Instructeur", value: instructeurNaam },
+      ...(packageName ? [{ label: "Startpakket", value: packageName }] : []),
+      {
+        label: "Agenda",
+        value: selfSchedulingAllowed
+          ? "Direct vrijgegeven voor zelf inplannen"
+          : "Wordt later vrijgegeven of samen ingepland",
+      },
+      ...(onboardingNote?.trim()
+        ? [{ label: "Startnotitie", value: onboardingNote.trim() }]
+        : []),
+    ],
+    ctaPath: "/leerling/dashboard",
+    ctaLabel: selfSchedulingAllowed ? "Open je dashboard" : "Bekijk je traject",
+  });
+}
+
 export async function notifyLearnerToLeaveReview({
   supabase,
   leerlingId,
@@ -675,6 +734,256 @@ export async function notifyLearnerToLeaveReview({
     ],
     ctaPath: "/leerling/reviews",
     ctaLabel: "Laat een review achter",
+  });
+}
+
+export async function notifyLearnerAboutLessonCompassUpdate({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  focus,
+  mission,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  focus?: string | null;
+  mission?: string | null;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  if (!learner?.id) {
+    return;
+  }
+
+  const title = "Je leskompas is bijgewerkt";
+  const text = focus?.trim()
+    ? `${instructeurNaam} heeft jullie lesfocus aangescherpt: ${focus.trim()}`
+    : mission?.trim()
+      ? `${instructeurNaam} heeft een nieuwe mini-missie voor je klaargezet.`
+      : `${instructeurNaam} heeft jullie gedeelde leskompas bijgewerkt.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: learner.id,
+    title,
+    text,
+    type: "info",
+  });
+}
+
+export async function notifyInstructorAboutLessonCompassUpdate({
+  supabase,
+  instructeurId,
+  leerlingNaam,
+  confidence,
+  helpRequest,
+}: {
+  supabase: ServerSupabase;
+  instructeurId: string | null;
+  leerlingNaam: string;
+  confidence?: number | null;
+  helpRequest?: string | null;
+}) {
+  const instructor = await getInstructorContactById(supabase, instructeurId);
+
+  if (!instructor?.id) {
+    return;
+  }
+
+  const title = "Nieuwe leerling check-in";
+  const text = helpRequest?.trim()
+    ? `${leerlingNaam} heeft op het leskompas gedeeld waar hulp nodig is: ${helpRequest.trim()}`
+    : confidence != null
+      ? `${leerlingNaam} heeft het leskompas bijgewerkt met zelfvertrouwen ${confidence}/5.`
+      : `${leerlingNaam} heeft het gedeelde leskompas bijgewerkt.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: instructor.id,
+    title,
+    text,
+    type: "info",
+  });
+}
+
+export async function notifyInstructorAboutLessonCheckin({
+  supabase,
+  instructeurId,
+  leerlingNaam,
+  confidenceLevel,
+  supportRequest,
+  arrivalMode,
+}: {
+  supabase: ServerSupabase;
+  instructeurId: string | null;
+  leerlingNaam: string;
+  confidenceLevel?: number | null;
+  supportRequest?: string | null;
+  arrivalMode?: "op_tijd" | "afstemmen" | null;
+}) {
+  const instructor = await getInstructorContactById(supabase, instructeurId);
+
+  if (!instructor?.id) {
+    return;
+  }
+
+  const title = "Nieuwe voor-les check-in";
+  const text = supportRequest?.trim()
+    ? `${leerlingNaam} heeft gedeeld waar vandaag hulp nodig is: ${supportRequest.trim()}`
+    : arrivalMode === "afstemmen"
+      ? `${leerlingNaam} wil voor de les nog even afstemmen.`
+      : confidenceLevel != null
+        ? `${leerlingNaam} heeft de voor-les check-in bijgewerkt met vertrouwen ${confidenceLevel}/5.`
+        : `${leerlingNaam} heeft de voor-les check-in bijgewerkt.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: instructor.id,
+    title,
+    text,
+    type: "info",
+  });
+}
+
+export async function notifyLearnerAboutLessonCheckinFocus({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  focus,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  focus: string;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  if (!learner?.id) {
+    return;
+  }
+
+  await createInAppNotification({
+    supabase,
+    profileId: learner.id,
+    title: "Je lesfocus is bijgewerkt",
+    text: `${instructeurNaam} heeft alvast een focus voor je volgende les klaargezet: ${focus}`,
+    type: "succes",
+  });
+}
+
+export async function notifyLearnerAboutPackageSuggestion({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  packageName,
+  currentPackageName,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  packageName: string;
+  currentPackageName?: string | null;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  if (!learner?.id) {
+    return;
+  }
+
+  const isUpgrade = Boolean(currentPackageName?.trim());
+  const title = isUpgrade
+    ? "Nieuw upgradevoorstel van je instructeur"
+    : "Nieuw pakketvoorstel van je instructeur";
+  const text = isUpgrade
+    ? `${instructeurNaam} denkt dat ${packageName} nu een logische volgende stap is na ${currentPackageName?.trim()}.`
+    : `${instructeurNaam} heeft ${packageName} als slim pakketvoorstel voor je klaargezet.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: learner.id,
+    title,
+    text,
+    type: "info",
+  });
+
+  await deliverNotificationEmail({
+    to: learner.email,
+    subject: title,
+    eyebrow: isUpgrade ? "Pakket upgrade" : "Pakketvoorstel",
+    intro: isUpgrade
+      ? `${instructeurNaam} denkt dat ${packageName} nu goed past als volgende stap in je traject.`
+      : `${instructeurNaam} heeft ${packageName} als passend pakket voor je geselecteerd.`,
+    details: [
+      { label: "Instructeur", value: instructeurNaam },
+      ...(currentPackageName?.trim()
+        ? [{ label: "Huidig pakket", value: currentPackageName.trim() }]
+        : []),
+      { label: "Voorstel", value: packageName },
+    ],
+    ctaPath: "/leerling/dashboard",
+    ctaLabel: "Open je dashboard",
+  });
+}
+
+export async function notifyLearnerAboutOpenSlotNudge({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  slotStartAt,
+  slotEndAt,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  slotStartAt: string;
+  slotEndAt: string;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  if (!learner?.id) {
+    return;
+  }
+
+  const dateLabel = new Intl.DateTimeFormat("nl-NL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date(slotStartAt));
+  const startLabel = new Intl.DateTimeFormat("nl-NL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date(slotStartAt));
+  const endLabel = new Intl.DateTimeFormat("nl-NL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date(slotEndAt));
+  const slotLabel = `${dateLabel} tussen ${startLabel} en ${endLabel}`;
+  const title = "Nieuw open lesmoment voor je klaar";
+  const text = `${instructeurNaam} heeft een mooi vrij lesmoment voor je in beeld op ${slotLabel}.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: learner.id,
+    title,
+    text,
+    type: "succes",
+  });
+
+  await deliverNotificationEmail({
+    to: learner.email,
+    subject: title,
+    eyebrow: "Slimme planning nudge",
+    intro: `${instructeurNaam} heeft een open lesmoment voor je geselecteerd dat goed in je ritme kan passen.`,
+    details: [
+      { label: "Instructeur", value: instructeurNaam },
+      { label: "Moment", value: slotLabel },
+    ],
+    ctaPath: "/leerling/instructeurs",
+    ctaLabel: "Bekijk je instructeurs",
   });
 }
 

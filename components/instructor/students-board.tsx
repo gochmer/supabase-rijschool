@@ -18,12 +18,19 @@ import {
 import { toast } from "sonner";
 
 import {
+  toggleInstructorLearnerChecklistAction,
+} from "@/lib/actions/instructor-learners";
+import {
   clearStudentProgressAssessmentAction,
   saveStudentProgressAssessmentAction,
 } from "@/lib/actions/student-progress";
 import { updateStudentSelfSchedulingAccessAction } from "@/lib/actions/student-scheduling";
+import { MANUAL_LEARNER_INTAKE_ITEMS } from "@/lib/manual-learner-intake";
+import { getFirstLessonTemplateForPackage } from "@/lib/package-first-lesson-template";
 import type {
   InstructorStudentProgressRow,
+  LocationOption,
+  Pakket,
   StudentProgressAssessment,
   StudentProgressLessonNote,
   StudentProgressStatus,
@@ -48,6 +55,10 @@ import {
   type StudentProgressSection,
 } from "@/lib/student-progress";
 import { cn } from "@/lib/utils";
+import { CreateManualLessonDialog } from "@/components/instructor/create-manual-lesson-dialog";
+import { StudentDetachDialog } from "@/components/instructor/student-detach-dialog";
+import { StudentInviteResendButton } from "@/components/instructor/student-invite-resend-button";
+import { StudentPackageDialog } from "@/components/instructor/student-package-dialog";
 import { ProgressPrintButton } from "@/components/progress/progress-print-button";
 import { StudentProgressLessonNoteEditor } from "@/components/progress/student-progress-lesson-note-editor";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +80,17 @@ function formatFullDate(dateValue: string) {
     year: "numeric",
     timeZone: "Europe/Amsterdam",
   }).format(new Date(`${dateValue}T12:00:00`));
+}
+
+function formatDateTimeLabel(dateValue: string) {
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date(dateValue));
 }
 
 function getProgressBand(value: number) {
@@ -186,10 +208,14 @@ export function StudentsBoard({
   students,
   assessments,
   notes,
+  locationOptions = [],
+  packages = [],
 }: {
   students: InstructorStudentProgressRow[];
   assessments: StudentProgressAssessment[];
   notes: StudentProgressLessonNote[];
+  locationOptions?: LocationOption[];
+  packages?: Pakket[];
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("alles");
@@ -253,6 +279,28 @@ export function StudentsBoard({
 
     return localNotes.filter((note) => note.leerling_id === selectedStudent.id);
   }, [localNotes, selectedStudent]);
+  const selectedPackage = useMemo(() => {
+    if (!selectedStudent) {
+      return null;
+    }
+
+    return (
+      packages.find((pkg) => pkg.id === selectedStudent.pakketId) ??
+      packages.find((pkg) => pkg.naam === selectedStudent.pakket) ??
+      null
+    );
+  }, [packages, selectedStudent]);
+  const shouldUseFirstLessonTemplate = selectedStudent
+    ? selectedStudent.isHandmatigGekoppeld &&
+      selectedStudent.gekoppeldeLessen === 0
+    : false;
+  const firstLessonTemplate = useMemo(() => {
+    if (!shouldUseFirstLessonTemplate) {
+      return null;
+    }
+
+    return getFirstLessonTemplateForPackage(selectedPackage);
+  }, [selectedPackage, shouldUseFirstLessonTemplate]);
   const focusItems = useMemo(
     () => getStudentProgressFocusItems(selectedStudentAssessments),
     [selectedStudentAssessments]
@@ -341,6 +389,18 @@ export function StudentsBoard({
       .sort((left, right) => right.lesdatum.localeCompare(left.lesdatum))
       .slice(0, 4);
   }, [selectedStudentNotes]);
+  const intakeChecklistKeys = selectedStudent?.intakeChecklistKeys ?? [];
+  const intakeChecklistCompletedCount = intakeChecklistKeys.length;
+  const selectedStudentAccountStatus =
+    selectedStudent?.accountStatus ?? "actief";
+  const selectedStudentLastSignInLabel = selectedStudent?.lastSignInAt
+    ? formatDateTimeLabel(selectedStudent.lastSignInAt)
+    : null;
+  const canDetachSelectedStudent = selectedStudent
+    ? selectedStudent.isHandmatigGekoppeld &&
+      selectedStudent.gekoppeldeLessen === 0 &&
+      selectedStudent.aanvraagStatus === "Handmatig gekoppeld"
+    : false;
 
   function updateStudentSummary(nextAssessments: StudentProgressAssessment[]) {
     if (!selectedStudent) {
@@ -474,12 +534,53 @@ export function StudentsBoard({
     });
   }
 
+  function handleChecklistToggle(itemKey: string, completed: boolean) {
+    if (!selectedStudent?.isHandmatigGekoppeld) {
+      return;
+    }
+
+    const previousKeys = selectedStudent.intakeChecklistKeys ?? [];
+    const nextKeys = completed
+      ? [...previousKeys, itemKey]
+      : previousKeys.filter((key) => key !== itemKey);
+
+    setLocalStudents((current) =>
+      current.map((student) =>
+        student.id === selectedStudent.id
+          ? { ...student, intakeChecklistKeys: nextKeys }
+          : student
+      )
+    );
+
+    startTransition(async () => {
+      const result = await toggleInstructorLearnerChecklistAction({
+        leerlingId: selectedStudent.id,
+        itemKey,
+        completed,
+      });
+
+      if (!result.success) {
+        setLocalStudents((current) =>
+          current.map((student) =>
+            student.id === selectedStudent.id
+              ? { ...student, intakeChecklistKeys: previousKeys }
+              : student
+          )
+        );
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <aside className="space-y-4 print:hidden">
-          <div className="rounded-[1.55rem] border border-white/70 bg-white/86 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
-            <div className="space-y-3">
+          <div className="rounded-[1.45rem] border border-white/70 bg-white/86 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
+            <div className="space-y-2.5">
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
                   Leerlingregie
@@ -487,9 +588,8 @@ export function StudentsBoard({
                 <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
                   Voortgang per leerling
                 </h2>
-                <p className="mt-1.5 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                  Hier landt de instructiekaart het slimst: precies waar je leerling, volgende les en
-                  vaardigheidsscore samenkomen.
+                <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                  Zoek, selecteer en werk daarna direct verder in dezelfde instructiekaart.
                 </p>
               </div>
 
@@ -526,17 +626,17 @@ export function StudentsBoard({
                 ))}
               </div>
 
-              <div className="grid gap-3">
+              <div className="grid gap-2.5">
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Zoek op leerling, mail of pakket"
-                  className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
+                  className="h-10 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
                 />
                 <select
                   value={filter}
                   onChange={(event) => setFilter(event.target.value)}
-                  className="native-select h-11 rounded-xl px-3 text-sm"
+                  className="native-select h-10 rounded-xl px-3 text-sm"
                 >
                   <option value="alles">Alle leerlingen</option>
                   <option value="hoog">Sterk op koers</option>
@@ -544,6 +644,9 @@ export function StudentsBoard({
                   <option value="laag">Extra aandacht</option>
                   <option value="actie">Actie nodig</option>
                 </select>
+                <div className="rounded-[1rem] border border-slate-200/80 bg-slate-50/90 px-3 py-2 text-[12px] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  {filteredStudents.length} leerling(en) zichtbaar in deze selectie.
+                </div>
               </div>
             </div>
           </div>
@@ -619,7 +722,7 @@ export function StudentsBoard({
                 className="rounded-[1.7rem] border border-white/70 bg-white/88 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]"
               >
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
                         Digitale instructiekaart
@@ -633,16 +736,209 @@ export function StudentsBoard({
                         {selectedStudent.naam}
                       </h2>
                       <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                        {selectedStudent.pakket} · {selectedStudent.email || "Geen e-mail"} ·{" "}
+                        {selectedStudent.pakket} • {selectedStudent.email || "Geen e-mail"} •{" "}
                         {selectedStudent.telefoon || "Geen telefoon"}
                       </p>
+                      {selectedStudent.isHandmatigGekoppeld ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="info">Handmatig gekoppeld</Badge>
+                          <Badge
+                            variant={
+                              selectedStudentAccountStatus === "actief"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {selectedStudentAccountStatus === "actief"
+                              ? "Account actief"
+                              : "Uitnodiging open"}
+                          </Badge>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
                   <div className="space-y-2 xl:w-[26rem]">
                     <div className="flex justify-end">
-                      <ProgressPrintButton className="h-9 rounded-full text-[12px]" />
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <StudentPackageDialog
+                          leerlingId={selectedStudent.id}
+                          leerlingNaam={selectedStudent.naam}
+                          currentPackageName={
+                            selectedStudent.pakket !== "Nog geen pakket"
+                              ? selectedStudent.pakket
+                              : null
+                          }
+                          packages={packages}
+                        />
+                        <CreateManualLessonDialog
+                          leerlingId={selectedStudent.id}
+                          leerlingNaam={selectedStudent.naam}
+                          suggestedTitle={
+                            selectedStudent.pakket !== "Nog geen pakket"
+                              ? selectedStudent.pakket
+                              : "Rijles"
+                          }
+                          locationOptions={locationOptions}
+                          template={firstLessonTemplate}
+                        />
+                        {selectedStudent.isHandmatigGekoppeld ? (
+                          <StudentDetachDialog
+                            leerlingId={selectedStudent.id}
+                            leerlingNaam={selectedStudent.naam}
+                            canDetach={canDetachSelectedStudent}
+                          />
+                        ) : null}
+                        {selectedStudent.isHandmatigGekoppeld &&
+                        selectedStudentAccountStatus === "uitgenodigd" ? (
+                          <StudentInviteResendButton
+                            leerlingId={selectedStudent.id}
+                          />
+                        ) : null}
+                        <ProgressPrintButton className="h-9 rounded-full text-[12px]" />
+                      </div>
                     </div>
+                    {selectedStudent.isHandmatigGekoppeld ? (
+                      <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                              Accountstatus
+                            </p>
+                            <p className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-white">
+                              {selectedStudentAccountStatus === "actief"
+                                ? "Leerling heeft toegang tot het account"
+                                : "Leerling moet uitnodiging nog openen"}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={
+                              selectedStudentAccountStatus === "actief"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {selectedStudentAccountStatus === "actief"
+                              ? "Actief"
+                              : "Wacht op activatie"}
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                          {selectedStudentLastSignInLabel
+                            ? `Laatste login: ${selectedStudentLastSignInLabel}`
+                            : "Er is nog geen login geregistreerd voor dit account."}
+                        </p>
+                      </div>
+                    ) : null}
+                    {selectedStudent.onboardingNotitie ? (
+                      <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                        <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                          Startnotitie
+                        </p>
+                        <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                          {selectedStudent.onboardingNotitie}
+                        </p>
+                      </div>
+                    ) : null}
+                    {selectedStudent.isHandmatigGekoppeld ? (
+                      <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                              Intake-checklist
+                            </p>
+                            <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                              {intakeChecklistCompletedCount}/{MANUAL_LEARNER_INTAKE_ITEMS.length} onderdelen klaar
+                            </p>
+                          </div>
+                          <Badge
+                            variant={
+                              intakeChecklistCompletedCount === MANUAL_LEARNER_INTAKE_ITEMS.length
+                                ? "success"
+                                : intakeChecklistCompletedCount >= 3
+                                  ? "warning"
+                                  : "info"
+                            }
+                          >
+                            {Math.round(
+                              (intakeChecklistCompletedCount /
+                                MANUAL_LEARNER_INTAKE_ITEMS.length) *
+                                100
+                            )}
+                            %
+                          </Badge>
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          {MANUAL_LEARNER_INTAKE_ITEMS.map((item) => {
+                            const completed = intakeChecklistKeys.includes(item.key);
+
+                            return (
+                              <button
+                                key={item.key}
+                                type="button"
+                                onClick={() =>
+                                  handleChecklistToggle(item.key, !completed)
+                                }
+                                className={cn(
+                                  "flex w-full items-start gap-3 rounded-[1rem] border px-3 py-2.5 text-left transition-all",
+                                  completed
+                                    ? "border-emerald-200/80 bg-emerald-50/90 dark:border-emerald-400/18 dark:bg-emerald-500/10"
+                                    : "border-slate-200/80 bg-white/80 hover:border-slate-300/80 dark:border-white/10 dark:bg-white/4 dark:hover:bg-white/7"
+                                )}
+                              >
+                                <div
+                                  className={cn(
+                                    "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
+                                    completed
+                                      ? "border-emerald-500 bg-emerald-500 text-white"
+                                      : "border-slate-300 bg-white text-transparent dark:border-slate-500 dark:bg-slate-900"
+                                  )}
+                                >
+                                  <CheckCircle2 className="size-3.5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[13px] font-semibold text-slate-900 dark:text-white">
+                                    {item.title}
+                                  </p>
+                                  <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                                    {item.detail}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                    {firstLessonTemplate ? (
+                      <div className="rounded-[1.15rem] border border-sky-200/80 bg-[linear-gradient(135deg,rgba(59,130,246,0.08),rgba(14,165,233,0.08),rgba(255,255,255,0.92))] p-3 dark:border-sky-400/18 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.12),rgba(59,130,246,0.14),rgba(15,23,42,0.74))]">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                              Eerste lesopzet
+                            </p>
+                            <h3 className="mt-1 text-[15px] font-semibold text-slate-950 dark:text-white">
+                              {firstLessonTemplate.title}
+                            </h3>
+                          </div>
+                          <Badge variant="info">
+                            {firstLessonTemplate.durationMinutes} min
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                          {firstLessonTemplate.summary}
+                        </p>
+                        <ul className="mt-3 space-y-1.5 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                          {firstLessonTemplate.bullets.map((bullet) => (
+                            <li key={bullet}>- {bullet}</li>
+                          ))}
+                        </ul>
+                        <p className="mt-3 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                          Als je nu op <span className="font-medium text-slate-700 dark:text-slate-200">Les inplannen</span> klikt, nemen titel en duur deze opzet automatisch over.
+                        </p>
+                      </div>
+                    ) : null}
                     <div className="grid gap-2 sm:grid-cols-2">
                     {[
                       {
@@ -718,8 +1014,10 @@ export function StudentsBoard({
                             {selectedStudent.zelfInplannenToegestaan
                               ? "Deze leerling mag nu jouw agenda zien en zelf een passend moment kiezen."
                               : selectedStudent.planningVrijTeGeven
-                                ? "Deze leerling zit al in een actief traject. Jij bepaalt hier of zelf inplannen wordt vrijgegeven."
-                                : "De agenda blijft afgeschermd tot er een geaccepteerde aanvraag of echte lesrelatie is."}
+                                ? selectedStudent.isHandmatigGekoppeld
+                                  ? "Deze leerling is handmatig aan jouw werkplek gekoppeld. Jij bepaalt hier of zelf inplannen direct wordt vrijgegeven."
+                                  : "Deze leerling zit al in een actief traject. Jij bepaalt hier of zelf inplannen wordt vrijgegeven."
+                                : "De agenda blijft afgeschermd tot je deze leerling actief koppelt of een traject start."}
                           </p>
                         </div>
                         {selectedStudent.planningVrijTeGeven ? (

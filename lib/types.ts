@@ -11,6 +11,7 @@ export type LesStatus =
   | "afgerond"
   | "geannuleerd";
 export type LessonAttendanceStatus = "onbekend" | "aanwezig" | "afwezig";
+export type LessonCompassLastUpdatedBy = "leerling" | "instructeur";
 
 export type LesAanvraagType = "algemeen" | "pakket" | "proefles";
 
@@ -20,6 +21,7 @@ export type StudentProgressStatus =
   | "begeleid"
   | "zelfstandig"
   | "herhaling";
+export type LessonCheckinArrivalMode = "op_tijd" | "afstemmen";
 
 export interface Profiel {
   id: string;
@@ -234,8 +236,10 @@ export interface StudentProgressLessonNote {
 
 export interface InstructorStudentProgressRow {
   id: string;
+  profileId?: string;
   naam: string;
   pakket: string;
+  pakketId?: string | null;
   voortgang: number;
   volgendeLes: string;
   volgendeLesAt?: string | null;
@@ -247,4 +251,42 @@ export interface InstructorStudentProgressRow {
   telefoon?: string;
   zelfInplannenToegestaan?: boolean;
   planningVrijTeGeven?: boolean;
+  isHandmatigGekoppeld?: boolean;
+  onboardingNotitie?: string | null;
+  intakeChecklistKeys?: string[];
+  accountStatus?: "uitgenodigd" | "actief";
+  lastSignInAt?: string | null;
+}
+
+export interface SharedLessonCompassBoard {
+  id: string | null;
+  leerling_id: string;
+  instructeur_id: string;
+  counterpart_name: string;
+  counterpart_role: "leerling" | "instructeur";
+  next_touchpoint: string | null;
+  instructor_focus?: string | null;
+  instructor_mission?: string | null;
+  learner_confidence?: number | null;
+  learner_help_request?: string | null;
+  last_updated_by?: LessonCompassLastUpdatedBy | null;
+  updated_at?: string | null;
+  updated_label?: string | null;
+  pulse_label: string;
+  pulse_variant: "info" | "success" | "warning";
+}
+
+export interface LessonCheckinBoard {
+  id: string | null;
+  les_id: string;
+  counterpart_name: string;
+  lesson_title: string;
+  lesson_date: string;
+  lesson_time: string;
+  confidence_level?: number | null;
+  support_request?: string | null;
+  arrival_mode?: LessonCheckinArrivalMode | null;
+  instructor_focus?: string | null;
+  learner_updated_at?: string | null;
+  instructor_updated_at?: string | null;
 }

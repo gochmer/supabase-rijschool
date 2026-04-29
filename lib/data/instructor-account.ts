@@ -3,6 +3,7 @@ import "server-only";
 import type {
   BeschikbaarheidSlot,
   BeschikbaarheidWeekrooster,
+  InstructorStudentProgressRow,
   Voertuig,
 } from "@/lib/types";
 import {
@@ -11,7 +12,14 @@ import {
 } from "@/lib/availability";
 import { buildRecurringAvailabilitySlots } from "@/lib/availability-week-rules";
 import { formatCurrency } from "@/lib/format";
+import { getInstructorGrowthInsights } from "@/lib/data/instructor-growth-insights";
+import {
+  getInstructeurLessonRequests,
+  getInstructeurLessons,
+} from "@/lib/data/lesson-requests";
+import { getCurrentInstructorPackages } from "@/lib/data/packages";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
 import { createServerClient } from "@/lib/supabase/server";
 
 type LessonRevenueRow = {
@@ -36,6 +44,45 @@ type DocumentRow = {
   status: string;
   url: string | null;
   created_at: string;
+};
+
+export type InstructorIncomeCockpitStat = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
+export type InstructorIncomeActionItem = {
+  id: string;
+  title: string;
+  detail: string;
+  meta?: string;
+  badge: "success" | "warning" | "danger" | "info";
+  href: string;
+  ctaLabel: string;
+};
+
+export type InstructorStudentPackageHealth = {
+  leerlingId: string;
+  naam: string;
+  pakketNaam: string;
+  packageValueAmount: number;
+  packageValueLabel: string;
+  lessonsUsedLabel: string;
+  remainingLessonsLabel: string;
+  usageRatio: number;
+  badge: "success" | "warning" | "danger" | "info";
+  badgeLabel: string;
+  nextStep: string;
+};
+
+export type InstructorIncomeCockpit = {
+  stats: InstructorIncomeCockpitStat[];
+  actions: InstructorIncomeActionItem[];
+  packageHealth: InstructorStudentPackageHealth[];
+  gapOpportunities: InstructorIncomeActionItem[];
+  incomeRows: Awaited<ReturnType<typeof getCurrentInstructorIncomeRows>>;
+  growthInsights: Awaited<ReturnType<typeof getInstructorGrowthInsights>>;
 };
 
 function formatDate(dateString: string) {
@@ -69,6 +116,107 @@ function toAmount(value: number | string | null | undefined) {
   }
 
   return 0;
+}
+
+function isCurrentMonth(dateValue: string | null | undefined) {
+  if (!dateValue) {
+    return false;
+  }
+
+  const date = new Date(dateValue);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
+}
+
+function isWithinNextDays(dateValue: string | null | undefined, days: number) {
+  if (!dateValue) {
+    return false;
+  }
+
+  const timestamp = new Date(dateValue).getTime();
+  const now = Date.now();
+
+  return timestamp >= now && timestamp <= now + days * 24 * 60 * 60 * 1000;
+}
+
+function buildStudentPackageHealth(
+  student: InstructorStudentProgressRow,
+  packagePrice: number,
+  packageLessons: number
+): InstructorStudentPackageHealth {
+  const lessonsUsed = Math.max(student.gekoppeldeLessen, 0);
+  const remainingLessons =
+    packageLessons > 0 ? Math.max(packageLessons - lessonsUsed, 0) : 0;
+  const usageRatio =
+    packageLessons > 0
+      ? Math.min(100, Math.round((lessonsUsed / packageLessons) * 100))
+      : 0;
+
+  if (packageLessons === 0) {
+    return {
+      leerlingId: student.id,
+      naam: student.naam,
+      pakketNaam: student.pakket,
+      packageValueAmount: packagePrice,
+      packageValueLabel: packagePrice > 0 ? formatCurrency(packagePrice) : "Op aanvraag",
+      lessonsUsedLabel: `${lessonsUsed} losse les${lessonsUsed === 1 ? "" : "sen"} gebruikt`,
+      remainingLessonsLabel: "Flextraject zonder vaste lesdekking",
+      usageRatio,
+      badge: "info",
+      badgeLabel: "Flex",
+      nextStep: "Kijk of een vast pakket nu meer rust en opbrengst geeft.",
+    };
+  }
+
+  if (remainingLessons <= 1) {
+    return {
+      leerlingId: student.id,
+      naam: student.naam,
+      pakketNaam: student.pakket,
+      packageValueAmount: packagePrice,
+      packageValueLabel: formatCurrency(packagePrice),
+      lessonsUsedLabel: `${lessonsUsed} van ${packageLessons} lessen gebruikt`,
+      remainingLessonsLabel: `${remainingLessons} les${remainingLessons === 1 ? "" : "sen"} over`,
+      usageRatio,
+      badge: "danger",
+      badgeLabel: "Bijna op",
+      nextStep: "Tijd om direct een vervolgvoorstel of upgrade klaar te zetten.",
+    };
+  }
+
+  if (remainingLessons <= 3) {
+    return {
+      leerlingId: student.id,
+      naam: student.naam,
+      pakketNaam: student.pakket,
+      packageValueAmount: packagePrice,
+      packageValueLabel: formatCurrency(packagePrice),
+      lessonsUsedLabel: `${lessonsUsed} van ${packageLessons} lessen gebruikt`,
+      remainingLessonsLabel: `${remainingLessons} lessen over`,
+      usageRatio,
+      badge: "warning",
+      badgeLabel: "Bijna leeg",
+      nextStep: "Goed moment om vervolglessen of een groter pakket te bespreken.",
+    };
+  }
+
+  return {
+    leerlingId: student.id,
+    naam: student.naam,
+    pakketNaam: student.pakket,
+    packageValueAmount: packagePrice,
+    packageValueLabel: formatCurrency(packagePrice),
+    lessonsUsedLabel: `${lessonsUsed} van ${packageLessons} lessen gebruikt`,
+    remainingLessonsLabel: `${remainingLessons} lessen over`,
+    usageRatio,
+    badge: "success",
+    badgeLabel: "Gezond",
+    nextStep: "Dit pakket loopt nog stabiel; focus hier vooral op ritme en voortgang.",
+  };
 }
 
 export async function getCurrentInstructorAvailability(): Promise<
@@ -149,6 +297,200 @@ export async function getCurrentInstructorIncomeRows() {
     datum: formatDate(row.start_at ?? row.created_at),
     status: row.status,
   }));
+}
+
+export async function getCurrentInstructorIncomeCockpit(): Promise<InstructorIncomeCockpit> {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return {
+      stats: [],
+      actions: [],
+      packageHealth: [],
+      gapOpportunities: [],
+      incomeRows: [],
+      growthInsights: {
+        summary: {
+          headline: "Nog geen groeidata",
+          readyActions: 0,
+          estimatedGrowthValueLabel: "Geen directe groeikans",
+          nudgeAudienceLabel: "Nog geen nudge-doelgroep",
+        },
+        packageOpportunities: [],
+        fillGaps: [],
+        upgradeCandidates: [],
+      },
+    };
+  }
+
+  const [incomeRows, lessons, requests, packages, workspace, growthInsights] =
+    await Promise.all([
+      getCurrentInstructorIncomeRows(),
+      getInstructeurLessons(),
+      getInstructeurLessonRequests(),
+      getCurrentInstructorPackages(),
+      getInstructeurStudentsWorkspace(),
+      getInstructorGrowthInsights(),
+    ]);
+
+  const lessonPrice = toAmount(instructeur.prijs_per_les);
+  const packageMap = new Map(
+    packages.map((pkg) => [pkg.id, { price: pkg.prijs, lessons: pkg.lessen }])
+  );
+  const plannedLessons = lessons.filter((lesson) =>
+    ["ingepland", "geaccepteerd"].includes(lesson.status)
+  );
+  const completedLessons = lessons.filter((lesson) => lesson.status === "afgerond");
+  const weekLessons = plannedLessons.filter((lesson) =>
+    isWithinNextDays(lesson.start_at, 7)
+  );
+  const monthCompletedLessons = completedLessons.filter((lesson) =>
+    isCurrentMonth(lesson.start_at)
+  );
+  const openRequests = requests.filter((request) => request.status === "aangevraagd");
+  const packageHealth = workspace.students
+    .filter((student) => student.pakketId && packageMap.has(student.pakketId))
+    .map((student) => {
+      const packageData = packageMap.get(student.pakketId ?? "");
+
+      return buildStudentPackageHealth(
+        student,
+        packageData?.price ?? 0,
+        packageData?.lessons ?? 0
+      );
+    })
+    .sort((left, right) => {
+      const badgePriority = { danger: 3, warning: 2, info: 1, success: 0 };
+      const badgeDiff = badgePriority[right.badge] - badgePriority[left.badge];
+
+      if (badgeDiff !== 0) {
+        return badgeDiff;
+      }
+
+      return right.usageRatio - left.usageRatio;
+    })
+    .slice(0, 6);
+
+  const packagePortfolioValue = packageHealth.reduce(
+    (sum, item) => sum + item.packageValueAmount,
+    0
+  );
+  const gapCount = growthInsights.fillGaps.length;
+  const gapRevenuePotential = gapCount * lessonPrice;
+  const openRevenue = plannedLessons.length * lessonPrice;
+  const completedRevenueThisMonth = monthCompletedLessons.length * lessonPrice;
+  const upcomingWeekRevenue = weekLessons.length * lessonPrice;
+  const atRiskPackageCount = packageHealth.filter((item) =>
+    item.badge === "danger" || item.badge === "warning"
+  ).length;
+  const packageMissingStudents = workspace.students.filter(
+    (student) => !student.pakketId && student.gekoppeldeLessen > 0
+  );
+
+  const actions: InstructorIncomeActionItem[] = [
+    ...openRequests.slice(0, 2).map((request) => ({
+      id: `request-${request.id}`,
+      title: request.leerling_naam || "Nieuwe aanvraag",
+      detail:
+        "Deze aanvraag staat nog open. Een snelle reactie helpt om omzet sneller naar een ingeplande les te trekken.",
+      meta: `${request.voorkeursdatum} • ${request.tijdvak}`,
+      badge: "warning" as const,
+      href: "/instructeur/aanvragen",
+      ctaLabel: "Open aanvraag",
+    })),
+    ...packageHealth
+      .filter((item) => item.badge === "danger" || item.badge === "warning")
+      .slice(0, 2)
+      .map((item) => ({
+        id: `package-${item.leerlingId}`,
+        title: item.naam,
+        detail: item.nextStep,
+        meta: `${item.pakketNaam} • ${item.remainingLessonsLabel}`,
+        badge: item.badge,
+        href: "/instructeur/leerlingen",
+        ctaLabel: "Open werkplek",
+      })),
+    ...growthInsights.fillGaps.slice(0, 2).map((item) => ({
+      id: `gap-${item.id}`,
+      title: item.title,
+      detail:
+        "Dit open moment vertegenwoordigt direct leswaarde. Vul het slim zodat je agenda geen stille omzet laat liggen.",
+      meta: `${item.meta ?? "Open plek"} • ${formatCurrency(lessonPrice)}`,
+      badge: item.badge,
+      href: "/instructeur/beschikbaarheid",
+      ctaLabel: "Open agenda",
+    })),
+    ...packageMissingStudents.slice(0, 2).map((student) => ({
+      id: `missing-package-${student.id}`,
+      title: student.naam,
+      detail:
+        "Deze leerling rijdt al wel, maar nog zonder logisch gekoppeld pakket. Daar laat je nu structuur en omzet liggen.",
+      meta: `${student.gekoppeldeLessen} les${student.gekoppeldeLessen === 1 ? "" : "sen"} gekoppeld`,
+      badge: "info" as const,
+      href: "/instructeur/leerlingen",
+      ctaLabel: "Koppel pakket",
+    })),
+  ].slice(0, 8);
+
+  const gapOpportunities = growthInsights.fillGaps.slice(0, 5).map((item) => ({
+    id: item.id,
+    title: item.title,
+    detail: item.detail,
+    meta: `${item.meta ?? "Open plek"} • potentieel ${formatCurrency(lessonPrice)}`,
+    badge: item.badge,
+    href: "/instructeur/beschikbaarheid",
+    ctaLabel: item.actionType ? "Stuur nudge" : "Open agenda",
+  }));
+
+  return {
+    stats: [
+      {
+        label: "Verwacht deze week",
+        value: formatCurrency(upcomingWeekRevenue),
+        detail: `${weekLessons.length} geplande les${weekLessons.length === 1 ? "" : "sen"} in de komende 7 dagen.`,
+      },
+      {
+        label: "Afgerond deze maand",
+        value: formatCurrency(completedRevenueThisMonth),
+        detail: `${monthCompletedLessons.length} afgeronde les${monthCompletedLessons.length === 1 ? "" : "sen"} in deze kalendermaand.`,
+      },
+      {
+        label: "Open lesomzet",
+        value: formatCurrency(openRevenue),
+        detail: `${plannedLessons.length} ingeplande of geaccepteerde les${plannedLessons.length === 1 ? "" : "sen"} staat of staan al klaar.`,
+      },
+      {
+        label: "Pakketportfolio",
+        value: formatCurrency(packagePortfolioValue),
+        detail: `${packageHealth.length} actieve leerlingpakketten met directe waarde in je werkplek.`,
+      },
+      {
+        label: "Lege gaten",
+        value: formatCurrency(gapRevenuePotential),
+        detail: `${gapCount} open boekbare momenten kunnen nog worden omgezet in lesomzet.`,
+      },
+      {
+        label: "Groeikans",
+        value: growthInsights.summary.estimatedGrowthValueLabel,
+        detail: `${growthInsights.summary.readyActions} opvolgacties staan al klaar voor voorstel, upgrade of nudge.`,
+      },
+      {
+        label: "Bijna door pakket heen",
+        value: `${atRiskPackageCount}`,
+        detail: "Leerlingen waar een vervolgvoorstel nu omzetverlies en ritmebreuk kan voorkomen.",
+      },
+      {
+        label: "Zonder logisch pakket",
+        value: `${packageMissingStudents.length}`,
+        detail: "Actieve trajecten die nog wel lessen draaien maar nog geen scherp pakket hebben gekoppeld.",
+      },
+    ],
+    actions,
+    packageHealth,
+    gapOpportunities,
+    incomeRows,
+    growthInsights,
+  };
 }
 
 export async function getCurrentInstructorSettingsOverview() {

@@ -1,10 +1,16 @@
 import Link from "next/link";
-import { CheckCircle2, Clock3, Sparkles } from "lucide-react";
+import {
+  CalendarCheck2,
+  CheckCircle2,
+  CircleAlert,
+  Clock3,
+  FolderCheck,
+} from "lucide-react";
 
+import { InsightPanel } from "@/components/dashboard/insight-panel";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RequestStatusActions } from "@/components/dashboard/request-status-actions";
 import { TrendCard } from "@/components/dashboard/trend-card";
-import { InsightPanel } from "@/components/dashboard/insight-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +20,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getInstructeurLessonRequests } from "@/lib/data/lesson-requests";
+import { getLocationOptions } from "@/lib/data/locations";
 import {
   getRequestStatusLabel,
   getRequestStatusVariant,
   requestStatusTimeline,
 } from "@/lib/lesson-request-flow";
-import { getInstructeurLessonRequests } from "@/lib/data/lesson-requests";
-import { getLocationOptions } from "@/lib/data/locations";
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
+import type { LesAanvraag } from "@/lib/types";
 
 function isTimelineStepActive(
   stepValue: (typeof requestStatusTimeline)[number]["value"],
@@ -38,17 +46,153 @@ function isTimelineStepActive(
   return stepIndex <= currentIndex;
 }
 
+function getRequestPrimaryLabel(request: LesAanvraag) {
+  if (request.aanvraag_type === "proefles") {
+    return "Proefles";
+  }
+
+  if (request.pakket_naam) {
+    return request.pakket_naam;
+  }
+
+  return "Lesaanvraag";
+}
+
+function RequestWorkflowCard({
+  request,
+  locationOptions,
+  emphasizeAction = false,
+}: {
+  request: LesAanvraag;
+  locationOptions: Awaited<ReturnType<typeof getLocationOptions>>;
+  emphasizeAction?: boolean;
+}) {
+  return (
+    <Card className="overflow-hidden border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+      <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="p-5">
+          <CardHeader className="p-0">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <CardTitle className="text-lg">{request.leerling_naam}</CardTitle>
+                <CardDescription>
+                  {request.voorkeursdatum} • {request.tijdvak}
+                </CardDescription>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge>{getRequestPrimaryLabel(request)}</Badge>
+                  {request.les_type ? (
+                    <Badge variant="info">
+                      {getRijlesTypeLabel(request.les_type)}
+                    </Badge>
+                  ) : null}
+                  {request.aanvraag_type === "pakket" ? (
+                    <Badge variant="success">Pakketvraag</Badge>
+                  ) : null}
+                </div>
+              </div>
+              <Badge variant={getRequestStatusVariant(request.status)}>
+                {getRequestStatusLabel(request.status)}
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="mt-4 p-0">
+            <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {request.bericht || "Geen extra toelichting meegegeven bij deze aanvraag."}
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {requestStatusTimeline.map((step) => {
+                const active = isTimelineStepActive(step.value, request.status);
+                return (
+                  <span
+                    key={`${request.id}-${step.value}`}
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase ${
+                      active
+                        ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100"
+                        : "border-slate-200 bg-slate-50 text-slate-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-500"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                );
+              })}
+              {request.status === "geweigerd" ? (
+                <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-rose-700 uppercase dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
+                  Geweigerd
+                </span>
+              ) : null}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+              {emphasizeAction ? (
+                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700 dark:bg-amber-400/10 dark:text-amber-100">
+                  <CircleAlert className="size-4" />
+                  Nu reageren houdt de boekingskans hoog
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 dark:bg-white/5">
+                  <FolderCheck className="size-4" />
+                  Status staat netjes verwerkt
+                </span>
+              )}
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 dark:bg-white/5">
+                <CheckCircle2 className="size-4" />
+                Leerling ziet dezelfde statusflow terug
+              </span>
+            </div>
+          </CardContent>
+        </div>
+
+        <div className="flex flex-col justify-between border-t border-slate-100 bg-slate-50/70 p-5 dark:border-white/10 dark:bg-white/5 xl:border-t-0 xl:border-l">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.24em] text-primary uppercase">
+              {request.status === "aangevraagd" ? "Nu beslissen" : "Afhandeling"}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {request.status === "aangevraagd"
+                ? "Accepteer of weiger direct. De lesflow, notificaties en vervolgstatus werken daarna meteen door."
+                : "Deze aanvraag staat al verder in de flow. Gebruik dit blok vooral om de stand rustig terug te lezen."}
+            </p>
+          </div>
+          <div className="mt-5">
+            <RequestStatusActions
+              requestId={request.id}
+              status={request.status}
+              locationOptions={locationOptions}
+            />
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default async function AanvragenPage() {
   const [requests, locationOptions] = await Promise.all([
     getInstructeurLessonRequests(),
     getLocationOptions(),
   ]);
 
+  const pendingRequests = requests.filter((item) => item.status === "aangevraagd");
+  const acceptedRequests = requests.filter((item) =>
+    ["geaccepteerd", "ingepland"].includes(item.status)
+  );
+  const rejectedRequests = requests.filter((item) => item.status === "geweigerd");
+  const completedRequests = requests.filter((item) => item.status === "afgerond");
+  const processedRequests = requests.filter((item) => item.status !== "aangevraagd");
+  const proeflesRequests = requests.filter(
+    (item) => item.aanvraag_type === "proefles"
+  ).length;
+  const packageRequests = requests.filter(
+    (item) => item.aanvraag_type === "pakket"
+  ).length;
+
   return (
     <>
       <PageHeader
         title="Lesaanvragen"
-        description="Accepteer of weiger aanvragen, houd prioriteit in beeld en werk sneller vanuit een rijkere flow."
+        description="Werk open aanvragen eerst af en houd daarna rustig zicht op wat al verwerkt is."
         actions={
           <>
             <Button asChild variant="outline" className="rounded-full">
@@ -61,148 +205,281 @@ export default async function AanvragenPage() {
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <TrendCard
-          title="Aanvraagritme"
-          value={`${requests.length}`}
-          change="+21%"
-          description="Nieuwe aanvragen per periode, bedoeld om je capaciteit en reactietempo te bewaken."
-          data={[2, 3, 4, 4, 5, 6, 8]}
-        />
-        <InsightPanel
-          title="Vandaag prioriteit"
-          description="Snelle signalen om aanvragen beter en sneller op te volgen."
-          items={[
-            {
-              label: "Nog te beoordelen",
-              value: `${requests.filter((item) => item.status === "aangevraagd").length} aanvraag(en) wachten op reactie`,
-              status: "Actie nodig",
-            },
-            {
-              label: "Geaccepteerd",
-              value: `${requests.filter((item) => item.status === "geaccepteerd").length} aanvraag(en) al verwerkt`,
-            },
-            {
-              label: "Tijdsdruk",
-              value: "Snelle reactie verhoogt kans op bevestigde boeking.",
-            },
-          ]}
-        />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Nu beslissen
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+              {pendingRequests.length}
+            </p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Aanvragen die nu nog op jouw reactie wachten.
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Klaar voor les
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+              {acceptedRequests.length}
+            </p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Geaccepteerd of al ingepland in het traject.
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Proeflessen
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+              {proeflesRequests}
+            </p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Handig om snel om te zetten naar een eerste traject.
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+              Pakketvragen
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+              {packageRequests}
+            </p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Gericht op directe pakketconversie en vervolg.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid gap-4">
-        {requests.map((request) => (
-          <Card
-            key={request.id}
-            className="overflow-hidden border-0 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)]"
+      <Tabs defaultValue="nu" className="space-y-4">
+        <TabsList className="h-auto w-full rounded-[1.4rem] bg-white/70 p-1 dark:bg-white/5">
+          <TabsTrigger value="nu" className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm">
+            Nu beslissen
+            <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
+              {pendingRequests.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="verwerkt"
+            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm"
           >
-            <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="p-6">
-                <CardHeader className="p-0">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-2">
-                      <CardTitle>{request.leerling_naam}</CardTitle>
-                      <CardDescription>
-                        {request.voorkeursdatum} - {request.tijdvak}
-                      </CardDescription>
-                      {request.pakket_naam ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge>
-                            {request.aanvraag_type === "proefles"
-                              ? "Proefles"
-                              : request.pakket_naam}
-                          </Badge>
-                          {request.les_type ? (
-                            <Badge variant="info">
-                              {getRijlesTypeLabel(request.les_type)}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                    <Badge
-                      variant={getRequestStatusVariant(request.status)}
-                    >
-                      {getRequestStatusLabel(request.status)}
-                    </Badge>
+            Verwerkt
+            <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
+              {processedRequests.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="inzicht"
+            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm"
+          >
+            Inzicht
+            <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
+              3
+            </span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="nu" className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+            <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-amber-100 p-2 text-amber-700 dark:bg-amber-400/10 dark:text-amber-100">
+                    <Clock3 className="size-4" />
                   </div>
-                </CardHeader>
-                <CardContent className="mt-5 p-0">
-                  <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-                    {request.bericht || "Geen extra toelichting meegegeven bij deze aanvraag."}
+                  <div>
+                    <p className="font-semibold text-slate-950 dark:text-white">
+                      Vandaag eerst
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      Begin met open aanvragen. Snelle reactie houdt het traject warm en maakt plannen makkelijker.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+                <CardContent className="p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    Nog te beoordelen
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {requestStatusTimeline.map((step) => {
-                      const active = isTimelineStepActive(step.value, request.status);
-                      return (
-                        <span
-                          key={`${request.id}-${step.value}`}
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase ${
-                            active
-                              ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100"
-                              : "border-slate-200 bg-slate-50 text-slate-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-500"
-                          }`}
-                        >
-                          {step.label}
-                        </span>
-                      );
-                    })}
-                    {request.status === "geweigerd" ? (
-                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-rose-700 uppercase dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
-                        Geweigerd
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5">
-                      <Clock3 className="size-4" />
-                      Reageer snel voor hogere conversie
-                    </span>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5">
-                      <CheckCircle2 className="size-4" />
-                      Status wordt direct gesynchroniseerd
-                    </span>
-                  </div>
+                  <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                    {pendingRequests.length}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Gebruik deze tab als je besliswerkplek.
+                  </p>
                 </CardContent>
-              </div>
-
-              <div className="flex flex-col justify-between border-t border-slate-100 bg-slate-50/70 p-6 xl:border-t-0 xl:border-l">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.24em] text-primary uppercase">
-                    Snelle afhandeling
+              </Card>
+              <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+                <CardContent className="p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    Klaar voor planning
                   </p>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                    Accepteer of weiger direct. Leerling en instructeur zien dezelfde statusflow terug in het platform.
+                  <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                    {acceptedRequests.length}
                   </p>
-                </div>
-                <div className="mt-5">
-                  <RequestStatusActions
-                    requestId={request.id}
-                    status={request.status}
-                    locationOptions={locationOptions}
-                  />
-                </div>
-              </div>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Aanvragen die al verder zijn in de flow.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-          </Card>
-        ))}
-
-        {requests.length === 0 ? (
-          <div className="rounded-[1.9rem] border border-dashed border-border bg-white/80 p-8 text-sm leading-7 text-muted-foreground">
-            Er zijn momenteel geen nieuwe aanvragen die wachten op actie.
           </div>
-        ) : null}
-      </div>
 
-      <div className="rounded-[2rem] bg-[linear-gradient(135deg,rgba(15,23,42,1),rgba(29,78,216,0.95))] p-5 text-white">
-        <div className="flex items-center gap-3">
-          <Sparkles className="size-4 text-sky-200" />
-          <p className="font-semibold">Slimme opvolging</p>
-        </div>
-        <p className="mt-2 text-sm leading-7 text-white/75">
-          We kunnen hier later ook prioriteitsscores, automatische labels en reactietimer-achtige inzichten aan toevoegen.
-        </p>
-      </div>
+          <div className="grid gap-4">
+            {pendingRequests.length ? (
+              pendingRequests.map((request) => (
+                <RequestWorkflowCard
+                  key={request.id}
+                  request={request}
+                  locationOptions={locationOptions}
+                  emphasizeAction
+                />
+              ))
+            ) : (
+              <div className="rounded-[1.8rem] border border-dashed border-border bg-white/80 p-8 text-sm leading-7 text-muted-foreground dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                Er staan nu geen open aanvragen meer klaar. Je kunt rustig door naar verwerkt of de beschikbaarheid nalopen.
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="verwerkt" className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Geaccepteerd
+                </p>
+                <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                  {acceptedRequests.length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Geweigerd
+                </p>
+                <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                  {rejectedRequests.length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Afgerond
+                </p>
+                <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                  {completedRequests.length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4">
+            {processedRequests.length ? (
+              processedRequests.map((request) => (
+                <RequestWorkflowCard
+                  key={request.id}
+                  request={request}
+                  locationOptions={locationOptions}
+                />
+              ))
+            ) : (
+              <div className="rounded-[1.8rem] border border-dashed border-border bg-white/80 p-8 text-sm leading-7 text-muted-foreground dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                Er zijn nog geen verwerkte aanvragen om terug te lezen.
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="inzicht" className="space-y-4">
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <TrendCard
+              title="Aanvraagritme"
+              value={`${requests.length}`}
+              change="+21%"
+              description="Nieuwe aanvragen per periode, bedoeld om je reactietempo en instroom in beeld te houden."
+              data={[2, 3, 4, 4, 5, 6, 8]}
+            />
+            <InsightPanel
+              title="Wat nu slim is"
+              description="Compacte signalen om sneller te zien waar de meeste winst zit."
+              items={[
+                {
+                  label: "Direct oppakken",
+                  value: `${pendingRequests.length} aanvraag(en) wachten op reactie`,
+                  status: pendingRequests.length ? "Actie nodig" : "Rustig",
+                },
+                {
+                  label: "Klaar voor les",
+                  value: `${acceptedRequests.length} aanvraag(en) zijn al geaccepteerd of ingepland`,
+                },
+                {
+                  label: "Instroommix",
+                  value: `${proeflesRequests} proeflessen en ${packageRequests} pakketvragen in beeld`,
+                },
+              ]}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <CalendarCheck2 className="size-4 text-primary" />
+                  <p className="font-semibold text-slate-950 dark:text-white">
+                    Snelle planning
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Open daarna meteen je beschikbaarheid om geaccepteerde aanvragen sneller door te zetten.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="size-4 text-primary" />
+                  <p className="font-semibold text-slate-950 dark:text-white">
+                    Rustige afhandeling
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Gebruik `Verwerkt` als terugleeslaag, zodat je beslissen en administratie niet door elkaar lopen.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-white/70 bg-white/90 dark:border-white/10 dark:bg-white/5">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <FolderCheck className="size-4 text-primary" />
+                  <p className="font-semibold text-slate-950 dark:text-white">
+                    Betere opvolging
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Als je veel proeflesaanvragen ziet, kun je daarna makkelijker doorpakken in berichten of pakketten.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

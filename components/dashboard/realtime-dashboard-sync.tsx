@@ -59,6 +59,13 @@ export function RealtimeDashboardSync({
           queueRefresh("Meldingen bijgewerkt");
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "les_checkins" },
+        () => {
+          queueRefresh("Les check-in bijgewerkt");
+        }
+      )
       .subscribe((status) => {
         setIsConnected(status === "SUBSCRIBED");
 

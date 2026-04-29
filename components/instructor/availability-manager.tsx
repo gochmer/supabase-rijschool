@@ -449,10 +449,12 @@ export function AvailabilityManager({
   slots,
   lessons = [],
   pricePerLesson = 0,
+  showSummarySidebar = true,
 }: {
   slots: BeschikbaarheidSlot[];
   lessons?: Les[];
   pricePerLesson?: number;
+  showSummarySidebar?: boolean;
 }) {
   const [compact, setCompact] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -1603,7 +1605,14 @@ export function AvailabilityManager({
           </Badge>
         </div>
 
-        <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.1fr)_22rem]">
+        <div
+          className={cn(
+            "mt-4 grid gap-4",
+            showSummarySidebar
+              ? "2xl:grid-cols-[minmax(0,1.1fr)_22rem]"
+              : "2xl:grid-cols-1"
+          )}
+        >
           <div className="space-y-4">
             <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -2139,47 +2148,48 @@ export function AvailabilityManager({
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-[1.1rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.9))] p-3 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.18)]">
-              <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                Overzicht
-              </p>
-              <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                Je planning in een oogopslag
-              </h3>
+          {showSummarySidebar ? (
+            <div className="space-y-4">
+              <div className="rounded-[1.1rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.9))] p-3 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.18)]">
+                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                  Overzicht
+                </p>
+                <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                  Je planning in een oogopslag
+                </h3>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                {[
-                  { label: "Actieve slots", value: `${activeCount}`, icon: Sparkles },
-                  {
-                    label: "Volgende week open",
-                    value: formatMinutesLabel(nextWeekTotalMinutes),
-                    icon: CalendarDays,
-                  },
-                  {
-                    label: "Ingeplande lessen",
-                    value: `${bookedLessonCount}`,
-                    icon: CalendarClock,
-                  },
-                  { label: "Niet boekbaar", value: `${hiddenCount}`, icon: EyeOff },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-[0.9rem] border border-white/90 bg-white/92 p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <item.icon className="size-4 text-sky-700" />
-                      <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                        {item.label}
-                      </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  {[
+                    { label: "Actieve slots", value: `${activeCount}`, icon: Sparkles },
+                    {
+                      label: "Volgende week open",
+                      value: formatMinutesLabel(nextWeekTotalMinutes),
+                      icon: CalendarDays,
+                    },
+                    {
+                      label: "Ingeplande lessen",
+                      value: `${bookedLessonCount}`,
+                      icon: CalendarClock,
+                    },
+                    { label: "Niet boekbaar", value: `${hiddenCount}`, icon: EyeOff },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-[0.9rem] border border-white/90 bg-white/92 p-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <item.icon className="size-4 text-sky-700" />
+                        <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                          {item.label}
+                        </p>
+                      </div>
+                      <p className="mt-3 text-2xl font-semibold text-slate-950">{item.value}</p>
                     </div>
-                    <p className="mt-3 text-2xl font-semibold text-slate-950">{item.value}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-
-          </div>
+          ) : null}
         </div>
       </div>
 

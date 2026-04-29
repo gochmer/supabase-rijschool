@@ -29,7 +29,8 @@ export async function hasInstructorStudentPlanningRelationship(
   leerlingId: string
 ) {
   const supabase = await createServerClient();
-  const [{ data: requestRows }, { data: lessonRows }] = await Promise.all([
+  const [{ data: requestRows }, { data: lessonRows }, { data: linkRows }] =
+    await Promise.all([
     supabase
       .from("lesaanvragen")
       .select("id")
@@ -44,9 +45,15 @@ export async function hasInstructorStudentPlanningRelationship(
       .eq("leerling_id", leerlingId)
       .neq("status", "geannuleerd")
       .limit(1),
+    supabase
+      .from("instructeur_leerling_koppelingen" as never)
+      .select("id")
+      .eq("instructeur_id", instructorId)
+      .eq("leerling_id", leerlingId)
+      .limit(1),
   ]);
 
-  return Boolean(requestRows?.length || lessonRows?.length);
+  return Boolean(requestRows?.length || lessonRows?.length || linkRows?.length);
 }
 
 export async function getLearnerInstructorSchedulingAccess(
