@@ -313,6 +313,7 @@ export default async function LeerlingDashboardPage() {
       />
 
       <DashboardActionHub
+        compact
         title="Waar wil je meteen naartoe?"
         description="Je belangrijkste leerlingzaken staan als simpele tegels bovenaan, zodat je niet door het dashboard hoeft te zoeken."
         primaryHref={nextLesson ? "/leerling/boekingen" : "/instructeurs"}
@@ -359,6 +360,7 @@ export default async function LeerlingDashboardPage() {
       />
 
       <DashboardFocusPanel
+        compact
         eyebrow="Vandaag belangrijk"
         title="Je rijlestraject in een oogopslag"
         description="Bovenaan staat meteen wat nu telt: je volgende les, open aanvragen en de slimste vervolgstap."
@@ -367,6 +369,7 @@ export default async function LeerlingDashboardPage() {
       />
 
       <OnboardingPanel
+        compact
         eyebrow="Nieuwe leerling"
         title="Van registratie naar je eerste rijles"
         description="Deze checklist houdt de start simpel: eerst je profiel op orde, dan de juiste instructeur kiezen en je eerste aanvraag afronden."

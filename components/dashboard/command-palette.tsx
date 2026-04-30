@@ -28,9 +28,11 @@ type PaletteAction = {
 export function CommandPalette({
   role,
   compact = false,
+  presentation = "card",
 }: {
   role: GebruikersRol;
   compact?: boolean;
+  presentation?: "card" | "search";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -80,6 +82,7 @@ export function CommandPalette({
     const haystack = `${action.title} ${action.description}`.toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
+  const isSearchPresentation = presentation === "search";
 
   function runAction(action: PaletteAction) {
     if (action.href) {
@@ -103,16 +106,20 @@ export function CommandPalette({
         type="button"
         variant="outline"
         className={
-          isUrban
-            ? `w-full justify-between rounded-[1.4rem] border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.9),rgba(17,24,39,0.94))] text-left text-white shadow-[0_22px_52px_-34px_rgba(15,23,42,0.64)] backdrop-blur ${compact ? "px-3 py-2.5" : "px-4 py-5"}`
-            : `w-full justify-between rounded-[1.4rem] border-slate-200 bg-white/82 text-left shadow-[0_18px_45px_-30px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:text-white dark:shadow-[0_22px_52px_-34px_rgba(15,23,42,0.6)] ${compact ? "px-3 py-2.5" : "px-4 py-5"}`
+          isSearchPresentation
+            ? "h-10 w-full justify-between rounded-full border-white/10 bg-[#181818] px-3 text-left text-white shadow-none hover:bg-[#202020]"
+            : isUrban
+              ? `w-full justify-between rounded-[1.4rem] border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.9),rgba(17,24,39,0.94))] text-left text-white shadow-[0_22px_52px_-34px_rgba(15,23,42,0.64)] backdrop-blur ${compact ? "px-3 py-2.5" : "px-4 py-5"}`
+              : `w-full justify-between rounded-[1.4rem] border-slate-200 bg-white/82 text-left shadow-[0_18px_45px_-30px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:text-white dark:shadow-[0_22px_52px_-34px_rgba(15,23,42,0.6)] ${compact ? "px-3 py-2.5" : "px-4 py-5"}`
         }
         onClick={() => setOpen(true)}
       >
         <span className="flex min-w-0 items-center gap-3">
           <span
             className={
-              isUrban
+              isSearchPresentation
+                ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-transparent text-slate-300"
+                : isUrban
                 ? `flex shrink-0 items-center justify-center rounded-xl bg-white/8 text-slate-100 ${compact ? "size-8" : "size-9"}`
                 : `flex shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-white/8 dark:text-slate-100 ${compact ? "size-8" : "size-9"}`
             }
@@ -122,14 +129,16 @@ export function CommandPalette({
           <span className="min-w-0">
             <span
               className={
-                isUrban
+                isSearchPresentation
+                  ? "block truncate text-sm font-semibold text-slate-300"
+                  : isUrban
                   ? "block truncate text-sm font-semibold text-white"
                   : "block truncate text-sm font-semibold text-slate-950 dark:text-white"
               }
             >
-              Command palette
+              {isSearchPresentation ? "Zoek in dashboard" : "Command palette"}
             </span>
-            {compact ? null : (
+            {compact || isSearchPresentation ? null : (
               <span
                 className={
                   isUrban
@@ -143,7 +152,13 @@ export function CommandPalette({
           </span>
         </span>
         {compact ? (
-          <span className={isUrban ? "shrink-0 text-[11px] font-medium text-slate-300" : "shrink-0 text-[11px] font-medium text-slate-600 dark:text-slate-300"}>
+          <span
+            className={
+              isSearchPresentation || isUrban
+                ? "shrink-0 text-[11px] font-medium text-slate-300"
+                : "shrink-0 text-[11px] font-medium text-slate-600 dark:text-slate-300"
+            }
+          >
             Ctrl+K
           </span>
         ) : (
