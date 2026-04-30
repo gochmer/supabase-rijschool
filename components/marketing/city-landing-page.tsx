@@ -47,7 +47,7 @@ function RelatedRouteLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="group flex items-center justify-between rounded-[1.05rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/18 dark:hover:bg-white/10 dark:hover:text-white"
+      className="surface-card group flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:bg-white hover:text-slate-950 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white"
     >
       <span>{label}</span>
       <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -163,10 +163,10 @@ export function CityLandingPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }} />
 
-      <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_12%_16%,rgba(56,189,248,0.22),transparent_24%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.18),transparent_24%),radial-gradient(circle_at_62%_68%,rgba(249,115,22,0.12),transparent_24%)]" />
-        <div className="site-shell relative mx-auto w-full py-10 lg:py-16">
-          <Reveal className="overflow-hidden rounded-[2.6rem] border border-white/80 bg-white/92 shadow-[0_34px_110px_-56px_rgba(15,23,42,0.34)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.88),rgba(15,23,42,0.96))] dark:shadow-[0_34px_110px_-56px_rgba(15,23,42,0.72)]">
+      <section className="relative overflow-hidden px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_12%_16%,rgba(56,189,248,0.14),transparent_26%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.12),transparent_28%)]" />
+        <div className="site-shell relative mx-auto w-full py-8 lg:py-14">
+          <Reveal className="surface-panel overflow-hidden rounded-[1.75rem]">
             <div className="grid gap-0 xl:grid-cols-[1.05fr_0.95fr]">
               <div className="p-6 sm:p-8">
                 <div className="space-y-6">
@@ -206,7 +206,7 @@ export function CityLandingPage({
                     { label: content.metricPackageLabel, value: `${totalPackages}`, detail: content.metricPackageDetail, icon: MapPin },
                     { label: "Gem. score", value: averageReviewScore ? `${averageReviewScore}/5` : "Nog leeg", detail: averageReviewScore ? "Gebaseerd op zichtbare reviews" : "Reviews vullen dit automatisch", icon: Star },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-[1.6rem] border border-slate-200 bg-white/90 p-4 shadow-[0_20px_46px_-36px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-white/6">
+                    <div key={item.label} className="surface-card p-4">
                       <div className="flex items-center gap-2 text-slate-500 dark:text-slate-300"><item.icon className="size-4" /><p className="text-[10px] font-semibold tracking-[0.18em] uppercase">{item.label}</p></div>
                       <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{item.value}</p>
                       <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{item.detail}</p>
@@ -221,7 +221,7 @@ export function CityLandingPage({
 
       <section className="site-shell mx-auto w-full px-4 py-6 sm:px-6 lg:px-8">
         <Reveal className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
-          <Card className="border border-white/80 bg-white/90 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+          <Card className="surface-panel">
             <CardHeader>
               <CardTitle>{localNarrative.title}</CardTitle>
               <CardDescription>Unieke lokale context voor {content.collectionLabel.toLowerCase()} in {city.name}</CardDescription>

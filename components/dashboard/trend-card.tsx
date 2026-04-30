@@ -31,12 +31,12 @@ export function TrendCard({
   return (
     <Card
       className={cn(
-        "overflow-hidden shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)]",
+        "overflow-hidden",
         isUrban
-          ? "border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] text-white shadow-[0_28px_90px_-46px_rgba(15,23,42,0.78)]"
+          ? "border border-white/10 bg-slate-950/84 text-white shadow-[0_24px_72px_-44px_rgba(15,23,42,0.78)]"
           : isHazard
           ? "re-frame-flash border border-red-300/12 bg-[linear-gradient(145deg,rgba(8,10,14,0.98),rgba(18,9,12,0.98),rgba(52,14,18,0.9))] text-white shadow-[0_28px_90px_-46px_rgba(0,0,0,0.76)]"
-          : "border border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
+          : "surface-panel"
       )}
     >
       <CardHeader className="pb-3">

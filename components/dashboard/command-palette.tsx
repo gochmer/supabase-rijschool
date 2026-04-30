@@ -163,8 +163,8 @@ export function CommandPalette({
         <DialogContent
           className={
             isUrban
-              ? "max-w-2xl rounded-[2rem] border border-white/10 bg-[linear-gradient(145deg,rgba(9,14,21,0.99),rgba(17,24,39,0.98),rgba(24,32,47,0.98))] p-6 text-white shadow-[0_32px_100px_-50px_rgba(15,23,42,0.86)]"
-              : "max-w-2xl rounded-[2rem] border border-white/70 bg-white/92 p-6 shadow-[0_32px_100px_-50px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(9,14,21,0.99),rgba(17,24,39,0.98),rgba(24,32,47,0.98))] dark:text-white dark:shadow-[0_32px_100px_-50px_rgba(15,23,42,0.86)]"
+              ? "max-w-2xl rounded-[1.35rem] border border-white/10 bg-slate-950/96 p-6 text-white shadow-[0_24px_72px_-44px_rgba(15,23,42,0.82)]"
+              : "surface-panel max-w-2xl rounded-[1.35rem] p-6"
           }
           showCloseButton={false}
         >

@@ -24,16 +24,16 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[1.55rem] p-4 xl:p-5",
+        "overflow-hidden rounded-[1.35rem] p-4 xl:p-5",
         isUrban
-          ? "border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] shadow-[0_28px_90px_-45px_rgba(15,23,42,0.82)]"
+          ? "border border-white/10 bg-slate-950/84 shadow-[0_24px_72px_-44px_rgba(15,23,42,0.78)]"
           : isHazard
           ? "re-frame-flash re-scanlines border border-red-300/14 bg-[linear-gradient(145deg,rgba(8,10,14,0.98),rgba(18,9,12,0.98),rgba(52,14,18,0.9),rgba(31,22,25,0.9))] shadow-[0_28px_90px_-45px_rgba(0,0,0,0.82)]"
-          : "border border-white/70 bg-white/82 shadow-[0_28px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_28px_90px_-45px_rgba(15,23,42,0.72)]"
+          : "surface-panel"
       )}
     >
-      <div className="flex flex-col gap-3.5 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-2">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+        <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <p
               className={cn(
@@ -62,7 +62,7 @@ export function PageHeader({
           </div>
           <h1
             className={cn(
-              "text-[1.85rem] font-semibold tracking-tight sm:text-[2.15rem]",
+              "text-[1.65rem] font-semibold tracking-tight sm:text-[2rem]",
               isUrban || isHazard ? "text-white" : "text-slate-950 dark:text-white"
             )}
           >
@@ -82,7 +82,7 @@ export function PageHeader({
           </p>
         </div>
         {actions ? (
-          <div className="grid gap-1.5 sm:flex sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto">
+          <div className="grid gap-2 sm:flex sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto">
             {actions}
           </div>
         ) : null}

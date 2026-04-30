@@ -129,7 +129,7 @@ export function InstructorAvailabilityPlanner({
 
   if (!entries.length) {
     return (
-      <div className="rounded-[2rem] border border-white/80 bg-white/92 p-6 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.86),rgba(15,23,42,0.92))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]">
+      <div className="surface-panel rounded-[1.35rem] p-6">
         <p className="text-xs font-semibold tracking-[0.22em] text-sky-700 uppercase">
           Live agenda
         </p>
@@ -179,7 +179,7 @@ export function InstructorAvailabilityPlanner({
   }
 
   return (
-    <div className="rounded-[2rem] border border-white/80 bg-white/92 p-5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.86),rgba(15,23,42,0.92))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)] sm:p-6">
+    <div className="surface-panel rounded-[1.35rem] p-5 sm:p-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
           <p className="text-xs font-semibold tracking-[0.22em] text-sky-700 uppercase">

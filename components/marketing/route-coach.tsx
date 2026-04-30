@@ -275,20 +275,19 @@ export function RouteCoach({
 
   return (
     <Reveal className={className}>
-      <section className="overflow-hidden rounded-[2.45rem] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] shadow-[0_34px_110px_-54px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.88),rgba(15,23,42,0.96))] dark:shadow-[0_34px_110px_-54px_rgba(15,23,42,0.56)]">
+      <section className="surface-panel overflow-hidden rounded-[1.75rem]">
         <div className="grid gap-0 xl:grid-cols-[0.92fr_1.08fr]">
           <div className="border-b border-slate-200/80 p-6 dark:border-white/10 sm:p-7 xl:border-b-0 xl:border-r">
             <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-sky-700 uppercase dark:border-sky-300/16 dark:bg-sky-400/10 dark:text-sky-100">
               <Compass className="size-3.5" />
               Rijles Routecoach
             </div>
-            <h2 className="mt-4 max-w-[16ch] text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[2.6rem]">
-              Niet alleen zoeken. Eerst slim kiezen.
+            <h2 className="mt-4 max-w-[18ch] text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-[2.35rem]">
+              Kies de route die nu het beste past.
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-[15px]">
-              Deze coach stuurt bezoekers in een paar stappen naar de beste
-              route voor hun situatie. Daardoor voelt de site minder als een
-              lijst en meer als een duidelijke startbegeleider.
+              Beantwoord een paar keuzes en ga direct naar de meest logische
+              start voor jouw situatie.
             </p>
 
             <div className="mt-6 grid gap-3">
@@ -346,7 +345,7 @@ export function RouteCoach({
               ].map((group) => (
                 <div
                   key={group.label}
-                  className="rounded-[1.2rem] border border-slate-200 bg-white/90 p-3 shadow-[0_18px_38px_-28px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6"
+                  className="surface-card p-3"
                 >
                   <div className="mb-2 flex items-center gap-2 text-slate-500 dark:text-slate-300">
                     <group.icon className="size-4" />
@@ -381,7 +380,7 @@ export function RouteCoach({
           </div>
 
           <div className="p-6 sm:p-7">
-            <div className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(140deg,#0f172a,#1d4ed8,#38bdf8)] p-5 text-white shadow-[0_28px_72px_-38px_rgba(37,99,235,0.34)]">
+            <div className="rounded-[1.45rem] border border-slate-200 bg-[linear-gradient(140deg,#0f172a,#1d4ed8,#38bdf8)] p-5 text-white shadow-[0_24px_64px_-38px_rgba(37,99,235,0.32)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold tracking-[0.22em] text-white/66 uppercase">
@@ -459,11 +458,6 @@ export function RouteCoach({
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[1.15rem] border border-white/12 bg-white/8 px-4 py-3 text-[12px] leading-6 text-white/74">
-                Dit is precies het soort extra laag dat je site unieker maakt:
-                niet alleen tonen wat er is, maar actief helpen kiezen wat nu
-                de slimste stap is.
-              </div>
             </div>
           </div>
         </div>

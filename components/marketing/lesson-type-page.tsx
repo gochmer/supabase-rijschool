@@ -74,10 +74,10 @@ export function LessonTypePage({
 
   return (
     <div className="pb-20">
-      <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_10%_16%,rgba(56,189,248,0.18),transparent_24%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.18),transparent_26%),radial-gradient(circle_at_58%_62%,rgba(249,115,22,0.1),transparent_24%)]" />
-        <div className="site-shell relative mx-auto w-full py-10 lg:py-16">
-          <Reveal className="rounded-[2.5rem] border border-white/80 bg-white/90 p-6 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.22)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.62)] sm:p-8">
+      <section className="relative overflow-hidden px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_10%_16%,rgba(56,189,248,0.13),transparent_26%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.11),transparent_28%)]" />
+        <div className="site-shell relative mx-auto w-full py-8 lg:py-14">
+          <Reveal className="surface-panel rounded-[1.75rem] p-5 sm:p-7">
             <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
               <div className="space-y-6">
                 <SeoBreadcrumbs items={breadcrumbItems} />
@@ -143,7 +143,7 @@ export function LessonTypePage({
                 ].map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-[1.6rem] border border-slate-200 bg-slate-50/90 p-4 shadow-[0_20px_46px_-36px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/6 dark:shadow-[0_20px_46px_-36px_rgba(15,23,42,0.42)]"
+                    className="surface-card p-4"
                   >
                     <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                       {item.label}
@@ -195,7 +195,7 @@ export function LessonTypePage({
               ))}
             </div>
           ) : (
-            <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white/80 p-8 text-sm leading-7 text-slate-600 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:shadow-[0_24px_70px_-42px_rgba(15,23,42,0.42)]">
+            <div className="surface-empty p-8 text-sm leading-7 text-slate-600 dark:text-slate-300">
               Er staan nog geen instructeurs live met {getRijlesTypeLabel(lessonType).toLowerCase()}-aanbod.
               Zodra een instructeur deze pakketten toevoegt in het dashboard, verschijnt het aanbod hier direct.
             </div>
@@ -398,7 +398,7 @@ export function LessonTypePage({
               })}
             </div>
           ) : (
-            <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white/80 p-8 text-sm leading-7 text-slate-600 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:shadow-[0_24px_70px_-42px_rgba(15,23,42,0.42)]">
+            <div className="surface-empty p-8 text-sm leading-7 text-slate-600 dark:text-slate-300">
               Er staan nog geen zichtbare {getRijlesTypeLabel(lessonType).toLowerCase()}-pakketten live.
               Zodra instructeurs ze toevoegen in hun dashboard, verschijnen ze hier.
             </div>

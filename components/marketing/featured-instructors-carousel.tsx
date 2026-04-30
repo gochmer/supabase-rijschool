@@ -46,7 +46,7 @@ export function FeaturedInstructorsCarousel({
     <Carousel
       opts={{ align: "start", loop: true }}
       setApi={setApi}
-      className="w-full rounded-[2.2rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-3 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.86),rgba(15,23,42,0.92))] dark:shadow-[0_30px_80px_-50px_rgba(15,23,42,0.56)]"
+      className="surface-panel w-full rounded-[1.65rem] p-3"
     >
       <CarouselContent className="-ml-3">
         {items.map((instructor) => (

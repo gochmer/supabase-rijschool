@@ -50,14 +50,14 @@ export default async function HomePage() {
 
   return (
     <div className="pb-20">
-      <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_10%_16%,rgba(56,189,248,0.18),transparent_24%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.18),transparent_26%),radial-gradient(circle_at_58%_62%,rgba(249,115,22,0.1),transparent_24%)]" />
-        <div className="site-shell relative mx-auto w-full py-10 lg:py-16">
-          <Reveal className="relative overflow-hidden rounded-[2.6rem] bg-[linear-gradient(145deg,rgba(7,12,28,0.98),rgba(17,24,39,0.94),rgba(37,99,235,0.82),rgba(14,165,233,0.72))] p-4 text-white shadow-[0_40px_110px_-56px_rgba(15,23,42,0.72)] sm:p-6 xl:p-8">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.1),transparent_28%)]" />
+      <section className="relative overflow-hidden px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_10%_16%,rgba(56,189,248,0.14),transparent_26%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.12),transparent_28%)]" />
+        <div className="site-shell relative mx-auto w-full py-8 lg:py-14">
+          <Reveal className="relative overflow-hidden rounded-[1.75rem] bg-[linear-gradient(145deg,rgba(7,12,28,0.98),rgba(17,24,39,0.94),rgba(37,99,235,0.72))] p-4 text-white shadow-[0_30px_84px_-54px_rgba(15,23,42,0.64)] sm:p-5 xl:p-7">
+            <div className="absolute inset-x-0 top-0 h-px bg-white/24" />
             <div className="relative grid gap-6 xl:grid-cols-[1fr_0.78fr] xl:items-center">
               <InstructorSearchCard />
-              <div className="rounded-[2rem] border border-white/12 bg-white/10 p-5 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+              <div className="rounded-[1.45rem] border border-white/12 bg-white/9 p-5 shadow-[0_22px_62px_-44px_rgba(0,0,0,0.38)] backdrop-blur-xl">
                 <p className="text-[10px] font-semibold tracking-[0.24em] text-white/64 uppercase">
                   Snelle route
                 </p>
@@ -76,7 +76,7 @@ export default async function HomePage() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="group flex items-center justify-between rounded-[1rem] border border-white/12 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/16"
+                      className="group flex items-center justify-between rounded-[0.95rem] border border-white/12 bg-white/9 px-4 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/14"
                     >
                       <span className="flex items-center gap-2">
                         <item.icon className="size-4 text-sky-100" />
@@ -103,7 +103,7 @@ export default async function HomePage() {
                 Vergelijk rijinstructeurs op prijs, ervaring, beoordeling en beschikbaarheid.
               </h2>
               <p className="text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">
-                Bekijk in één rustige selectie welke instructeur past bij jouw regio, budget en voorkeur voor automaat of handgeschakeld.
+                Bekijk in een rustige selectie welke instructeur past bij jouw regio, budget en voorkeur voor automaat of handgeschakeld.
               </p>
             </div>
             <Button asChild variant="outline" className="rounded-full">
@@ -119,7 +119,7 @@ export default async function HomePage() {
               packagesByInstructorId={packagesByInstructorId}
             />
           ) : (
-            <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-10 text-center shadow-[0_24px_70px_-48px_rgba(15,23,42,0.18)] dark:border-white/12 dark:bg-white/6">
+            <div className="surface-empty px-6 py-10 text-center">
               <p className="text-sm font-semibold text-slate-950 dark:text-white">
                 Er zijn nog geen uitgelichte instructeurs beschikbaar.
               </p>
@@ -137,22 +137,22 @@ export default async function HomePage() {
 
       <section className="site-shell mx-auto w-full px-4 pb-10 sm:px-6 lg:px-8">
         <Reveal>
-          <div className="rounded-[2.45rem] border border-white/70 bg-white/90 p-6 shadow-[0_32px_100px_-50px_rgba(15,23,42,0.18)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))] dark:shadow-[0_32px_100px_-50px_rgba(15,23,42,0.64)] sm:p-8">
-            <div className="grid gap-8 xl:grid-cols-[1fr_auto] xl:items-end">
-              <div className="max-w-3xl space-y-4">
+          <div className="surface-panel rounded-[1.75rem] p-5 sm:p-7">
+            <div className="grid gap-7 xl:grid-cols-[1fr_auto] xl:items-end">
+              <div className="max-w-3xl space-y-3.5">
                 <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-sky-700 uppercase dark:border-white/10 dark:bg-white/6 dark:text-sky-200">
                   <Sparkles className="size-3.5" />
                   Klaar voor je volgende stap
                 </div>
-                <h2 className="max-w-[18ch] text-[2rem] font-semibold leading-[1.02] tracking-tight text-slate-950 dark:text-white sm:text-[2.8rem]">
-                  Van oriënteren naar aanvragen in een duidelijke flow.
+                <h2 className="max-w-[20ch] text-[1.9rem] font-semibold leading-[1.06] tracking-tight text-slate-950 dark:text-white sm:text-[2.5rem]">
+                  Van orienteren naar aanvragen in een duidelijke flow.
                 </h2>
                 <p className="max-w-[42rem] text-[15px] leading-7 text-slate-600 dark:text-slate-300">
                   Start met een route, vergelijk de belangrijkste verschillen en ga daarna direct door naar een instructeur of pakket dat bij je planning past.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {["Sterke eerste indruk", "Heldere selectie", "Snelle doorstroom"].map((item) => (
-                    <div key={item} className="rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3 text-[12px] font-semibold text-slate-700 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/6 dark:text-slate-200">
+                    <div key={item} className="surface-card px-4 py-3 text-[12px] font-semibold text-slate-700 dark:text-slate-200">
                       {item}
                     </div>
                   ))}
@@ -171,7 +171,7 @@ export default async function HomePage() {
                     </Link>
                   </Button>
                 </div>
-                <div className="flex items-start gap-3 rounded-[1.25rem] bg-slate-50 px-4 py-3 dark:bg-white/6">
+                <div className="surface-muted flex items-start gap-3 px-4 py-3">
                   <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
                     <ShieldCheck className="size-4" />
                   </div>
@@ -181,7 +181,7 @@ export default async function HomePage() {
                 </div>
               </div>
 
-              <div className="w-full max-w-md rounded-[1.9rem] border border-slate-200 bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] px-5 py-5 text-white shadow-[0_26px_62px_-38px_rgba(37,99,235,0.34)] dark:border-white/10">
+              <div className="w-full max-w-md rounded-[1.45rem] border border-slate-200 bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] px-5 py-5 text-white shadow-[0_22px_58px_-38px_rgba(37,99,235,0.32)] dark:border-white/10">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-[10px] font-semibold tracking-[0.2em] text-white/62 uppercase">
                     Volgende stap

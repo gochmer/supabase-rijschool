@@ -60,7 +60,7 @@ export function AutomaticInternalLinks({
   if (!links.length) return null;
 
   return (
-    <Card className="rounded-[2rem] border border-white/80 bg-white/92 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.2)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+    <Card className="surface-panel rounded-[1.35rem]">
       <CardHeader>
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
@@ -77,7 +77,7 @@ export function AutomaticInternalLinks({
           <Link
             key={link.href}
             href={link.href}
-            className="group flex items-center justify-between rounded-[1rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 dark:hover:border-white/18 dark:hover:bg-white/10 dark:hover:text-white"
+            className="surface-card group flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:bg-white hover:text-slate-950 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white"
           >
             <span>{link.label}</span>
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />

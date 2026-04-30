@@ -62,20 +62,15 @@ export async function DashboardShell({
       className={cn(
         "relative min-h-screen overflow-hidden",
         isLearner
-          ? "bg-[linear-gradient(180deg,#0b1118_0%,#111827_42%,#161d27_100%)] text-white"
-          : "bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_26%),radial-gradient(circle_at_18%_38%,_rgba(99,102,241,0.12),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(249,115,22,0.12),_transparent_24%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_50%,#f8fafc_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.14),_transparent_24%),radial-gradient(circle_at_18%_38%,_rgba(99,102,241,0.12),_transparent_22%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.1),_transparent_22%),linear-gradient(180deg,#020617_0%,#0f172a_52%,#111827_100%)]"
+          ? "bg-[linear-gradient(180deg,#0f172a_0%,#111827_54%,#0f172a_100%)] text-white"
+          : "bg-[linear-gradient(180deg,#f8fafc_0%,#eef4ff_50%,#f8fafc_100%)] dark:bg-[linear-gradient(180deg,#020617_0%,#0f172a_52%,#111827_100%)]"
       )}
     >
       {isLearner ? (
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.18),transparent_24%),radial-gradient(circle_at_82%_16%,rgba(56,189,248,0.1),transparent_20%),radial-gradient(circle_at_50%_78%,rgba(245,158,11,0.08),transparent_26%)]" />
-          <div className="absolute left-[-8rem] top-[-4rem] h-[26rem] w-[26rem] rounded-full bg-slate-400/12 blur-3xl" />
-          <div className="absolute right-[-8rem] top-[20%] h-[30rem] w-[30rem] rounded-full bg-sky-300/8 blur-3xl" />
-          <div className="absolute bottom-[-8rem] left-[14%] h-[24rem] w-[24rem] rounded-full bg-amber-200/6 blur-3xl" />
-        </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.16),transparent_28%),radial-gradient(circle_at_82%_14%,rgba(56,189,248,0.09),transparent_24%)]" />
       ) : null}
 
-      <div className="mx-auto grid min-h-screen w-full max-w-[1440px] items-start gap-6 px-4 py-6 xl:grid-cols-[300px_minmax(0,1fr)] xl:px-6">
+      <div className="mx-auto grid min-h-screen w-full max-w-[1440px] items-start gap-5 px-4 py-5 xl:grid-cols-[280px_minmax(0,1fr)] xl:px-6">
         <aside
           className={cn(
             "min-h-0 xl:self-start",
@@ -84,11 +79,11 @@ export async function DashboardShell({
         >
           <div
             className={cn(
-              "flex flex-col rounded-[2.2rem] backdrop-blur-xl",
-              isLearner ? "gap-3 p-3.5" : "gap-6 p-4",
+              "flex flex-col rounded-[1.55rem] backdrop-blur-xl",
+              isLearner ? "gap-3 p-3" : "gap-5 p-4",
               isLearner
-                ? "border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] shadow-[0_32px_100px_-48px_rgba(15,23,42,0.82)]"
-                : "border border-white/70 bg-white/72 shadow-[0_32px_90px_-48px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.86),rgba(30,41,59,0.82),rgba(15,23,42,0.88))] dark:shadow-[0_32px_90px_-48px_rgba(15,23,42,0.76)]"
+                ? "border border-white/10 bg-slate-950/82 shadow-[0_28px_86px_-48px_rgba(15,23,42,0.82)]"
+                : "surface-panel"
             )}
           >
             <div className="shrink-0">
@@ -97,11 +92,11 @@ export async function DashboardShell({
 
             <div
               className={cn(
-                "shrink-0 rounded-[1.8rem]",
+                "shrink-0 rounded-[1.15rem]",
                 isLearner ? "p-3" : "p-4",
                 isLearner
-                  ? "border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))]"
-                  : "bg-slate-50/80 dark:bg-white/6"
+                  ? "border border-white/10 bg-white/6"
+                  : "surface-card"
               )}
             >
               <div
@@ -149,11 +144,11 @@ export async function DashboardShell({
             <div className="shrink-0">
               <div
                 className={cn(
-                  "rounded-[1.9rem] shadow-[0_30px_80px_-40px_rgba(15,23,42,0.8)]",
+                  "rounded-[1.25rem] shadow-[0_24px_64px_-38px_rgba(15,23,42,0.62)]",
                   isLearner ? "p-3.5" : "p-5",
                   isLearner
-                    ? "border border-white/10 bg-[linear-gradient(135deg,#0f172a,#1e293b,#334155)] text-white shadow-[0_30px_90px_-44px_rgba(15,23,42,0.9)]"
-                    : "bg-[linear-gradient(135deg,rgba(15,23,42,1),rgba(37,99,235,0.95),rgba(14,165,233,0.9))] text-primary-foreground dark:border dark:border-white/10 dark:bg-[linear-gradient(135deg,rgba(30,41,59,0.96),rgba(37,99,235,0.72),rgba(14,165,233,0.5))]"
+                    ? "border border-white/10 bg-white/7 text-white"
+                    : "border border-slate-200 bg-slate-950 text-primary-foreground dark:border-white/10 dark:bg-white/7"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -170,7 +165,7 @@ export async function DashboardShell({
                 >
                   {isLearner
                     ? "Profiel, boekingen en instructeurs direct bereikbaar."
-                    : "Live dashboards, berichten, pakketten en beheerflows staan klaar in een modern platform."}
+                    : "Belangrijkste acties, berichten en beheerflows staan klaar."}
                 </p>
                 <SignOutButton
                   className={cn(
@@ -187,18 +182,18 @@ export async function DashboardShell({
 
         <main
           className={cn(
-            "dashboard-fade min-w-0 space-y-6 rounded-[2.2rem] p-2 sm:p-3",
+            "dashboard-fade min-w-0 space-y-5 rounded-[1.65rem] p-2 sm:p-3",
             isLearner
-              ? "border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.72),rgba(17,24,39,0.76),rgba(15,23,42,0.72))] backdrop-blur-md"
-              : "border border-white/50 bg-white/36 backdrop-blur-sm dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.46),rgba(15,23,42,0.32),rgba(15,23,42,0.42))] dark:backdrop-blur-md"
+              ? "border border-white/10 bg-white/5 backdrop-blur-md"
+              : "border border-white/55 bg-white/45 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-md"
           )}
         >
           <div
             className={cn(
-              "sticky top-2 z-20 flex flex-col gap-3 rounded-[1.6rem] border px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between",
+              "sticky top-2 z-20 flex flex-col gap-3 rounded-[1.25rem] border px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between",
               isLearner
-                ? "border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(148,163,184,0.07),rgba(15,23,42,0.24))]"
-                : "border-white/70 bg-white/76 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]"
+                ? "border-white/10 bg-slate-950/64"
+                : "border-white/70 bg-white/84 dark:border-white/10 dark:bg-slate-950/72"
             )}
           >
             <div className="min-w-0">
@@ -209,7 +204,7 @@ export async function DashboardShell({
                 )}
               >
                 <BellRing className="size-3.5" />
-                Algemene dashboardheader
+                Dashboardstatus
               </div>
               <p
                 className={cn(

@@ -85,10 +85,10 @@ const contactFaqItems = [
   {
     question: "Hoe snel krijg ik antwoord op mijn bericht?",
     answer:
-      "Meestal binnen één werkdag. Voor vragen over onboarding, support of samenwerkingen proberen we zo snel mogelijk een eerste duidelijke reactie te geven.",
+      "Meestal binnen een werkdag. Voor vragen over onboarding, support of samenwerkingen proberen we zo snel mogelijk een eerste duidelijke reactie te geven.",
   },
   {
-    question: "Kan ik ook contact opnemen als ik nog aan het oriënteren ben?",
+    question: "Kan ik ook contact opnemen als ik nog aan het orienteren ben?",
     answer:
       "Ja, juist dan. We kunnen helpen bij vragen over pakketten, instructeurpresentatie, platforminrichting en wat logisch is voor jouw situatie.",
   },
@@ -107,27 +107,26 @@ export default function ContactPage() {
 
   return (
     <div className="pb-20">
-      <section className="relative overflow-hidden px-4 pt-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_14%_18%,rgba(99,102,241,0.24),transparent_24%),radial-gradient(circle_at_84%_15%,rgba(124,58,237,0.18),transparent_26%),radial-gradient(circle_at_56%_58%,rgba(56,189,248,0.08),transparent_30%)]" />
-        <div className="site-shell relative mx-auto w-full py-12 lg:py-20">
-          <div className="grid gap-10 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
-            <Reveal className="space-y-8 lg:pr-6">
+      <section className="relative overflow-hidden px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="absolute inset-x-0 top-0 h-[26rem] bg-[radial-gradient(circle_at_14%_18%,rgba(56,189,248,0.12),transparent_26%),radial-gradient(circle_at_84%_15%,rgba(29,78,216,0.1),transparent_28%)]" />
+        <div className="site-shell relative mx-auto w-full py-8 lg:py-14">
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
+            <Reveal className="surface-panel space-y-6 rounded-[1.75rem] p-5 sm:p-7">
               <SeoBreadcrumbs items={breadcrumbItems} />
               <SectionHeading
                 eyebrow="Contact"
                 title="Praat met een team dat net zoveel aandacht heeft voor uitstraling als voor gebruiksgemak."
                 description="Voor vragen over instructeurs, pakketten, demo&apos;s, samenwerkingen of ondersteuning. We reageren snel en duidelijk."
-                tone="inverse"
               />
               <SignatureLine className="h-px w-36 rounded-full" />
               <div className="flex flex-wrap gap-2.5">
                 {contactSignals.map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-full border border-white/12 bg-white/8 px-4 py-2 text-sm text-slate-200 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl"
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/6 dark:text-slate-300"
                   >
-                    <span className="font-semibold text-white">{item.label}</span>{" "}
-                    <span className="text-slate-300">{item.value}</span>
+                    <span className="font-semibold text-slate-950 dark:text-white">{item.label}</span>{" "}
+                    <span>{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -135,17 +134,17 @@ export default function ContactPage() {
                 {contactItems.map((item) => (
                   <div
                     key={item.title}
-                    className="flex min-h-[8rem] items-start gap-3 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-4 shadow-[0_24px_48px_-34px_rgba(15,23,42,0.44)] backdrop-blur-xl"
+                    className="surface-card flex min-h-[8rem] items-start gap-3 px-4 py-4"
                   >
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-sky-100">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
                       <item.icon className="size-4" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-400 uppercase">
+                      <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400">
                         {item.title}
                       </p>
-                      <p className="mt-2 font-semibold text-white">{item.value}</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-300">
+                      <p className="mt-2 font-semibold text-slate-950 dark:text-white">{item.value}</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                         {item.description}
                       </p>
                     </div>
@@ -156,9 +155,9 @@ export default function ContactPage() {
 
             <Reveal
               delay={0.08}
-              className="relative overflow-hidden rounded-[2.6rem] bg-[linear-gradient(145deg,rgba(7,12,28,0.98),rgba(17,24,39,0.94),rgba(67,56,202,0.82),rgba(109,40,217,0.72))] px-6 py-6 text-white shadow-[0_40px_110px_-56px_rgba(15,23,42,0.82)] sm:px-7 sm:py-7 xl:min-h-[34rem] xl:px-8 xl:py-8"
+              className="relative overflow-hidden rounded-[1.75rem] bg-[linear-gradient(145deg,rgba(7,12,28,0.98),rgba(17,24,39,0.94),rgba(37,99,235,0.72))] px-6 py-6 text-white shadow-[0_30px_86px_-52px_rgba(15,23,42,0.74)] sm:px-7 sm:py-7 xl:min-h-[34rem] xl:px-8 xl:py-8"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.1),transparent_30%)]" />
+              <div className="absolute inset-x-0 top-0 h-px bg-white/24" />
               <div className="relative flex h-full flex-col justify-between gap-8">
                 <div className="max-w-[29rem] space-y-5">
                   <div className="flex flex-wrap items-center gap-2">
@@ -192,7 +191,7 @@ export default function ContactPage() {
                   {contactReasons.map((item) => (
                     <div
                       key={item.eyebrow}
-                      className="flex min-h-[8.75rem] flex-col rounded-[1.65rem] border border-white/12 bg-white/10 p-4 text-white/82 backdrop-blur"
+                      className="flex min-h-[8.75rem] flex-col rounded-[1.25rem] border border-white/12 bg-white/10 p-4 text-white/82 backdrop-blur"
                     >
                       <p className="text-[10px] font-semibold tracking-[0.18em] text-violet-100 uppercase">
                         {item.eyebrow}
@@ -210,7 +209,7 @@ export default function ContactPage() {
       <section className="site-shell mx-auto w-full px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr]">
           <Reveal className="space-y-5">
-            <div className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.92))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.68)]">
+            <div className="surface-panel rounded-[1.35rem] p-6">
               <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
                 Waarom contact opnemen
               </p>
@@ -221,7 +220,7 @@ export default function ContactPage() {
                 {supportPoints.map((item) => (
                   <div
                     key={item}
-                    className="flex items-start gap-3 rounded-[1.4rem] bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-600 dark:bg-white/6 dark:text-slate-300"
+                    className="surface-muted flex items-start gap-3 px-4 py-3 text-sm leading-7 text-slate-600 dark:text-slate-300"
                   >
                     <CheckCircle2 className="mt-1 size-4 shrink-0 text-emerald-500 dark:text-emerald-300" />
                     <span>{item}</span>
@@ -230,13 +229,13 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="rounded-[1.9rem] border border-white/70 bg-white/84 p-5 shadow-[0_22px_70px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.84),rgba(30,41,59,0.78),rgba(15,23,42,0.88))] dark:shadow-[0_22px_70px_-42px_rgba(15,23,42,0.62)]">
+            <div className="surface-panel rounded-[1.35rem] p-5">
               <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
                 Wat je mag verwachten
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                 {contactSignals.map((item) => (
-                  <div key={item.label} className="rounded-[1.3rem] bg-slate-50/90 p-4 dark:bg-white/6">
+                  <div key={item.label} className="surface-muted p-4">
                     <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                       {item.label}
                     </p>
@@ -250,7 +249,7 @@ export default function ContactPage() {
           </Reveal>
 
           <Reveal delay={0.06}>
-            <Card className="border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.84),rgba(15,23,42,0.94))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
+            <Card className="surface-panel">
               <CardHeader className="space-y-4">
                 <div className="inline-flex w-fit rounded-full border border-sky-100 bg-sky-50/80 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-sky-700 uppercase dark:border-white/10 dark:bg-white/6 dark:text-sky-200">
                   Bericht sturen

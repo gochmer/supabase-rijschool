@@ -30,15 +30,12 @@ export function SiteHeader() {
       <div className="site-shell mx-auto w-full">
         <div
           className={cn(
-            "relative overflow-hidden rounded-[1.55rem] border px-3.5 py-2.5 backdrop-blur-2xl sm:rounded-[1.9rem] sm:px-5 sm:py-3",
-            "border-white/12 bg-[linear-gradient(135deg,rgba(2,6,23,0.92),rgba(15,23,42,0.9),rgba(30,64,175,0.34))] shadow-[0_28px_80px_-46px_rgba(15,23,42,0.52)]",
-            !isHome && "shadow-[0_24px_68px_-42px_rgba(15,23,42,0.4)]",
+            "relative overflow-hidden rounded-[1.35rem] border px-3.5 py-2.5 backdrop-blur-2xl sm:px-4 sm:py-3",
+            "border-white/12 bg-[linear-gradient(135deg,rgba(2,6,23,0.94),rgba(15,23,42,0.9),rgba(30,64,175,0.26))] shadow-[0_22px_70px_-44px_rgba(15,23,42,0.5)]",
+            !isHome && "shadow-[0_20px_60px_-42px_rgba(15,23,42,0.38)]",
           )}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.18),transparent_28%)]" />
           <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.7),transparent)]" />
-          <div className="pointer-events-none absolute -left-10 top-0 h-24 w-24 rounded-full bg-sky-400/12 blur-3xl" />
-          <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-blue-400/12 blur-3xl" />
 
           <div className="relative flex items-center justify-between gap-4 xl:grid xl:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto] xl:gap-4">
             <div className="flex min-w-0 items-center xl:min-h-[3rem] xl:shrink-0">
@@ -46,7 +43,7 @@ export function SiteHeader() {
             </div>
 
             <div className="hidden min-w-0 xl:flex xl:justify-center">
-              <nav className="flex w-full max-w-fit items-center justify-center gap-1 rounded-[1.25rem] border border-white/10 bg-white/6 p-1.5 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.42)]">
+              <nav className="flex w-full max-w-fit items-center justify-center gap-1 rounded-[1rem] border border-white/10 bg-white/6 p-1 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.4)]">
                 {headerNavigation.map((item) => {
                   const active = isActive(pathname, item.href);
                   return (
@@ -54,26 +51,16 @@ export function SiteHeader() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "group relative flex min-w-[108px] items-center justify-center overflow-hidden rounded-[0.95rem] px-3.5 py-2.5 text-[0.78rem] font-semibold tracking-[0.12em] uppercase transition-all duration-200",
+                        "group relative flex items-center justify-center overflow-hidden rounded-[0.82rem] px-3 py-2 text-[0.75rem] font-semibold tracking-[0.1em] uppercase transition-all duration-200",
                         active
-                          ? "bg-[linear-gradient(135deg,#f8fafc,#dbeafe)] text-slate-950 shadow-[0_16px_34px_-20px_rgba(255,255,255,0.28)]"
+                          ? "bg-white text-slate-950 shadow-[0_12px_28px_-18px_rgba(255,255,255,0.3)]"
                           : "text-white/74 hover:bg-white/10 hover:text-white",
                       )}
                     >
                       <span
                         className={cn(
-                          "absolute inset-x-3 top-1.5 h-px rounded-full transition-opacity duration-200",
-                          active
-                            ? "bg-[linear-gradient(90deg,transparent,rgba(14,165,233,0.92),transparent)] opacity-100"
-                            : "bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.52),transparent)] opacity-0 group-hover:opacity-100",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "absolute bottom-[8px] left-1/2 h-[2px] -translate-x-1/2 rounded-full transition-all duration-200",
-                          active
-                            ? "w-12 bg-[linear-gradient(90deg,#0ea5e9,#38bdf8)]"
-                            : "w-0 bg-white/70 group-hover:w-8",
+                          "absolute bottom-1.5 left-1/2 h-[2px] -translate-x-1/2 rounded-full transition-all duration-200",
+                          active ? "w-8 bg-sky-500" : "w-0 bg-white/70 group-hover:w-6",
                         )}
                       />
                       <span className="relative z-10">{item.label}</span>
@@ -88,13 +75,13 @@ export function SiteHeader() {
               <Button
                 asChild
                 variant="ghost"
-                className="h-9 rounded-[0.95rem] border border-white/10 bg-white/6 px-3 text-[0.74rem] font-semibold tracking-[0.12em] uppercase text-white/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-white/10 hover:text-white"
+                className="h-9 rounded-[0.82rem] border border-white/10 bg-white/6 px-3 text-[0.74rem] font-semibold tracking-[0.1em] uppercase text-white/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-white/10 hover:text-white"
               >
                 <Link href="/inloggen">Inloggen</Link>
               </Button>
               <Button
                 asChild
-                className="h-9 rounded-[0.95rem] bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] px-3.5 text-[0.74rem] font-semibold tracking-[0.12em] uppercase text-white shadow-[0_16px_34px_-20px_rgba(37,99,235,0.42)]"
+                className="h-9 rounded-[0.82rem] bg-white px-3.5 text-[0.74rem] font-semibold tracking-[0.1em] uppercase text-slate-950 shadow-[0_14px_32px_-20px_rgba(255,255,255,0.32)] hover:bg-white/92"
               >
                 <Link href="/registreren">
                   Gratis starten
@@ -107,7 +94,7 @@ export function SiteHeader() {
               type="button"
               variant="outline"
               size="icon"
-              className="rounded-[0.95rem] border-white/10 bg-white/8 text-white shadow-[0_16px_34px_-24px_rgba(15,23,42,0.42)] hover:bg-white/12 xl:hidden"
+              className="rounded-[0.82rem] border-white/10 bg-white/8 text-white shadow-[0_16px_34px_-24px_rgba(15,23,42,0.42)] hover:bg-white/12 xl:hidden"
               onClick={() => setMobileOpen((open) => !open)}
               aria-label={mobileOpen ? "Menu sluiten" : "Menu openen"}
             >
@@ -120,7 +107,7 @@ export function SiteHeader() {
               <div className="flex justify-end">
                 <ThemeToggle surface="dark" compact />
               </div>
-              <div className="grid gap-2 rounded-[1.35rem] border border-white/10 bg-white/6 p-2 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.42)]">
+              <div className="grid gap-2 rounded-[1rem] border border-white/10 bg-white/6 p-2 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.42)]">
                 {headerNavigation.map((item) => {
                   const active = isActive(pathname, item.href);
                   return (
@@ -130,7 +117,7 @@ export function SiteHeader() {
                       className={cn(
                         "group relative overflow-hidden rounded-[1.1rem] px-4 py-3.5 text-[0.8rem] font-semibold tracking-[0.14em] uppercase transition-all",
                         active
-                          ? "bg-[linear-gradient(135deg,#f8fafc,#dbeafe)] text-slate-950 shadow-[0_16px_30px_-18px_rgba(255,255,255,0.24)]"
+                          ? "bg-white text-slate-950 shadow-[0_16px_30px_-18px_rgba(255,255,255,0.24)]"
                           : "bg-white/6 text-white/82 hover:bg-white/10 hover:text-white",
                       )}
                       onClick={() => setMobileOpen(false)}
@@ -158,7 +145,7 @@ export function SiteHeader() {
                 </Button>
                 <Button
                   asChild
-                  className="h-11 rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white"
+                  className="h-11 rounded-full bg-white text-slate-950 hover:bg-white/92"
                 >
                   <Link href="/registreren" onClick={() => setMobileOpen(false)}>
                     Gratis starten

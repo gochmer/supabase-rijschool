@@ -71,7 +71,7 @@ export function DataTableCard({
     <Card
       className={cn(
         isUrban
-          ? "border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] text-white shadow-[0_28px_88px_-46px_rgba(15,23,42,0.78)]"
+          ? "border border-white/10 bg-slate-950/84 text-white shadow-[0_24px_72px_-44px_rgba(15,23,42,0.78)]"
           : isHazard
           ? "re-frame-flash border border-red-300/12 bg-[linear-gradient(145deg,rgba(9,11,16,0.98),rgba(22,12,15,0.96),rgba(40,16,19,0.9))] text-white shadow-[0_28px_88px_-46px_rgba(0,0,0,0.74)]"
           : "surface-panel"
@@ -98,7 +98,7 @@ export function DataTableCard({
                   className={cn(
                     "rounded-[1rem] p-3 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.22)]",
                     isUrban
-                      ? "border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))]"
+                      ? "border border-white/10 bg-white/7"
                       : isHazard
                         ? "border border-red-300/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(120,22,22,0.12))]"
                         : "surface-card"
@@ -174,7 +174,7 @@ export function DataTableCard({
                       className={cn(
                         "translate-y-0 rounded-[1rem] transition-transform duration-300 hover:-translate-y-0.5",
                         isUrban
-                          ? "bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))] shadow-[0_18px_40px_-28px_rgba(15,23,42,0.56)]"
+                          ? "bg-white/7 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.52)]"
                           : isHazard
                             ? "bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(120,22,22,0.12))] shadow-[0_18px_40px_-28px_rgba(0,0,0,0.56)]"
                             : "bg-slate-50/85 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.35)] dark:bg-white/5 dark:shadow-[0_14px_34px_-26px_rgba(15,23,42,0.52)]"

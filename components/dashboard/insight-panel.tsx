@@ -18,9 +18,9 @@ export function InsightPanel({
   return (
     <div
       className={cn(
-        "p-4",
+        "rounded-[1.35rem] p-4",
         isUrban
-          ? "border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] text-white shadow-[0_28px_88px_-46px_rgba(15,23,42,0.78)]"
+          ? "border border-white/10 bg-slate-950/84 text-white shadow-[0_24px_72px_-44px_rgba(15,23,42,0.78)]"
           : isHazard
           ? "re-frame-flash border border-red-300/12 bg-[linear-gradient(145deg,rgba(9,11,16,0.98),rgba(22,12,15,0.96),rgba(40,16,19,0.9))] text-white shadow-[0_28px_88px_-46px_rgba(0,0,0,0.72)]"
           : "surface-panel"
@@ -44,7 +44,7 @@ export function InsightPanel({
             className={cn(
               "flex flex-col items-start gap-2 rounded-[1rem] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between",
               isUrban
-                ? "border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))]"
+                ? "border border-white/10 bg-white/7"
                 : isHazard
                 ? "border border-red-300/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(120,22,22,0.12))]"
                 : "surface-muted"

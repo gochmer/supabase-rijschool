@@ -47,11 +47,9 @@ const footerSignals = [
 export function SiteFooter() {
   return (
     <footer className="px-3 pb-4 sm:px-6 sm:pb-5 lg:px-8">
-      <div className="site-shell mx-auto w-full overflow-hidden rounded-[2.2rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.84))] shadow-[0_24px_72px_-48px_rgba(15,23,42,0.18)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(15,23,42,0.86),rgba(2,6,23,0.96))] dark:shadow-[0_24px_72px_-48px_rgba(15,23,42,0.72)]">
+      <div className="surface-panel site-shell mx-auto w-full overflow-hidden rounded-[1.65rem]">
         <div className="relative">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.35),transparent)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent)]" />
-          <div className="pointer-events-none absolute -left-16 top-8 h-44 w-44 rounded-full bg-sky-200/20 blur-3xl dark:bg-sky-500/10" />
-          <div className="pointer-events-none absolute -right-14 top-12 h-48 w-48 rounded-full bg-blue-200/18 blur-3xl dark:bg-blue-500/10" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(14,165,233,0.32),transparent)] dark:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent)]" />
         </div>
 
         <div className="relative border-b border-white/65 px-4 py-5 dark:border-white/10 sm:px-6">
@@ -80,7 +78,7 @@ export function SiteFooter() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-[1.4rem] border border-white/10 bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] p-4 text-white shadow-[0_20px_56px_-36px_rgba(37,99,235,0.32)] sm:rounded-[1.55rem] sm:p-4.5">
+            <div className="relative overflow-hidden rounded-[1.25rem] border border-white/10 bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] p-4 text-white shadow-[0_18px_52px_-36px_rgba(37,99,235,0.3)] sm:p-4.5">
               <div className="absolute inset-x-0 top-0 h-12 bg-[linear-gradient(180deg,rgba(255,255,255,0.16),transparent)]" />
               <div className="absolute -right-8 bottom-0 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
               <p className="relative text-[12px] text-white/72">Klaar om te starten</p>
@@ -122,7 +120,7 @@ export function SiteFooter() {
               {footerHighlights.map((item) => (
                 <div
                   key={item}
-                  className="rounded-[1rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.82))] px-3.5 py-2 text-[12px] text-slate-600 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] dark:text-slate-300 dark:shadow-[0_16px_34px_-28px_rgba(15,23,42,0.42)]"
+                  className="surface-muted px-3.5 py-2 text-[12px] text-slate-600 dark:text-slate-300"
                 >
                   {item}
                 </div>
@@ -130,7 +128,7 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <div className="rounded-[1.2rem] border border-white/75 bg-white/50 p-3 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.1)] dark:border-white/10 dark:bg-white/4 dark:shadow-[0_16px_34px_-28px_rgba(15,23,42,0.42)]">
+          <div className="surface-card p-3">
             <div className="space-y-2">
               <h3 className="text-[12px] font-semibold tracking-[0.16em] text-slate-950 uppercase dark:text-white">
                 Navigatie
@@ -153,7 +151,7 @@ export function SiteFooter() {
           {footerLinks.map((group) => (
             <div
               key={group.title}
-              className="rounded-[1.2rem] border border-white/75 bg-white/50 p-3 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.1)] dark:border-white/10 dark:bg-white/4 dark:shadow-[0_16px_34px_-28px_rgba(15,23,42,0.42)]"
+              className="surface-card p-3"
             >
               <div className="space-y-2">
                 <h3 className="text-[12px] font-semibold tracking-[0.16em] text-slate-950 uppercase dark:text-white">
@@ -175,21 +173,21 @@ export function SiteFooter() {
             </div>
           ))}
 
-          <div className="rounded-[1.2rem] border border-sky-100/90 bg-[linear-gradient(135deg,rgba(240,249,255,0.86),rgba(255,255,255,0.76))] p-3 shadow-[0_16px_34px_-28px_rgba(14,165,233,0.12)] dark:border-white/10 dark:bg-[linear-gradient(135deg,rgba(30,41,59,0.74),rgba(15,23,42,0.88))] dark:shadow-[0_16px_34px_-28px_rgba(15,23,42,0.48)]">
+          <div className="surface-card p-3">
             <div className="space-y-2">
               <h3 className="text-[12px] font-semibold tracking-[0.16em] text-slate-950 uppercase dark:text-white">
                 Contact
               </h3>
               <div className="grid gap-1.5 text-[13px] text-slate-600 dark:text-slate-300">
-                <div className="inline-flex items-start gap-2 rounded-[0.9rem] bg-white/80 px-3 py-2 dark:bg-white/6">
+                <div className="surface-muted inline-flex items-start gap-2 px-3 py-2">
                   <MapPin className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
                   <span>Nieuwezijds Voorburgwal 120, Amsterdam</span>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-[0.9rem] bg-white/80 px-3 py-2 dark:bg-white/6">
+                <div className="surface-muted inline-flex items-center gap-2 px-3 py-2">
                   <Mail className="size-3.5 shrink-0 text-sky-600" />
                   <span>info@rijbasis.nl</span>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-[0.9rem] bg-white/80 px-3 py-2 dark:bg-white/6">
+                <div className="surface-muted inline-flex items-center gap-2 px-3 py-2">
                   <Phone className="size-3.5 shrink-0 text-sky-600" />
                   <span>020 320 44 91</span>
                 </div>

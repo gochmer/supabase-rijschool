@@ -102,7 +102,7 @@ type SearchCardSelectProps = {
 
 function SearchCardSelect({ name, label, value, onValueChange, icon: Icon, options }: SearchCardSelectProps) {
   return (
-    <label className="rounded-[1.2rem] border border-slate-200/80 bg-white px-4 py-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.12)] transition-colors focus-within:border-sky-300 focus-within:bg-sky-50/40 dark:border-white/10 dark:bg-white/6 dark:shadow-[0_16px_32px_-24px_rgba(15,23,42,0.38)] dark:focus-within:border-sky-300/40 dark:focus-within:bg-white/8">
+    <label className="surface-card px-4 py-3 transition-colors focus-within:border-sky-300 focus-within:bg-sky-50/40 dark:focus-within:border-sky-300/40 dark:focus-within:bg-white/8">
       <input type="hidden" name={name} value={value} />
       <div className="flex min-h-[3.6rem] items-start gap-3">
         <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
@@ -142,18 +142,18 @@ export function InstructorSearchCard() {
   ];
 
   return (
-    <div className="rounded-[2rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-2.5 shadow-[0_34px_90px_-54px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(30,41,59,0.88),rgba(15,23,42,0.92))] dark:shadow-[0_34px_90px_-54px_rgba(15,23,42,0.58)]">
-      <form action="/instructeurs" method="get" className="rounded-[1.7rem] border border-slate-200/80 bg-white/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:p-3.5 dark:border-white/10 dark:bg-white/5 dark:shadow-none">
+    <div className="surface-panel rounded-[1.55rem] p-2.5">
+      <form action="/instructeurs" method="get" className="rounded-[1.25rem] border border-slate-200/80 bg-white/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:p-3.5 dark:border-white/10 dark:bg-white/5 dark:shadow-none">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.24em] text-primary uppercase">Zoek jouw rijschool</p>
-            <p className="mt-1 max-w-[18ch] text-[1rem] leading-[1.25] font-semibold text-slate-950 sm:max-w-none sm:text-[1.18rem] dark:text-white">Vind een instructeur die past bij jouw regio, budget en planning.</p>
+            <p className="mt-1 max-w-[18ch] text-[1rem] leading-[1.25] font-semibold text-slate-950 sm:max-w-none sm:text-[1.15rem] dark:text-white">Vind een instructeur die past bij jouw regio, budget en planning.</p>
             <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-300">Start met locatie en verfijn daarna rustig je voorkeuren.</p>
           </div>
           <div className="flex size-10 shrink-0 items-center justify-center rounded-[1rem] bg-primary/10 text-primary shadow-[0_14px_28px_-20px_rgba(37,99,235,0.18)] dark:bg-white/10 dark:text-sky-200 dark:shadow-[0_14px_28px_-20px_rgba(15,23,42,0.42)]"><Search className="size-4" /></div>
         </div>
 
-        <label className="mt-3 block rounded-[1.2rem] border border-slate-200/80 bg-white px-4 py-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.12)] transition-colors focus-within:border-sky-300 focus-within:bg-sky-50/40 dark:border-white/10 dark:bg-white/6 dark:shadow-[0_16px_32px_-24px_rgba(15,23,42,0.38)] dark:focus-within:border-sky-300/40 dark:focus-within:bg-white/8">
+        <label className="surface-card mt-3 block px-4 py-3 transition-colors focus-within:border-sky-300 focus-within:bg-sky-50/40 dark:focus-within:border-sky-300/40 dark:focus-within:bg-white/8">
           <div className="flex min-h-[3.2rem] items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200"><Search className="size-4" /></div>
             <div className="min-w-0 flex-1">
@@ -187,7 +187,7 @@ export function InstructorSearchCard() {
           })}
         </div>
 
-        <div className="mt-3 rounded-[1.2rem] border border-slate-200 bg-slate-50/90 px-4 py-3 shadow-[0_20px_40px_-30px_rgba(15,23,42,0.1)] dark:border-white/10 dark:bg-white/6 dark:shadow-[0_20px_40px_-30px_rgba(15,23,42,0.42)]">
+        <div className="surface-muted mt-3 px-4 py-3">
           <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400">Jouw selectie</p>
           <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
             {selectionSummary.map((item) => <span key={item} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/6 dark:text-slate-200 sm:text-[11px]">{item}</span>)}
@@ -196,7 +196,7 @@ export function InstructorSearchCard() {
         </div>
 
         <input type="hidden" name="sort" value="top" />
-        <div className="mt-3 rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-2 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6 dark:shadow-[0_18px_40px_-34px_rgba(15,23,42,0.42)]">
+        <div className="surface-muted mt-3 p-2">
           <div className="flex flex-col gap-2 md:flex-row">
             <Button type="submit" className="h-11 flex-1 rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white shadow-[0_22px_45px_-26px_rgba(37,99,235,0.38)] sm:h-10.5">Zoek instructeurs<Search className="size-4" /></Button>
             <Button type="button" variant="outline" onClick={() => setFilters(initialState)} className="h-11 w-full rounded-full px-5 sm:h-10.5 sm:w-auto">Filters wissen</Button>

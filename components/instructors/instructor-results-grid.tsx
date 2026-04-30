@@ -38,7 +38,7 @@ export function InstructorResultsGrid({
 }) {
   if (!instructors.length) {
     return (
-      <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/78 p-10 text-center shadow-[0_24px_70px_-48px_rgba(15,23,42,0.18)] dark:border-white/12 dark:bg-white/6">
+      <div className="surface-empty p-10 text-center">
         <h3 className="text-xl font-semibold text-slate-950 dark:text-white">
           Geen instructeurs gevonden
         </h3>

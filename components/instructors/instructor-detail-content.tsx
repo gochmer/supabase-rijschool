@@ -138,11 +138,11 @@ export function InstructorDetailContent({
   return (
     <div className="pb-14">
       <section className="relative overflow-hidden px-4 pt-8 sm:px-6 lg:px-8">
-        <div className="absolute inset-x-0 top-0 h-[26rem] bg-[radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.18),transparent_22%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.16),transparent_24%),radial-gradient(circle_at_56%_64%,rgba(249,115,22,0.12),transparent_24%)]" />
+        <div className="absolute inset-x-0 top-0 h-[24rem] bg-[radial-gradient(circle_at_12%_18%,rgba(56,189,248,0.13),transparent_25%),radial-gradient(circle_at_84%_14%,rgba(29,78,216,0.11),transparent_28%)]" />
         <div className="site-shell relative mx-auto w-full py-6 lg:py-10">
           <SeoBreadcrumbs items={breadcrumbItems} className="mb-4" />
 
-          <Reveal className="overflow-hidden rounded-[2.2rem] border border-white/80 bg-white/92 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.28)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(30,41,59,0.88),rgba(15,23,42,0.96))]">
+          <Reveal className="surface-panel overflow-hidden rounded-[1.75rem]">
             <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
               <div className="p-5 sm:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">

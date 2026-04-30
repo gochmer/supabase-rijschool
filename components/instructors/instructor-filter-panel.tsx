@@ -37,8 +37,8 @@ export function InstructorFilterPanel({
   onOpenMobileFilters: () => void;
 }) {
   return (
-    <div className="relative z-10 overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/88 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.34)] backdrop-blur-xl dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))] dark:shadow-[0_28px_90px_-48px_rgba(15,23,42,0.68)]">
-      <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(29,78,216,0.92),rgba(14,165,233,0.82))] px-5 py-5 text-white dark:border-white/10">
+    <div className="surface-panel relative z-10 overflow-hidden rounded-[1.65rem]">
+      <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(29,78,216,0.86),rgba(14,165,233,0.68))] px-5 py-5 text-white dark:border-white/10">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase">
