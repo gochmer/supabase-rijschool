@@ -13,6 +13,7 @@ export const dashboardNavigation: Record<
   Array<{ href: string; label: string }>
 > = {
   leerling: [
+    { href: "/leerling/dashboard", label: "Dashboard" },
     { href: "/leerling/profiel", label: "Profiel" },
     { href: "/leerling/instructeurs", label: "Instructeurs" },
     { href: "/leerling/boekingen", label: "Boekingen" },

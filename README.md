@@ -92,6 +92,9 @@ NOTIFICATION_REPLY_TO_EMAIL=
 NOTIFICATION_TEST_TO_EMAIL=
 
 PLAYWRIGHT_BASE_URL=http://localhost:3000
+PLAYWRIGHT_LEARNER_EMAIL=
+PLAYWRIGHT_INSTRUCTOR_EMAIL=
+PLAYWRIGHT_ADMIN_EMAIL=
 PLAYWRIGHT_NOTIFICATION_TEST_EMAIL=
 PLAYWRIGHT_TEST_PASSWORD=
 ```
@@ -121,6 +124,8 @@ npm run build
 npm run check:links
 npm run start
 npm run playwright:clickcheck
+npm run playwright:dashboards
+npm run test:flows
 npm run supabase:seed:demo
 npm run supabase:types
 ```
@@ -141,6 +146,12 @@ node scripts/playwright-direct-booking-check.mjs
 node scripts/playwright-notification-flows-check.mjs
 node scripts/playwright-review-flow-check.mjs
 ```
+
+Gebruik `npm run test:flows` voor een gecombineerde smoke test van interne links,
+klikbare routes, directe boeking, notificaties, reviews en dashboard visual checks.
+Voor `npm run playwright:dashboards` kun je `PLAYWRIGHT_LEARNER_EMAIL`,
+`PLAYWRIGHT_INSTRUCTOR_EMAIL` en `PLAYWRIGHT_ADMIN_EMAIL` invullen om per rol de
+dashboardpagina's op desktop en mobiel te controleren.
 
 ## Projectstructuur
 

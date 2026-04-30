@@ -61,6 +61,12 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  filterPackagesByType,
+  getPackageDraftPriceSummary,
+  getPackageDraftReadinessItems,
+  getPackageStudioMetrics,
+} from "@/components/packages/package-studio-model";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -151,20 +157,14 @@ export function PackageStudio({
   const editTekstRef = useRef<HTMLDivElement | null>(null);
   const editBeeldRef = useRef<HTMLDivElement | null>(null);
 
-  const activeCount = packages.filter((pkg) => pkg.actief !== false).length;
-  const autoCount = packages.filter((pkg) => pkg.les_type === "auto").length;
-  const motorCount = packages.filter((pkg) => pkg.les_type === "motor").length;
-  const vrachtwagenCount = packages.filter((pkg) => pkg.les_type === "vrachtwagen").length;
-  const filteredPackages =
-    typeFilter === "alles"
-      ? packages
-      : packages.filter((pkg) => pkg.les_type === typeFilter);
-  const averagePrice =
-    packages.length > 0
-      ? Math.round(
-          packages.reduce((sum, pkg) => sum + Number(pkg.prijs ?? 0), 0) / packages.length
-        )
-      : 0;
+  const {
+    activeCount,
+    autoCount,
+    averagePrice,
+    motorCount,
+    vrachtwagenCount,
+  } = getPackageStudioMetrics(packages);
+  const filteredPackages = filterPackagesByType(packages, typeFilter);
   const isBusy = isPending || isUploadingCover;
   const createVisual = getPackageVisualConfig(iconKey, visualTheme);
   const editVisual = getPackageVisualConfig(editIconKey, editVisualTheme);
@@ -212,31 +212,16 @@ export function PackageStudio({
   const createCompletedCount = createProgressItems.filter(
     (item) => item.complete
   ).length;
-  const createPriceValue = Number.parseFloat(prijs.replace(",", "."));
-  const createLessonCount = Number.parseInt(aantalLessen, 10);
-  const createPriceLabel =
-    Number.isFinite(createPriceValue) && createPriceValue > 0
-      ? formatCurrency(createPriceValue)
-      : "Nog leeg";
-  const createLessonsLabel =
-    Number.isFinite(createLessonCount) && createLessonCount > 0
-      ? `${createLessonCount} lessen`
-      : "Nog leeg";
-  const createPricePerLessonLabel =
-    Number.isFinite(createPriceValue) &&
-    createPriceValue > 0 &&
-    Number.isFinite(createLessonCount) &&
-    createLessonCount > 0
-      ? formatCurrency(Math.round((createPriceValue / createLessonCount) * 100) / 100)
-      : "Nog leeg";
-  const parsedCreateWeeklyLimit = weeklyBookingLimitMinutes.trim()
-    ? Number.parseInt(weeklyBookingLimitMinutes, 10)
-    : null;
-  const createWeeklyLimitLabel = formatWeeklyLimitLabel(
-    parsedCreateWeeklyLimit !== null && Number.isFinite(parsedCreateWeeklyLimit)
-      ? parsedCreateWeeklyLimit
-      : null
-  );
+  const {
+    lessonsLabel: createLessonsLabel,
+    priceLabel: createPriceLabel,
+    pricePerLessonLabel: createPricePerLessonLabel,
+    weeklyLimitLabel: createWeeklyLimitLabel,
+  } = getPackageDraftPriceSummary({
+    aantalLessen,
+    prijs,
+    weeklyBookingLimitMinutes,
+  });
   const createPreviewStats = [
     {
       label: "Prijs",
@@ -254,25 +239,12 @@ export function PackageStudio({
       icon: Gauge,
     },
   ];
-  const createReadinessItems = [
-    {
-      label: naam.trim() ? "Naam klaar" : "Naam mist",
-      complete: Boolean(naam.trim()),
-    },
-    {
-      label: prijs.trim() ? "Prijs klaar" : "Prijs mist",
-      complete: Boolean(prijs.trim()),
-    },
-    {
-      label: beschrijving.trim() ? "Tekst klaar" : "Tekst mist",
-      complete: Boolean(beschrijving.trim()),
-    },
-    {
-      label: coverPreviewUrl ? "Foto klaar" : "Foto optioneel",
-      complete: Boolean(coverPreviewUrl),
-      optional: true,
-    },
-  ];
+  const createReadinessItems = getPackageDraftReadinessItems({
+    beschrijving,
+    coverPreviewUrl,
+    naam,
+    prijs,
+  });
 
   function scrollStepIntoView(element: HTMLDivElement | null) {
     element?.scrollIntoView({

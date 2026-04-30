@@ -41,7 +41,6 @@ import type {
 import {
   SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS,
   formatMinutesAsHoursLabel,
-  formatWeeklyLimitLabel,
 } from "@/lib/self-scheduling-limits";
 import {
   getStudentAutomaticNotifications,
@@ -64,6 +63,16 @@ import {
 } from "@/lib/student-progress";
 import { cn } from "@/lib/utils";
 import { CreateManualLessonDialog } from "@/components/instructor/create-manual-lesson-dialog";
+import {
+  canDetachStudent,
+  filterInstructorStudents,
+  getAverageStudentProgress,
+  getRecentStudentNotes,
+  getSelectedLessonNote,
+  getStudentAttentionCount,
+  getStudentWeeklyPlanningSummary,
+  getWeeklyBookingLimitInput,
+} from "@/components/instructor/students-board-model";
 import { StudentDetachDialog } from "@/components/instructor/student-detach-dialog";
 import { StudentInviteResendButton } from "@/components/instructor/student-invite-resend-button";
 import {
@@ -119,21 +128,10 @@ export function StudentsBoard({
   const [isPending, startTransition] = useTransition();
 
   const filteredStudents = useMemo(() => {
-    return localStudents.filter((student) => {
-      const matchesQuery = `${student.naam} ${student.pakket} ${student.email ?? ""}`
-        .toLowerCase()
-        .includes(query.toLowerCase());
-
-      const matchesFilter =
-        filter === "alles" ||
-        (filter === "hoog" && student.voortgang >= 70) ||
-        (filter === "midden" && student.voortgang >= 40 && student.voortgang < 70) ||
-        (filter === "laag" && student.voortgang < 40) ||
-        (filter === "actie" &&
-          student.laatsteBeoordeling !== "Nog geen beoordeling" &&
-          student.voortgang < 70);
-
-      return matchesQuery && matchesFilter;
+    return filterInstructorStudents({
+      filter,
+      query,
+      students: localStudents,
     });
   }, [filter, localStudents, query]);
 
@@ -247,37 +245,24 @@ export function StudentsBoard({
     [localAssessments, selectedDate, selectedStudent?.id]
   );
 
-  const averageProgress = useMemo(() => {
-    if (!localStudents.length) {
-      return 0;
-    }
-
-    return Math.round(
-      localStudents.reduce((total, student) => total + student.voortgang, 0) /
-        localStudents.length
-    );
-  }, [localStudents]);
+  const averageProgress = useMemo(
+    () => getAverageStudentProgress(localStudents),
+    [localStudents]
+  );
 
   const attentionStudents = useMemo(
-    () => localStudents.filter((student) => student.voortgang < 40).length,
+    () => getStudentAttentionCount(localStudents),
     [localStudents]
   );
   const selectedLessonNote = useMemo(() => {
-    if (!selectedStudent) {
-      return null;
-    }
-
-    return (
-      selectedStudentNotes.find(
-        (note) =>
-          note.leerling_id === selectedStudent.id && note.lesdatum === selectedDate
-      ) ?? null
-    );
+    return getSelectedLessonNote({
+      notes: selectedStudentNotes,
+      selectedDate,
+      selectedStudent,
+    });
   }, [selectedDate, selectedStudent, selectedStudentNotes]);
   const recentNotes = useMemo(() => {
-    return [...selectedStudentNotes]
-      .sort((left, right) => right.lesdatum.localeCompare(left.lesdatum))
-      .slice(0, 4);
+    return getRecentStudentNotes(selectedStudentNotes);
   }, [selectedStudentNotes]);
   const intakeChecklistKeys = selectedStudent?.intakeChecklistKeys ?? [];
   const intakeChecklistCompletedCount = intakeChecklistKeys.length;
@@ -286,58 +271,23 @@ export function StudentsBoard({
   const selectedStudentLastSignInLabel = selectedStudent?.lastSignInAt
     ? formatDateTimeLabel(selectedStudent.lastSignInAt)
     : null;
-  const selectedStudentWeeklyLimitLabel = selectedStudent
-    ? formatWeeklyLimitLabel(selectedStudent.zelfInplannenLimietMinutenPerWeek ?? null)
-    : "Onbeperkt";
-  const selectedStudentWeeklyLimitSource = !selectedStudent
-    ? "none"
-    : selectedStudent.zelfInplannenHandmatigeOverrideActief
-      ? "manual"
-      : selectedStudent.zelfInplannenPakketLimietMinutenPerWeek != null
-        ? "package"
-        : "none";
+  const weeklyPlanningSummary = getStudentWeeklyPlanningSummary(selectedStudent);
+  const selectedStudentWeeklyLimitLabel = weeklyPlanningSummary.limitLabel;
+  const selectedStudentWeeklyLimitSource = weeklyPlanningSummary.limitSource;
   const selectedStudentWeeklyLimitSourceLabel =
-    selectedStudentWeeklyLimitSource === "manual"
-      ? "Handmatige override"
-      : selectedStudentWeeklyLimitSource === "package"
-        ? "Pakketstandaard"
-        : "Geen limiet";
-  const selectedStudentPackageWeeklyLimitLabel = selectedStudent
-    ? formatWeeklyLimitLabel(
-        selectedStudent.zelfInplannenPakketLimietMinutenPerWeek ?? null
-      )
-    : "Onbeperkt";
-  const selectedStudentManualWeeklyLimitLabel = selectedStudent
-    ? selectedStudent.zelfInplannenHandmatigeOverrideActief
-      ? formatWeeklyLimitLabel(
-          selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek ?? null
-        )
-      : "Niet actief"
-    : "Niet actief";
-  const selectedStudentWeeklyUsedLabel = selectedStudent
-    ? formatMinutesAsHoursLabel(
-        selectedStudent.zelfInplannenGebruiktMinutenDezeWeek ?? 0
-      )
-    : "0 min";
+    weeklyPlanningSummary.limitSourceLabel;
+  const selectedStudentPackageWeeklyLimitLabel =
+    weeklyPlanningSummary.packageLimitLabel;
+  const selectedStudentManualWeeklyLimitLabel =
+    weeklyPlanningSummary.manualLimitLabel;
+  const selectedStudentWeeklyUsedLabel = weeklyPlanningSummary.usedLabel;
   const selectedStudentWeeklyRemainingLabel =
-    selectedStudent?.zelfInplannenResterendMinutenDezeWeek == null
-      ? "Onbeperkt"
-      : formatMinutesAsHoursLabel(
-          selectedStudent.zelfInplannenResterendMinutenDezeWeek
-        );
-  const weeklyBookingLimitInput =
-    selectedStudent && weeklyBookingLimitDraft.studentId === selectedStudent.id
-      ? weeklyBookingLimitDraft.value
-      : selectedStudent?.zelfInplannenHandmatigeOverrideActief
-        ? selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek != null
-          ? String(selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek)
-          : ""
-        : "";
-  const canDetachSelectedStudent = selectedStudent
-    ? selectedStudent.isHandmatigGekoppeld &&
-      selectedStudent.gekoppeldeLessen === 0 &&
-      selectedStudent.aanvraagStatus === "Handmatig gekoppeld"
-    : false;
+    weeklyPlanningSummary.remainingLabel;
+  const weeklyBookingLimitInput = getWeeklyBookingLimitInput({
+    draft: weeklyBookingLimitDraft,
+    selectedStudent,
+  });
+  const canDetachSelectedStudent = canDetachStudent(selectedStudent);
 
   function updateStudentSummary(nextAssessments: StudentProgressAssessment[]) {
     if (!selectedStudent) {

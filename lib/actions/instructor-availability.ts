@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import {
   addDaysToDateValue,
   createAvailabilityTimestamp,
@@ -25,163 +23,30 @@ import {
   type BookingWindow,
 } from "@/lib/booking-availability";
 import { getAvailabilityTemplateById } from "@/lib/availability-templates";
-import { getCurrentInstructeurRecord, ensureCurrentUserContext } from "@/lib/data/profiles";
+import {
+  MAX_LINKED_WINDOW_GAP_MINUTES,
+  ensureInstructorAccess,
+  getPlannedAvailabilitySlotKey,
+  revalidateAvailabilityPaths,
+  type ApplyAvailabilityTemplateInput,
+  type ApplyAvailabilityWeeklyBulkActionInput,
+  type CreateAvailabilitySlotInput,
+  type CreateAvailabilityWeekOverrideInput,
+  type DeleteAvailabilitySlotInput,
+  type DeleteAvailabilityWeekRuleInput,
+  type DuplicateAvailabilityWeekInput,
+  type MoveAvailabilityBlockInput,
+  type PlannedAvailabilitySlot,
+  type SeriesAvailabilityActionInput,
+  type ShiftAvailabilityBlocksInput,
+  type UpdateAvailabilitySeriesTimingInput,
+  type UpdateAvailabilitySlotTimingInput,
+  type UpdateAvailabilityStatusInput,
+  type UpdateAvailabilityWeekRuleActiveInput,
+  type UpdateAvailabilityWeekRuleInput,
+  type UpdateAvailabilityWindowInput,
+} from "@/lib/actions/instructor-availability-shared";
 import { createServerClient } from "@/lib/supabase/server";
-
-type CreateAvailabilitySlotInput = {
-  datum: string;
-  eindDatum?: string;
-  startTijd: string;
-  eindTijd: string;
-  repeatWeeks?: number | string;
-  weekdagen?: number[];
-  pauzeStartTijd?: string;
-  pauzeEindTijd?: string;
-  beschikbaar?: boolean;
-  lesduurMinuten?: number;
-  bufferMinuten?: number;
-  maxLessenPerDag?: number;
-};
-
-type UpdateAvailabilityStatusInput = {
-  slotId: string;
-  beschikbaar: boolean;
-};
-
-type DeleteAvailabilitySlotInput = {
-  slotId: string;
-};
-
-type SeriesAvailabilityActionInput = {
-  slotId: string;
-};
-
-type UpdateAvailabilitySlotTimingInput = {
-  slotId: string;
-  datum: string;
-  startTijd: string;
-  eindTijd: string;
-};
-
-type UpdateAvailabilitySeriesTimingInput = {
-  slotId: string;
-  startTijd: string;
-  eindTijd: string;
-};
-
-type UpdateAvailabilityWindowInput = {
-  slotId: string;
-  startTijd: string;
-  eindTijd: string;
-  pauzeStartTijd?: string;
-  pauzeEindTijd?: string;
-};
-
-type UpdateAvailabilityWeekRuleInput = {
-  ruleId: string;
-  startTijd: string;
-  eindTijd: string;
-  pauzeStartTijd?: string;
-  pauzeEindTijd?: string;
-};
-
-type UpdateAvailabilityWeekRuleActiveInput = {
-  ruleId: string;
-  beschikbaar: boolean;
-};
-
-type DeleteAvailabilityWeekRuleInput = {
-  ruleId: string;
-};
-
-type ApplyAvailabilityTemplateInput = {
-  templateId: string;
-  startDatum: string;
-  repeatWeeks?: number;
-};
-
-type DuplicateAvailabilityWeekInput = {
-  sourceWeekStartDatum: string;
-  targetWeekStartDatum: string;
-};
-
-type MoveAvailabilityBlockInput = {
-  slotId: string;
-  targetDateValue: string;
-};
-
-type ApplyAvailabilityWeeklyBulkActionInput = {
-  weekStartDateValue: string;
-  action: "close_after_time" | "open_after_time" | "close_weekend";
-  cutoffTime?: string;
-};
-
-type ShiftAvailabilityBlocksInput = {
-  slotIds: string[];
-  minutes: number;
-};
-
-type CreateAvailabilityWeekOverrideInput = {
-  slotId: string;
-  startTijd: string;
-  eindTijd: string;
-  pauzeStartTijd?: string;
-  pauzeEindTijd?: string;
-  beschikbaar: boolean;
-};
-
-const MAX_LINKED_WINDOW_GAP_MINUTES = 90;
-
-type PlannedAvailabilitySlot = {
-  id?: string;
-  start_at: string;
-  eind_at: string;
-  dateLabel: string;
-};
-
-function getPlannedAvailabilitySlotKey(slot: Pick<PlannedAvailabilitySlot, "start_at" | "eind_at">) {
-  return `${slot.start_at}|${slot.eind_at}`;
-}
-
-function revalidateAvailabilityPaths(slug: string) {
-  revalidatePath("/instructeur/beschikbaarheid");
-  revalidatePath("/instructeur/dashboard");
-  revalidatePath("/instructeurs");
-  revalidatePath("/leerling/instructeurs");
-  revalidatePath(`/instructeurs/${slug}`);
-}
-
-async function ensureInstructorAccess() {
-  const context = await ensureCurrentUserContext();
-
-  if (!context) {
-    return {
-      ok: false as const,
-      message: "Log eerst in om je beschikbaarheid te beheren.",
-    };
-  }
-
-  if (context.role !== "instructeur") {
-    return {
-      ok: false as const,
-      message: "Alleen instructeurs kunnen beschikbaarheid beheren.",
-    };
-  }
-
-  const instructeur = await getCurrentInstructeurRecord();
-
-  if (!instructeur) {
-    return {
-      ok: false as const,
-      message: "Je instructeursprofiel kon niet worden gevonden.",
-    };
-  }
-
-  return {
-    ok: true as const,
-    instructeur,
-  };
-}
 
 async function getSeriesSlotsFromAnchor(
   slotId: string,
