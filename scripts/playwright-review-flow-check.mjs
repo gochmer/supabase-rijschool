@@ -506,6 +506,9 @@ async function run() {
       );
     }
 
+    await learnerPage.locator("details").first().evaluate((element) => {
+      element.open = true;
+    });
     await learnerPage.getByRole("button", { name: "Review schrijven" }).click();
     const reviewDialog = learnerPage.locator('[role="dialog"]').last();
     await reviewDialog
@@ -540,6 +543,9 @@ async function run() {
     );
 
     await gotoStable(learnerPage, "/leerling/reviews");
+    await learnerPage.locator("details").first().evaluate((element) => {
+      element.open = true;
+    });
     await learnerPage
       .getByRole("button", { name: "Review bijwerken" })
       .waitFor({ timeout: 15_000 });
