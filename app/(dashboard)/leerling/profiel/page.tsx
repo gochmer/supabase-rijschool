@@ -8,6 +8,10 @@ import {
   User,
 } from "lucide-react";
 
+import {
+  formatTrajectoryDate,
+  TrajectoryRelationshipCard,
+} from "@/components/dashboard/trajectory-relationship-card";
 import { StudentProgressReadOnlyCard } from "@/components/progress/student-progress-readonly-card";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Button } from "@/components/ui/button";
@@ -46,9 +50,15 @@ export default async function LeerlingProfielPage() {
   const nextLesson = lessons.find((lesson) =>
     ["ingepland", "geaccepteerd"].includes(lesson.status)
   );
-  const pendingRequests = requests.filter(
+  const pendingRequestItems = requests.filter(
     (request) => request.status === "aangevraagd"
-  ).length;
+  );
+  const acceptedRequestItems = requests.filter((request) =>
+    ["ingepland", "geaccepteerd"].includes(request.status)
+  );
+  const pendingRequests = pendingRequestItems.length;
+  const primaryRequest =
+    acceptedRequestItems[0] ?? pendingRequestItems[0] ?? requests[0] ?? null;
   const progressValue = leerling?.voortgang_percentage ?? 0;
   const favoriteCount = leerling?.favoriete_instructeurs?.length ?? 0;
   const packageLabel =
@@ -64,6 +74,39 @@ export default async function LeerlingProfielPage() {
   const accountQuality = Math.round(
     (profileIntegrity.filter(Boolean).length / profileIntegrity.length) * 100
   );
+  const trajectoryInstructorName =
+    nextLesson?.instructeur_naam ??
+    primaryRequest?.instructeur_naam ??
+    progressWorkspace.laatsteInstructeurNaam ??
+    "Instructeur volgt";
+  const trajectoryStartLabel =
+    primaryRequest?.voorkeursdatum ??
+    nextLesson?.datum ??
+    formatTrajectoryDate(profile?.created_at) ??
+    "Start volgt";
+  const trajectoryGoalLabel =
+    packageOverview.assignedPackage?.naam ??
+    primaryRequest?.pakket_naam ??
+    (primaryRequest?.aanvraag_type === "proefles"
+      ? "Proefles afronden"
+      : "Rijbewijs B");
+  const trajectoryRhythmLabel = nextLesson
+    ? `${nextLesson.datum} om ${nextLesson.tijd}`
+    : pendingRequests > 0
+      ? "Aanvraag wacht op reactie"
+      : "Ritme volgt na eerste planning";
+  const trajectoryMilestone = nextLesson
+    ? `Volgende les: ${nextLesson.titel}`
+    : pendingRequestItems[0]
+      ? `Reactie van ${pendingRequestItems[0].instructeur_naam}`
+      : !hasProfileName || !hasProfilePhone
+        ? "Profiel compleet maken"
+        : "Instructeur kiezen";
+  const trajectoryPreferences = [
+    nextLesson?.locatie ?? "Ophaallocatie volgt",
+    primaryRequest?.tijdvak ?? "Lestijd afstemmen",
+    hasProfilePhone ? "Contact bekend" : "Telefoon aanvullen",
+  ];
 
   const overviewCards = [
     {
@@ -320,6 +363,33 @@ export default async function LeerlingProfielPage() {
             Voortgang
           </TabsTrigger>
         </TabsList>
+
+        <TrajectoryRelationshipCard
+          learner={{
+            name: profile?.volledige_naam ?? "Leerling",
+            roleLabel: "Leerling",
+            subtitle:
+              accountQuality >= 75 ? "Profiel sterk op orde" : "Profiel aanvullen",
+            tone: "sky",
+          }}
+          instructor={{
+            name: trajectoryInstructorName,
+            roleLabel: "Instructeur",
+            subtitle: nextLesson ? "Samen actief" : "Koppeling volgt",
+            tone: "emerald",
+          }}
+          startLabel={trajectoryStartLabel}
+          goalLabel={trajectoryGoalLabel}
+          rhythmLabel={trajectoryRhythmLabel}
+          nextMilestone={trajectoryMilestone}
+          preferences={trajectoryPreferences}
+          agreements={[
+            "Voortgang samen volgen",
+            "Berichten overzichtelijk",
+            "Gevoelige info opt-in",
+          ]}
+          description="Je belangrijkste trajectafspraken bij elkaar: wie rijdt mee, wat is het doel en wat is de eerstvolgende stap."
+        />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {overviewCards.map((card) => (

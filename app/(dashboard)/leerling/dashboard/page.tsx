@@ -12,6 +12,10 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { SharedLessonCompass } from "@/components/dashboard/shared-lesson-compass";
 import {
+  formatTrajectoryDate,
+  TrajectoryRelationshipCard,
+} from "@/components/dashboard/trajectory-relationship-card";
+import {
   OnboardingPanel,
   type OnboardingStep,
 } from "@/components/dashboard/onboarding-panel";
@@ -66,6 +70,40 @@ export default async function LeerlingDashboardPage() {
   const hasStartedRequest = Boolean(requests.length);
   const hasActiveLesson = Boolean(nextLesson);
   const latestPendingRequest = pendingRequests[0] ?? null;
+  const primaryRequest =
+    acceptedRequests[0] ?? latestPendingRequest ?? requests[0] ?? null;
+  const trajectoryInstructorName =
+    nextLesson?.instructeur_naam ??
+    primaryRequest?.instructeur_naam ??
+    lessonCompassBoards[0]?.counterpart_name ??
+    "Instructeur volgt";
+  const trajectoryStartLabel =
+    primaryRequest?.voorkeursdatum ??
+    nextLesson?.datum ??
+    formatTrajectoryDate(profile?.created_at) ??
+    "Start volgt";
+  const trajectoryGoalLabel =
+    primaryRequest?.pakket_naam ??
+    (primaryRequest?.aanvraag_type === "proefles"
+      ? "Proefles afronden"
+      : primaryRequest?.aanvraag_type === "pakket"
+        ? "Pakket starten"
+        : "Rijbewijs B");
+  const trajectoryRhythmLabel = nextLesson
+    ? `${nextLesson.datum} om ${nextLesson.tijd}`
+    : latestPendingRequest
+      ? "Aanvraag wacht op reactie"
+      : "Ritme volgt na eerste planning";
+  const trajectoryMilestone = nextLesson
+    ? `Volgende les: ${nextLesson.titel}`
+    : latestPendingRequest
+      ? `Reactie van ${latestPendingRequest.instructeur_naam}`
+      : "Eerste instructeur kiezen";
+  const trajectoryPreferences = [
+    nextLesson?.locatie ?? "Ophaallocatie volgt",
+    primaryRequest?.tijdvak ?? "Lestijd afstemmen",
+    unreadNotifications.length ? "Bericht open" : "Afstemming via berichten",
+  ];
   const learnerNextStep: DashboardFocusItem = nextLesson
     ? {
         label: "Wat moet ik nu doen?",
@@ -222,6 +260,31 @@ export default async function LeerlingDashboardPage() {
             Planning
           </TabsTrigger>
         </TabsList>
+
+      <TrajectoryRelationshipCard
+        learner={{
+          name: profile?.volledige_naam ?? "Leerling",
+          roleLabel: "Leerling",
+          subtitle: profileComplete ? "Profiel staat klaar" : "Profiel aanvullen",
+          tone: "sky",
+        }}
+        instructor={{
+          name: trajectoryInstructorName,
+          roleLabel: "Instructeur",
+          subtitle: nextLesson ? "Traject actief" : "Koppeling in voorbereiding",
+          tone: "emerald",
+        }}
+        startLabel={trajectoryStartLabel}
+        goalLabel={trajectoryGoalLabel}
+        rhythmLabel={trajectoryRhythmLabel}
+        nextMilestone={trajectoryMilestone}
+        preferences={trajectoryPreferences}
+        agreements={[
+          "Voorbereid naar de les",
+          "Wijzigingen via boekingen",
+          "Privacy blijft opt-in",
+        ]}
+      />
 
       <DashboardFocusPanel
         eyebrow="Vandaag belangrijk"
