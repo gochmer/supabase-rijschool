@@ -548,6 +548,7 @@ export default async function LeerlingBoekingenPage() {
             lessons={lessons}
             requests={requests}
             tone="urban"
+            role="leerling"
             title="Agenda"
             description="Je bevestigde lessen en open aanvragen staan samen in een kalenderbeeld."
             emptyDescription="Zodra een les of aanvraag een concreet moment heeft, verschijnt die hier automatisch in je agenda."

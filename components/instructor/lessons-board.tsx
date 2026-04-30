@@ -343,6 +343,8 @@ export function LessonsBoard({
           <LessonCalendar
             lessons={filteredLessons}
             requests={filteredRequests}
+            role="instructeur"
+            locationOptions={locationOptions}
             title="Weekoverzicht"
             description="Bekijk je bevestigde lessen en open aanvragen in kalenderweergave, zodat je snel ziet waar je ruimte of drukte hebt."
             emptyDescription="Er zijn nog geen lessen of aanvragen die aan deze filters voldoen. Pas je zoekopdracht aan of plan nieuwe lessen in."

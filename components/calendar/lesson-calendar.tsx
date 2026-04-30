@@ -23,12 +23,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { LearnerLessonActions } from "@/components/dashboard/learner-lesson-actions";
+import { LessonAttendanceActions } from "@/components/dashboard/lesson-attendance-actions";
+import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
+import { LessonNoteEditor } from "@/components/dashboard/lesson-note-editor";
+import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
+import { RequestStatusActions } from "@/components/dashboard/request-status-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
 import { cn } from "@/lib/utils";
-import type { Les, LesAanvraag, LesStatus } from "@/lib/types";
+import type { Les, LesAanvraag, LesStatus, LocationOption } from "@/lib/types";
 
 type CalendarEntry = {
   id: string;
@@ -42,6 +48,8 @@ type CalendarEntry = {
   contactLabel: string;
   note?: string;
   typeLabel: string;
+  lesson?: Les;
+  request?: LesAanvraag;
 };
 
 function getStatusMeta(
@@ -230,6 +238,7 @@ function createLessonEntry(lesson: Les): CalendarEntry | null {
       lesson.instructeur_naam || lesson.leerling_naam || "Nog niet gekoppeld",
     note: lesson.lesson_note ?? "",
     typeLabel: inferLessonTypeFromTitle(lesson.titel),
+    lesson,
   };
 }
 
@@ -280,6 +289,7 @@ function createRequestEntry(request: LesAanvraag): CalendarEntry | null {
     contactLabel,
     note: request.bericht,
     typeLabel,
+    request,
   };
 }
 
@@ -893,6 +903,151 @@ function LessonDayPlanner({
   );
 }
 
+function getEntryNextStep(entry: CalendarEntry, role: "leerling" | "instructeur") {
+  if (entry.kind === "request") {
+    if (entry.status === "aangevraagd") {
+      return role === "instructeur"
+        ? "Beoordeel deze aanvraag en zet hem om naar een les zodra het moment klopt."
+        : "Je instructeur bekijkt deze aanvraag. Houd je berichten in de gaten voor afstemming.";
+    }
+
+    if (entry.status === "geaccepteerd" || entry.status === "ingepland") {
+      return "Dit moment is voorlopig afgestemd. Controleer locatie, route en eventuele laatste afspraken.";
+    }
+
+    return "Deze aanvraag vraagt geen directe agenda-actie meer.";
+  }
+
+  if (entry.status === "ingepland" || entry.status === "geaccepteerd") {
+    return role === "instructeur"
+      ? "Bereid deze les voor, open de route of werk na afloop aanwezigheid en notities bij."
+      : "Zet de les in je eigen agenda, open de route of annuleer als dat nog mag.";
+  }
+
+  if (entry.status === "afgerond") {
+    return role === "instructeur"
+      ? "Rond de administratie af met aanwezigheid en een korte lesnotitie."
+      : "Deze les is afgerond. Bekijk je voortgang of laat een review achter wanneer dat past.";
+  }
+
+  return "Controleer de status en stem bij twijfel af via berichten.";
+}
+
+function CalendarActionPanel({
+  entry,
+  role,
+  tone,
+  locationOptions,
+}: {
+  entry: CalendarEntry | null;
+  role: "leerling" | "instructeur" | null;
+  tone: "default" | "urban";
+  locationOptions: LocationOption[];
+}) {
+  const isUrban = tone === "urban";
+
+  if (!entry || !role) {
+    return null;
+  }
+
+  const lesson = entry.lesson;
+  const request = entry.request;
+  const messageHref = role === "instructeur" ? "/instructeur/berichten" : "/leerling/berichten";
+  const nextStep = getEntryNextStep(entry, role);
+
+  return (
+    <div
+      className={cn(
+        "mt-4 rounded-[1.25rem] border p-3.5",
+        isUrban
+          ? "border-white/10 bg-white/5"
+          : "border-slate-200 bg-white/85 dark:border-white/10 dark:bg-white/[0.06]"
+      )}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between 2xl:flex-col">
+        <div>
+          <p
+            className={cn(
+              "text-xs font-semibold tracking-[0.18em] uppercase",
+              isUrban ? "text-slate-300" : "text-slate-500 dark:text-slate-400"
+            )}
+          >
+            Acties
+          </p>
+          <p
+            className={cn(
+              "mt-2 text-sm leading-6",
+              isUrban ? "text-slate-300" : "text-slate-600 dark:text-slate-300"
+            )}
+          >
+            {nextStep}
+          </p>
+        </div>
+
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className={cn(
+            "h-9 rounded-full",
+            isUrban && "border-white/10 bg-white/6 text-white hover:bg-white/10"
+          )}
+        >
+          <a href={messageHref}>
+            <MessageSquare className="size-4" />
+            Bericht openen
+          </a>
+        </Button>
+      </div>
+
+      <div className="mt-3 space-y-3">
+        {lesson ? (
+          <>
+            <LessonQuickActions lesson={lesson} tone={tone} />
+
+            {role === "leerling" ? (
+              <LearnerLessonActions lesson={lesson} />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <LessonEditDialog
+                    lesson={lesson}
+                    locationOptions={locationOptions}
+                  />
+                </div>
+                <LessonAttendanceActions lesson={lesson} tone={tone} />
+                <LessonNoteEditor lesson={lesson} tone={tone} />
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {request && role === "instructeur" ? (
+          <RequestStatusActions
+            requestId={request.id}
+            status={request.status}
+            locationOptions={locationOptions}
+          />
+        ) : null}
+
+        {request && role === "leerling" ? (
+          <div
+            className={cn(
+              "rounded-[1rem] border px-3 py-2.5 text-sm leading-6",
+              isUrban
+                ? "border-white/10 bg-white/4 text-slate-300"
+                : "border-slate-200 bg-slate-50/90 text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300"
+            )}
+          >
+            Aanvragen kun je hier volgen. Zodra het moment een les wordt,
+            verschijnen route, agenda-export en annuleeracties direct in dit paneel.
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function LessonCalendar({
   lessons,
   requests = [],
@@ -901,6 +1056,8 @@ export function LessonCalendar({
   emptyTitle = "Nog geen lessen in de agenda",
   emptyDescription = "Zodra lessen bevestigd zijn, verschijnen ze hier automatisch in je kalender.",
   tone = "default",
+  role = null,
+  locationOptions = [],
 }: {
   lessons: Les[];
   requests?: LesAanvraag[];
@@ -909,6 +1066,8 @@ export function LessonCalendar({
   emptyTitle?: string;
   emptyDescription?: string;
   tone?: "default" | "urban";
+  role?: "leerling" | "instructeur" | null;
+  locationOptions?: LocationOption[];
 }) {
   const isUrban = tone === "urban";
 
@@ -1501,6 +1660,13 @@ export function LessonCalendar({
                 </div>
               ) : null}
             </div>
+
+            <CalendarActionPanel
+              entry={selectedEntry}
+              role={role}
+              tone={tone}
+              locationOptions={locationOptions}
+            />
           </div>
 
           <div
