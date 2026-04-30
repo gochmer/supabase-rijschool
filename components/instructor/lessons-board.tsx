@@ -237,10 +237,10 @@ export function LessonsBoard({
       </div>
 
       <Tabs defaultValue="dag" className="space-y-4">
-        <TabsList className="h-auto w-full rounded-[1.4rem] bg-white/70 p-1 dark:bg-white/5">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.4rem] border border-white/60 bg-white/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.32)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 [&::-webkit-scrollbar]:hidden">
           <TabsTrigger
             value="dag"
-            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm"
+            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm data-active:bg-sky-200 data-active:text-slate-950"
           >
             Vandaag
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
@@ -249,7 +249,7 @@ export function LessonsBoard({
           </TabsTrigger>
           <TabsTrigger
             value="week"
-            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm"
+            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm data-active:bg-emerald-200 data-active:text-slate-950"
           >
             Week
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
@@ -258,7 +258,7 @@ export function LessonsBoard({
           </TabsTrigger>
           <TabsTrigger
             value="afhandelen"
-            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm"
+            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm data-active:bg-amber-200 data-active:text-slate-950"
           >
             Afhandelen
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">

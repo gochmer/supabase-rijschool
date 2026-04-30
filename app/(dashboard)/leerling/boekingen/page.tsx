@@ -11,6 +11,7 @@ import { LessonCalendar } from "@/components/calendar/lesson-calendar";
 import { LearnerLessonActions } from "@/components/dashboard/learner-lesson-actions";
 import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
 import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
@@ -75,7 +76,7 @@ const urbanCardClassName =
   "rounded-[1.9rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] p-5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]";
 
 const tabTriggerClassName =
-  "h-10 rounded-full px-4 text-slate-300 data-active:bg-white data-active:text-slate-950";
+  "h-10 rounded-full px-4 text-slate-300 data-active:text-slate-950";
 
 export default async function LeerlingBoekingenPage() {
   const [requests, lessons, bookingOverview] = await Promise.all([
@@ -113,6 +114,7 @@ export default async function LeerlingBoekingenPage() {
       icon: CalendarDays,
       label: "Volgende les",
       value: nextLesson ? nextLesson.datum : "Nog niet ingepland",
+      tone: nextLesson ? "emerald" : "sky",
       detail: nextLesson
         ? `${nextLesson.tijd} met ${nextLesson.instructeur_naam}`
         : "Plan zodra je een instructeur hebt gekozen.",
@@ -121,6 +123,7 @@ export default async function LeerlingBoekingenPage() {
       icon: Clock3,
       label: "Open aanvragen",
       value: `${pendingRequests}`,
+      tone: pendingRequests > 0 ? "amber" : "emerald",
       detail:
         pendingRequests > 0
           ? "Wachten nog op reactie van instructeurs."
@@ -130,6 +133,7 @@ export default async function LeerlingBoekingenPage() {
       icon: UserRound,
       label: "Actieve instructeurs",
       value: `${activeInstructorCount}`,
+      tone: activeInstructorCount > 0 ? "cyan" : "rose",
       detail:
         activeInstructorCount > 0
           ? "Je kunt vanuit deze koppelingen plannen of volgen."
@@ -139,12 +143,13 @@ export default async function LeerlingBoekingenPage() {
       icon: MapPin,
       label: "Vrije blokken",
       value: `${totalOpenSlots}`,
+      tone: totalOpenSlots > 0 ? "violet" : "sky",
       detail:
         totalOpenSlots > 0
           ? `${totalTrialSlots} proeflesblok${totalTrialSlots === 1 ? "" : "ken"} beschikbaar.`
           : "Nog geen vrij planblok open.",
     },
-  ];
+  ] as const;
   const hasNoInstructorState =
     bookingOverview.totalKnownInstructors > 0 &&
     !bookingOverview.eligibleInstructors.length &&
@@ -178,44 +183,24 @@ export default async function LeerlingBoekingenPage() {
       />
 
       <Tabs defaultValue="zelf-plannen" className="space-y-4">
-        <TabsList className="sticky top-28 z-10 w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] backdrop-blur-xl">
-          <TabsTrigger value="zelf-plannen" className={tabTriggerClassName}>
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="zelf-plannen" className={`${tabTriggerClassName} data-active:bg-sky-200`}>
             Zelf plannen
           </TabsTrigger>
-          <TabsTrigger value="aanvragen" className={tabTriggerClassName}>
+          <TabsTrigger value="aanvragen" className={`${tabTriggerClassName} data-active:bg-amber-200`}>
             Aanvragen
           </TabsTrigger>
-          <TabsTrigger value="lessen" className={tabTriggerClassName}>
+          <TabsTrigger value="lessen" className={`${tabTriggerClassName} data-active:bg-emerald-200`}>
             Lessen
           </TabsTrigger>
-          <TabsTrigger value="agenda" className={tabTriggerClassName}>
+          <TabsTrigger value="agenda" className={`${tabTriggerClassName} data-active:bg-violet-200`}>
             Agenda
           </TabsTrigger>
         </TabsList>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {planningStats.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-[1.45rem] border border-white/10 bg-white/6 p-4 shadow-[0_20px_58px_-42px_rgba(15,23,42,0.7)]"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
-                <item.icon className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-                  {item.label}
-                </p>
-                <p className="mt-1 truncate text-lg font-semibold text-white">
-                  {item.value}
-                </p>
-                <p className="mt-1 text-[12px] leading-5 text-slate-300">
-                  {item.detail}
-                </p>
-              </div>
-            </div>
-          </div>
+          <DashboardStatCard key={item.label} {...item} />
         ))}
       </div>
 

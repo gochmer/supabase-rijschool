@@ -7,10 +7,10 @@ import {
   WalletCards,
 } from "lucide-react";
 
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { InstructorIncomeTabs } from "@/components/dashboard/instructor-income-tabs";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   getCurrentInstructorIncomeCockpit,
   getCurrentInstructorIncomeOverview,
@@ -57,12 +57,7 @@ export default async function InkomstenPage() {
     "border-sky-200/80 bg-sky-50/80 dark:border-sky-400/20 dark:bg-sky-500/10",
     "border-slate-200/80 bg-slate-50/90 dark:border-slate-400/20 dark:bg-slate-500/10",
   ];
-  const topStatTones = [
-    "from-emerald-500/12 to-cyan-500/10",
-    "from-sky-500/12 to-indigo-500/10",
-    "from-slate-500/12 to-sky-500/8",
-    "from-amber-500/14 to-rose-500/10",
-  ];
+  const topStatTones = ["emerald", "sky", "cyan", "amber"] as const;
 
   return (
     <div className="space-y-6">
@@ -187,36 +182,14 @@ export default async function InkomstenPage() {
           const Icon = summaryIcons[index] ?? WalletCards;
 
           return (
-            <Card
+            <DashboardStatCard
               key={stat.label}
-              className="overflow-hidden border border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
-            >
-              <CardContent className="relative p-4">
-                <div
-                  className={cn(
-                    "absolute inset-x-0 top-0 h-20 bg-gradient-to-r opacity-80",
-                    topStatTones[index] ??
-                      "from-slate-500/10 to-transparent"
-                  )}
-                />
-                <div className="relative">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-950/6 text-primary dark:bg-white/10 dark:text-sky-200">
-                      <Icon className="size-4" />
-                    </div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                      {stat.label}
-                    </p>
-                  </div>
-                  <p className="mt-4 text-2xl font-semibold text-slate-950 dark:text-white">
-                    {stat.value}
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    {stat.detail}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              detail={stat.detail}
+              icon={Icon}
+              label={stat.label}
+              tone={topStatTones[index] ?? "cyan"}
+              value={stat.value}
+            />
           );
         })}
       </div>

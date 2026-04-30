@@ -181,17 +181,17 @@ export function InstructorIncomeTabs({
 
           <TabsList
             variant="line"
-            className="w-full justify-start gap-1 overflow-x-auto rounded-full bg-slate-100/80 p-1 dark:bg-white/6 lg:w-auto"
+            className="!h-auto min-h-12 w-full justify-start gap-1 overflow-x-auto overflow-y-hidden rounded-full bg-slate-100/80 p-1 [-ms-overflow-style:none] [scrollbar-width:none] dark:bg-white/6 lg:w-auto [&::-webkit-scrollbar]:hidden"
           >
             <TabsTrigger
               value="overzicht"
-              className="rounded-full px-4 py-2 text-[13px] data-active:bg-white dark:data-active:bg-white/10"
+              className="rounded-full px-4 py-2 text-[13px] data-active:bg-emerald-600 data-active:text-white dark:data-active:bg-emerald-300 dark:data-active:text-slate-950"
             >
               Overzicht
             </TabsTrigger>
             <TabsTrigger
               value="cockpit"
-              className="rounded-full px-4 py-2 text-[13px] data-active:bg-white dark:data-active:bg-white/10"
+              className="rounded-full px-4 py-2 text-[13px] data-active:bg-sky-600 data-active:text-white dark:data-active:bg-sky-300 dark:data-active:text-slate-950"
             >
               Cockpit
             </TabsTrigger>

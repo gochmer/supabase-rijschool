@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RequestStatusActions } from "@/components/dashboard/request-status-actions";
@@ -221,27 +222,31 @@ export default async function AanvragenPage() {
       label: "Nu beslissen",
       value: `${pendingRequests.length}`,
       description: "Aanvragen die nu nog op jouw reactie wachten.",
-      tone: "from-amber-500/14 to-rose-500/10",
+      icon: Clock3,
+      tone: pendingRequests.length > 0 ? "amber" : "emerald",
     },
     {
       label: "Klaar voor les",
       value: `${acceptedRequests.length}`,
       description: "Geaccepteerd of al ingepland in het traject.",
-      tone: "from-emerald-500/12 to-cyan-500/10",
+      icon: CalendarCheck2,
+      tone: "emerald",
     },
     {
       label: "Proeflessen",
       value: `${proeflesRequests}`,
       description: "Handig om snel om te zetten naar een eerste traject.",
-      tone: "from-sky-500/12 to-indigo-500/10",
+      icon: Sparkles,
+      tone: "sky",
     },
     {
       label: "Pakketvragen",
       value: `${packageRequests}`,
       description: "Gericht op directe pakketconversie en vervolg.",
-      tone: "from-slate-500/12 to-sky-500/8",
+      icon: FolderCheck,
+      tone: "violet",
     },
-  ];
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -321,36 +326,20 @@ export default async function AanvragenPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((item) => (
-          <Card
+          <DashboardStatCard
             key={item.label}
-            className="overflow-hidden border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
-          >
-            <CardContent className="relative p-4">
-              <div
-                className={cn(
-                  "absolute inset-x-0 top-0 h-20 bg-gradient-to-r opacity-80",
-                  item.tone
-                )}
-              />
-              <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  {item.label}
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
-                  {item.value}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  {item.description}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            detail={item.description}
+            icon={item.icon}
+            label={item.label}
+            tone={item.tone}
+            value={item.value}
+          />
         ))}
       </div>
 
       <Tabs defaultValue="nu" className="space-y-4">
-        <TabsList className="h-auto w-full rounded-[1.45rem] border border-white/60 bg-white/75 p-1 dark:border-white/10 dark:bg-white/5">
-          <TabsTrigger value="nu" className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.45rem] border border-white/60 bg-white/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.32)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="nu" className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm data-active:bg-amber-200 data-active:text-slate-950">
             Nu beslissen
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
               {pendingRequests.length}
@@ -358,7 +347,7 @@ export default async function AanvragenPage() {
           </TabsTrigger>
           <TabsTrigger
             value="verwerkt"
-            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm"
+            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm data-active:bg-emerald-200 data-active:text-slate-950"
           >
             Verwerkt
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">
@@ -367,7 +356,7 @@ export default async function AanvragenPage() {
           </TabsTrigger>
           <TabsTrigger
             value="inzicht"
-            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm"
+            className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm data-active:bg-sky-200 data-active:text-slate-950"
           >
             Inzicht
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">

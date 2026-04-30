@@ -6,9 +6,9 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MessageCenter } from "@/components/messages/message-center";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   getCurrentMessageInbox,
@@ -63,30 +63,30 @@ export default async function InstructeurBerichtenPage() {
       value: `${unreadCount}`,
       description: "Nieuwe leerlingsignalen die nu aandacht vragen.",
       icon: MessageSquareMore,
-      tone: "from-sky-500/12 to-indigo-500/10",
+      tone: unreadCount > 0 ? "amber" : "emerald",
     },
     {
       label: "Recent verstuurd",
       value: `${outgoingLog.length}`,
       description: "Laatste berichten en templateacties uit je werklaag.",
       icon: Send,
-      tone: "from-emerald-500/12 to-cyan-500/10",
+      tone: "sky",
     },
     {
       label: "Leerlingen bereikbaar",
       value: `${recipients.length}`,
       description: "Ontvangers waar je nu direct een bericht aan kunt sturen.",
       icon: CalendarClock,
-      tone: "from-slate-500/12 to-sky-500/8",
+      tone: "cyan",
     },
     {
       label: "Opvolging klaar",
       value: `${smartTemplates.length}`,
       description: "Concepten klaar voor intake, herinnering of voorstel.",
       icon: ClipboardPenLine,
-      tone: "from-amber-500/14 to-rose-500/10",
+      tone: "violet",
     },
-  ];
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -150,35 +150,14 @@ export default async function InstructeurBerichtenPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((item) => (
-          <Card
+          <DashboardStatCard
             key={item.label}
-            className="overflow-hidden border border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
-          >
-            <CardContent className="relative p-4">
-              <div
-                className={cn(
-                  "absolute inset-x-0 top-0 h-20 bg-gradient-to-r opacity-80",
-                  item.tone
-                )}
-              />
-              <div className="relative">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-950/6 text-primary dark:bg-white/10 dark:text-sky-200">
-                    <item.icon className="size-4" />
-                  </div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    {item.label}
-                  </p>
-                </div>
-                <p className="mt-4 text-2xl font-semibold text-slate-950 dark:text-white">
-                  {item.value}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  {item.description}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            detail={item.description}
+            icon={item.icon}
+            label={item.label}
+            tone={item.tone}
+            value={item.value}
+          />
         ))}
       </div>
 

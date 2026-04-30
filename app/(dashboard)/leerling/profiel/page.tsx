@@ -312,11 +312,11 @@ export default async function LeerlingProfielPage() {
       </section>
 
       <Tabs defaultValue="profiel" className="space-y-4 print:hidden">
-        <TabsList className="sticky top-28 z-10 w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] backdrop-blur-xl">
-          <TabsTrigger value="profiel" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="profiel" className="h-10 rounded-full px-4 data-active:bg-sky-200 data-active:text-slate-950">
             Profiel
           </TabsTrigger>
-          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4 data-active:bg-emerald-200 data-active:text-slate-950">
             Voortgang
           </TabsTrigger>
         </TabsList>

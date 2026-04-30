@@ -1,5 +1,6 @@
 import { CalendarDays, Heart, Search, Zap } from "lucide-react";
 
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { InstructorFinder } from "@/components/instructors/instructor-finder";
 import { getFavoriteInstructorIds } from "@/lib/data/favorites";
@@ -68,27 +69,31 @@ export default async function LeerlingInstructeursPage() {
       icon: Search,
       label: "Instructeurs",
       value: `${liveInstructors.length}`,
+      tone: "sky",
       detail: "Beschikbaar om te vergelijken.",
     },
     {
       icon: Heart,
       label: "Favorieten",
       value: `${favoriteInstructorIds.length}`,
+      tone: "rose",
       detail: "Bewaarde instructeurs in jouw account.",
     },
     {
       icon: CalendarDays,
       label: "Zichtbare agenda",
       value: `${visibleAgendaInstructorIds.length}`,
+      tone: "emerald",
       detail: `${totalVisibleSlots} vrije blokken zichtbaar.`,
     },
     {
       icon: Zap,
       label: "Direct boeken",
       value: `${directBookingCount}`,
+      tone: "amber",
       detail: "Koppelingen waar direct plannen openstaat.",
     },
-  ];
+  ] as const;
 
   return (
     <div className="space-y-6 text-white">
@@ -101,27 +106,7 @@ export default async function LeerlingInstructeursPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-[1.45rem] border border-white/10 bg-white/6 p-4 shadow-[0_20px_58px_-42px_rgba(15,23,42,0.7)]"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
-                <item.icon className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-                  {item.label}
-                </p>
-                <p className="mt-1 truncate text-lg font-semibold text-white">
-                  {item.value}
-                </p>
-                <p className="mt-1 text-[12px] leading-5 text-slate-300">
-                  {item.detail}
-                </p>
-              </div>
-            </div>
-          </div>
+          <DashboardStatCard key={item.label} {...item} />
         ))}
       </div>
 

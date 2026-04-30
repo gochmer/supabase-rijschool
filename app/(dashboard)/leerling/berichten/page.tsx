@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BellRing, Radio, Send } from "lucide-react";
 
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MessageCenter } from "@/components/messages/message-center";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,37 @@ export default async function LeerlingBerichtenPage() {
 
   const unreadCount = inbox.filter((item) => item.ongelezen).length;
   const latestMessage = inbox[0];
+  const messageStats = [
+    {
+      icon: BellRing,
+      label: "Ongelezen berichten",
+      value: `${unreadCount}`,
+      tone: unreadCount > 0 ? "amber" : "emerald",
+      detail:
+        unreadCount > 0
+          ? "Er wachten nog berichten op jouw aandacht."
+          : "Je inbox is bijgewerkt en volledig gelezen.",
+    },
+    {
+      icon: Radio,
+      label: "Beschikbare contacten",
+      value: `${recipients.length}`,
+      tone: "cyan",
+      detail:
+        recipients.length > 0
+          ? "Je kunt direct schakelen met instructeurs binnen het platform."
+          : "Er zijn nog geen ontvangers klaar voor directe communicatie.",
+    },
+    {
+      icon: Send,
+      label: "Laatste bericht",
+      value: latestMessage?.afzender ?? "Nog geen berichten",
+      tone: "sky",
+      detail: latestMessage
+        ? latestMessage.tijd
+        : "Zodra er een bericht binnenkomt wordt hier de laatste update getoond.",
+    },
+  ] as const;
 
   return (
     <div className="space-y-6 text-white">
@@ -49,62 +81,18 @@ export default async function LeerlingBerichtenPage() {
       />
 
       <Tabs defaultValue="berichten" className="space-y-4">
-        <TabsList className="sticky top-28 z-10 w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] backdrop-blur-xl">
-          <TabsTrigger value="berichten" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="berichten" className="h-10 rounded-full px-4 data-active:bg-sky-200 data-active:text-slate-950">
             Berichten
           </TabsTrigger>
-          <TabsTrigger value="contacten" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+          <TabsTrigger value="contacten" className="h-10 rounded-full px-4 data-active:bg-emerald-200 data-active:text-slate-950">
             Contacten
           </TabsTrigger>
         </TabsList>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {[
-          {
-            icon: BellRing,
-            label: "Ongelezen berichten",
-            value: `${unreadCount}`,
-            detail:
-              unreadCount > 0
-                ? "Er wachten nog berichten op jouw aandacht."
-                : "Je inbox is bijgewerkt en volledig gelezen.",
-          },
-          {
-            icon: Radio,
-            label: "Beschikbare contacten",
-            value: `${recipients.length}`,
-            detail:
-              recipients.length > 0
-                ? "Je kunt direct schakelen met instructeurs binnen het platform."
-                : "Er zijn nog geen ontvangers klaar voor directe communicatie.",
-          },
-          {
-            icon: Send,
-            label: "Laatste bericht",
-            value: latestMessage?.afzender ?? "Nog geen berichten",
-            detail: latestMessage
-              ? latestMessage.tijd
-              : "Zodra er een bericht binnenkomt wordt hier de laatste update getoond.",
-          },
-        ].map((item) => (
-          <div key={item.label} className="rounded-[1.45rem] border border-white/10 bg-white/6 p-4 shadow-[0_20px_58px_-42px_rgba(15,23,42,0.7)]">
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
-                <item.icon className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-                  {item.label}
-                </p>
-                <p className="mt-1 truncate text-lg font-semibold text-white">
-                  {item.value}
-                </p>
-                <p className="mt-1 text-[12px] leading-5 text-slate-300">
-                  {item.detail}
-                </p>
-              </div>
-            </div>
-          </div>
+        {messageStats.map((item) => (
+          <DashboardStatCard key={item.label} {...item} />
         ))}
       </div>
 

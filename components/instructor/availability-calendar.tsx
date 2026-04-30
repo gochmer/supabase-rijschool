@@ -1225,14 +1225,14 @@ export function AvailabilityCalendar({
             onValueChange={(value) => setView(value as "week" | "today" | "list")}
             className="gap-3"
           >
-            <TabsList className="h-auto rounded-[1rem] bg-white/80 p-1 dark:bg-white/6">
-              <TabsTrigger value="week" className="min-h-10 rounded-[0.9rem] px-3">
+            <TabsList className="!h-auto min-h-12 justify-start overflow-x-auto overflow-y-hidden rounded-[1rem] bg-white/85 p-1 [-ms-overflow-style:none] [scrollbar-width:none] dark:bg-white/6 [&::-webkit-scrollbar]:hidden">
+              <TabsTrigger value="week" className="min-h-10 rounded-[0.9rem] px-3 data-active:bg-sky-200 data-active:text-slate-950">
                 Weekoverzicht
               </TabsTrigger>
-              <TabsTrigger value="today" className="min-h-10 rounded-[0.9rem] px-3">
+              <TabsTrigger value="today" className="min-h-10 rounded-[0.9rem] px-3 data-active:bg-emerald-200 data-active:text-slate-950">
                 Vandaag
               </TabsTrigger>
-              <TabsTrigger value="list" className="min-h-10 rounded-[0.9rem] px-3">
+              <TabsTrigger value="list" className="min-h-10 rounded-[0.9rem] px-3 data-active:bg-amber-200 data-active:text-slate-950">
                 Lijst
               </TabsTrigger>
             </TabsList>

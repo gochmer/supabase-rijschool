@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { AvatarUploadCard } from "@/components/profile/avatar-upload-card";
 import { ProfileForm } from "@/components/profile/profile-form";
@@ -109,6 +110,7 @@ export default async function InstructeurProfielPage() {
       value: `${safeScore}%`,
       description: conversionLevel,
       icon: Rocket,
+      tone: safeScore >= 70 ? "emerald" : "amber",
     },
     {
       label: "Reviews",
@@ -117,20 +119,23 @@ export default async function InstructeurProfielPage() {
         ? `${reviewSummary.reviewCount} review${reviewSummary.reviewCount === 1 ? "" : "s"}`
         : "Nog geen social proof",
       icon: Star,
+      tone: reviewSummary.reviewCount ? "amber" : "violet",
     },
     {
       label: "Werkgebied",
       value: workArea.length ? `${workArea.length}` : "0",
       description: workArea.length ? "Regio's ingevuld" : "Nog regio's toevoegen",
       icon: MapPin,
+      tone: workArea.length ? "sky" : "rose",
     },
     {
       label: "Open punten",
       value: improvementTips.length ? `${improvementTips.length}` : "0",
       description: improvementTips.length ? "Nog slim om te verfijnen" : "Profiel staat sterk",
       icon: BadgeCheck,
+      tone: improvementTips.length ? "amber" : "emerald",
     },
-  ];
+  ] as const;
 
   const reviewMetrics = [
     {
@@ -208,37 +213,26 @@ export default async function InstructeurProfielPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((item) => (
-          <Card
+          <DashboardStatCard
             key={item.label}
-            className="border border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <item.icon className="size-4 text-primary" />
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  {item.label}
-                </p>
-              </div>
-              <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
-                {item.value}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                {item.description}
-              </p>
-            </CardContent>
-          </Card>
+            detail={item.description}
+            icon={item.icon}
+            label={item.label}
+            tone={item.tone}
+            value={item.value}
+          />
         ))}
       </div>
 
       <Tabs defaultValue="overzicht" className="space-y-4">
-        <TabsList className="h-auto w-full rounded-[1.4rem] bg-white/70 p-1 dark:bg-white/5">
-          <TabsTrigger value="overzicht" className="min-h-10 rounded-[1rem] px-3 text-sm">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.4rem] border border-white/60 bg-white/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.32)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="overzicht" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-sky-200 data-active:text-slate-950">
             Overzicht
           </TabsTrigger>
-          <TabsTrigger value="bewerken" className="min-h-10 rounded-[1rem] px-3 text-sm">
+          <TabsTrigger value="bewerken" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-emerald-200 data-active:text-slate-950">
             Bewerken
           </TabsTrigger>
-          <TabsTrigger value="reviews" className="min-h-10 rounded-[1rem] px-3 text-sm">
+          <TabsTrigger value="reviews" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-amber-200 data-active:text-slate-950">
             Reviews
           </TabsTrigger>
         </TabsList>

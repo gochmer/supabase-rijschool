@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PackageStudio } from "@/components/packages/package-studio";
 import { Badge } from "@/components/ui/badge";
@@ -135,7 +136,7 @@ export default async function InstructeurPakkettenPage() {
         ? `${activePackages} actief zichtbaar op je profiel`
         : "Nog geen actieve pakketten klaar",
       icon: Boxes,
-      tone: "from-emerald-500/12 to-cyan-500/10",
+      tone: activePackages > 0 ? "emerald" : "amber",
     },
     {
       label: "Uitgelicht",
@@ -144,7 +145,7 @@ export default async function InstructeurPakkettenPage() {
         ? "Trekken extra aandacht in je aanbod"
         : "Nog geen focuspakket gekozen",
       icon: Pin,
-      tone: "from-sky-500/12 to-indigo-500/10",
+      tone: featuredPackages > 0 ? "sky" : "violet",
     },
     {
       label: "Met pakketfoto",
@@ -153,7 +154,7 @@ export default async function InstructeurPakkettenPage() {
         ? `${missingCoverCount} missen nog beeld`
         : "Alle pakketten hebben een foto",
       icon: FileImage,
-      tone: "from-slate-500/12 to-sky-500/8",
+      tone: missingCoverCount > 0 ? "amber" : "cyan",
     },
     {
       label: "Gemiddelde prijs",
@@ -162,9 +163,9 @@ export default async function InstructeurPakkettenPage() {
         ? `${practiceExamPackages} met praktijk-examenprijs`
         : "Nog zonder examenprijslaag",
       icon: BadgeEuro,
-      tone: "from-amber-500/14 to-slate-500/10",
+      tone: "rose",
     },
-  ];
+  ] as const;
 
   const strengthItems = [
     {
@@ -374,49 +375,28 @@ export default async function InstructeurPakkettenPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((item) => (
-          <Card
+          <DashboardStatCard
             key={item.label}
-            className="overflow-hidden border border-white/70 bg-white/90 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
-          >
-            <CardContent className="relative p-4">
-              <div
-                className={cn(
-                  "absolute inset-x-0 top-0 h-20 bg-gradient-to-r opacity-80",
-                  item.tone
-                )}
-              />
-              <div className="relative">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-950/6 text-primary dark:bg-white/10 dark:text-sky-200">
-                    <item.icon className="size-4" />
-                  </div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    {item.label}
-                  </p>
-                </div>
-                <p className="mt-4 text-2xl font-semibold text-slate-950 dark:text-white">
-                  {item.value}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  {item.description}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            detail={item.description}
+            icon={item.icon}
+            label={item.label}
+            tone={item.tone}
+            value={item.value}
+          />
         ))}
       </div>
 
       <Tabs defaultValue="studio" className="space-y-4">
-        <TabsList className="h-auto w-full rounded-[1.45rem] border border-white/60 bg-white/75 p-1 dark:border-white/10 dark:bg-white/5">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.45rem] border border-white/60 bg-white/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.32)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 [&::-webkit-scrollbar]:hidden">
           <TabsTrigger
             value="studio"
-            className="min-h-10 rounded-[1rem] px-3 text-sm"
+            className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-sky-200 data-active:text-slate-950"
           >
             Studio
           </TabsTrigger>
           <TabsTrigger
             value="overzicht"
-            className="min-h-10 rounded-[1rem] px-3 text-sm"
+            className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-emerald-200 data-active:text-slate-950"
           >
             Aanbodcheck
           </TabsTrigger>
