@@ -529,18 +529,6 @@ function buildGeneratedPackageDescription({
   return `${variants[safeVariantIndex]}${practiceLine}`;
 }
 
-function getPackageTierLabel(lessons: number | null, price: number | null) {
-  if ((lessons ?? 0) >= 24 || (price ?? 0) >= 1500) {
-    return "Premium traject";
-  }
-
-  if ((lessons ?? 0) >= 10 || (price ?? 0) >= 650) {
-    return "Middenpakket";
-  }
-
-  return "Instappakket";
-}
-
 function PackageCoverFocusEditor({
   imageUrl,
   imageAlt,
@@ -865,81 +853,6 @@ function getPresetLabelById(lesType: RijlesType, presetId: string | null) {
   return preset ? preset.label : null;
 }
 
-function PackageInsightsPanel({
-  priceLabel,
-  practiceExamLabel,
-  pricePerLessonLabel,
-  totalValueLabel,
-  tierLabel,
-  className,
-  accentClass,
-}: {
-  priceLabel: string;
-  practiceExamLabel: string;
-  pricePerLessonLabel: string;
-  totalValueLabel: string;
-  tierLabel: string;
-  className?: string;
-  accentClass?: string;
-}) {
-  const labelClass =
-    "inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-700 uppercase dark:border-white/10 dark:bg-white/10 dark:text-slate-200";
-
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-[1.25rem] border border-white/75 bg-white/92 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.14)] transition-colors dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]",
-        className
-      )}
-    >
-      <div
-        className={cn(
-          "absolute inset-x-0 top-0 h-14 bg-gradient-to-r from-slate-900/6 via-sky-500/8 to-transparent dark:from-white/6 dark:via-sky-400/10",
-          accentClass
-        )}
-      />
-      <div>
-        <p className={labelClass}>
-          Slim pakketinzicht
-        </p>
-        <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-          Zie direct hoe je pakket commercieel overkomt en waar prijs, waarde en opbouw nu staan.
-        </p>
-      </div>
-
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: "Pakketprijs", value: priceLabel },
-          { label: "Praktijk-examen", value: practiceExamLabel },
-          { label: "Prijs per les", value: pricePerLessonLabel },
-          { label: "Positie", value: tierLabel },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="rounded-[1rem] border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/8"
-          >
-            <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
-              {item.label}
-            </p>
-            <p className="mt-1.5 text-sm font-semibold text-slate-950 dark:text-white">
-              {item.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-3 rounded-[1rem] border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/8">
-        <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
-          Totale waarde met praktijk-examen
-        </p>
-        <p className="mt-1.5 text-sm font-semibold text-slate-950 dark:text-white">
-          {totalValueLabel}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function StudioProgressOverview({
   label,
   items,
@@ -1099,20 +1012,6 @@ export function PackageStudio({
   const showPracticeExamPriceField = hasPracticeExam || Boolean(praktijkExamenPrijs.trim());
   const showEditPracticeExamPriceField =
     editHasPracticeExam || Boolean(editPraktijkExamenPrijs.trim());
-  const createPriceNumber = parseLooseNumber(prijs);
-  const createPracticeExamNumber = showPracticeExamPriceField
-    ? parseLooseNumber(praktijkExamenPrijs)
-    : null;
-  const createLessonsNumber = Number.parseInt(aantalLessen, 10);
-  const createPricePerLesson =
-    createPriceNumber !== null && Number.isFinite(createLessonsNumber) && createLessonsNumber > 0
-      ? formatCurrency(createPriceNumber / createLessonsNumber)
-      : "Nog niet compleet";
-  const createTotalValue =
-    createPriceNumber !== null
-      ? formatCurrency(createPriceNumber + (createPracticeExamNumber ?? 0))
-      : "Nog niet compleet";
-  const createTier = getPackageTierLabel(createLessonsNumber, createPriceNumber);
   const createCoverObjectPosition = getPackageCoverObjectPosition(
     coverPosition,
     coverFocusX,
@@ -1125,8 +1024,6 @@ export function PackageStudio({
   );
   const selectedCreatePresetLabel = getPresetLabelById(lesType, selectedCreatePresetId);
   const selectedEditPresetLabel = getPresetLabelById(editLesType, selectedEditPresetId);
-  const activeStudioStepMeta = getStudioStepMeta(activeStudioStep);
-  const activeEditStudioStepMeta = getStudioStepMeta(activeEditStudioStep);
   const createProgressItems = getStudioProgressItems({
     naam,
     badge,
@@ -1775,7 +1672,7 @@ export function PackageStudio({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
+        <div className="mt-5 grid gap-4 xl:grid-cols-2 xl:items-start">
           <div className="space-y-4">
             <div
               ref={createBasisRef}
@@ -2092,131 +1989,37 @@ export function PackageStudio({
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div
-              className={cn(
-                "relative overflow-hidden rounded-[1.25rem] border bg-white/92 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.14)] transition-all dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]",
-                activeStudioStepMeta.borderClass
-              )}
-            >
-              <div
-                className={cn(
-                  "absolute inset-x-0 top-0 h-14 bg-gradient-to-r",
-                  activeStudioStepMeta.accentClass
-                )}
-              />
-              <div className="relative flex items-start gap-3">
-                <div
-                  className={cn(
-                    "flex size-10 shrink-0 items-center justify-center rounded-2xl",
-                    activeStudioStepMeta.iconClass
-                  )}
-                >
-                  <activeStudioStepMeta.icon className="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <p
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] uppercase",
-                      activeStudioStepMeta.chipClass
-                    )}
-                  >
-                    Actieve stap
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
-                    Stap {activeStudioStepMeta.step} · {activeStudioStepMeta.title}
-                  </h3>
-                  <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                    {activeStudioStepMeta.detail}. De rechter previewlaag laat nu meteen zien hoe
-                    deze keuze doorwerkt in je pakketpresentatie.
-                  </p>
-                </div>
+          <div
+            ref={createBeeldRef}
+            className={cn(
+              "relative scroll-mt-6 overflow-hidden rounded-[1.35rem] border bg-white/94 p-4 shadow-[0_20px_48px_-36px_rgba(15,23,42,0.18)] transition-all dark:bg-white/6",
+              activeStudioStep === "beeld"
+                ? getStudioStepMeta("beeld").borderClass
+                : "border-white/85 dark:border-white/10"
+            )}
+            onClick={() => setActiveStudioStep("beeld")}
+            onPointerEnter={() => setActiveStudioStep("beeld")}
+            onFocusCapture={() => setActiveStudioStep("beeld")}
+          >
+            <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-r from-slate-900/6 via-sky-500/8 to-transparent dark:from-white/6 dark:via-sky-400/10" />
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950/6 text-primary dark:bg-white/10 dark:text-sky-200">
+                <ImagePlus className="size-4" />
+              </div>
+              <div>
+                <p className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-700 uppercase dark:border-white/10 dark:bg-white/10 dark:text-slate-200">
+                  Stap 04
+                </p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                  Beeld
+                </h3>
+                <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  Voeg je pakketfoto toe en controleer meteen hoe je kaart eruitziet.
+                </p>
               </div>
             </div>
 
-            <PackageInsightsPanel
-              priceLabel={
-                createPriceNumber !== null ? formatCurrency(createPriceNumber) : "Nog niet ingevuld"
-              }
-              practiceExamLabel={
-                createPracticeExamNumber !== null
-                  ? formatCurrency(createPracticeExamNumber)
-                  : showPracticeExamPriceField
-                    ? "Nog niet ingevuld"
-                    : "Niet actief"
-              }
-              pricePerLessonLabel={createPricePerLesson}
-              totalValueLabel={createTotalValue}
-              tierLabel={createTier}
-              className={activeStudioStepMeta.borderClass}
-              accentClass={activeStudioStepMeta.accentClass}
-            />
-
-            <div
-              className={cn(
-                "relative overflow-hidden rounded-[1.25rem] border bg-white/92 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.14)] transition-all dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]",
-                activeStudioStepMeta.borderClass
-              )}
-            >
-              <div
-                className={cn(
-                  "absolute inset-x-0 top-0 h-12 bg-gradient-to-r",
-                  activeStudioStepMeta.accentClass
-                )}
-              />
-              <p className="relative inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-700 uppercase dark:border-white/10 dark:bg-white/10 dark:text-slate-200">
-                Studiotip
-              </p>
-              <div className="mt-3 space-y-3">
-                {[
-                  "Een heldere pakketnaam en badge zorgen dat leerlingen sneller begrijpen wat ze kiezen.",
-                  "Prijs, aantal lessen en praktijk-examenlaag vormen samen je commerciële basis.",
-                  "Een eigen foto maakt het pakket direct sterker op je profiel en in kaarten.",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-[1rem] border border-slate-200 bg-white/95 px-3 py-3 text-sm leading-6 text-slate-600 dark:border-white/10 dark:bg-white/8 dark:text-slate-300"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          ref={createBeeldRef}
-          className={cn(
-            "relative mt-5 scroll-mt-6 overflow-hidden rounded-[1.35rem] border bg-white/94 p-4 shadow-[0_20px_48px_-36px_rgba(15,23,42,0.18)] transition-all dark:bg-white/6",
-            activeStudioStep === "beeld"
-              ? getStudioStepMeta("beeld").borderClass
-              : "border-white/85 dark:border-white/10"
-          )}
-          onClick={() => setActiveStudioStep("beeld")}
-          onPointerEnter={() => setActiveStudioStep("beeld")}
-          onFocusCapture={() => setActiveStudioStep("beeld")}
-        >
-          <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-r from-slate-900/6 via-sky-500/8 to-transparent dark:from-white/6 dark:via-sky-400/10" />
-          <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950/6 text-primary dark:bg-white/10 dark:text-sky-200">
-              <ImagePlus className="size-4" />
-            </div>
-            <div>
-              <p className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-700 uppercase dark:border-white/10 dark:bg-white/10 dark:text-slate-200">
-                Stap 04
-              </p>
-              <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
-                Beeld
-              </h3>
-              <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                Upload een eigen pakketfoto, kies de focus en zie meteen hoe de kaart straks op je profiel verschijnt.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(320px,1.08fr)]">
-            <div className="space-y-4">
+            <div className="mt-4 space-y-4">
               <div className="space-y-2 rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/5">
                 <Label htmlFor="package_cover">Pakketfoto</Label>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -2225,7 +2028,7 @@ export function PackageStudio({
                       Geef je pakket een eigen foto
                     </p>
                     <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                      JPG, PNG, WebP of AVIF tot 5 MB. Deze pakketfoto komt terug in het dashboard en op de openbare pakketkaarten.
+                      JPG, PNG, WebP of AVIF tot 5 MB. Deze foto komt terug in je pakketkaart en op je profiel.
                     </p>
                   </div>
                   {coverPreviewUrl ? (
@@ -2269,9 +2072,7 @@ export function PackageStudio({
                   ))}
                 </select>
               </div>
-            </div>
 
-            <div className="space-y-4">
               <div
                 className={cn(
                   "overflow-hidden rounded-[1.35rem] border text-slate-950 dark:text-slate-950",
@@ -2394,7 +2195,7 @@ export function PackageStudio({
           </Badge>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.84fr)_minmax(320px,1.16fr)]">
+        <div className="mt-5 grid gap-4 xl:grid-cols-2 xl:items-start">
           <div className="grid gap-3 sm:grid-cols-3">
             {[
               {
@@ -2876,47 +2677,6 @@ export function PackageStudio({
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                "relative mt-4 overflow-hidden rounded-[1.2rem] border bg-white/92 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.14)] transition-all dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]",
-                activeEditStudioStepMeta.borderClass
-              )}
-            >
-              <div
-                className={cn(
-                  "absolute inset-x-0 top-0 h-12 bg-gradient-to-r",
-                  activeEditStudioStepMeta.accentClass
-                )}
-              />
-              <div className="relative flex items-start gap-3">
-                <div
-                  className={cn(
-                    "flex size-10 shrink-0 items-center justify-center rounded-2xl",
-                    activeEditStudioStepMeta.iconClass
-                  )}
-                >
-                  <activeEditStudioStepMeta.icon className="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <p
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] uppercase",
-                      activeEditStudioStepMeta.chipClass
-                    )}
-                  >
-                    Actieve stap
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
-                    Stap {activeEditStudioStepMeta.step} - {activeEditStudioStepMeta.title}
-                  </h3>
-                  <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                    {activeEditStudioStepMeta.detail}. Werk dit deel bij en controleer daarna direct
-                    de live preview van je bestaande pakket.
-                  </p>
-                </div>
               </div>
             </div>
 

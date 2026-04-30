@@ -10,6 +10,7 @@ export function InstructorResultsGrid({
   packagesByInstructorId,
   availableSlotsByInstructorId,
   directBookingEnabledByInstructorId,
+  trialLessonAvailableByInstructorId,
   weeklyBookingLimitByInstructorId,
   bookedMinutesByWeekStartByInstructorId,
   weeklyRemainingMinutesThisWeekByInstructorId,
@@ -24,6 +25,7 @@ export function InstructorResultsGrid({
   packagesByInstructorId: Record<string, Pakket[]>;
   availableSlotsByInstructorId: Record<string, BeschikbaarheidSlot[]>;
   directBookingEnabledByInstructorId: Record<string, boolean>;
+  trialLessonAvailableByInstructorId: Record<string, boolean>;
   weeklyBookingLimitByInstructorId: Record<string, number | null>;
   bookedMinutesByWeekStartByInstructorId: Record<string, WeeklyBookedMinutesMap>;
   weeklyRemainingMinutesThisWeekByInstructorId: Record<string, number | null>;
@@ -68,6 +70,9 @@ export function InstructorResultsGrid({
             directBookingEnabled={Boolean(
               directBookingEnabledByInstructorId[instructor.id]
             )}
+            trialLessonAvailable={
+              trialLessonAvailableByInstructorId[instructor.id] ?? true
+            }
             weeklyBookingLimitMinutes={
               weeklyBookingLimitByInstructorId[instructor.id] ?? null
             }

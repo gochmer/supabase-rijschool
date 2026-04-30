@@ -17,6 +17,7 @@ import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
 import {
   getLearnerInstructorBookingLimitSnapshot,
   getLearnerInstructorSchedulingAccess,
+  hasLearnerUsedTrialLesson,
 } from "@/lib/data/student-scheduling";
 import {
   ensureCurrentUserContext,
@@ -165,6 +166,10 @@ function getRequestedLessonDurationKind(params: {
   }
 
   return "rijles";
+}
+
+function getTrialLessonAlreadyUsedMessage() {
+  return "Je hebt al eerder een proefles gepland of gevolgd. Een proefles kun je maar eenmalig boeken.";
 }
 
 async function requestedWindowFitsCurrentAvailability(params: {
@@ -643,6 +648,15 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
   }
 
   const requestType = input.requestType === "proefles" ? "proefles" : "algemeen";
+  if (
+    requestType === "proefles" &&
+    (await hasLearnerUsedTrialLesson({ supabase, leerlingId: leerling.id }))
+  ) {
+    return {
+      success: false,
+      message: getTrialLessonAlreadyUsedMessage(),
+    };
+  }
   const durationKind = getRequestedLessonDurationKind({
     hasSelectedPackage: Boolean(input.packageId?.trim()),
     requestType,
@@ -906,6 +920,16 @@ export async function createDirectLessonBookingAction(
   }
 
   const requestType = input.requestType === "proefles" ? "proefles" : "algemeen";
+  if (
+    requestType === "proefles" &&
+    (await hasLearnerUsedTrialLesson({ supabase, leerlingId: leerling.id }))
+  ) {
+    return {
+      success: false,
+      message: getTrialLessonAlreadyUsedMessage(),
+      refreshAvailability: true,
+    };
+  }
   const durationKind = getRequestedLessonDurationKind({
     hasSelectedPackage: Boolean(input.packageId?.trim()),
     requestType,

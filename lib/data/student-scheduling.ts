@@ -47,6 +47,7 @@ type InstructorPublicBookingReadBuilder = {
 export type LearnerInstructorSchedulingAccess = {
   instructorId: string | null;
   hasActiveRelationship: boolean;
+  trialLessonAvailable: boolean;
   publicBookingEnabled: boolean;
   selfSchedulingAllowed: boolean;
   directBookingAllowed: boolean;
@@ -126,6 +127,7 @@ export type LearnerBookingEligibility = {
   instructorName: string;
   hasActiveRelationship: boolean;
   hasPendingRequest: boolean;
+  trialLessonAvailable: boolean;
   publicBookingEnabled: boolean;
   selfSchedulingAllowed: boolean;
   directBookingAllowed: boolean;
@@ -163,6 +165,41 @@ function createEmptyBookingLimitSnapshot(): LearnerBookingLimitSnapshot {
     weeklyRemainingMinutesThisWeek: null,
     currentWeekLimitReached: false,
   };
+}
+
+export async function hasLearnerUsedTrialLesson(params: {
+  supabase: Awaited<ReturnType<typeof createServerClient>>;
+  leerlingId: string;
+}) {
+  const lessonRequestTable = params.supabase.from("lesaanvragen" as never) as unknown as {
+    select: (columns: string) => {
+      eq: (column: string, value: string) => {
+        eq: (column: string, value: string) => {
+          limit: (count: number) => Promise<{
+            data: Array<{ id: string }> | null;
+          }>;
+        };
+      };
+    };
+  };
+
+  const [requestResult, lessonResult] = await Promise.all([
+    lessonRequestTable
+      .select("id")
+      .eq("leerling_id", params.leerlingId)
+      .eq("aanvraag_type", "proefles")
+      .limit(1),
+    (params.supabase
+      .from("lessen")
+      .select("id")
+      .eq("leerling_id", params.leerlingId)
+      .ilike("titel", "%proefles%")
+      .limit(1)) as unknown as Promise<{
+      data: Array<{ id: string }> | null;
+    }>,
+  ]);
+
+  return Boolean(requestResult.data?.length || lessonResult.data?.length);
 }
 
 async function getLearnerBookingLimitSnapshotsForInstructorIds(params: {
@@ -418,6 +455,10 @@ export async function getLearnerInstructorSchedulingAccess(
         instructorIds: [instructorId],
       })
     )[instructorId] ?? createEmptyBookingLimitSnapshot();
+  const trialLessonAvailable = !(await hasLearnerUsedTrialLesson({
+    supabase,
+    leerlingId,
+  }));
 
   const publicBookingEnabled = Boolean(instructorRow?.online_boeken_actief);
   const selfSchedulingAllowed =
@@ -427,6 +468,7 @@ export async function getLearnerInstructorSchedulingAccess(
   return {
     instructorId,
     hasActiveRelationship: hasRelationship,
+    trialLessonAvailable,
     publicBookingEnabled,
     selfSchedulingAllowed,
     directBookingAllowed,
@@ -458,6 +500,7 @@ export async function getCurrentLearnerSchedulingAccessForInstructorSlug(
     return {
       instructorId: null,
       hasActiveRelationship: false,
+      trialLessonAvailable: true,
       publicBookingEnabled: false,
       selfSchedulingAllowed: false,
       directBookingAllowed: false,
@@ -473,6 +516,7 @@ export async function getCurrentLearnerSchedulingAccessForInstructorSlug(
     return {
       instructorId: instructeur.id,
       hasActiveRelationship: false,
+      trialLessonAvailable: true,
       publicBookingEnabled,
       selfSchedulingAllowed: false,
       directBookingAllowed: false,
@@ -521,6 +565,7 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
         accumulator[instructorId] = {
           instructorId,
           hasActiveRelationship: false,
+          trialLessonAvailable: true,
           publicBookingEnabled,
           selfSchedulingAllowed: false,
           directBookingAllowed: false,
@@ -568,6 +613,10 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
       data: RelationshipMapRow[] | null;
     }>,
   ]);
+  const trialLessonAvailable = !(await hasLearnerUsedTrialLesson({
+    supabase,
+    leerlingId: leerling.id,
+  }));
   const limitSnapshots = await getLearnerBookingLimitSnapshotsForInstructorIds({
     supabase,
     leerlingId: leerling.id,
@@ -603,6 +652,7 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
       accumulator[instructorId] = {
         instructorId,
         hasActiveRelationship,
+        trialLessonAvailable,
         publicBookingEnabled,
         selfSchedulingAllowed,
         directBookingAllowed,
@@ -771,12 +821,13 @@ export async function getCurrentLearnerBookingOverview(): Promise<LearnerBooking
         instructorName: row.volledige_naam ?? "Instructeur",
         hasActiveRelationship: access.hasActiveRelationship,
         hasPendingRequest: pendingRequestInstructorIds.has(instructorId),
+        trialLessonAvailable: access.trialLessonAvailable,
         publicBookingEnabled: access.publicBookingEnabled,
         selfSchedulingAllowed: access.selfSchedulingAllowed,
         directBookingAllowed: access.directBookingAllowed,
         canBookFromBookingsPage: access.hasActiveRelationship,
         availableSlots: regularAvailableSlots,
-        trialAvailableSlots,
+        trialAvailableSlots: access.trialLessonAvailable ? trialAvailableSlots : [],
         regularLessonDurationMinutes,
         trialLessonDurationMinutes,
         weeklyBookingLimitMinutes: access.weeklyBookingLimitMinutes,

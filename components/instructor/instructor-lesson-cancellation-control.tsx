@@ -58,11 +58,10 @@ export function InstructorLessonCancellationControl({
             Les annuleren
           </p>
           <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-            Laat leerlingen op tijd zelf annuleren
+            Annuleertermijn
           </h3>
-          <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-            Jij bepaalt of leerlingen hun eigen geplande les online mogen annuleren,
-            en zo ja, hoeveel uur voor de start dat nog kan.
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Bepaal tot hoe laat leerlingen zelf mogen annuleren.
           </p>
         </div>
         <div
@@ -108,20 +107,11 @@ export function InstructorLessonCancellationControl({
         </Button>
       </div>
 
-      <div className="mt-4 rounded-[1.1rem] border border-slate-200 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/5">
-        <div className="flex flex-wrap gap-2">
-          <Badge variant={isEnabled ? "success" : "warning"}>
-            {isEnabled ? "Leerling mag zelf annuleren" : "Alleen via contact"}
-          </Badge>
-          {isEnabled ? (
-            <Badge variant="info">{selectedHours} uur voor lesstart</Badge>
-          ) : null}
-        </div>
-        <p className="mt-3 text-xs leading-6 text-slate-600 dark:text-slate-300">
-          {isEnabled
-            ? "Zodra een les binnen deze termijn valt, verdwijnt de online annuleerknop vanzelf en ziet de leerling een nette melding om contact op te nemen."
-            : "Leerlingen zien geen annuleerknop meer bij geplande lessen. Ze krijgen alleen de melding dat annuleren via jou of de rijschool loopt."}
-        </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Badge variant={isEnabled ? "success" : "warning"}>
+          {isEnabled ? "Zelf annuleren aan" : "Alleen via contact"}
+        </Badge>
+        {isEnabled ? <Badge variant="info">{selectedHours} uur vooraf</Badge> : null}
       </div>
     </div>
   );

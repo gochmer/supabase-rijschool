@@ -22,6 +22,7 @@ import {
   getLessonAttendanceLabel,
   getLessonAttendanceVariant,
 } from "@/lib/lesson-utilities";
+import { cn } from "@/lib/utils";
 import {
   formatMinutesAsHoursLabel,
   formatWeeklyLimitLabel,
@@ -293,6 +294,11 @@ export default async function LeerlingBoekingenPage() {
                   proefles of korter blok nog wel.
                 </p>
               ) : null}
+              {!item.trialLessonAvailable ? (
+                <p className="mt-3 text-[12px] leading-6 text-slate-300">
+                  Je proefles is al gebruikt. Daarom kun je hier alleen vervolglessen plannen.
+                </p>
+              ) : null}
               {item.availableSlots.length ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {item.availableSlots.slice(0, 3).map((slot) => (
@@ -305,7 +311,12 @@ export default async function LeerlingBoekingenPage() {
                   ))}
                 </div>
               ) : null}
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <div
+                className={cn(
+                  "mt-4 grid gap-2",
+                  item.trialLessonAvailable ? "sm:grid-cols-2" : "sm:grid-cols-1"
+                )}
+              >
                 <LessonRequestDialog
                   instructorName={item.instructorName}
                   instructorSlug={item.instructorSlug}
@@ -326,28 +337,30 @@ export default async function LeerlingBoekingenPage() {
                   }
                   triggerClassName="!h-10 !w-full"
                 />
-                <LessonRequestDialog
-                  instructorName={item.instructorName}
-                  instructorSlug={item.instructorSlug}
-                  requestType="proefles"
-                  availableSlots={item.trialAvailableSlots}
-                  directBookingEnabled={item.directBookingAllowed}
-                  defaultDurationMinutes={item.trialLessonDurationMinutes}
-                  weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
-                  bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
-                  weeklyRemainingMinutesThisWeek={item.weeklyRemainingMinutesThisWeek}
-                  triggerLabel={
-                    item.directBookingAllowed
-                      ? item.trialAvailableSlots.length
-                        ? "Plan proefles"
-                        : "Vraag proefles aan"
-                      : item.trialAvailableSlots.length
-                        ? "Kies proeflesmoment"
-                        : "Vraag proefles aan"
-                  }
-                  triggerVariant="secondary"
-                  triggerClassName="!h-10 !w-full"
-                />
+                {item.trialLessonAvailable ? (
+                  <LessonRequestDialog
+                    instructorName={item.instructorName}
+                    instructorSlug={item.instructorSlug}
+                    requestType="proefles"
+                    availableSlots={item.trialAvailableSlots}
+                    directBookingEnabled={item.directBookingAllowed}
+                    defaultDurationMinutes={item.trialLessonDurationMinutes}
+                    weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
+                    bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
+                    weeklyRemainingMinutesThisWeek={item.weeklyRemainingMinutesThisWeek}
+                    triggerLabel={
+                      item.directBookingAllowed
+                        ? item.trialAvailableSlots.length
+                          ? "Plan proefles"
+                          : "Vraag proefles aan"
+                        : item.trialAvailableSlots.length
+                          ? "Kies proeflesmoment"
+                          : "Vraag proefles aan"
+                    }
+                    triggerVariant="secondary"
+                    triggerClassName="!h-10 !w-full"
+                  />
+                ) : null}
               </div>
             </div>
           ))}

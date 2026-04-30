@@ -30,6 +30,12 @@ export default async function LeerlingInstructeursPage() {
       access.directBookingAllowed,
     ])
   );
+  const trialLessonAvailableByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.trialLessonAvailable,
+    ])
+  );
   const weeklyBookingLimitByInstructorId = Object.fromEntries(
     Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
       instructorId,
@@ -61,6 +67,7 @@ export default async function LeerlingInstructeursPage() {
         favoriteInstructorIds={favoriteInstructorIds}
         availableSlotsByInstructorId={availableSlotsByInstructorId}
         directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
+        trialLessonAvailableByInstructorId={trialLessonAvailableByInstructorId}
         weeklyBookingLimitByInstructorId={weeklyBookingLimitByInstructorId}
         bookedMinutesByWeekStartByInstructorId={
           bookedMinutesByWeekStartByInstructorId

@@ -20,6 +20,7 @@ import {
   type WeeklyBookedMinutesMap,
 } from "@/lib/self-scheduling-limits";
 import type { BeschikbaarheidSlot } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AvailabilityCalendar } from "@/components/instructor/availability-calendar";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
@@ -64,6 +65,7 @@ export function InstructorAvailabilityPlanner({
   slots,
   directBookingEnabled = false,
   publicBookingEnabled = false,
+  trialLessonAvailable = true,
   regularLessonDurationMinutes = 60,
   trialLessonDurationMinutes = 50,
   weeklyBookingLimitMinutes = null,
@@ -76,6 +78,7 @@ export function InstructorAvailabilityPlanner({
   slots: BeschikbaarheidSlot[];
   directBookingEnabled?: boolean;
   publicBookingEnabled?: boolean;
+  trialLessonAvailable?: boolean;
   regularLessonDurationMinutes?: number;
   trialLessonDurationMinutes?: number;
   weeklyBookingLimitMinutes?: number | null;
@@ -140,7 +143,12 @@ export function InstructorAvailabilityPlanner({
               )}.`
             : "Deze instructeur heeft op dit moment nog geen momenten voor jou vrijgezet. Je kunt wel alvast een gewone aanvraag versturen, waarna de planning later wordt afgestemd."}
         </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div
+          className={cn(
+            "mt-5 grid gap-3",
+            trialLessonAvailable ? "sm:grid-cols-2" : "sm:grid-cols-1"
+          )}
+        >
           <LessonRequestDialog
             instructorName={instructorName}
             instructorSlug={instructorSlug}
@@ -151,18 +159,20 @@ export function InstructorAvailabilityPlanner({
             weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
             triggerLabel="Les aanvragen"
           />
-          <LessonRequestDialog
-            instructorName={instructorName}
-            instructorSlug={instructorSlug}
-            requestType="proefles"
-            availableSlots={slots}
-            defaultDurationMinutes={trialLessonDurationMinutes}
-            weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
-            bookedMinutesByWeekStart={bookedMinutesByWeekStart}
-            weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
-            triggerLabel="Plan proefles"
-            triggerVariant="secondary"
-          />
+          {trialLessonAvailable ? (
+            <LessonRequestDialog
+              instructorName={instructorName}
+              instructorSlug={instructorSlug}
+              requestType="proefles"
+              availableSlots={slots}
+              defaultDurationMinutes={trialLessonDurationMinutes}
+              weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+              bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+              weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
+              triggerLabel="Plan proefles"
+              triggerVariant="secondary"
+            />
+          ) : null}
         </div>
       </div>
     );
@@ -324,14 +334,21 @@ export function InstructorAvailabilityPlanner({
                         : "Na bevestigen gaat dit exacte tijdvak mee als voorkeursmoment."}
                     </p>
                     <p className="mt-1 text-[13px] leading-6 text-emerald-700/90 dark:text-emerald-100/80">
-                      Je kunt hieronder nog een gewone les of proefles op dit blok starten.
+                      {trialLessonAvailable
+                        ? "Je kunt hieronder nog een gewone les of proefles op dit blok starten."
+                        : "Je kunt hieronder een gewone les op dit blok starten."}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3">
+            <div
+              className={cn(
+                "mt-5 grid gap-3",
+                trialLessonAvailable ? "sm:grid-cols-2" : "sm:grid-cols-1"
+              )}
+            >
                 <LessonRequestDialog
                   instructorName={instructorName}
                   instructorSlug={instructorSlug}
@@ -345,25 +362,27 @@ export function InstructorAvailabilityPlanner({
                   triggerLabel={directBookingEnabled ? "Boek dit moment" : "Vraag dit moment aan"}
                   triggerClassName="!h-10 w-full"
                 />
-                <LessonRequestDialog
-                  instructorName={instructorName}
-                  instructorSlug={instructorSlug}
-                  requestType="proefles"
-                  availableSlots={slots}
-                  directBookingEnabled={directBookingEnabled}
-                  defaultSlotId={selectedEntry?.id}
-                  defaultDurationMinutes={trialLessonDurationMinutes}
-                  weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
-                  bookedMinutesByWeekStart={bookedMinutesByWeekStart}
-                  weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
-                  triggerLabel={
-                    directBookingEnabled
-                      ? "Boek dit moment als proefles"
-                    : "Vraag proefles op dit moment aan"
-                }
-                triggerVariant="secondary"
-                triggerClassName="!h-10 w-full"
-              />
+                {trialLessonAvailable ? (
+                  <LessonRequestDialog
+                    instructorName={instructorName}
+                    instructorSlug={instructorSlug}
+                    requestType="proefles"
+                    availableSlots={slots}
+                    directBookingEnabled={directBookingEnabled}
+                    defaultSlotId={selectedEntry?.id}
+                    defaultDurationMinutes={trialLessonDurationMinutes}
+                    weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+                    bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+                    weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
+                    triggerLabel={
+                      directBookingEnabled
+                        ? "Boek dit moment als proefles"
+                        : "Vraag proefles op dit moment aan"
+                    }
+                    triggerVariant="secondary"
+                    triggerClassName="!h-10 w-full"
+                  />
+                ) : null}
             </div>
           </div>
 

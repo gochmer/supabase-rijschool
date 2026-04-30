@@ -3,29 +3,17 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CalendarClock,
-  CalendarDays,
-  Eye,
   EyeOff,
   Luggage,
   PlusSquare,
-  Settings2,
-  Sparkles,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   applyAvailabilityWeeklyBulkAction,
-  createAvailabilityWeekOverrideAction,
   createAvailabilitySlotAction,
-  deleteAvailabilitySlotAction,
-  deleteAvailabilityWeekRuleAction,
   moveAvailabilityBlockAction,
-  shiftAvailabilityBlocksAction,
-  updateAvailabilitySlotStatusAction,
   updateAvailabilityWeekRuleAction,
-  updateAvailabilityWeekRuleActiveAction,
   updateAvailabilityWindowAction,
 } from "@/lib/actions/instructor-availability";
 import {
@@ -36,7 +24,6 @@ import {
   formatAvailabilityMoment,
   formatAvailabilityTime,
   getAvailabilityDateValue,
-  getAvailabilityDurationMinutes,
   getAvailabilityWeekdayNumber,
   getStartOfWeekDateValue,
 } from "@/lib/availability";
@@ -87,18 +74,6 @@ const schedulePresets = [
     end: "20:00",
     weekdays: [1, 2, 3, 4, 5],
   },
-  {
-    label: "Avond 18:00 - 21:00",
-    start: "18:00",
-    end: "21:00",
-    weekdays: [1, 2, 3, 4, 5],
-  },
-  {
-    label: "Zaterdag 10:00 - 15:00",
-    start: "10:00",
-    end: "15:00",
-    weekdays: [6],
-  },
 ];
 
 const exceptionPresets = [
@@ -118,25 +93,6 @@ const exceptionPresets = [
     end: "17:00",
   },
 ];
-
-function formatMinutesLabel(totalMinutes: number) {
-  if (totalMinutes <= 0) {
-    return "0 uur";
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (!minutes) {
-    return `${hours} uur`;
-  }
-
-  if (!hours) {
-    return `${minutes} min`;
-  }
-
-  return `${hours}u ${String(minutes).padStart(2, "0")}m`;
-}
 
 function formatDateLong(dateValue: string) {
   return new Intl.DateTimeFormat("nl-NL", {
@@ -356,10 +312,6 @@ export function AvailabilityManager({
   const [selectedAvailabilityId, setSelectedAvailabilityId] = useState<string | null>(
     availabilityItems[0]?.id ?? null
   );
-  const [selectedAvailabilityIds, setSelectedAvailabilityIds] = useState<string[]>(
-    availabilityItems[0]?.id ? [availabilityItems[0].id] : []
-  );
-  const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedDateValue, setSelectedDateValue] = useState(
     availabilityItems[0]?.startAt
       ? getAvailabilityDateValue(availabilityItems[0].startAt)
@@ -378,14 +330,6 @@ export function AvailabilityManager({
     addDaysToDateValue(todayValue, 2)
   );
   const [bulkCutoffTime, setBulkCutoffTime] = useState("18:00");
-  const [editDraft, setEditDraft] = useState<LinkedWindowDraft>({
-    sourceKey: "empty",
-    startTijd: "09:00",
-    eindTijd: "20:00",
-    hasBreak: false,
-    pauseStartTijd: "13:00",
-    pauseEindTijd: "14:00",
-  });
 
   const resolvedSelectedAvailabilityId = useMemo(() => {
     if (!availabilityItems.length) {
@@ -410,30 +354,6 @@ export function AvailabilityManager({
 
   const selectedAvailabilityItem =
     availabilityItems.find((item) => item.id === resolvedSelectedAvailabilityId) ?? null;
-  const isRecurringSelection = selectedAvailabilityItem?.source === "weekrooster";
-  const resolvedSelectedAvailabilityIds = useMemo(() => {
-    const validIds = Array.from(new Set(selectedAvailabilityIds)).filter((id) =>
-      availabilityItems.some((item) => item.id === id)
-    );
-
-    if (validIds.length) {
-      return validIds;
-    }
-
-    return resolvedSelectedAvailabilityId ? [resolvedSelectedAvailabilityId] : [];
-  }, [availabilityItems, resolvedSelectedAvailabilityId, selectedAvailabilityIds]);
-  const selectedAvailabilitySelectionItems = useMemo(
-    () =>
-      availabilityItems.filter((item) =>
-        resolvedSelectedAvailabilityIds.includes(item.id)
-      ),
-    [availabilityItems, resolvedSelectedAvailabilityIds]
-  );
-  const selectedAvailabilitySelectionCount =
-    selectedAvailabilitySelectionItems.length;
-  const selectedRecurringSelectionCount = selectedAvailabilitySelectionItems.filter(
-    (item) => item.source === "weekrooster"
-  ).length;
 
   const selectedEntryStartAt = useMemo(
     () => selectedAvailabilityItem?.startAt ?? availabilityItems[0]?.startAt,
@@ -453,49 +373,11 @@ export function AvailabilityManager({
       ),
     [lessonItems, selectedDateValue]
   );
-  const linkedWindowDraft = useMemo(
-    () => buildLinkedWindowDraft(selectedDaySlots, resolvedSelectedAvailabilityId),
-    [resolvedSelectedAvailabilityId, selectedDaySlots]
-  );
-  const activeEditDraft =
-    linkedWindowDraft && editDraft.sourceKey === linkedWindowDraft.sourceKey
-      ? editDraft
-      : linkedWindowDraft ?? editDraft;
-
-  const openSlotCount = availabilityItems.filter((item) => item.available).length;
-  const blockedSlotCount = availabilityItems.filter((item) => !item.available).length;
-  const recurringSlotCount = availabilityItems.filter(
-    (item) => item.sourceLabel === "Vaste weekplanning"
-  ).length;
-  const selectedDayOpenMinutes = selectedDaySlots
-    .filter((item) => item.available)
-    .reduce(
-      (total, item) => total + getAvailabilityDurationMinutes(item.startAt, item.endAt),
-      0
-    );
-  const selectedDayBlockedMinutes = selectedDaySlots
-    .filter((item) => !item.available)
-    .reduce(
-      (total, item) => total + getAvailabilityDurationMinutes(item.startAt, item.endAt),
-      0
-    );
   const selectedWeekStart = getStartOfWeekDateValue(selectedDateValue || todayValue);
 
   function handleAvailabilityEventClick(eventId: string) {
     const clickedItem = availabilityItems.find((item) => item.id === eventId);
     setSelectedAvailabilityId(eventId);
-    if (multiSelectMode) {
-      setSelectedAvailabilityIds((current) => {
-        if (current.includes(eventId)) {
-          const next = current.filter((id) => id !== eventId);
-          return next.length ? next : [eventId];
-        }
-
-        return [...current, eventId];
-      });
-    } else {
-      setSelectedAvailabilityIds([eventId]);
-    }
 
     if (clickedItem?.startAt) {
       setSelectedDateValue(getAvailabilityDateValue(clickedItem.startAt));
@@ -512,58 +394,7 @@ export function AvailabilityManager({
 
     if (firstSlotOnDay) {
       setSelectedAvailabilityId(firstSlotOnDay.id);
-      if (!multiSelectMode) {
-        setSelectedAvailabilityIds([firstSlotOnDay.id]);
-      }
     }
-  }
-
-  function toggleMultiSelectMode() {
-    setMultiSelectMode((current) => {
-      const next = !current;
-
-      if (next) {
-        setSelectedAvailabilityIds((existing) =>
-          existing.length
-            ? existing
-            : resolvedSelectedAvailabilityId
-              ? [resolvedSelectedAvailabilityId]
-              : []
-        );
-      } else {
-        setSelectedAvailabilityIds(
-          resolvedSelectedAvailabilityId ? [resolvedSelectedAvailabilityId] : []
-        );
-      }
-
-      return next;
-    });
-  }
-
-  function handleSelectAllForDay() {
-    setSelectedAvailabilityIds(selectedDaySlots.map((item) => item.id));
-    if (selectedDaySlots[0]) {
-      setSelectedAvailabilityId(selectedDaySlots[0].id);
-    }
-    setMultiSelectMode(true);
-  }
-
-  function clearSelection() {
-    setSelectedAvailabilityIds(
-      resolvedSelectedAvailabilityId ? [resolvedSelectedAvailabilityId] : []
-    );
-  }
-
-  function patchEditDraft(patch: Partial<LinkedWindowDraft>) {
-    setEditDraft({
-      sourceKey: linkedWindowDraft?.sourceKey ?? activeEditDraft.sourceKey,
-      startTijd: activeEditDraft.startTijd,
-      eindTijd: activeEditDraft.eindTijd,
-      hasBreak: activeEditDraft.hasBreak,
-      pauseStartTijd: activeEditDraft.pauseStartTijd,
-      pauseEindTijd: activeEditDraft.pauseEindTijd,
-      ...patch,
-    });
   }
 
   function getEditDraftForAvailabilityItemId(itemId: string) {
@@ -776,183 +607,8 @@ export function AvailabilityManager({
     );
   }
 
-  function handleShiftSelectedBlocks(minutes: number) {
-    const slotIds = multiSelectMode
-      ? resolvedSelectedAvailabilityIds
-      : selectedAvailabilityItem
-        ? [selectedAvailabilityItem.id]
-        : [];
-
-    if (!slotIds.length) {
-      toast.error("Kies eerst een of meer blokken in je agenda.");
-      return;
-    }
-
-    runAction(() =>
-      shiftAvailabilityBlocksAction({
-        slotIds,
-        minutes,
-      })
-    );
-  }
-
-  function handleCreateWeekOverride(available: boolean) {
-    if (!selectedAvailabilityItem || selectedAvailabilityItem.source !== "weekrooster") {
-      toast.error("Kies eerst een vast weekblok om alleen deze week los op te slaan.");
-      return;
-    }
-
-    runAction(() =>
-      createAvailabilityWeekOverrideAction({
-        slotId: selectedAvailabilityItem.id,
-        startTijd: activeEditDraft.startTijd,
-        eindTijd: activeEditDraft.eindTijd,
-        pauzeStartTijd: activeEditDraft.hasBreak
-          ? activeEditDraft.pauseStartTijd
-          : undefined,
-        pauzeEindTijd: activeEditDraft.hasBreak
-          ? activeEditDraft.pauseEindTijd
-          : undefined,
-        beschikbaar: available,
-      })
-    );
-  }
-
-  function handleUpdateSelectedWindow() {
-    if (!selectedAvailabilityItem) {
-      toast.error("Kies eerst een open moment uit de agenda.");
-      return;
-    }
-
-    if (selectedAvailabilityItem.source === "weekrooster" && selectedAvailabilityItem.weekRuleId) {
-      runAction(() =>
-        updateAvailabilityWeekRuleAction({
-          ruleId: selectedAvailabilityItem.weekRuleId ?? "",
-          startTijd: activeEditDraft.startTijd,
-          eindTijd: activeEditDraft.eindTijd,
-          pauzeStartTijd: activeEditDraft.hasBreak
-            ? activeEditDraft.pauseStartTijd
-            : undefined,
-          pauzeEindTijd: activeEditDraft.hasBreak
-            ? activeEditDraft.pauseEindTijd
-            : undefined,
-        })
-      );
-      return;
-    }
-
-    runAction(() =>
-      updateAvailabilityWindowAction({
-        slotId: selectedAvailabilityItem.id,
-        startTijd: activeEditDraft.startTijd,
-        eindTijd: activeEditDraft.eindTijd,
-        pauzeStartTijd: activeEditDraft.hasBreak
-          ? activeEditDraft.pauseStartTijd
-          : undefined,
-        pauzeEindTijd: activeEditDraft.hasBreak
-          ? activeEditDraft.pauseEindTijd
-          : undefined,
-      })
-    );
-  }
-
-  function handleToggleSelectedSlot() {
-    if (!selectedAvailabilityItem) {
-      toast.error("Kies eerst een open moment uit de agenda.");
-      return;
-    }
-
-    if (selectedAvailabilityItem.source === "weekrooster" && selectedAvailabilityItem.weekRuleId) {
-      runAction(() =>
-        updateAvailabilityWeekRuleActiveAction({
-          ruleId: selectedAvailabilityItem.weekRuleId ?? "",
-          beschikbaar: !selectedAvailabilityItem.available,
-        })
-      );
-      return;
-    }
-
-    runAction(() =>
-      updateAvailabilitySlotStatusAction({
-        slotId: selectedAvailabilityItem.id,
-        beschikbaar: !selectedAvailabilityItem.available,
-      })
-    );
-  }
-
-  function handleDeleteSelectedSlot() {
-    if (!selectedAvailabilityItem) {
-      toast.error("Kies eerst een open moment uit de agenda.");
-      return;
-    }
-
-    if (!window.confirm("Weet je zeker dat je dit geselecteerde moment wilt verwijderen?")) {
-      return;
-    }
-
-    if (selectedAvailabilityItem.source === "weekrooster" && selectedAvailabilityItem.weekRuleId) {
-      runAction(() =>
-        deleteAvailabilityWeekRuleAction({
-          ruleId: selectedAvailabilityItem.weekRuleId ?? "",
-        })
-      );
-      return;
-    }
-
-    runAction(() =>
-      deleteAvailabilitySlotAction({
-        slotId: selectedAvailabilityItem.id,
-      })
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2">
-        {[
-          {
-            label: "Open",
-            value: `${openSlotCount}`,
-            hint: "Boekbaar",
-            icon: Sparkles,
-          },
-          {
-            label: "Dicht",
-            value: `${blockedSlotCount}`,
-            hint: "Geblokkeerd",
-            icon: EyeOff,
-          },
-          {
-            label: "Weekritme",
-            value: `${recurringSlotCount}`,
-            hint: "Terugkerend",
-            icon: CalendarDays,
-          },
-          {
-            label: "Lessen",
-            value: `${lessonItems.length}`,
-            hint: "In agenda",
-            icon: CalendarClock,
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="rounded-[1.4rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5"
-          >
-            <div className="flex items-center gap-2">
-              <item.icon className="size-4 text-sky-700 dark:text-sky-300" />
-              <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                {item.label}
-              </p>
-            </div>
-            <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
-              {item.value}
-            </p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.hint}</p>
-          </div>
-        ))}
-      </div>
-
       <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-2">
           <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
@@ -964,9 +620,6 @@ export function AvailabilityManager({
                 <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
                   Vaste werktijden
                 </h3>
-                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Dit is je standaard open werkweek.
-                </p>
               </div>
               <Badge className="border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">
                 {formatDateLong(selectedDateValue || todayValue)}
@@ -1039,9 +692,6 @@ export function AvailabilityManager({
                     <p className="text-sm font-semibold text-slate-950 dark:text-white">
                       Pauze meenemen
                     </p>
-                    <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
-                      Splitst je rooster in twee open delen.
-                    </p>
                   </div>
                   <Button
                     type="button"
@@ -1096,20 +746,17 @@ export function AvailabilityManager({
             <div className="space-y-4">
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                  Uitzondering toevoegen
+                  Uitzondering
                 </p>
                 <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-                  Los moment dichtzetten
+                  Moment dichtzetten
                 </h3>
-                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Alleen voor een losse afwijking.
-                </p>
               </div>
 
               <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Datum van uitzondering</Label>
+                    <Label>Datum</Label>
                     <Input
                       type="date"
                       value={selectedDateValue}
@@ -1118,7 +765,7 @@ export function AvailabilityManager({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Snelle voorbeelden</Label>
+                    <Label>Presets</Label>
                     <div className="flex flex-wrap gap-2">
                       {exceptionPresets.map((preset) => (
                         <Button
@@ -1137,7 +784,7 @@ export function AvailabilityManager({
 
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Starttijd dicht</Label>
+                    <Label>Start</Label>
                     <Input
                       type="time"
                       value={exceptionStartTijd}
@@ -1146,7 +793,7 @@ export function AvailabilityManager({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Eindtijd dicht</Label>
+                    <Label>Eind</Label>
                     <Input
                       type="time"
                       value={exceptionEindTijd}
@@ -1164,7 +811,7 @@ export function AvailabilityManager({
                     onClick={handleCreateExceptionBlock}
                   >
                     <EyeOff className="size-4" />
-                    Uitzondering blokkeren
+                    Moment blokkeren
                   </Button>
                 </div>
               </div>
@@ -1175,9 +822,6 @@ export function AvailabilityManager({
                   <div>
                     <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
                       Vakantie blokkeren
-                    </p>
-                    <p className="mt-1 text-xs leading-6 text-amber-900/80 dark:text-amber-100/85">
-                      Zet meteen een hele periode dicht.
                     </p>
                   </div>
                 </div>
@@ -1211,7 +855,7 @@ export function AvailabilityManager({
                     disabled={isPending}
                     onClick={handleCreateVacationBlock}
                   >
-                    Hele periode dichtzetten
+                    Periode blokkeren
                   </Button>
                 </div>
               </div>
@@ -1222,9 +866,6 @@ export function AvailabilityManager({
                     <p className="text-sm font-semibold text-slate-950 dark:text-white">
                       Weekacties
                     </p>
-                    <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
-                      Snel een hele week opschonen.
-                    </p>
                   </div>
                   <Badge className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
                     Week van {formatAvailabilityDay(createAvailabilityTimestamp(selectedWeekStart, "12:00"))}
@@ -1232,7 +873,7 @@ export function AvailabilityManager({
                 </div>
 
                 <div className="mt-3 space-y-2">
-                  <Label>Sluit alles na</Label>
+                  <Label>Na dit uur</Label>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       type="time"
@@ -1246,7 +887,7 @@ export function AvailabilityManager({
                       disabled={isPending}
                       onClick={handleBulkCloseAfterTime}
                     >
-                      Alles sluiten na dit uur
+                      Sluiten
                     </Button>
                     <Button
                       type="button"
@@ -1255,7 +896,7 @@ export function AvailabilityManager({
                       disabled={isPending}
                       onClick={handleBulkOpenAfterTime}
                     >
-                      Alles weer open na dit uur
+                      Weer open
                     </Button>
                   </div>
                 </div>
@@ -1268,46 +909,13 @@ export function AvailabilityManager({
                     disabled={isPending}
                     onClick={handleBulkCloseWeekend}
                   >
-                    Weekend dicht zetten
+                    Weekend dicht
                   </Button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-              Dagoverzicht
-            </p>
-            <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-              {formatDateLong(selectedDateValue || todayValue)}
-            </h3>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                  Open uren
-                </p>
-                <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
-                  {formatMinutesLabel(selectedDayOpenMinutes)}
-                </p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                  {selectedDaySlots.filter((item) => item.available).length} blokken
-                </p>
-              </div>
-              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                  Geblokkeerd
-                </p>
-                <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
-                  {formatMinutesLabel(selectedDayBlockedMinutes)}
-                </p>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                  {selectedDayLessons.length} lessen
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="space-y-4">
@@ -1317,6 +925,7 @@ export function AvailabilityManager({
             selectedEntryStartAt={selectedEntryStartAt}
             selectedAvailabilityId={resolvedSelectedAvailabilityId}
             selectedDateValue={selectedDateValue}
+            showFooterStats={false}
             onDateSelect={handleDateSelect}
             onAvailabilityEventClick={handleAvailabilityEventClick}
             onAvailabilityEventDrop={handleAvailabilityDrop}
@@ -1325,7 +934,7 @@ export function AvailabilityManager({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div>
         <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -1338,42 +947,10 @@ export function AvailabilityManager({
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Badge className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
-                {selectedDaySlots.length + selectedDayLessons.length} items
+                {selectedDaySlots.length + selectedDayLessons.length} blokken
               </Badge>
-              {selectedDaySlots.length ? (
-                <Button
-                  type="button"
-                  variant={multiSelectMode ? "default" : "outline"}
-                  className="h-9 rounded-full"
-                  onClick={toggleMultiSelectMode}
-              >
-                {multiSelectMode ? "Meerdere actief" : "Meerdere selecteren"}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-
-          {multiSelectMode && selectedDaySlots.length ? (
-            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-[1rem] border border-sky-200 bg-sky-50/80 p-3 text-sm text-sky-900 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">
-              <span>{selectedAvailabilitySelectionCount} blokken geselecteerd.</span>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 rounded-full border-sky-200 bg-white/80 text-sky-900 dark:border-sky-300/20 dark:bg-white/10 dark:text-sky-100"
-                onClick={handleSelectAllForDay}
-              >
-                Alles op deze dag
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 rounded-full border-sky-200 bg-white/80 text-sky-900 dark:border-sky-300/20 dark:bg-white/10 dark:text-sky-100"
-                onClick={clearSelection}
-              >
-                Selectie opschonen
-              </Button>
             </div>
-          ) : null}
+          </div>
 
           <div className="mt-4 space-y-3">
             <AvailabilityDayPlanner
@@ -1388,273 +965,7 @@ export function AvailabilityManager({
               onAvailabilityEventClick={handleAvailabilityEventClick}
               onAvailabilityResize={handleAvailabilityResize}
             />
-
-            <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              Klik in deze dagplanner op een open of afgeschermd blok om het rechts verder te beheren.
-            </div>
           </div>
-        </div>
-
-        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                Geselecteerd moment
-              </p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
-                {multiSelectMode && selectedAvailabilitySelectionCount > 1
-                  ? `${selectedAvailabilitySelectionCount} blokken geselecteerd`
-                  : selectedAvailabilityItem
-                  ? selectedAvailabilityItem.momentLabel
-                  : "Nog geen moment gekozen"}
-              </h3>
-              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                {multiSelectMode && selectedAvailabilitySelectionCount > 1
-                  ? "Meerdere blokken tegelijk beheren."
-                  : isRecurringSelection
-                  ? "Dit blok hoort bij je vaste weekritme."
-                  : "Beheer dit losse moment direct vanuit je agenda."}
-              </p>
-            </div>
-            {selectedAvailabilityItem ? (
-              <Badge
-                className={cn(
-                  "border",
-                  selectedAvailabilityItem.available
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-100"
-                    : "border-slate-200 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100"
-                )}
-              >
-                {multiSelectMode && selectedAvailabilitySelectionCount > 1
-                  ? "Bulkselectie"
-                  : isRecurringSelection
-                  ? "Vaste weekplanning"
-                  : selectedAvailabilityItem.available
-                    ? "Boekbaar"
-                    : "Verborgen"}
-              </Badge>
-            ) : null}
-          </div>
-
-          {multiSelectMode && selectedAvailabilitySelectionCount > 1 ? (
-            <div className="mt-4 space-y-4">
-              <div className="rounded-[1rem] border border-sky-200 bg-sky-50/80 p-4 dark:border-sky-300/20 dark:bg-sky-400/10">
-                <p className="text-sm font-semibold text-sky-950 dark:text-sky-100">
-                  {selectedAvailabilitySelectionCount} blokken tegelijk geselecteerd
-                </p>
-                <p className="mt-2 text-sm leading-7 text-sky-900/80 dark:text-sky-100/85">
-                  {selectedRecurringSelectionCount
-                    ? `${selectedRecurringSelectionCount} uit vaste weekplanning.`
-                    : "Alle blokken zijn losse momenten."}
-                </p>
-              </div>
-
-              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                  Tijd verschuiven
-                </p>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {[
-                    { label: "15 min eerder", value: -15 },
-                    { label: "30 min eerder", value: -30 },
-                    { label: "15 min later", value: 15 },
-                    { label: "30 min later", value: 30 },
-                  ].map((shift) => (
-                    <Button
-                      key={shift.label}
-                      type="button"
-                      variant="outline"
-                      className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
-                      disabled={isPending}
-                      onClick={() => handleShiftSelectedBlocks(shift.value)}
-                    >
-                      {shift.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : selectedAvailabilityItem ? (
-            <div className="mt-4 space-y-4">
-              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                  Tijd verschuiven
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {[
-                    { label: "15 min eerder", value: -15 },
-                    { label: "15 min later", value: 15 },
-                  ].map((shift) => (
-                    <Button
-                      key={shift.label}
-                      type="button"
-                      variant="outline"
-                      className="h-10 rounded-xl border-slate-200 bg-white text-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
-                      disabled={isPending}
-                      onClick={() => handleShiftSelectedBlocks(shift.value)}
-                    >
-                      {shift.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {isRecurringSelection ? (
-                <div className="rounded-[1rem] border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-300/20 dark:bg-amber-400/10">
-                  <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
-                    Alleen deze week afwijken
-                  </p>
-                  <p className="mt-1 text-xs leading-6 text-amber-900/80 dark:text-amber-100/85">
-                    Maak van dit vaste blok alleen voor deze week een losse afwijking.
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-10 rounded-full border-amber-200 bg-white/80 text-amber-900 dark:border-amber-300/20 dark:bg-white/10 dark:text-amber-100"
-                      disabled={isPending}
-                      onClick={() => handleCreateWeekOverride(true)}
-                    >
-                      Deze week los boekbaar opslaan
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-10 rounded-full border-amber-200 bg-white/80 text-amber-900 dark:border-amber-300/20 dark:bg-white/10 dark:text-amber-100"
-                      disabled={isPending}
-                      onClick={() => handleCreateWeekOverride(false)}
-                    >
-                      Deze week los dichtzetten
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Werkdag start</Label>
-                  <Input
-                    type="time"
-                    value={activeEditDraft.startTijd}
-                    onChange={(event) =>
-                      patchEditDraft({ startTijd: event.target.value })
-                    }
-                    className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Werkdag eind</Label>
-                  <Input
-                    type="time"
-                    value={activeEditDraft.eindTijd}
-                    onChange={(event) =>
-                      patchEditDraft({ eindTijd: event.target.value })
-                    }
-                    className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                      Pauze voor dit venster
-                    </p>
-                    <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
-                      Optioneel voor dit moment.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant={activeEditDraft.hasBreak ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() =>
-                      patchEditDraft({ hasBreak: !activeEditDraft.hasBreak })
-                    }
-                  >
-                    {activeEditDraft.hasBreak ? "Aan" : "Uit"}
-                  </Button>
-                </div>
-
-                {activeEditDraft.hasBreak ? (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Pauze start</Label>
-                      <Input
-                        type="time"
-                        value={activeEditDraft.pauseStartTijd}
-                        onChange={(event) =>
-                          patchEditDraft({ pauseStartTijd: event.target.value })
-                        }
-                        className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Pauze eind</Label>
-                      <Input
-                        type="time"
-                        value={activeEditDraft.pauseEindTijd}
-                        onChange={(event) =>
-                          patchEditDraft({ pauseEindTijd: event.target.value })
-                        }
-                        className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Button
-                  type="button"
-                  className="h-11 rounded-full"
-                  disabled={isPending}
-                  onClick={handleUpdateSelectedWindow}
-                >
-                  <Settings2 className="size-4" />
-                  {isRecurringSelection ? "Weekplanning bijwerken" : "Werkvenster bijwerken"}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
-                  disabled={isPending}
-                  onClick={handleToggleSelectedSlot}
-                >
-                  {selectedAvailabilityItem.available ? (
-                    <>
-                      <EyeOff className="size-4" />
-                      Niet boekbaar maken
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="size-4" />
-                      Weer boekbaar maken
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="h-11 rounded-full"
-                  disabled={isPending}
-                  onClick={handleDeleteSelectedSlot}
-                >
-                  <Trash2 className="size-4" />
-                  Geselecteerd moment verwijderen
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              Klik in de agenda op een open of afgeschermd moment om het verder te beheren.
-            </div>
-          )}
         </div>
       </div>
     </div>

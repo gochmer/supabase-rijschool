@@ -726,23 +726,23 @@ export function StudentsBoard({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
-        <aside className="space-y-4 print:hidden">
-          <div className="rounded-[1.45rem] border border-white/70 bg-white/86 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
+      <div className="grid gap-4">
+        <aside className="space-y-3 print:hidden">
+          <div className="rounded-[1.35rem] border border-white/70 bg-white/86 p-3 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
             <div className="space-y-2.5">
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
                   Leerlingregie
                 </p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
-                  Voortgang per leerling
+                <h2 className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
+                  Leerlingenoverzicht
                 </h2>
-                <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                  Zoek, selecteer en werk daarna direct verder in dezelfde instructiekaart.
+                <p className="mt-1 text-[12px] leading-5 text-slate-600 dark:text-slate-300">
+                  Zoek, kies en werk direct verder in dezelfde kaart.
                 </p>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   {
                     icon: Search,
@@ -762,46 +762,48 @@ export function StudentsBoard({
                 ].map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-[1.1rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                    className="rounded-[1rem] border border-slate-200/80 bg-slate-50/90 p-2.5 dark:border-white/10 dark:bg-white/5"
                   >
-                    <item.icon className="size-4 text-slate-500 dark:text-slate-300" />
-                    <p className="mt-2 text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                    <item.icon className="size-3.5 text-slate-500 dark:text-slate-300" />
+                    <p className="mt-1.5 text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
                       {item.label}
                     </p>
-                    <p className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                    <p className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                       {item.value}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="grid gap-2.5">
+              <div className="grid gap-2">
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Zoek op leerling, mail of pakket"
                   className="h-10 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
                 />
-                <select
-                  value={filter}
-                  onChange={(event) => setFilter(event.target.value)}
-                  className="native-select h-10 rounded-xl px-3 text-sm"
-                >
-                  <option value="alles">Alle leerlingen</option>
-                  <option value="hoog">Sterk op koers</option>
-                  <option value="midden">In opbouw</option>
-                  <option value="laag">Extra aandacht</option>
-                  <option value="actie">Actie nodig</option>
-                </select>
-                <div className="rounded-[1rem] border border-slate-200/80 bg-slate-50/90 px-3 py-2 text-[12px] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                  {filteredStudents.length} leerling(en) zichtbaar in deze selectie.
+                <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_11rem_auto] xl:items-center">
+                  <select
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value)}
+                    className="native-select h-10 rounded-xl px-3 text-sm"
+                  >
+                    <option value="alles">Alle leerlingen</option>
+                    <option value="hoog">Sterk op koers</option>
+                    <option value="midden">In opbouw</option>
+                    <option value="laag">Extra aandacht</option>
+                    <option value="actie">Actie nodig</option>
+                  </select>
+                  <div className="rounded-[0.95rem] border border-slate-200/80 bg-slate-50/90 px-3 py-2 text-[12px] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 xl:text-center">
+                    {filteredStudents.length} zichtbaar
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-[1.55rem] border border-white/70 bg-white/90 p-3 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
-            <div className="space-y-2">
+          <div className="rounded-[1.45rem] border border-white/70 bg-white/90 p-2.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
+            <div className="space-y-2 xl:max-h-[calc(100vh-21rem)] xl:overflow-y-auto xl:pr-1">
               {filteredStudents.length ? (
                 filteredStudents.map((student) => {
                   const band = getProgressBand(student.voortgang);
@@ -825,36 +827,52 @@ export function StudentsBoard({
                         });
                       }}
                       className={cn(
-                        "w-full rounded-[1.2rem] border p-3 text-left transition-all",
+                        "w-full rounded-[1.05rem] border p-2.5 text-left transition-all",
                         isSelected
                           ? "border-sky-300/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(59,130,246,0.14),rgba(15,23,42,0.04))] shadow-[0_18px_44px_-28px_rgba(14,165,233,0.34)] dark:border-sky-400/30 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(59,130,246,0.14),rgba(15,23,42,0.32))]"
                           : "border-slate-200/80 bg-slate-50/88 hover:border-slate-300/80 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/8"
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-[15px] font-semibold text-slate-950 dark:text-white">
-                            {student.naam}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-[14px] font-semibold text-slate-950 dark:text-white">
+                                {student.naam}
+                              </p>
+                              <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                                {student.pakket}
+                              </p>
+                            </div>
+                            <Badge variant={band.badge}>{student.voortgang}%</Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-2.5 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                        <div className="rounded-[0.9rem] border border-slate-200/80 bg-white/90 px-2.5 py-2 dark:border-white/10 dark:bg-white/6">
+                          <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                            Pakket
                           </p>
-                          <p className="mt-0.5 truncate text-[12px] text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">
                             {student.pakket}
                           </p>
                         </div>
-                        <Badge variant={band.badge}>{student.voortgang}%</Badge>
-                      </div>
-
-                      <div className="mt-3 grid gap-2 text-[12px] text-slate-600 dark:text-slate-300">
-                        <div className="flex items-center justify-between gap-2">
-                          <span>Volgende les</span>
-                          <span className="font-medium text-slate-800 dark:text-slate-100">
+                        <div className="rounded-[0.9rem] border border-slate-200/80 bg-white/90 px-2.5 py-2 dark:border-white/10 dark:bg-white/6">
+                          <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                            Volgende les
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium text-slate-700 dark:text-slate-200">
                             {student.volgendeLes}
-                          </span>
+                          </p>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span>Status</span>
-                          <span className="font-medium text-slate-800 dark:text-slate-100">
+                        <div className="rounded-[0.9rem] border border-slate-200/80 bg-white/90 px-2.5 py-2 dark:border-white/10 dark:bg-white/6">
+                          <p className="text-[9px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                            Status
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium text-slate-700 dark:text-slate-200">
                             {band.label}
-                          </span>
+                          </p>
                         </div>
                       </div>
                     </button>
@@ -882,126 +900,92 @@ export function StudentsBoard({
                 data-progress-print-root
                 className="rounded-[1.7rem] border border-white/70 bg-white/88 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] print:shadow-none dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)]"
               >
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
-                        Digitale instructiekaart
-                      </p>
-                      <Badge variant={getProgressBand(selectedStudent.voortgang).badge}>
-                        {getProgressBand(selectedStudent.voortgang).label}
-                      </Badge>
-                    </div>
-                    <div>
-                      <h2 className="text-[1.65rem] font-semibold tracking-tight text-slate-950 dark:text-white">
-                        {selectedStudent.naam}
-                      </h2>
-                      <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                        {selectedStudent.pakket} • {selectedStudent.email || "Geen e-mail"} •{" "}
-                        {selectedStudent.telefoon || "Geen telefoon"}
-                      </p>
-                      {selectedStudent.isHandmatigGekoppeld ? (
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant="info">Handmatig gekoppeld</Badge>
-                          <Badge
-                            variant={
-                              selectedStudentAccountStatus === "actief"
-                                ? "success"
-                                : "warning"
-                            }
-                          >
-                            {selectedStudentAccountStatus === "actief"
-                              ? "Account actief"
-                              : "Uitnodiging open"}
-                          </Badge>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 xl:w-[26rem]">
-                    <div className="flex justify-end">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <StudentPackageDialog
-                          leerlingId={selectedStudent.id}
-                          leerlingNaam={selectedStudent.naam}
-                          currentPackageName={
-                            selectedStudent.pakket !== "Nog geen pakket"
-                              ? selectedStudent.pakket
-                              : null
-                          }
-                          packages={packages}
-                        />
-                        <CreateManualLessonDialog
-                          leerlingId={selectedStudent.id}
-                          leerlingNaam={selectedStudent.naam}
-                          suggestedTitle={
-                            selectedStudent.pakket !== "Nog geen pakket"
-                              ? selectedStudent.pakket
-                              : "Rijles"
-                          }
-                          locationOptions={locationOptions}
-                          template={firstLessonTemplate}
-                          durationDefaults={lessonDurationDefaults}
-                        />
+                <div className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
+                          Digitale instructiekaart
+                        </p>
+                        <Badge variant={getProgressBand(selectedStudent.voortgang).badge}>
+                          {getProgressBand(selectedStudent.voortgang).label}
+                        </Badge>
+                      </div>
+                      <div>
+                        <h2 className="text-[1.65rem] font-semibold tracking-tight text-slate-950 dark:text-white">
+                          {selectedStudent.naam}
+                        </h2>
+                        <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                          {selectedStudent.pakket} • {selectedStudent.email || "Geen e-mail"} •{" "}
+                          {selectedStudent.telefoon || "Geen telefoon"}
+                        </p>
                         {selectedStudent.isHandmatigGekoppeld ? (
-                          <StudentDetachDialog
-                            leerlingId={selectedStudent.id}
-                            leerlingNaam={selectedStudent.naam}
-                            canDetach={canDetachSelectedStudent}
-                          />
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <Badge variant="info">Handmatig gekoppeld</Badge>
+                            <Badge
+                              variant={
+                                selectedStudentAccountStatus === "actief"
+                                  ? "success"
+                                  : "warning"
+                              }
+                            >
+                              {selectedStudentAccountStatus === "actief"
+                                ? "Account actief"
+                                : "Uitnodiging open"}
+                            </Badge>
+                          </div>
                         ) : null}
-                        {selectedStudent.isHandmatigGekoppeld &&
-                        selectedStudentAccountStatus === "uitgenodigd" ? (
-                          <StudentInviteResendButton
-                            leerlingId={selectedStudent.id}
-                          />
-                        ) : null}
-                        <ProgressPrintButton className="h-9 rounded-full text-[12px]" />
                       </div>
                     </div>
-                    {selectedStudent.isHandmatigGekoppeld ? (
-                      <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
-                              Accountstatus
-                            </p>
-                            <p className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-white">
-                              {selectedStudentAccountStatus === "actief"
-                                ? "Leerling heeft toegang tot het account"
-                                : "Leerling moet uitnodiging nog openen"}
+
+                    {selectedStudent.isHandmatigGekoppeld ||
+                    selectedStudent.onboardingNotitie ? (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {selectedStudent.isHandmatigGekoppeld ? (
+                          <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                                  Accountstatus
+                                </p>
+                                <p className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-white">
+                                  {selectedStudentAccountStatus === "actief"
+                                    ? "Leerling heeft toegang tot het account"
+                                    : "Leerling moet uitnodiging nog openen"}
+                                </p>
+                              </div>
+                              <Badge
+                                variant={
+                                  selectedStudentAccountStatus === "actief"
+                                    ? "success"
+                                    : "warning"
+                                }
+                              >
+                                {selectedStudentAccountStatus === "actief"
+                                  ? "Actief"
+                                  : "Wacht op activatie"}
+                              </Badge>
+                            </div>
+                            <p className="mt-2 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                              {selectedStudentLastSignInLabel
+                                ? `Laatste login: ${selectedStudentLastSignInLabel}`
+                                : "Er is nog geen login geregistreerd voor dit account."}
                             </p>
                           </div>
-                          <Badge
-                            variant={
-                              selectedStudentAccountStatus === "actief"
-                                ? "success"
-                                : "warning"
-                            }
-                          >
-                            {selectedStudentAccountStatus === "actief"
-                              ? "Actief"
-                              : "Wacht op activatie"}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
-                          {selectedStudentLastSignInLabel
-                            ? `Laatste login: ${selectedStudentLastSignInLabel}`
-                            : "Er is nog geen login geregistreerd voor dit account."}
-                        </p>
+                        ) : null}
+                        {selectedStudent.onboardingNotitie ? (
+                          <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                            <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                              Startnotitie
+                            </p>
+                            <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+                              {selectedStudent.onboardingNotitie}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
-                    {selectedStudent.onboardingNotitie ? (
-                      <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
-                        <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
-                          Startnotitie
-                        </p>
-                        <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                          {selectedStudent.onboardingNotitie}
-                        </p>
-                      </div>
-                    ) : null}
+
                     {selectedStudent.isHandmatigGekoppeld ? (
                       <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1073,6 +1057,7 @@ export function StudentsBoard({
                         </div>
                       </div>
                     ) : null}
+
                     {firstLessonTemplate ? (
                       <div className="rounded-[1.15rem] border border-sky-200/80 bg-[linear-gradient(135deg,rgba(59,130,246,0.08),rgba(14,165,233,0.08),rgba(255,255,255,0.92))] p-3 dark:border-sky-400/18 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.12),rgba(59,130,246,0.14),rgba(15,23,42,0.74))]">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1101,7 +1086,50 @@ export function StudentsBoard({
                         </p>
                       </div>
                     ) : null}
-                    <div className="grid gap-2 sm:grid-cols-2">
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-start">
+                      <div className="flex flex-wrap justify-start gap-2">
+                        <StudentPackageDialog
+                          leerlingId={selectedStudent.id}
+                          leerlingNaam={selectedStudent.naam}
+                          currentPackageName={
+                            selectedStudent.pakket !== "Nog geen pakket"
+                              ? selectedStudent.pakket
+                              : null
+                          }
+                          packages={packages}
+                        />
+                        <CreateManualLessonDialog
+                          leerlingId={selectedStudent.id}
+                          leerlingNaam={selectedStudent.naam}
+                          suggestedTitle={
+                            selectedStudent.pakket !== "Nog geen pakket"
+                              ? selectedStudent.pakket
+                              : "Rijles"
+                          }
+                          locationOptions={locationOptions}
+                          template={firstLessonTemplate}
+                          durationDefaults={lessonDurationDefaults}
+                        />
+                        {selectedStudent.isHandmatigGekoppeld ? (
+                          <StudentDetachDialog
+                            leerlingId={selectedStudent.id}
+                            leerlingNaam={selectedStudent.naam}
+                            canDetach={canDetachSelectedStudent}
+                          />
+                        ) : null}
+                        {selectedStudent.isHandmatigGekoppeld &&
+                        selectedStudentAccountStatus === "uitgenodigd" ? (
+                          <StudentInviteResendButton
+                            leerlingId={selectedStudent.id}
+                          />
+                        ) : null}
+                        <ProgressPrintButton className="h-9 rounded-full text-[12px]" />
+                      </div>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     {[
                       {
                         icon: Target,
@@ -1148,7 +1176,7 @@ export function StudentsBoard({
                       </div>
                     ))}
                     </div>
-                    <div className="mt-3 rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
+                    <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="space-y-1.5">
                           <div className="flex flex-wrap items-center gap-2">
@@ -1204,8 +1232,8 @@ export function StudentsBoard({
                       </div>
 
                       {selectedStudent.planningVrijTeGeven ? (
-                        <div className="mt-4 space-y-3">
-                          <div className="grid gap-2 md:grid-cols-4">
+                        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                          <div className="grid gap-2 md:grid-cols-2">
                             {[
                               {
                                 label: "Actieve limiet",

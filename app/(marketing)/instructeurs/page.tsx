@@ -57,6 +57,12 @@ export default async function InstructeursPage() {
       access.directBookingAllowed,
     ])
   );
+  const trialLessonAvailableByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.trialLessonAvailable,
+    ])
+  );
   const weeklyBookingLimitByInstructorId = Object.fromEntries(
     Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
       instructorId,
@@ -140,6 +146,7 @@ export default async function InstructeursPage() {
             packagesByInstructorId={packagesByInstructorId}
             availableSlotsByInstructorId={availableSlotsByInstructorId}
             directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
+            trialLessonAvailableByInstructorId={trialLessonAvailableByInstructorId}
             weeklyBookingLimitByInstructorId={weeklyBookingLimitByInstructorId}
             bookedMinutesByWeekStartByInstructorId={
               bookedMinutesByWeekStartByInstructorId

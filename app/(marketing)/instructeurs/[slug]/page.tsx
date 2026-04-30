@@ -229,33 +229,35 @@ export default async function InstructeurDetailPage({
                     </div>
 
                     <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap">
-                      <LessonRequestDialog
-                        instructorName={instructor.volledige_naam}
-                        instructorSlug={instructor.slug}
-                        requestType="proefles"
-                        availableSlots={planningAccess.canViewAgenda ? slots : []}
-                        directBookingEnabled={planningAccess.directBookingAllowed}
-                        defaultDurationMinutes={
-                          instructor.standaard_proefles_duur_minuten ?? 50
-                        }
-                        weeklyBookingLimitMinutes={
-                          planningAccess.weeklyBookingLimitMinutes
-                        }
-                        bookedMinutesByWeekStart={
-                          planningAccess.bookedMinutesByWeekStart
-                        }
-                        weeklyRemainingMinutesThisWeek={
-                          planningAccess.weeklyRemainingMinutesThisWeek
-                        }
-                        triggerLabel={
-                          planningAccess.directBookingAllowed
-                            ? "Plan proefles"
-                            : planningAccess.canViewAgenda
-                              ? "Vraag proefles op moment aan"
-                              : "Plan proefles"
-                        }
-                        triggerClassName="h-9 px-5 text-[13px]"
-                      />
+                      {planningAccess.trialLessonAvailable ? (
+                        <LessonRequestDialog
+                          instructorName={instructor.volledige_naam}
+                          instructorSlug={instructor.slug}
+                          requestType="proefles"
+                          availableSlots={planningAccess.canViewAgenda ? slots : []}
+                          directBookingEnabled={planningAccess.directBookingAllowed}
+                          defaultDurationMinutes={
+                            instructor.standaard_proefles_duur_minuten ?? 50
+                          }
+                          weeklyBookingLimitMinutes={
+                            planningAccess.weeklyBookingLimitMinutes
+                          }
+                          bookedMinutesByWeekStart={
+                            planningAccess.bookedMinutesByWeekStart
+                          }
+                          weeklyRemainingMinutesThisWeek={
+                            planningAccess.weeklyRemainingMinutesThisWeek
+                          }
+                          triggerLabel={
+                            planningAccess.directBookingAllowed
+                              ? "Plan proefles"
+                              : planningAccess.canViewAgenda
+                                ? "Vraag proefles op moment aan"
+                                : "Plan proefles"
+                          }
+                          triggerClassName="h-9 px-5 text-[13px]"
+                        />
+                      ) : null}
                       <LessonRequestDialog
                         instructorName={instructor.volledige_naam}
                         instructorSlug={instructor.slug}
@@ -316,7 +318,9 @@ export default async function InstructeurDetailPage({
                               ? "Je kunt al live momenten kiezen; na bevestigen gaat precies dit kalenderblok mee als voorkeursmoment."
                             : planningAccess.hasActiveRelationship
                               ? "Je traject is al actief. Zodra deze instructeur plannen voor jou vrijgeeft, verschijnt de agenda hieronder."
-                              : "Vraag eerst een proefles of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."}
+                              : planningAccess.trialLessonAvailable
+                                ? "Vraag eerst een proefles of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."
+                                : "Vraag eerst een les of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."}
                         </p>
                       </div>
                     </div>
@@ -671,7 +675,9 @@ export default async function InstructeurDetailPage({
           ) : (
             <Card className="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50/80 p-6 text-sm leading-7 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">
               Deze instructeur heeft nog geen losse trajecten gepubliceerd. Je kunt wel direct
-              een lesaanvraag of proefles starten.
+              {planningAccess.trialLessonAvailable
+                ? "een lesaanvraag of proefles starten."
+                : "een lesaanvraag starten."}
             </Card>
           )}
         </Reveal>
@@ -703,6 +709,7 @@ export default async function InstructeurDetailPage({
                     slots={slots}
                     directBookingEnabled={planningAccess.directBookingAllowed}
                     publicBookingEnabled={planningAccess.publicBookingEnabled}
+                    trialLessonAvailable={planningAccess.trialLessonAvailable}
                     regularLessonDurationMinutes={
                       instructor.standaard_rijles_duur_minuten ?? 60
                     }
@@ -742,7 +749,9 @@ export default async function InstructeurDetailPage({
                       <CardDescription>
                         {planningAccess.hasActiveRelationship
                           ? "Zodra deze instructeur zelf inplannen voor jou aanzet of online boeking openzet, verschijnen hier de beschikbare momenten."
-                          : "Eerst vraag je een proefles of pakket aan. Daarna kan de instructeur plannen vrijgeven of online boeking openen wanneer dat logisch is."}
+                          : planningAccess.trialLessonAvailable
+                            ? "Eerst vraag je een proefles of pakket aan. Daarna kan de instructeur plannen vrijgeven of online boeking openen wanneer dat logisch is."
+                            : "Eerst vraag je een les of pakket aan. Daarna kan de instructeur plannen vrijgeven of online boeking openen wanneer dat logisch is."}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -750,7 +759,9 @@ export default async function InstructeurDetailPage({
                         {[
                           {
                             label: "Stap 1",
-                            value: "Vraag een pakket of proefles aan",
+                            value: planningAccess.trialLessonAvailable
+                              ? "Vraag een pakket of proefles aan"
+                              : "Vraag een pakket of les aan",
                           },
                           {
                             label: "Stap 2",
@@ -775,7 +786,13 @@ export default async function InstructeurDetailPage({
                         ))}
                       </div>
 
-                      <div className="grid gap-2 sm:grid-cols-2">
+                      <div
+                        className={
+                          planningAccess.trialLessonAvailable
+                            ? "grid gap-2 sm:grid-cols-2"
+                            : "grid gap-2 sm:grid-cols-1"
+                        }
+                      >
                         <LessonRequestDialog
                           instructorName={instructor.volledige_naam}
                           instructorSlug={instructor.slug}
@@ -798,27 +815,29 @@ export default async function InstructeurDetailPage({
                           triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
                           triggerClassName="h-9 text-[13px]"
                         />
-                        <LessonRequestDialog
-                          instructorName={instructor.volledige_naam}
-                          instructorSlug={instructor.slug}
-                          requestType="proefles"
-                          availableSlots={[]}
-                          defaultDurationMinutes={
-                            instructor.standaard_proefles_duur_minuten ?? 50
-                          }
-                          weeklyBookingLimitMinutes={
-                            planningAccess.weeklyBookingLimitMinutes
-                          }
-                          bookedMinutesByWeekStart={
-                            planningAccess.bookedMinutesByWeekStart
-                          }
-                          weeklyRemainingMinutesThisWeek={
-                            planningAccess.weeklyRemainingMinutesThisWeek
-                          }
-                          triggerLabel="Plan proefles"
-                          triggerVariant="secondary"
-                          triggerClassName="h-9 text-[13px]"
-                        />
+                        {planningAccess.trialLessonAvailable ? (
+                          <LessonRequestDialog
+                            instructorName={instructor.volledige_naam}
+                            instructorSlug={instructor.slug}
+                            requestType="proefles"
+                            availableSlots={[]}
+                            defaultDurationMinutes={
+                              instructor.standaard_proefles_duur_minuten ?? 50
+                            }
+                            weeklyBookingLimitMinutes={
+                              planningAccess.weeklyBookingLimitMinutes
+                            }
+                            bookedMinutesByWeekStart={
+                              planningAccess.bookedMinutesByWeekStart
+                            }
+                            weeklyRemainingMinutesThisWeek={
+                              planningAccess.weeklyRemainingMinutesThisWeek
+                            }
+                            triggerLabel="Plan proefles"
+                            triggerVariant="secondary"
+                            triggerClassName="h-9 text-[13px]"
+                          />
+                        ) : null}
                       </div>
                     </CardContent>
                   </Card>

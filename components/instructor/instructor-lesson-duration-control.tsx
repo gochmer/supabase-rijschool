@@ -23,22 +23,22 @@ const durationFieldConfig: Array<{
   {
     key: "rijles",
     label: "Rijles",
-    hint: "Je standaard losse rijles.",
+    hint: "Standaardles.",
   },
   {
     key: "proefles",
     label: "Proefles",
-    hint: "Kennismaking of intake.",
+    hint: "Kennismaking.",
   },
   {
     key: "pakketles",
     label: "Pakketles",
-    hint: "Langer blok voor trajecten of pakketten.",
+    hint: "Langer blok.",
   },
   {
     key: "examenrit",
     label: "Examenrit",
-    hint: "Examenvoorbereiding of examengericht blok.",
+    hint: "Examengericht.",
   },
 ];
 
@@ -127,11 +127,10 @@ export function InstructorLessonDurationControl({
             Standaard lesduur
           </p>
           <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-            Bepaal je blokduur per lestype
+            Duur per lestype
           </h3>
-          <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-            Nieuwe boekbare blokken en handmatig geplande lessen nemen deze duur automatisch
-            over. Per losse les kun je daarna nog steeds afwijken.
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Nieuwe blokken nemen deze duur automatisch over.
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
@@ -195,8 +194,7 @@ export function InstructorLessonDurationControl({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.1rem] border border-slate-200 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/5">
         <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
-          Voorbeeld: plan je een proefles om 10:00 met 50 minuten standaardduur, dan reserveert
-          de agenda automatisch 10:00 tot 10:50.
+          Per losse les kun je later nog afwijken.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" className="h-9 rounded-full" onClick={resetValues}>

@@ -16,6 +16,7 @@ export function InstructorFinder({
   packagesByInstructorId = {},
   availableSlotsByInstructorId = {},
   directBookingEnabledByInstructorId = {},
+  trialLessonAvailableByInstructorId = {},
   weeklyBookingLimitByInstructorId = {},
   bookedMinutesByWeekStartByInstructorId = {},
   weeklyRemainingMinutesThisWeekByInstructorId = {},
@@ -27,6 +28,7 @@ export function InstructorFinder({
   packagesByInstructorId?: Record<string, Pakket[]>;
   availableSlotsByInstructorId?: Record<string, BeschikbaarheidSlot[]>;
   directBookingEnabledByInstructorId?: Record<string, boolean>;
+  trialLessonAvailableByInstructorId?: Record<string, boolean>;
   weeklyBookingLimitByInstructorId?: Record<string, number | null>;
   bookedMinutesByWeekStartByInstructorId?: Record<string, WeeklyBookedMinutesMap>;
   weeklyRemainingMinutesThisWeekByInstructorId?: Record<string, number | null>;
@@ -79,6 +81,7 @@ export function InstructorFinder({
         packagesByInstructorId={packagesByInstructorId}
         availableSlotsByInstructorId={availableSlotsByInstructorId}
         directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
+        trialLessonAvailableByInstructorId={trialLessonAvailableByInstructorId}
         weeklyBookingLimitByInstructorId={weeklyBookingLimitByInstructorId}
         bookedMinutesByWeekStartByInstructorId={bookedMinutesByWeekStartByInstructorId}
         weeklyRemainingMinutesThisWeekByInstructorId={

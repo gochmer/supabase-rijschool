@@ -21,7 +21,7 @@ export default async function BeschikbaarheidPage() {
     <div className="space-y-6">
       <PageHeader
         title="Beschikbaarheid"
-        description="Je vaste werkweek staat standaard open. Gebruik alleen uitzonderingen of vakantie om momenten dicht te zetten."
+        description="Je werkweek staat standaard open. Beheer alleen uitzonderingen."
       />
 
       <InstructorOnlineBookingControl
