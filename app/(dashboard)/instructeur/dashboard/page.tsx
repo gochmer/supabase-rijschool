@@ -11,6 +11,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentProfile,
 } from "@/lib/data/profiles";
+import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
 import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
 
 export default async function InstructeurDashboardPage() {
@@ -20,6 +21,7 @@ export default async function InstructeurDashboardPage() {
     notifications,
     instructor,
     profile,
+    reviewSummary,
     instructorPackages,
     availabilitySlots,
     studentsWorkspace,
@@ -29,6 +31,7 @@ export default async function InstructeurDashboardPage() {
     getCurrentNotifications(),
     getCurrentInstructeurRecord(),
     getCurrentProfile(),
+    getCurrentInstructorReviewSummary(),
     getCurrentInstructorPackages(),
     getCurrentInstructorAvailability(),
     getInstructeurStudentsWorkspace(),
@@ -41,6 +44,7 @@ export default async function InstructeurDashboardPage() {
       notifications={notifications}
       instructor={instructor}
       profileName={profile?.volledige_naam}
+      reviewSummary={reviewSummary}
       packages={instructorPackages}
       availabilitySlots={availabilitySlots}
       students={studentsWorkspace.students}

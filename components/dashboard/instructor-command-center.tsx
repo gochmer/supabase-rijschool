@@ -7,12 +7,15 @@ import {
   CheckCircle2,
   Clock3,
   Euro,
+  Eye,
   FileText,
   GraduationCap,
   MessageSquare,
   PackageCheck,
+  Settings,
   Star,
   TrendingUp,
+  UserRound,
   UsersRound,
   WalletCards,
 } from "lucide-react";
@@ -31,9 +34,13 @@ import type {
 import { cn } from "@/lib/utils";
 
 type DashboardInstructorRecord = {
+  slug?: string | null;
   prijs_per_les: number | string | null;
   beoordeling: number | string | null;
   aantal_reviews?: number | string | null;
+  profiel_status?: string | null;
+  profiel_compleetheid?: number | null;
+  online_boeken_actief?: boolean | null;
 };
 
 type InstructorCommandCenterProps = {
@@ -42,6 +49,10 @@ type InstructorCommandCenterProps = {
   notifications: Notificatie[];
   instructor: DashboardInstructorRecord | null;
   profileName?: string | null;
+  reviewSummary?: {
+    averageScore: number;
+    reviewCount: number;
+  };
   packages: Pakket[];
   availabilitySlots: BeschikbaarheidSlot[];
   students: InstructorStudentProgressRow[];
@@ -473,12 +484,90 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
+function OverviewRouteCard({
+  title,
+  description,
+  href,
+  icon: Icon,
+  value,
+  valueLabel,
+  rows,
+  tone,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  value: string;
+  valueLabel: string;
+  rows: Array<{ label: string; value: string }>;
+  tone: "blue" | "green" | "amber" | "purple" | "slate";
+}) {
+  const toneClass = {
+    blue: "bg-blue-500/16 text-blue-100 ring-blue-400/20",
+    green: "bg-emerald-500/16 text-emerald-100 ring-emerald-400/20",
+    amber: "bg-orange-500/16 text-orange-100 ring-orange-400/20",
+    purple: "bg-violet-500/16 text-violet-100 ring-violet-400/20",
+    slate: "bg-slate-500/16 text-slate-100 ring-slate-400/20",
+  }[tone];
+
+  return (
+    <Link
+      href={href}
+      className="group flex min-h-[15rem] flex-col justify-between rounded-xl border border-white/10 bg-white/[0.055] p-4 transition hover:border-white/20 hover:bg-white/[0.08]"
+    >
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <span
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-lg ring-1",
+              toneClass
+            )}
+          >
+            <Icon className="size-5" />
+          </span>
+          <span className="text-[11px] font-semibold text-slate-500 transition group-hover:text-slate-300">
+            Open
+          </span>
+        </div>
+        <div className="mt-4">
+          <p className="text-lg font-semibold text-white">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+              {valueLabel}
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          {rows.map((row) => (
+            <div
+              key={`${title}-${row.label}`}
+              className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.045] px-3 py-2 text-[12px]"
+            >
+              <span className="text-slate-400">{row.label}</span>
+              <span className="font-semibold text-slate-200">{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export function InstructorCommandCenter({
   lessons,
   requests,
   notifications,
   instructor,
   profileName,
+  reviewSummary,
   packages,
   availabilitySlots,
   students,
@@ -538,14 +627,170 @@ export function InstructorCommandCenter({
   const incomeSeries = buildIncomeSeries(completedLessons, lessonPrice, now);
   const lessonBuckets = buildLessonBuckets(lessons, now);
   const yearlyIncome = yearlyCompletedLessons.length * lessonPrice;
-  const averageRating = Number(instructor?.beoordeling ?? 0);
-  const reviewCount = Number(instructor?.aantal_reviews ?? 0);
+  const averageRating =
+    reviewSummary?.averageScore ?? Number(instructor?.beoordeling ?? 0);
+  const reviewCount =
+    reviewSummary?.reviewCount ?? Number(instructor?.aantal_reviews ?? 0);
   const displayName = profileName ?? "RijBasis";
+  const profileScore = Number(instructor?.profiel_compleetheid ?? 0);
+  const publicProfilePath = instructor?.slug
+    ? `/instructeurs/${instructor.slug}`
+    : "/instructeurs";
   const tipText = getTipText({
     openRequestCount: openRequests.length,
     openSlotCount: availableSlots.length,
     activePackageCount: activePackages.length,
   });
+  const totalOverviewItems = [
+    {
+      title: "Profiel",
+      description: "Naam, bio, prijs, reviews en publieke uitstraling.",
+      href: "/instructeur/profiel",
+      icon: UserRound,
+      value: `${Math.min(100, Math.max(0, profileScore))}%`,
+      valueLabel: "Profielscore",
+      tone: "blue" as const,
+      rows: [
+        { label: "Status", value: instructor?.profiel_status ?? "concept" },
+        {
+          label: "Prijs",
+          value: lessonPrice ? formatCurrency(lessonPrice) : "Nog leeg",
+        },
+      ],
+    },
+    {
+      title: "Pakketten",
+      description: "Aanbod, prijzen en actieve lespakketten.",
+      href: "/instructeur/pakketten",
+      icon: PackageCheck,
+      value: `${activePackages.length}`,
+      valueLabel: "Actief",
+      tone: "amber" as const,
+      rows: [
+        { label: "Totaal", value: `${packages.length}` },
+        {
+          label: "Gemiddeld",
+          value: packages.length
+            ? formatCurrency(
+                Math.round(
+                  packages.reduce((total, pkg) => total + Number(pkg.prijs ?? 0), 0) /
+                    packages.length
+                )
+              )
+            : "Nog leeg",
+        },
+      ],
+    },
+    {
+      title: "Openbare gids",
+      description: "Hoe leerlingen je publieke profiel en aanbod zien.",
+      href: publicProfilePath,
+      icon: Eye,
+      value: averageRating ? averageRating.toFixed(1) : "0.0",
+      valueLabel: "Beoordeling",
+      tone: "purple" as const,
+      rows: [
+        { label: "Reviews", value: `${reviewCount}` },
+        { label: "Preview", value: instructor?.slug ? "Eigen profiel" : "Gids" },
+      ],
+    },
+    {
+      title: "Beschikbaarheid",
+      description: "Weekplanning, boekbare blokken en online boeken.",
+      href: "/instructeur/beschikbaarheid",
+      icon: CalendarDays,
+      value: `${availableSlots.length}`,
+      valueLabel: "Open blokken",
+      tone: "green" as const,
+      rows: [
+        {
+          label: "Online boeken",
+          value: instructor?.online_boeken_actief ? "Actief" : "Uit",
+        },
+        { label: "Komende slots", value: `${availabilitySlots.length}` },
+      ],
+    },
+    {
+      title: "Aanvragen",
+      description: "Nieuwe proeflessen, pakketten en lesaanvragen.",
+      href: "/instructeur/aanvragen",
+      icon: FileText,
+      value: `${openRequests.length}`,
+      valueLabel: "Open",
+      tone: "blue" as const,
+      rows: [
+        { label: "Totaal", value: `${requests.length}` },
+        {
+          label: "Verwerkt",
+          value: `${requests.filter((request) => request.status !== "aangevraagd").length}`,
+        },
+      ],
+    },
+    {
+      title: "Leerlingen",
+      description: "Trajecten, voortgang en volgende les per leerling.",
+      href: "/instructeur/leerlingen",
+      icon: UsersRound,
+      value: `${students.length}`,
+      valueLabel: "Actief",
+      tone: "green" as const,
+      rows: [
+        {
+          label: "70%+ voortgang",
+          value: `${students.filter((student) => student.voortgang >= 70).length}`,
+        },
+        {
+          label: "Zelf plannen",
+          value: `${students.filter((student) => student.zelfInplannenToegestaan).length}`,
+        },
+      ],
+    },
+    {
+      title: "Lessen",
+      description: "Gepland, afgerond en geannuleerd in een rustige planning.",
+      href: "/instructeur/lessen",
+      icon: Clock3,
+      value: `${lessonsThisMonth.length}`,
+      valueLabel: "Deze maand",
+      tone: "slate" as const,
+      rows: [
+        { label: "Afgerond", value: `${completedThisMonth.length}` },
+        {
+          label: "Gepland",
+          value: `${lessons.filter((lesson) => ["ingepland", "geaccepteerd"].includes(lesson.status)).length}`,
+        },
+      ],
+    },
+    {
+      title: "Inkomsten",
+      description: "Omzetinschatting, pakketwaarde en betaalritme.",
+      href: "/instructeur/inkomsten",
+      icon: WalletCards,
+      value: formatCurrency(incomeThisMonth),
+      valueLabel: "Deze maand",
+      tone: "amber" as const,
+      rows: [
+        { label: "Dit jaar", value: formatCurrency(yearlyIncome) },
+        { label: "Lesprijs", value: lessonPrice ? formatCurrency(lessonPrice) : "Nog leeg" },
+      ],
+    },
+    {
+      title: "Instellingen",
+      description: "Voertuigen, documenten, meldingen en accountbasis.",
+      href: "/instructeur/instellingen",
+      icon: Settings,
+      value: unreadNotifications.length ? `${unreadNotifications.length}` : "0",
+      valueLabel: "Meldingen",
+      tone: "slate" as const,
+      rows: [
+        {
+          label: "Online boeken",
+          value: instructor?.online_boeken_actief ? "Actief" : "Uit",
+        },
+        { label: "Documenten", value: "Beheer" },
+      ],
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -614,6 +859,15 @@ export function InstructorCommandCenter({
           tone="amber"
         />
       </div>
+
+      <CommandPanel>
+        <SectionHeader title="Alles van /instructeur" href="/instructeur" cta="Open overzicht" />
+        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+          {totalOverviewItems.map((item) => (
+            <OverviewRouteCard key={item.title} {...item} />
+          ))}
+        </div>
+      </CommandPanel>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <CommandPanel>

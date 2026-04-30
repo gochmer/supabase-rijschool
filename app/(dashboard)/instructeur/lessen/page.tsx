@@ -63,6 +63,7 @@ export default async function InstructeurLessenPage() {
       <PageHeader
         title="Lessen"
         description="Bekijk ingeplande, afgeronde en geannuleerde lessen per leerling."
+        tone="urban"
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {lessonStats.map((item) => (

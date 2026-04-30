@@ -23,7 +23,7 @@ export const dashboardNavigation: Record<
     { href: "/leerling/instellingen", label: "Instellingen" },
   ],
   instructeur: [
-    { href: "/instructeur/dashboard", label: "Dashboard" },
+    { href: "/instructeur", label: "Dashboard" },
     { href: "/instructeur/profiel", label: "Profiel" },
     { href: "/instructeur/pakketten", label: "Pakketten" },
     { href: "/instructeurs", label: "Openbare gids" },

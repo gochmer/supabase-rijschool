@@ -115,6 +115,7 @@ export default async function LeerlingenPage() {
       <PageHeader
         title="Leerlingen"
         description="Werk per leerling vanuit één rustige werkplek voor voortgang, intake en het plannen van de volgende stap."
+        tone="urban"
         actions={
           <>
             <StudentOnboardDialog packages={packages} />

@@ -64,6 +64,7 @@ export default async function InkomstenPage() {
       <PageHeader
         title="Inkomsten"
         description="Een cockpit voor geplande omzet, pakketwaarde, open gaten en leerlingen waar nu geld of vervolg blijft liggen."
+        tone="urban"
         actions={
           <>
             <Button

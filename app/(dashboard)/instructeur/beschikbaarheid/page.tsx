@@ -60,6 +60,7 @@ export default async function BeschikbaarheidPage() {
       <PageHeader
         title="Beschikbaarheid"
         description="Je werkweek staat standaard open. Beheer alleen uitzonderingen."
+        tone="urban"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

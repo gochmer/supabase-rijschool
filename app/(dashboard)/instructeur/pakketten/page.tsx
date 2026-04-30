@@ -268,6 +268,7 @@ export default async function InstructeurPakkettenPage() {
       <PageHeader
         title="Pakketten"
         description="Maak je aanbod rustiger, professioneler en duidelijker voordat het live op je instructeurprofiel verschijnt."
+        tone="urban"
         actions={
           publicProfilePath ? (
             <Button
