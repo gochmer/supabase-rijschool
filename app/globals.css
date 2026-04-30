@@ -294,6 +294,60 @@
     animation: dashboard-fade-up 480ms ease-out both;
   }
 
+  .surface-panel {
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 1.35rem;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 24px 72px -44px rgba(15, 23, 42, 0.36);
+    backdrop-filter: blur(16px);
+  }
+
+  .surface-card {
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 1rem;
+    background: rgba(248, 250, 252, 0.9);
+    box-shadow: 0 16px 44px -34px rgba(15, 23, 42, 0.26);
+  }
+
+  .surface-muted {
+    border: 1px solid rgba(226, 232, 240, 0.78);
+    border-radius: 0.95rem;
+    background: rgba(248, 250, 252, 0.82);
+  }
+
+  .surface-empty {
+    border: 1px dashed rgba(148, 163, 184, 0.6);
+    border-radius: 1.1rem;
+    background: rgba(248, 250, 252, 0.78);
+  }
+
+  .dark .surface-panel {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(
+      145deg,
+      rgba(15, 23, 42, 0.88),
+      rgba(30, 41, 59, 0.82),
+      rgba(15, 23, 42, 0.9)
+    );
+    box-shadow: 0 24px 72px -44px rgba(15, 23, 42, 0.64);
+  }
+
+  .dark .surface-card {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.055);
+    box-shadow: 0 16px 44px -34px rgba(15, 23, 42, 0.58);
+  }
+
+  .dark .surface-muted {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .surface-empty {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
   .re-scanlines {
     isolation: isolate;
     position: relative;

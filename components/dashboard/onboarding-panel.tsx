@@ -43,7 +43,7 @@ export function OnboardingPanel({
   }
 
   return (
-    <section className="overflow-hidden rounded-[1.55rem] border border-white/70 bg-white/86 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.36)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+    <section className="surface-panel overflow-hidden">
       <div className="grid gap-0 xl:grid-cols-[0.86fr_1.14fr]">
         <div className="relative overflow-hidden bg-slate-950 p-4 text-white sm:p-5">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(56,189,248,0.22),transparent_26%),radial-gradient(circle_at_84%_20%,rgba(16,185,129,0.18),transparent_24%),radial-gradient(circle_at_70%_86%,rgba(245,158,11,0.14),transparent_26%)]" />
@@ -88,7 +88,7 @@ export function OnboardingPanel({
               <Link
                 key={step.label}
                 href={step.href}
-                className="group min-w-0 rounded-[1.15rem] border border-slate-200 bg-slate-50/88 p-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_20px_58px_-38px_rgba(15,23,42,0.3)] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/8"
+                className="surface-card group min-w-0 p-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_20px_58px_-38px_rgba(15,23,42,0.3)] dark:hover:bg-white/8"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">

@@ -55,7 +55,7 @@ function FocusCard({
         "group flex min-w-0 flex-col rounded-[1.25rem] border transition-all duration-300 hover:-translate-y-0.5",
         featured
           ? "border-slate-200 bg-slate-950 p-4 text-white shadow-[0_26px_80px_-42px_rgba(15,23,42,0.7)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(2,6,23,0.98),rgba(30,41,59,0.94))]"
-          : "border-slate-200 bg-white/88 p-3.5 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.32)] hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/8"
+          : "surface-card p-3.5 hover:bg-white dark:hover:bg-white/8"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -133,7 +133,7 @@ export function DashboardFocusPanel({
   items: DashboardFocusItem[];
 }) {
   return (
-    <section className="rounded-[1.55rem] border border-white/70 bg-white/82 p-4 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.38)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]">
+    <section className="surface-panel p-4">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-3xl">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-primary uppercase dark:text-sky-300">

@@ -18,12 +18,12 @@ export function InsightPanel({
   return (
     <div
       className={cn(
-        "rounded-[1.4rem] p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)]",
+        "p-4",
         isUrban
           ? "border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] text-white shadow-[0_28px_88px_-46px_rgba(15,23,42,0.78)]"
           : isHazard
           ? "re-frame-flash border border-red-300/12 bg-[linear-gradient(145deg,rgba(9,11,16,0.98),rgba(22,12,15,0.96),rgba(40,16,19,0.9))] text-white shadow-[0_28px_88px_-46px_rgba(0,0,0,0.72)]"
-          : "border border-white/70 bg-white/84 dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))]"
+          : "surface-panel"
       )}
     >
       <h3 className={cn("text-lg font-semibold", isUrban || isHazard ? "text-white" : "text-slate-950 dark:text-white")}>
@@ -47,7 +47,7 @@ export function InsightPanel({
                 ? "border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))]"
                 : isHazard
                 ? "border border-red-300/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(120,22,22,0.12))]"
-                : "bg-slate-50/85 dark:border dark:border-white/10 dark:bg-white/5"
+                : "surface-muted"
             )}
           >
             <div className="min-w-0">

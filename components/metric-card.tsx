@@ -18,7 +18,7 @@ export function MetricCard({
   context: string;
 }) {
   return (
-    <Card className="group relative overflow-hidden border-0 bg-white/88 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70 transition-transform duration-300 hover:-translate-y-1 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.62)] dark:ring-white/10">
+    <Card className="surface-panel group relative overflow-hidden transition-transform duration-300 hover:-translate-y-1">
       <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#0f172a,#2563eb,#38bdf8)] dark:bg-[linear-gradient(90deg,#e2e8f0,#38bdf8,#0ea5e9)]" />
       <div className="absolute -right-10 -top-10 size-28 rounded-full bg-sky-100/60 blur-2xl transition-transform duration-500 group-hover:scale-110 dark:bg-sky-400/14" />
       <CardHeader className="relative pb-3">
