@@ -494,6 +494,8 @@ async function run() {
 
     const page = await browser.newPage();
     const directBookingPath = `/instructeurs/${instructor.slug}`;
+    const expectedBookedTimeSlot = "10:00 - 11:00";
+    const expectedDurationMinutes = 60;
     await loginUser(page, learnerIdentity.email, directBookingPath);
 
     await page.getByRole("heading", { name: /Plan zelf een moment bij/i }).waitFor({
@@ -532,7 +534,7 @@ async function run() {
           (row) =>
             row.status === "ingepland" &&
             row.voorkeursdatum === "2026-05-19" &&
-            row.tijdvak === "10:00 - 11:30"
+            row.tijdvak === expectedBookedTimeSlot
         )
     );
 
@@ -540,7 +542,7 @@ async function run() {
       (row) =>
         row.status === "ingepland" &&
         row.voorkeursdatum === "2026-05-19" &&
-        row.tijdvak === "10:00 - 11:30"
+        row.tijdvak === expectedBookedTimeSlot
     );
 
     if (!directRequest) {
@@ -554,6 +556,7 @@ async function run() {
           (row) =>
             row.status === "ingepland" &&
             row.start_at === seededAvailability.start_at &&
+            row.duur_minuten === expectedDurationMinutes &&
             row.notities === `request-ref:${directRequest.id}`
         )
     );

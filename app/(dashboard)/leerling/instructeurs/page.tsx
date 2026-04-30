@@ -30,6 +30,24 @@ export default async function LeerlingInstructeursPage() {
       access.directBookingAllowed,
     ])
   );
+  const weeklyBookingLimitByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.weeklyBookingLimitMinutes,
+    ])
+  );
+  const bookedMinutesByWeekStartByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.bookedMinutesByWeekStart,
+    ])
+  );
+  const weeklyRemainingMinutesThisWeekByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.weeklyRemainingMinutesThisWeek,
+    ])
+  );
 
   return (
     <>
@@ -43,6 +61,13 @@ export default async function LeerlingInstructeursPage() {
         favoriteInstructorIds={favoriteInstructorIds}
         availableSlotsByInstructorId={availableSlotsByInstructorId}
         directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
+        weeklyBookingLimitByInstructorId={weeklyBookingLimitByInstructorId}
+        bookedMinutesByWeekStartByInstructorId={
+          bookedMinutesByWeekStartByInstructorId
+        }
+        weeklyRemainingMinutesThisWeekByInstructorId={
+          weeklyRemainingMinutesThisWeekByInstructorId
+        }
       />
     </>
   );

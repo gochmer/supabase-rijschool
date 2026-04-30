@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { createInstructorLessonForLearnerAction } from "@/lib/actions/instructor-learners";
+import { getLessonEndAt } from "@/lib/booking-availability";
+import {
+  DEFAULT_LESSON_DURATION_MINUTES,
+  getLessonDurationKindLabel,
+  type InstructorLessonDurationDefaults,
+  type LessonDurationKind,
+} from "@/lib/lesson-durations";
 import type { FirstLessonTemplate } from "@/lib/package-first-lesson-template";
 import type { LocationOption } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -29,6 +36,13 @@ import {
 
 const LOCATION_LATER_VALUE = "__later__";
 
+const lessonKindOptions: LessonDurationKind[] = [
+  "rijles",
+  "proefles",
+  "pakketles",
+  "examenrit",
+];
+
 function getTodayDate() {
   const current = new Date();
   const local = new Date(current.getTime() - current.getTimezoneOffset() * 60_000);
@@ -45,24 +59,29 @@ export function CreateManualLessonDialog({
   suggestedTitle,
   locationOptions = [],
   template,
+  durationDefaults = DEFAULT_LESSON_DURATION_MINUTES,
 }: {
   leerlingId: string;
   leerlingNaam: string;
   suggestedTitle?: string;
   locationOptions?: LocationOption[];
   template?: FirstLessonTemplate | null;
+  durationDefaults?: InstructorLessonDurationDefaults;
 }) {
   const router = useRouter();
+  const defaultLessonKind: LessonDurationKind = template ? "pakketles" : "rijles";
   const [open, setOpen] = useState(false);
+  const [lessonKind, setLessonKind] = useState<LessonDurationKind>(defaultLessonKind);
   const [title, setTitle] = useState(template?.title || suggestedTitle || "Rijles");
   const [date, setDate] = useState(getTodayDate());
   const [time, setTime] = useState(getDefaultStartTime());
   const [duration, setDuration] = useState(
-    String(template?.durationMinutes ?? 60)
+    String(template?.durationMinutes ?? durationDefaults[defaultLessonKind])
   );
   const [locationChoice, setLocationChoice] = useState(LOCATION_LATER_VALUE);
   const [isPending, startTransition] = useTransition();
 
+  const lessonKindId = useId();
   const titleId = useId();
   const dateId = useId();
   const timeId = useId();
@@ -79,12 +98,35 @@ export function CreateManualLessonDialog({
     );
   }, [locationChoice, locationOptions]);
 
+  const endTimeLabel = useMemo(() => {
+    const durationMinutes = Number.parseInt(duration, 10);
+
+    if (!date || !time || !Number.isFinite(durationMinutes)) {
+      return null;
+    }
+
+    const startAt = `${date}T${time}:00`;
+    const endAt = getLessonEndAt(startAt, durationMinutes);
+
+    return endAt ? endAt.slice(11, 16) : null;
+  }, [date, duration, time]);
+
   function reset() {
+    setLessonKind(defaultLessonKind);
     setTitle(template?.title || suggestedTitle || "Rijles");
     setDate(getTodayDate());
     setTime(getDefaultStartTime());
-    setDuration(String(template?.durationMinutes ?? 60));
+    setDuration(String(template?.durationMinutes ?? durationDefaults[defaultLessonKind]));
     setLocationChoice(LOCATION_LATER_VALUE);
+  }
+
+  function handleLessonKindChange(nextKind: LessonDurationKind) {
+    setLessonKind(nextKind);
+    setDuration(String(durationDefaults[nextKind]));
+
+    if (!template) {
+      setTitle(getLessonDurationKindLabel(nextKind));
+    }
   }
 
   function handleSubmit() {
@@ -134,6 +176,25 @@ export function CreateManualLessonDialog({
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={lessonKindId}>Lestype</Label>
+            <Select value={lessonKind} onValueChange={(value) => handleLessonKindChange(value as LessonDurationKind)}>
+              <SelectTrigger
+                id={lessonKindId}
+                className="dark:border-white/10 dark:bg-white/5 dark:text-white"
+              >
+                <SelectValue placeholder="Kies een lestype" />
+              </SelectTrigger>
+              <SelectContent>
+                {lessonKindOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {getLessonDurationKindLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor={titleId}>Lestitel</Label>
             <Input
@@ -220,7 +281,10 @@ export function CreateManualLessonDialog({
 
         <div className="rounded-[1.05rem] border border-slate-200/80 bg-slate-50/90 p-3 text-sm leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
           <strong className="text-slate-950 dark:text-white">Samenvatting:</strong>{" "}
-          {title.trim() || "Rijles"} voor {leerlingNaam}. Locatie: {locationLabel}.
+          {title.trim() || "Rijles"} voor {leerlingNaam}. Type:{" "}
+          {getLessonDurationKindLabel(lessonKind)}.{" "}
+          {time ? `Start ${time}` : null}
+          {endTimeLabel ? `, einde ${endTimeLabel}` : null}. Locatie: {locationLabel}.
         </div>
 
         <DialogFooter>

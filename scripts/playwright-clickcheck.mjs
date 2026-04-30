@@ -331,36 +331,61 @@ async function loginUser(page, email, redirectPath) {
 
 async function inspectDialog(page, buttonNames) {
   const names = Array.isArray(buttonNames) ? buttonNames : [buttonNames];
-  let button = null;
   let resolvedButtonName = null;
 
   for (const name of names) {
-    const candidate = page.getByRole("button", { name }).first();
     const count = await page.getByRole("button", { name }).count();
 
     if (count > 0) {
-      button = candidate;
       resolvedButtonName = name;
       break;
     }
   }
 
-  if (!button || !resolvedButtonName) {
+  if (!resolvedButtonName) {
     throw new Error(`Geen knop gevonden voor: ${names.join(", ")}`);
   }
 
-  await button.scrollIntoViewIfNeeded();
-  await button.click({ force: true });
-
   const dialog = page.locator('[role="dialog"]').last();
-  await dialog.waitFor({ state: "visible", timeout: 8_000 });
+
+  async function openDialog() {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const freshButton = page.getByRole("button", { name: resolvedButtonName }).first();
+        await freshButton.waitFor({ state: "visible", timeout: 8_000 });
+        await freshButton.scrollIntoViewIfNeeded();
+        await freshButton.click({ force: true });
+        return;
+      } catch (error) {
+        if (attempt === 1) {
+          throw error;
+        }
+
+        await page.waitForTimeout(250);
+      }
+    }
+  }
+
+  await openDialog();
+
+  try {
+    await dialog.waitFor({ state: "visible", timeout: 8_000 });
+  } catch {
+    await page.keyboard.press("Escape").catch(() => null);
+    await page.waitForTimeout(250);
+    await openDialog();
+    await dialog.waitFor({ state: "visible", timeout: 8_000 });
+  }
   await page.waitForTimeout(500);
 
   const stepOneText = await dialog.innerText();
-  const nextButton = dialog.getByRole("button", { name: "Volgende stap" });
-  const hasNextStep = (await nextButton.count()) > 0;
+  const hasNextStep = (await dialog.getByRole("button", { name: "Volgende stap" }).count()) > 0;
 
   if (hasNextStep) {
+    const nextButton = page
+      .locator('[role="dialog"]')
+      .last()
+      .getByRole("button", { name: "Volgende stap" });
     await nextButton.click({ force: true });
     await page.waitForTimeout(350);
   }
@@ -496,28 +521,28 @@ async function checkLearnerDialogs(page, failures) {
 async function checkAvailabilityInteractions(page, failures) {
   await checkRoute(page, "/instructeur/beschikbaarheid", failures, {
     expectPathStartsWith: "/instructeur/beschikbaarheid",
-    expectText: "Type planning",
+    expectText: "Vaste werktijden",
   });
-
-  await page
-    .getByRole("button", { name: "Afwezig of vakantie blokkeren" })
-    .click();
-  await page.waitForTimeout(350);
 
   const afterBlockingText = await getBodyText(page);
   assertCondition(
-    afterBlockingText.includes("Vakantieperiode van-tot"),
-    "[/instructeur/beschikbaarheid] 'Vakantieperiode van-tot' verschijnt niet na klik op afwezigheid",
+    afterBlockingText.includes("Vaste werktijden") &&
+      afterBlockingText.includes("Los moment dichtzetten") &&
+      afterBlockingText.includes("Vakantie blokkeren"),
+    "[/instructeur/beschikbaarheid] basisrooster, losse uitzondering of vakantieblok ontbreekt",
     failures
   );
 
-  await page.getByRole("button", { name: "Boekbaar voor leerlingen" }).click();
-  await page.waitForTimeout(350);
-
-  const afterBookableText = await getBodyText(page);
+  const hasOnlineBookingToggle =
+    (await page
+      .getByRole("button", { name: "Zet online boeking aan" })
+      .count()) > 0 ||
+    (await page
+      .getByRole("button", { name: "Zet online boeking uit" })
+      .count()) > 0;
   assertCondition(
-    afterBookableText.includes("Lesblokken en buffer"),
-    "[/instructeur/beschikbaarheid] 'Lesblokken en buffer' verschijnt niet na terugschakelen",
+    hasOnlineBookingToggle,
+    "[/instructeur/beschikbaarheid] online boeking-toggle ontbreekt",
     failures
   );
 }

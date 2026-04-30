@@ -571,6 +571,59 @@ export async function notifyLearnerAboutLessonChange({
   });
 }
 
+export async function notifyInstructorAboutLearnerLessonCancellation({
+  supabase,
+  instructeurId,
+  leerlingNaam,
+  datum,
+  tijd,
+  lesTitel,
+  reason,
+}: {
+  supabase: ServerSupabase;
+  instructeurId: string | null;
+  leerlingNaam: string;
+  datum: string;
+  tijd: string;
+  lesTitel: string;
+  reason?: string | null;
+}) {
+  const instructor = await getInstructorContactById(supabase, instructeurId);
+
+  if (!instructor?.id) {
+    return;
+  }
+
+  const title = "Leerling heeft les geannuleerd";
+  const text = reason?.trim()
+    ? `${leerlingNaam} heeft ${lesTitel.toLowerCase()} van ${datum} om ${tijd} geannuleerd. Reden: ${reason.trim()}`
+    : `${leerlingNaam} heeft ${lesTitel.toLowerCase()} van ${datum} om ${tijd} geannuleerd.`;
+
+  await createInAppNotification({
+    supabase,
+    profileId: instructor.id,
+    title,
+    text,
+    type: "waarschuwing",
+  });
+
+  await deliverNotificationEmail({
+    to: instructor.email,
+    subject: title,
+    eyebrow: "Les geannuleerd",
+    intro: `${leerlingNaam} heeft een geplande les zelf geannuleerd binnen jouw ingestelde annuleerregels.`,
+    details: [
+      { label: "Leerling", value: leerlingNaam },
+      { label: "Les", value: lesTitel },
+      { label: "Datum", value: datum },
+      { label: "Tijd", value: tijd },
+      ...(reason?.trim() ? [{ label: "Reden", value: reason.trim() }] : []),
+    ],
+    ctaPath: "/instructeur/lessen",
+    ctaLabel: "Open je agenda",
+  });
+}
+
 export async function notifyLearnerAboutLessonAttendance({
   supabase,
   leerlingId,

@@ -6,6 +6,7 @@ import { InstructorFilterPanel } from "@/components/instructors/instructor-filte
 import { InstructorResultsGrid } from "@/components/instructors/instructor-results-grid";
 import { MobileFilterDrawer } from "@/components/instructors/mobile-filter-drawer";
 import { useInstructorFilters } from "@/components/instructors/use-instructor-filters";
+import type { WeeklyBookedMinutesMap } from "@/lib/self-scheduling-limits";
 import type { BeschikbaarheidSlot, InstructeurProfiel, Pakket } from "@/lib/types";
 
 export function InstructorFinder({
@@ -15,6 +16,9 @@ export function InstructorFinder({
   packagesByInstructorId = {},
   availableSlotsByInstructorId = {},
   directBookingEnabledByInstructorId = {},
+  weeklyBookingLimitByInstructorId = {},
+  bookedMinutesByWeekStartByInstructorId = {},
+  weeklyRemainingMinutesThisWeekByInstructorId = {},
   showPackagePanel = true,
 }: {
   instructors: InstructeurProfiel[];
@@ -23,6 +27,9 @@ export function InstructorFinder({
   packagesByInstructorId?: Record<string, Pakket[]>;
   availableSlotsByInstructorId?: Record<string, BeschikbaarheidSlot[]>;
   directBookingEnabledByInstructorId?: Record<string, boolean>;
+  weeklyBookingLimitByInstructorId?: Record<string, number | null>;
+  bookedMinutesByWeekStartByInstructorId?: Record<string, WeeklyBookedMinutesMap>;
+  weeklyRemainingMinutesThisWeekByInstructorId?: Record<string, number | null>;
   showPackagePanel?: boolean;
 }) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -72,6 +79,11 @@ export function InstructorFinder({
         packagesByInstructorId={packagesByInstructorId}
         availableSlotsByInstructorId={availableSlotsByInstructorId}
         directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
+        weeklyBookingLimitByInstructorId={weeklyBookingLimitByInstructorId}
+        bookedMinutesByWeekStartByInstructorId={bookedMinutesByWeekStartByInstructorId}
+        weeklyRemainingMinutesThisWeekByInstructorId={
+          weeklyRemainingMinutesThisWeekByInstructorId
+        }
         favoriteInstructorIds={favoriteInstructorIds}
         detailBasePath={detailBasePath}
         showPackagePanel={showPackagePanel}

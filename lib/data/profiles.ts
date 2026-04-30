@@ -205,7 +205,7 @@ export async function getCurrentInstructeurRecord() {
 
   const supabase = await createServerClient();
   const selectColumns =
-    "id, profile_id, slug, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur";
+    "id, profile_id, slug, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, leerling_annuleren_tot_uren_voor_les, standaard_rijles_duur_minuten, standaard_proefles_duur_minuten, standaard_pakketles_duur_minuten, standaard_examenrit_duur_minuten, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur";
   const { data } = await supabase
     .from("instructeurs")
     .select(selectColumns)
@@ -222,6 +222,11 @@ export async function getCurrentInstructeurRecord() {
       werkgebied: string[] | null;
       prijs_per_les: number | string | null;
       online_boeken_actief: boolean | null;
+      leerling_annuleren_tot_uren_voor_les: number | null;
+      standaard_rijles_duur_minuten: number | null;
+      standaard_proefles_duur_minuten: number | null;
+      standaard_pakketles_duur_minuten: number | null;
+      standaard_examenrit_duur_minuten: number | null;
       transmissie: TransmissieType | null;
       beoordeling: number | string | null;
       profiel_status: string | null;
@@ -259,6 +264,11 @@ export async function getCurrentInstructeurRecord() {
       werkgebied: string[] | null;
       prijs_per_les: number | string | null;
       online_boeken_actief: boolean | null;
+      leerling_annuleren_tot_uren_voor_les: number | null;
+      standaard_rijles_duur_minuten: number | null;
+      standaard_proefles_duur_minuten: number | null;
+      standaard_pakketles_duur_minuten: number | null;
+      standaard_examenrit_duur_minuten: number | null;
       transmissie: TransmissieType | null;
       beoordeling: number | string | null;
       profiel_status: string | null;
@@ -283,6 +293,11 @@ export async function getCurrentInstructeurRecord() {
       werkgebied: string[] | null;
       prijs_per_les: number | string | null;
       online_boeken_actief: boolean | null;
+      leerling_annuleren_tot_uren_voor_les: number | null;
+      standaard_rijles_duur_minuten: number | null;
+      standaard_proefles_duur_minuten: number | null;
+      standaard_pakketles_duur_minuten: number | null;
+      standaard_examenrit_duur_minuten: number | null;
       transmissie: TransmissieType | null;
       beoordeling: number | string | null;
       profiel_status: string | null;

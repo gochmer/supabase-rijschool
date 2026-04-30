@@ -235,6 +235,18 @@ export default async function InstructeurDetailPage({
                         requestType="proefles"
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
                         directBookingEnabled={planningAccess.directBookingAllowed}
+                        defaultDurationMinutes={
+                          instructor.standaard_proefles_duur_minuten ?? 50
+                        }
+                        weeklyBookingLimitMinutes={
+                          planningAccess.weeklyBookingLimitMinutes
+                        }
+                        bookedMinutesByWeekStart={
+                          planningAccess.bookedMinutesByWeekStart
+                        }
+                        weeklyRemainingMinutesThisWeek={
+                          planningAccess.weeklyRemainingMinutesThisWeek
+                        }
                         triggerLabel={
                           planningAccess.directBookingAllowed
                             ? "Plan proefles"
@@ -250,6 +262,20 @@ export default async function InstructeurDetailPage({
                         selectedPackage={primaryPackage}
                         availableSlots={planningAccess.canViewAgenda ? slots : []}
                         directBookingEnabled={planningAccess.directBookingAllowed}
+                        defaultDurationMinutes={
+                          primaryPackage
+                            ? instructor.standaard_pakketles_duur_minuten ?? 90
+                            : instructor.standaard_rijles_duur_minuten ?? 60
+                        }
+                        weeklyBookingLimitMinutes={
+                          planningAccess.weeklyBookingLimitMinutes
+                        }
+                        bookedMinutesByWeekStart={
+                          planningAccess.bookedMinutesByWeekStart
+                        }
+                        weeklyRemainingMinutesThisWeek={
+                          planningAccess.weeklyRemainingMinutesThisWeek
+                        }
                         triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
                         triggerVariant="secondary"
                         triggerClassName="h-9 px-5 text-[13px]"
@@ -614,6 +640,18 @@ export default async function InstructeurDetailPage({
                                 selectedPackage={pkg}
                                 availableSlots={planningAccess.canViewAgenda ? slots : []}
                                 directBookingEnabled={planningAccess.directBookingAllowed}
+                                defaultDurationMinutes={
+                                  instructor.standaard_pakketles_duur_minuten ?? 90
+                                }
+                                weeklyBookingLimitMinutes={
+                                  planningAccess.weeklyBookingLimitMinutes
+                                }
+                                bookedMinutesByWeekStart={
+                                  planningAccess.bookedMinutesByWeekStart
+                                }
+                                weeklyRemainingMinutesThisWeek={
+                                  planningAccess.weeklyRemainingMinutesThisWeek
+                                }
                                 triggerLabel="Vraag dit pakket aan"
                                 triggerClassName="!h-9 !w-full !rounded-full !text-[13px]"
                               />
@@ -640,71 +678,21 @@ export default async function InstructeurDetailPage({
       </section>
 
       <section className="site-shell mx-auto w-full px-4 py-2 sm:px-6 lg:px-8">
-        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-          <Reveal>
-            <Card className="rounded-[1.6rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-              <CardHeader className="pb-2.5">
-                <CardTitle>Profiel en lesstijl</CardTitle>
-                <CardDescription>
-                  Zo geeft {instructor.volledige_naam} vorm aan de begeleiding.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-[15px]">
-                  {instructor.bio}
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {instructor.specialisaties.map((tag) => (
-                    <Badge key={tag}>{tag}</Badge>
-                  ))}
-                </div>
-
-                <div className="grid gap-2.5 sm:grid-cols-3">
-                  {[
-                    {
-                      label: "Werkgebied",
-                      value: instructor.steden.join(" / "),
-                    },
-                    {
-                      label: "Transmissie",
-                      value: transmissionLabel(instructor.transmissie),
-                    },
-                    {
-                      label: "Focus",
-                      value: getInstructorFocus(instructor),
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-2.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6"
-                    >
-                      <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                        {item.label}
-                      </p>
-                      <p className="mt-1 text-[13px] leading-6 font-medium text-slate-950 dark:text-white">
-                        {item.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </Reveal>
-
+        <div className="space-y-4">
           <div id="plan-afspraak" className="scroll-mt-28">
-            <Reveal delay={0.06}>
+            <Reveal>
               <div className="space-y-3">
-                <div className="max-w-3xl space-y-2">
+                <div className="max-w-4xl space-y-2">
                   <p className="text-xs font-semibold tracking-[0.28em] text-primary uppercase">
                     Beschikbaarheid
                   </p>
                   <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
-                    Bekijk hoe planning voor deze instructeur werkt.
+                    Kies direct in een ruime, rustige agenda.
                   </h2>
                   <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
-                    De planner blijft hetzelfde, maar staat nu rustiger in de flow na profiel en
-                    pakketten.
+                    De planning staat hier bewust centraal. De agenda krijgt de meeste ruimte,
+                    zodat je week- en dagweergave in een echte boekingsflow kunt lezen zonder
+                    te zoeken naar open momenten.
                   </p>
                 </div>
 
@@ -715,6 +703,24 @@ export default async function InstructeurDetailPage({
                     slots={slots}
                     directBookingEnabled={planningAccess.directBookingAllowed}
                     publicBookingEnabled={planningAccess.publicBookingEnabled}
+                    regularLessonDurationMinutes={
+                      instructor.standaard_rijles_duur_minuten ?? 60
+                    }
+                    trialLessonDurationMinutes={
+                      instructor.standaard_proefles_duur_minuten ?? 50
+                    }
+                    weeklyBookingLimitMinutes={
+                      planningAccess.weeklyBookingLimitMinutes
+                    }
+                    weeklyBookingLimitSource={
+                      planningAccess.weeklyBookingLimitSource
+                    }
+                    bookedMinutesByWeekStart={
+                      planningAccess.bookedMinutesByWeekStart
+                    }
+                    weeklyRemainingMinutesThisWeek={
+                      planningAccess.weeklyRemainingMinutesThisWeek
+                    }
                   />
                 ) : (
                   <Card className="rounded-[1.6rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
@@ -775,6 +781,20 @@ export default async function InstructeurDetailPage({
                           instructorSlug={instructor.slug}
                           selectedPackage={primaryPackage}
                           availableSlots={[]}
+                          defaultDurationMinutes={
+                            primaryPackage
+                              ? instructor.standaard_pakketles_duur_minuten ?? 90
+                              : instructor.standaard_rijles_duur_minuten ?? 60
+                          }
+                          weeklyBookingLimitMinutes={
+                            planningAccess.weeklyBookingLimitMinutes
+                          }
+                          bookedMinutesByWeekStart={
+                            planningAccess.bookedMinutesByWeekStart
+                          }
+                          weeklyRemainingMinutesThisWeek={
+                            planningAccess.weeklyRemainingMinutesThisWeek
+                          }
                           triggerLabel={primaryPackage ? "Vraag pakket aan" : "Les aanvragen"}
                           triggerClassName="h-9 text-[13px]"
                         />
@@ -783,6 +803,18 @@ export default async function InstructeurDetailPage({
                           instructorSlug={instructor.slug}
                           requestType="proefles"
                           availableSlots={[]}
+                          defaultDurationMinutes={
+                            instructor.standaard_proefles_duur_minuten ?? 50
+                          }
+                          weeklyBookingLimitMinutes={
+                            planningAccess.weeklyBookingLimitMinutes
+                          }
+                          bookedMinutesByWeekStart={
+                            planningAccess.bookedMinutesByWeekStart
+                          }
+                          weeklyRemainingMinutesThisWeek={
+                            planningAccess.weeklyRemainingMinutesThisWeek
+                          }
                           triggerLabel="Plan proefles"
                           triggerVariant="secondary"
                           triggerClassName="h-9 text-[13px]"
@@ -794,6 +826,59 @@ export default async function InstructeurDetailPage({
               </div>
             </Reveal>
           </div>
+
+          <Reveal delay={0.04}>
+            <div className="max-w-4xl">
+              <Card className="rounded-[1.6rem] border-0 bg-white/92 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+                <CardHeader className="pb-2.5">
+                  <CardTitle>Profiel en lesstijl</CardTitle>
+                  <CardDescription>
+                    Zo geeft {instructor.volledige_naam} vorm aan de begeleiding.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-[15px]">
+                    {instructor.bio}
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {instructor.specialisaties.map((tag) => (
+                      <Badge key={tag}>{tag}</Badge>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-2.5 sm:grid-cols-3">
+                    {[
+                      {
+                        label: "Werkgebied",
+                        value: instructor.steden.join(" / "),
+                      },
+                      {
+                        label: "Transmissie",
+                        value: transmissionLabel(instructor.transmissie),
+                      },
+                      {
+                        label: "Focus",
+                        value: getInstructorFocus(instructor),
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-2.5 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6"
+                      >
+                        <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                          {item.label}
+                        </p>
+                        <p className="mt-1 text-[13px] leading-6 font-medium text-slate-950 dark:text-white">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Reveal>
         </div>
       </section>
 

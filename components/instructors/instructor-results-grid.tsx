@@ -2,6 +2,7 @@
 
 import { InstructorCard } from "@/components/instructors/instructor-card";
 import { Button } from "@/components/ui/button";
+import type { WeeklyBookedMinutesMap } from "@/lib/self-scheduling-limits";
 import type { BeschikbaarheidSlot, InstructeurProfiel, Pakket } from "@/lib/types";
 
 export function InstructorResultsGrid({
@@ -9,6 +10,9 @@ export function InstructorResultsGrid({
   packagesByInstructorId,
   availableSlotsByInstructorId,
   directBookingEnabledByInstructorId,
+  weeklyBookingLimitByInstructorId,
+  bookedMinutesByWeekStartByInstructorId,
+  weeklyRemainingMinutesThisWeekByInstructorId,
   favoriteInstructorIds,
   detailBasePath,
   showPackagePanel,
@@ -20,6 +24,9 @@ export function InstructorResultsGrid({
   packagesByInstructorId: Record<string, Pakket[]>;
   availableSlotsByInstructorId: Record<string, BeschikbaarheidSlot[]>;
   directBookingEnabledByInstructorId: Record<string, boolean>;
+  weeklyBookingLimitByInstructorId: Record<string, number | null>;
+  bookedMinutesByWeekStartByInstructorId: Record<string, WeeklyBookedMinutesMap>;
+  weeklyRemainingMinutesThisWeekByInstructorId: Record<string, number | null>;
   favoriteInstructorIds: string[];
   detailBasePath: string;
   showPackagePanel: boolean;
@@ -61,6 +68,15 @@ export function InstructorResultsGrid({
             directBookingEnabled={Boolean(
               directBookingEnabledByInstructorId[instructor.id]
             )}
+            weeklyBookingLimitMinutes={
+              weeklyBookingLimitByInstructorId[instructor.id] ?? null
+            }
+            bookedMinutesByWeekStart={
+              bookedMinutesByWeekStartByInstructorId[instructor.id] ?? {}
+            }
+            weeklyRemainingMinutesThisWeek={
+              weeklyRemainingMinutesThisWeekByInstructorId[instructor.id] ?? null
+            }
             detailBasePath={detailBasePath}
             isFavorite={favoriteInstructorIds.includes(instructor.id)}
             showPackagePanel={showPackagePanel}

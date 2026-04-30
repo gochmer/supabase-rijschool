@@ -35,6 +35,7 @@ type CreatePackageInput = {
   prijs?: string;
   praktijkExamenPrijs?: string;
   aantalLessen?: string;
+  weeklyBookingLimitMinutes?: string | number | null;
   badge?: string;
   labels?: string[] | string;
   iconKey?: string;
@@ -82,6 +83,21 @@ function parseOptionalPrice(value: string | undefined) {
   return Number.isFinite(parsed) && parsed >= 0 ? Number(parsed.toFixed(2)) : Number.NaN;
 }
 
+function parseOptionalWeeklyBookingLimitMinutes(
+  value: string | number | null | undefined
+) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed =
+    typeof value === "number"
+      ? Math.round(value)
+      : Number.parseInt(String(value).trim(), 10);
+
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
 function validatePackageInput(input: CreatePackageInput) {
   const naam = input.naam.trim();
   const lesTypeRaw = String(input.lesType ?? "").trim();
@@ -98,6 +114,9 @@ function validatePackageInput(input: CreatePackageInput) {
   const prijs = parsePrice(input.prijs);
   const praktijkExamenPrijs = parseOptionalPrice(input.praktijkExamenPrijs);
   const aantalLessen = parseLessonCount(input.aantalLessen);
+  const weeklyBookingLimitMinutes = parseOptionalWeeklyBookingLimitMinutes(
+    input.weeklyBookingLimitMinutes
+  );
 
   if (!naam) {
     return {
@@ -124,6 +143,18 @@ function validatePackageInput(input: CreatePackageInput) {
     return {
       success: false as const,
       message: "Vul een geldige prijs voor het praktijk-examen in.",
+    };
+  }
+
+  if (
+    weeklyBookingLimitMinutes !== null &&
+    (Number.isNaN(weeklyBookingLimitMinutes) ||
+      weeklyBookingLimitMinutes < 30 ||
+      weeklyBookingLimitMinutes > 1440)
+  ) {
+    return {
+      success: false as const,
+      message: "Kies een pakketlimiet tussen 30 en 1440 minuten per week, of laat hem onbeperkt.",
     };
   }
 
@@ -187,6 +218,7 @@ function validatePackageInput(input: CreatePackageInput) {
       labels,
       prijs,
       praktijkExamenPrijs,
+      weeklyBookingLimitMinutes,
       aantalLessen,
       lesType: getRijlesType(lesTypeRaw),
       iconKey: getPackageIconKey(iconKeyRaw),
@@ -362,6 +394,7 @@ export async function createPackageAction(input: CreatePackageInput) {
     labels,
     prijs,
     praktijkExamenPrijs,
+    weeklyBookingLimitMinutes,
     aantalLessen,
     lesType,
     iconKey,
@@ -407,6 +440,7 @@ export async function createPackageAction(input: CreatePackageInput) {
     beschrijving,
     prijs,
     praktijk_examen_prijs: praktijkExamenPrijs,
+    zelf_inplannen_limiet_minuten_per_week: weeklyBookingLimitMinutes,
     aantal_lessen: aantalLessen,
     les_type: lesType,
     badge: badge || null,
@@ -472,6 +506,7 @@ export async function updatePackageDetailsAction(
     labels,
     prijs,
     praktijkExamenPrijs,
+    weeklyBookingLimitMinutes,
     aantalLessen,
     lesType,
     iconKey,
@@ -497,6 +532,7 @@ export async function updatePackageDetailsAction(
     beschrijving: string;
     prijs: number;
     praktijk_examen_prijs: number | null;
+    zelf_inplannen_limiet_minuten_per_week: number | null;
     aantal_lessen: number;
     les_type: string;
     badge: string | null;
@@ -512,6 +548,7 @@ export async function updatePackageDetailsAction(
     beschrijving,
     prijs,
     praktijk_examen_prijs: praktijkExamenPrijs,
+    zelf_inplannen_limiet_minuten_per_week: weeklyBookingLimitMinutes,
     aantal_lessen: aantalLessen,
     les_type: lesType,
     badge: badge || null,

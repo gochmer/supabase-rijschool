@@ -46,7 +46,8 @@ function createLocalDateTime(dateString: string, timeString: string) {
 
 export function parseRequestWindow(
   preferredDate: string | null | undefined,
-  timeSlot: string | null | undefined
+  timeSlot: string | null | undefined,
+  fallbackDurationMinutes = 60
 ) {
   if (!preferredDate) {
     return { startAt: null, endAt: null };
@@ -55,9 +56,13 @@ export function parseRequestWindow(
   const rangeMatch = timeSlot?.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
 
   if (!rangeMatch) {
+    const startAt = createLocalDateTime(preferredDate, "12:00");
+
     return {
-      startAt: createLocalDateTime(preferredDate, "12:00"),
-      endAt: createLocalDateTime(preferredDate, "13:00"),
+      startAt,
+      endAt: startAt
+        ? addMinutesToIsoTimestamp(startAt, fallbackDurationMinutes)
+        : null,
     };
   }
 

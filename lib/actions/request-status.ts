@@ -9,6 +9,7 @@ import {
   ensureCurrentUserContext,
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
+import { getLessonDurationForKind } from "@/lib/lesson-durations";
 import {
   appendRequestUpdateMessage,
   buildLessonRequestReference,
@@ -45,9 +46,13 @@ function toLocalDateTime(dateString: string, timeString: string) {
   return `${dateString}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00`;
 }
 
-function parsePreferredLessonWindow(preferredDate: string | null, timeSlot: string | null) {
+function parsePreferredLessonWindow(
+  preferredDate: string | null,
+  timeSlot: string | null,
+  fallbackDurationMinutes: number
+) {
   if (!preferredDate) {
-    return { startAt: null, durationMinutes: 60 };
+    return { startAt: null, durationMinutes: fallbackDurationMinutes };
   }
 
   const rangeMatch = timeSlot?.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
@@ -55,7 +60,7 @@ function parsePreferredLessonWindow(preferredDate: string | null, timeSlot: stri
   if (!rangeMatch) {
     return {
       startAt: toLocalDateTime(preferredDate, "12:00"),
-      durationMinutes: 60,
+      durationMinutes: fallbackDurationMinutes,
     };
   }
 
@@ -63,7 +68,7 @@ function parsePreferredLessonWindow(preferredDate: string | null, timeSlot: stri
   const endAt = toLocalDateTime(preferredDate, rangeMatch[2]);
 
   if (!startAt || !endAt) {
-    return { startAt: null, durationMinutes: 60 };
+    return { startAt: null, durationMinutes: fallbackDurationMinutes };
   }
 
   const durationMinutes = Math.max(
@@ -88,7 +93,8 @@ function getLessonTitle(request: LessonRequestForScheduling) {
 
 async function ensureLessonForAcceptedRequest(
   request: LessonRequestForScheduling,
-  input: LocationSelectionInput
+  input: LocationSelectionInput,
+  instructeur: NonNullable<Awaited<ReturnType<typeof getCurrentInstructeurRecord>>>
 ) {
   if (!request.leerling_id || !request.instructeur_id) {
     return {
@@ -97,9 +103,18 @@ async function ensureLessonForAcceptedRequest(
     };
   }
 
+  const fallbackDurationMinutes = getLessonDurationForKind(
+    instructeur,
+    request.aanvraag_type === "pakket"
+      ? "pakketles"
+      : request.aanvraag_type === "proefles"
+        ? "proefles"
+        : "rijles"
+  );
   const { startAt, durationMinutes } = parsePreferredLessonWindow(
     request.voorkeursdatum,
-    request.tijdvak
+    request.tijdvak,
+    fallbackDurationMinutes
   );
 
   if (!startAt) {
@@ -218,7 +233,11 @@ export async function updateLessonRequestStatusAction(
   }
 
   if (input.status === "geaccepteerd") {
-    const lessonResult = await ensureLessonForAcceptedRequest(request, input);
+    const lessonResult = await ensureLessonForAcceptedRequest(
+      request,
+      input,
+      instructeur
+    );
 
     if (!lessonResult.success) {
       return {

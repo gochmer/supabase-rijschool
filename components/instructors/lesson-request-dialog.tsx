@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   CheckCircle2,
@@ -16,7 +17,18 @@ import {
 } from "@/lib/actions/lesson-requests";
 import { formatAvailabilitySlotLabel, getAvailabilityDateValue } from "@/lib/availability";
 import { formatCurrency } from "@/lib/format";
+import {
+  buildBookableAvailabilitySlots,
+  normalizeDurationMinutes,
+  type BookableAvailabilitySlot,
+} from "@/lib/lesson-durations";
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
+import {
+  filterAvailabilitySlotsByWeeklyLimit,
+  formatMinutesAsHoursLabel,
+  formatWeeklyLimitLabel,
+  type WeeklyBookedMinutesMap,
+} from "@/lib/self-scheduling-limits";
 import type { BeschikbaarheidSlot, Pakket } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +116,27 @@ function getRelativeDateLabel(dateValue: string) {
   return formatDialogCompactDateLabel(dateValue);
 }
 
+function resolveInitialSelectedSlotId(
+  slots: BookableAvailabilitySlot[],
+  defaultSlotId?: string | null
+) {
+  if (!slots.length) {
+    return "";
+  }
+
+  if (!defaultSlotId) {
+    return slots[0]?.id ?? "";
+  }
+
+  return (
+    slots.find(
+      (slot) => slot.id === defaultSlotId || slot.base_slot_id === defaultSlotId
+    )?.id ??
+    slots[0]?.id ??
+    ""
+  );
+}
+
 function StepBadge({
   active,
   done,
@@ -139,6 +172,10 @@ export function LessonRequestDialog({
   availableSlots = [],
   directBookingEnabled = false,
   defaultSlotId,
+  defaultDurationMinutes = 60,
+  weeklyBookingLimitMinutes = null,
+  bookedMinutesByWeekStart = {},
+  weeklyRemainingMinutesThisWeek = null,
   triggerLabel = "Les aanvragen",
   triggerClassName,
   triggerVariant = "primary",
@@ -151,6 +188,10 @@ export function LessonRequestDialog({
   availableSlots?: BeschikbaarheidSlot[];
   directBookingEnabled?: boolean;
   defaultSlotId?: string | null;
+  defaultDurationMinutes?: number;
+  weeklyBookingLimitMinutes?: number | null;
+  bookedMinutesByWeekStart?: WeeklyBookedMinutesMap;
+  weeklyRemainingMinutesThisWeek?: number | null;
   triggerLabel?: string;
   triggerClassName?: string;
   triggerVariant?: "primary" | "secondary";
@@ -160,17 +201,56 @@ export function LessonRequestDialog({
   const [manualDate, setManualDate] = useState("");
   const [manualTime, setManualTime] = useState("");
   const [isPending, startTransition] = useTransition();
+  const messageFieldRef = useRef<HTMLTextAreaElement | null>(null);
+  const router = useRouter();
 
   const isHazard = tone === "hazard";
-  const hasAvailableSlots = availableSlots.length > 0;
+  const normalizedDurationMinutes = useMemo(
+    () => normalizeDurationMinutes(defaultDurationMinutes, 60),
+    [defaultDurationMinutes]
+  );
+  const rawAvailableSlotCount = availableSlots.length;
+  const limitAwareAvailableSlots = useMemo(
+    () =>
+      filterAvailabilitySlotsByWeeklyLimit(
+        availableSlots,
+        normalizedDurationMinutes,
+        weeklyBookingLimitMinutes,
+        bookedMinutesByWeekStart
+      ),
+    [
+      availableSlots,
+      normalizedDurationMinutes,
+      weeklyBookingLimitMinutes,
+      bookedMinutesByWeekStart,
+    ]
+  );
+  const bookableSlots = useMemo(
+    () =>
+      buildBookableAvailabilitySlots(
+        limitAwareAvailableSlots,
+        normalizedDurationMinutes
+      ).sort(
+        (left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? "")
+      ),
+    [limitAwareAvailableSlots, normalizedDurationMinutes]
+  );
+  const hasAvailableSlots = bookableSlots.length > 0;
+  const blockedByWeeklyLimit =
+    weeklyBookingLimitMinutes != null &&
+    rawAvailableSlotCount > 0 &&
+    limitAwareAvailableSlots.length === 0;
   const canDirectBook = directBookingEnabled && hasAvailableSlots;
-  const [selectedSlotId, setSelectedSlotId] = useState(
-    defaultSlotId ?? availableSlots[0]?.id ?? ""
+  const [selectedSlotId, setSelectedSlotId] = useState(() =>
+    resolveInitialSelectedSlotId(bookableSlots, defaultSlotId)
   );
   const [selectedDateValue, setSelectedDateValue] = useState(() => {
     const initialSlot =
-      availableSlots.find((slot) => slot.id === (defaultSlotId ?? "")) ??
-      availableSlots[0] ??
+      bookableSlots.find(
+        (slot) =>
+          slot.id === (defaultSlotId ?? "") || slot.base_slot_id === (defaultSlotId ?? "")
+      ) ??
+      bookableSlots[0] ??
       null;
 
     return initialSlot?.start_at ? getAvailabilityDateValue(initialSlot.start_at) : "";
@@ -178,12 +258,12 @@ export function LessonRequestDialog({
 
   const selectedSlot = useMemo(
     () =>
-      availableSlots.find((slot) => slot.id === selectedSlotId) ??
-      availableSlots[0] ??
+      bookableSlots.find((slot) => slot.id === selectedSlotId) ??
+      bookableSlots[0] ??
       null,
-    [availableSlots, selectedSlotId]
+    [bookableSlots, selectedSlotId]
   );
-  const previewSlots = useMemo(() => availableSlots.slice(0, 4), [availableSlots]);
+  const previewSlots = useMemo(() => bookableSlots.slice(0, 4), [bookableSlots]);
   const groupedSlotDays = useMemo(() => {
     const groups = new Map<
       string,
@@ -196,7 +276,7 @@ export function LessonRequestDialog({
       }
     >();
 
-    availableSlots.forEach((slot) => {
+    bookableSlots.forEach((slot) => {
       if (!slot.start_at) {
         return;
       }
@@ -219,31 +299,31 @@ export function LessonRequestDialog({
     });
 
     return Array.from(groups.values());
-  }, [availableSlots]);
+  }, [bookableSlots]);
   const earliestSlotDay = groupedSlotDays[0] ?? null;
   const selectedDayGroup =
     groupedSlotDays.find((day) => day.dateValue === selectedDateValue) ?? null;
   const slotDayCount = useMemo(
     () =>
       new Set(
-        availableSlots
+        bookableSlots
           .map((slot) =>
             slot.start_at ? getAvailabilityDateValue(slot.start_at) : null
           )
           .filter(Boolean)
       ).size,
-    [availableSlots]
+    [bookableSlots]
   );
   const filteredSlotsForSelectedDate = useMemo(() => {
     if (!selectedDateValue) {
-      return availableSlots;
+      return bookableSlots;
     }
 
-    return availableSlots.filter(
+    return bookableSlots.filter(
       (slot) =>
         slot.start_at && getAvailabilityDateValue(slot.start_at) === selectedDateValue
     );
-  }, [availableSlots, selectedDateValue]);
+  }, [bookableSlots, selectedDateValue]);
   const selectedSlotDate = selectedSlot?.start_at
     ? getAvailabilityDateValue(selectedSlot.start_at)
     : "";
@@ -258,28 +338,42 @@ export function LessonRequestDialog({
       return 0;
     }
 
-    return availableSlots.filter(
+    return bookableSlots.filter(
       (slot) =>
         slot.start_at && getAvailabilityDateValue(slot.start_at) === selectedSlotDate
     ).length;
-  }, [availableSlots, selectedSlotDate]);
+  }, [bookableSlots, selectedSlotDate]);
   const primaryLabel = selectedPackage
     ? selectedPackage.naam
     : requestType === "proefles"
       ? "Proefles"
       : "Lesaanvraag";
   const submitLabel = canDirectBook ? "Direct inplannen" : "Aanvraag versturen";
-  const canGoNextFromMoment = hasAvailableSlots
-    ? Boolean(selectedSlot)
-    : Boolean(manualDate && manualTime);
+  const canGoNextFromMoment = blockedByWeeklyLimit
+    ? false
+    : hasAvailableSlots
+      ? Boolean(selectedSlot)
+      : Boolean(manualDate && manualTime);
+
+  useEffect(() => {
+    if (!open || step !== 3) {
+      return;
+    }
+
+    const focusTimer = window.setTimeout(() => {
+      messageFieldRef.current?.focus();
+    }, 40);
+
+    return () => window.clearTimeout(focusTimer);
+  }, [open, step]);
 
   function resetDialogState() {
     setStep(1);
     setManualDate("");
     setManualTime("");
-    const nextSlotId = defaultSlotId ?? availableSlots[0]?.id ?? "";
+    const nextSlotId = resolveInitialSelectedSlotId(bookableSlots, defaultSlotId);
     const nextSlot =
-      availableSlots.find((slot) => slot.id === nextSlotId) ?? availableSlots[0] ?? null;
+      bookableSlots.find((slot) => slot.id === nextSlotId) ?? bookableSlots[0] ?? null;
 
     setSelectedSlotId(nextSlotId);
     setSelectedDateValue(
@@ -300,6 +394,8 @@ export function LessonRequestDialog({
       const datum = String(formData.get("datum") ?? "");
       const tijdvak = String(formData.get("tijdvak") ?? "");
       const slotId = String(formData.get("slotId") ?? "");
+      const startAt = String(formData.get("startAt") ?? "");
+      const endAt = String(formData.get("endAt") ?? "");
       const bericht = String(formData.get("bericht") ?? "");
       const packageId = String(formData.get("packageId") ?? "");
 
@@ -307,6 +403,8 @@ export function LessonRequestDialog({
         ? await createDirectLessonBookingAction({
             instructorSlug,
             slotId,
+            startAt,
+            endAt,
             bericht,
             packageId,
             requestType,
@@ -316,6 +414,8 @@ export function LessonRequestDialog({
             datum,
             tijdvak,
             slotId,
+            startAt,
+            endAt,
             bericht,
             packageId,
             requestType,
@@ -329,8 +429,25 @@ export function LessonRequestDialog({
         );
         resetDialogState();
         setOpen(false);
+
+        if ("refreshAvailability" in result && result.refreshAvailability) {
+          router.refresh();
+        }
       } else {
-        toast.error(result.message);
+        if (
+          "existingBookingState" in result &&
+          result.existingBookingState === "already_booked"
+        ) {
+          toast.success(result.message);
+          resetDialogState();
+          setOpen(false);
+        } else {
+          toast.error(result.message);
+        }
+
+        if ("refreshAvailability" in result && result.refreshAvailability) {
+          router.refresh();
+        }
       }
     });
   }
@@ -338,7 +455,7 @@ export function LessonRequestDialog({
   function handleSlotSelect(slotId: string) {
     setSelectedSlotId(slotId);
 
-    const nextSlot = availableSlots.find((slot) => slot.id === slotId);
+    const nextSlot = bookableSlots.find((slot) => slot.id === slotId);
 
     if (nextSlot?.start_at) {
       setSelectedDateValue(getAvailabilityDateValue(nextSlot.start_at));
@@ -349,7 +466,7 @@ export function LessonRequestDialog({
     setSelectedDateValue(dateValue);
 
     const nextSlot =
-      availableSlots.find(
+      bookableSlots.find(
         (slot) => slot.start_at && getAvailabilityDateValue(slot.start_at) === dateValue
       ) ?? null;
 
@@ -416,7 +533,13 @@ export function LessonRequestDialog({
           {selectedPackage ? (
             <input type="hidden" name="packageId" value={selectedPackage.id} />
           ) : null}
-          <input type="hidden" name="slotId" value={selectedSlot?.id ?? ""} />
+          <input
+            type="hidden"
+            name="slotId"
+            value={selectedSlot?.base_slot_id ?? selectedSlot?.id ?? ""}
+          />
+          <input type="hidden" name="startAt" value={selectedSlot?.start_at ?? ""} />
+          <input type="hidden" name="endAt" value={selectedSlot?.eind_at ?? ""} />
           <input
             type="hidden"
             name="datum"
@@ -494,8 +617,8 @@ export function LessonRequestDialog({
                     <Badge
                       className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100"
                     >
-                      {availableSlots.length} open moment
-                      {availableSlots.length === 1 ? "" : "en"}
+                      {bookableSlots.length} boekbaar blok
+                      {bookableSlots.length === 1 ? "" : "ken"}
                     </Badge>
                   </div>
 
@@ -510,10 +633,10 @@ export function LessonRequestDialog({
                     ))}
                   </div>
 
-                  {availableSlots.length > previewSlots.length ? (
+                  {bookableSlots.length > previewSlots.length ? (
                     <p className="mt-2 text-[11px] leading-5 text-slate-500 dark:text-slate-300">
-                      En nog {availableSlots.length - previewSlots.length} extra open moment
-                      {availableSlots.length - previewSlots.length === 1 ? "" : "en"}.
+                      En nog {bookableSlots.length - previewSlots.length} extra boekbaar blok
+                      {bookableSlots.length - previewSlots.length === 1 ? "" : "ken"}.
                     </p>
                   ) : null}
 
@@ -522,25 +645,70 @@ export function LessonRequestDialog({
                       Deze momenten zijn echt boekbaar en worden direct ingepland zodra je bevestigt.
                     </p>
                   ) : null}
+                  {weeklyBookingLimitMinutes != null ? (
+                    <p className="mt-2 text-[11px] leading-5 text-slate-500 dark:text-slate-300">
+                      Persoonlijke limiet: {formatWeeklyLimitLabel(weeklyBookingLimitMinutes)}.
+                      {weeklyRemainingMinutesThisWeek == null
+                        ? " Deze week staat onbeperkt open."
+                        : ` Nog over deze week: ${formatMinutesAsHoursLabel(
+                            weeklyRemainingMinutesThisWeek
+                          )}.`}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
           ) : null}
 
           {step === 2 ? (
-            hasAvailableSlots ? (
+            blockedByWeeklyLimit ? (
+              <div className="space-y-4">
+                <div className="rounded-[1.2rem] border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-300/16 dark:bg-amber-400/10">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                      Je persoonlijke weekruimte is bereikt
+                    </p>
+                    <Badge className="border border-amber-200 bg-white text-amber-700 dark:border-amber-300/20 dark:bg-white/10 dark:text-amber-100">
+                      {formatWeeklyLimitLabel(weeklyBookingLimitMinutes)}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-[12px] leading-6 text-amber-800 dark:text-amber-100/90">
+                    Je hebt deze week al{" "}
+                    {formatMinutesAsHoursLabel(
+                      (weeklyBookingLimitMinutes ?? 0) -
+                        (weeklyRemainingMinutesThisWeek ?? 0)
+                    )}{" "}
+                    ingepland. Neem contact op met {instructorName} als je extra lessen wilt
+                    toevoegen of wacht tot de volgende week.
+                  </p>
+                </div>
+              </div>
+            ) : hasAvailableSlots ? (
               <div className="space-y-4">
                 <div className="rounded-[1.1rem] border border-sky-100 bg-sky-50/80 p-3 dark:border-sky-300/16 dark:bg-sky-400/10">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[11px] leading-5 text-sky-800 dark:text-sky-100">
-                      Je kiest hier alleen uit de momenten die de instructeur echt open heeft gezet in de agenda.
+                      Je kiest hier alleen uit de blokken die echt passen binnen de open agenda van de instructeur.
                     </p>
                     <Badge className="border border-sky-200 bg-white/80 text-sky-700 dark:border-sky-300/20 dark:bg-white/10 dark:text-sky-100">
-                      {availableSlots.length} open moment
-                      {availableSlots.length === 1 ? "" : "en"} op {slotDayCount} dag
+                      {bookableSlots.length} boekbaar blok
+                      {bookableSlots.length === 1 ? "" : "ken"} op {slotDayCount} dag
                       {slotDayCount === 1 ? "" : "en"}
                     </Badge>
                   </div>
+                  <p className="mt-2 text-[11px] leading-5 text-sky-700/90 dark:text-sky-100/85">
+                    Deze lijst gebruikt de standaardduur van {normalizedDurationMinutes} minuten voor dit lestype.
+                  </p>
+                  {weeklyBookingLimitMinutes != null ? (
+                    <p className="mt-2 text-[11px] leading-5 text-sky-700/90 dark:text-sky-100/85">
+                      Persoonlijke limiet: {formatWeeklyLimitLabel(weeklyBookingLimitMinutes)}.
+                      {weeklyRemainingMinutesThisWeek == null
+                        ? " Deze week staat onbeperkt open."
+                        : ` Nog over deze week: ${formatMinutesAsHoursLabel(
+                            weeklyRemainingMinutesThisWeek
+                          )}.`}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -590,7 +758,7 @@ export function LessonRequestDialog({
                     </p>
                     <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-300">
                       {selectedDayGroup
-                        ? `${selectedDayGroup.slotCount} open tijdvak${
+                        ? `${selectedDayGroup.slotCount} boekbare blok${
                             selectedDayGroup.slotCount === 1 ? "" : "ken"
                           } beschikbaar`
                         : "Kies eerst een dag om de beschikbare tijden te zien"}
@@ -613,7 +781,7 @@ export function LessonRequestDialog({
                     </p>
                     <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-300">
                       {earliestSlotDay
-                        ? `${earliestSlotDay.slotCount} open tijdvak${
+                        ? `${earliestSlotDay.slotCount} boekbare blok${
                             earliestSlotDay.slotCount === 1 ? "" : "ken"
                           } op deze dag`
                         : "De instructeur heeft nog geen open live agenda"}
@@ -655,7 +823,7 @@ export function LessonRequestDialog({
                           <p className="font-medium">{selectedSlot.tijdvak}</p>
                           <p className="text-xs text-slate-500 dark:text-slate-300">
                             {selectedDaySlotCount > 1
-                              ? `${selectedDaySlotCount} open tijdvakken op deze dag`
+                              ? `${selectedDaySlotCount} boekbare blokken op deze dag`
                               : "Dit moment staat echt open"}
                           </p>
                         </div>
@@ -673,7 +841,9 @@ export function LessonRequestDialog({
             ) : (
               <div className="space-y-4">
                 <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3 text-[11px] leading-5 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                  Deze instructeur heeft nu nog geen live open momenten. Vul daarom hieronder je voorkeursdatum en tijdvak in.
+                  {rawAvailableSlotCount
+                    ? `Er is nu nog geen open blok lang genoeg voor ${normalizedDurationMinutes} minuten. Vul hieronder een handmatig voorkeursmoment in of kies later een ander live blok.`
+                    : "Deze instructeur heeft nu nog geen live open momenten. Vul daarom hieronder je voorkeursdatum en tijdvak in."}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -740,6 +910,7 @@ export function LessonRequestDialog({
                 <Textarea
                   id="bericht"
                   name="bericht"
+                  ref={messageFieldRef}
                   placeholder="Geef aan wat je wilt oefenen of waar je hulp bij zoekt."
                   className="min-h-28 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
                 />
@@ -758,6 +929,7 @@ export function LessonRequestDialog({
 
             {step < 3 ? (
               <Button
+                key={`next-step-${step}`}
                 type="button"
                 onClick={() => setStep((current) => current + 1)}
                 disabled={step === 2 && !canGoNextFromMoment}
@@ -765,7 +937,11 @@ export function LessonRequestDialog({
                 Volgende stap
               </Button>
             ) : (
-              <Button type="submit" disabled={isPending || !canGoNextFromMoment}>
+              <Button
+                key="submit-step"
+                type="submit"
+                disabled={isPending || !canGoNextFromMoment}
+              >
                 {isPending ? `${submitLabel}...` : submitLabel}
               </Button>
             )}

@@ -9,15 +9,19 @@ import {
 } from "@/components/ui/card";
 import { getLocationOptions } from "@/lib/data/locations";
 import { getCurrentInstructorPackages } from "@/lib/data/packages";
+import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
 import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
+import { resolveInstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import Link from "next/link";
 
 export default async function LeerlingenPage() {
-  const [workspace, locationOptions, packages] = await Promise.all([
+  const [workspace, locationOptions, packages, instructeur] = await Promise.all([
     getInstructeurStudentsWorkspace(),
     getLocationOptions(),
     getCurrentInstructorPackages(),
+    getCurrentInstructeurRecord(),
   ]);
+  const lessonDurationDefaults = resolveInstructorLessonDurationDefaults(instructeur);
   const totalStudents = workspace.students.length;
   const manualStudents = workspace.students.filter(
     (student) => student.isHandmatigGekoppeld
@@ -126,6 +130,7 @@ export default async function LeerlingenPage() {
         notes={workspace.notes}
         locationOptions={locationOptions}
         packages={packages}
+        lessonDurationDefaults={lessonDurationDefaults}
       />
     </>
   );

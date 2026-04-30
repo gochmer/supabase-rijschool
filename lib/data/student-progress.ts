@@ -1,5 +1,6 @@
 import "server-only";
 
+import { parseRequestWindow } from "@/lib/booking-availability";
 import type {
   InstructorStudentProgressRow,
   StudentProgressAssessment,
@@ -15,18 +16,30 @@ import {
   calculateStudentProgressPercentage,
   getStudentProgressSummary,
 } from "@/lib/student-progress";
+import {
+  addBookedMinutesForWeek,
+  getRemainingWeeklyBookingMinutes,
+  getWeeklyBookingWindow,
+  resolveEffectiveWeeklyBookingLimit,
+} from "@/lib/self-scheduling-limits";
+import { extractLessonRequestReference } from "@/lib/lesson-request-flow";
 
 type InstructorStudentLessonRow = {
   leerling_id: string | null;
   start_at: string | null;
+  duur_minuten: number;
   status: string;
+  notities: string | null;
 };
 
 type InstructorStudentRequestRow = {
+  id: string;
   leerling_id: string | null;
   status: string | null;
   pakket_naam_snapshot: string | null;
   created_at: string;
+  voorkeursdatum: string | null;
+  tijdvak: string | null;
 };
 
 type InstructorStudentLinkRow = {
@@ -40,6 +53,8 @@ type InstructorStudentLinkRow = {
 type StudentSchedulingAccessRow = {
   leerling_id: string;
   zelf_inplannen_toegestaan: boolean;
+  zelf_inplannen_limiet_minuten_per_week: number | null;
+  zelf_inplannen_limiet_is_handmatig: boolean;
 };
 
 type StudentSchedulingAccessListBuilder = {
@@ -57,6 +72,12 @@ type InstructorStudentRow = {
   profile_id: string;
   voortgang_percentage: number;
   pakket_id: string | null;
+};
+
+type InstructorStudentPackageRow = {
+  id: string;
+  naam: string;
+  zelf_inplannen_limiet_minuten_per_week: number | null;
 };
 
 type StudentProgressLessonNoteRow = {
@@ -134,6 +155,9 @@ const DEMO_STUDENTS: InstructorStudentProgressRow[] = [
     email: "mila@example.com",
     telefoon: "06 12 34 56 78",
     zelfInplannenToegestaan: true,
+    zelfInplannenLimietMinutenPerWeek: 120,
+    zelfInplannenGebruiktMinutenDezeWeek: 60,
+    zelfInplannenResterendMinutenDezeWeek: 60,
     planningVrijTeGeven: true,
   },
   {
@@ -150,6 +174,9 @@ const DEMO_STUDENTS: InstructorStudentProgressRow[] = [
     email: "noah@example.com",
     telefoon: "06 98 76 54 32",
     zelfInplannenToegestaan: false,
+    zelfInplannenLimietMinutenPerWeek: null,
+    zelfInplannenGebruiktMinutenDezeWeek: 0,
+    zelfInplannenResterendMinutenDezeWeek: null,
     planningVrijTeGeven: false,
   },
 ];
@@ -253,12 +280,14 @@ export async function getInstructeurStudentsWorkspace() {
   const [lessonsResult, requestsResult, linksResult] = (await Promise.all([
     supabase
       .from("lessen")
-      .select("leerling_id, start_at, status")
+      .select("leerling_id, start_at, duur_minuten, status, notities")
       .eq("instructeur_id", instructeur.id)
       .not("leerling_id", "is", null),
     supabase
       .from("lesaanvragen")
-      .select("leerling_id, status, pakket_naam_snapshot, created_at")
+      .select(
+        "id, leerling_id, status, pakket_naam_snapshot, created_at, voorkeursdatum, tijdvak"
+      )
       .eq("instructeur_id", instructeur.id)
       .not("leerling_id", "is", null),
     supabase
@@ -319,7 +348,12 @@ export async function getInstructeurStudentsWorkspace() {
           .in("id", profileIds)
       : Promise.resolve({ data: [] }),
     packageIds.length
-      ? supabase.from("pakketten").select("id, naam").in("id", packageIds)
+      ? ((supabase
+          .from("pakketten")
+          .select("id, naam, zelf_inplannen_limiet_minuten_per_week")
+          .in("id", packageIds)) as unknown as Promise<{
+          data: InstructorStudentPackageRow[] | null;
+        }>)
       : Promise.resolve({ data: [] }),
     supabase
       .from("leerling_voortgang_beoordelingen")
@@ -340,7 +374,9 @@ export async function getInstructeurStudentsWorkspace() {
       .order("lesdatum", { ascending: false })
       .order("updated_at", { ascending: false }),
     studentSchedulingAccess
-      .select("leerling_id, zelf_inplannen_toegestaan")
+      .select(
+        "leerling_id, zelf_inplannen_toegestaan, zelf_inplannen_limiet_minuten_per_week, zelf_inplannen_limiet_is_handmatig"
+      )
       .eq("instructeur_id", instructeur.id)
       .in("leerling_id", leerlingIds),
   ]);
@@ -349,12 +385,12 @@ export async function getInstructeurStudentsWorkspace() {
     (profilesResult.data ?? []).map((profile) => [profile.id, profile])
   );
   const packageMap = new Map(
-    (packagesResult.data ?? []).map((pkg) => [pkg.id, pkg.naam])
+    (packagesResult.data ?? []).map((pkg) => [pkg.id, pkg])
   );
   const schedulingAccessMap = new Map(
     ((schedulingAccessResult.data ?? []) as StudentSchedulingAccessRow[]).map((row) => [
       row.leerling_id,
-      row.zelf_inplannen_toegestaan,
+      row,
     ])
   );
 
@@ -400,9 +436,12 @@ export async function getInstructeurStudentsWorkspace() {
   const requestsByStudent = new Map<
     string,
     Array<{
+      id: string;
       status: string | null;
       pakket_naam_snapshot: string | null;
       created_at: string;
+      voorkeursdatum: string | null;
+      tijdvak: string | null;
     }>
   >();
 
@@ -430,7 +469,9 @@ export async function getInstructeurStudentsWorkspace() {
     string,
     Array<{
       start_at: string | null;
+      duur_minuten: number;
       status: string;
+      notities: string | null;
     }>
   >();
 
@@ -442,10 +483,14 @@ export async function getInstructeurStudentsWorkspace() {
     const current = lessonsByStudent.get(lesson.leerling_id) ?? [];
     current.push({
       start_at: lesson.start_at,
+      duur_minuten: lesson.duur_minuten,
       status: lesson.status,
+      notities: lesson.notities,
     });
     lessonsByStudent.set(lesson.leerling_id, current);
   }
+
+  const { weekStartKey } = getWeeklyBookingWindow(new Date());
 
   for (const link of linkRows) {
     if (!link.leerling_id) {
@@ -467,6 +512,7 @@ export async function getInstructeurStudentsWorkspace() {
     const relatedLessons = lessonsByStudent.get(student.id) ?? [];
     const relatedRequests = requestsByStudent.get(student.id) ?? [];
     const manualLink = manualLinksByStudent.get(student.id) ?? null;
+    const schedulingAccess = schedulingAccessMap.get(student.id);
     const nextLesson = [...relatedLessons]
       .filter((lesson) => lesson.start_at)
       .sort((left, right) =>
@@ -503,14 +549,86 @@ export async function getInstructeurStudentsWorkspace() {
         )
       );
     const zelfInplannenToegestaan =
-      planningVrijTeGeven && Boolean(schedulingAccessMap.get(student.id));
+      planningVrijTeGeven && Boolean(schedulingAccess?.zelf_inplannen_toegestaan);
+    const linkedRequestIds = new Set(
+      relatedLessons
+        .map((lesson) => extractLessonRequestReference(lesson.notities))
+        .filter((value): value is string => Boolean(value))
+    );
+    const bookedMinutesByWeekStart: Record<string, number> = {};
+
+    relatedLessons.forEach((lesson) => {
+      if (!lesson.start_at || !["geaccepteerd", "ingepland", "afgerond"].includes(lesson.status)) {
+        return;
+      }
+
+      addBookedMinutesForWeek({
+        map: bookedMinutesByWeekStart,
+        dateLike: lesson.start_at,
+        minutes: lesson.duur_minuten,
+      });
+    });
+
+    relatedRequests.forEach((request) => {
+      if (
+        linkedRequestIds.has(request.id) ||
+        !request.voorkeursdatum ||
+        !["aangevraagd", "geaccepteerd", "ingepland"].includes(request.status ?? "")
+      ) {
+        return;
+      }
+
+      const { startAt, endAt } = parseRequestWindow(
+        request.voorkeursdatum,
+        request.tijdvak
+      );
+
+      if (!startAt || !endAt) {
+        return;
+      }
+
+      addBookedMinutesForWeek({
+        map: bookedMinutesByWeekStart,
+        dateLike: startAt,
+        minutes: Math.max(
+          30,
+          Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60000)
+        ),
+      });
+    });
+
+    const pakketZelfInplannenLimietMinutenPerWeek =
+      packageMap.get(student.pakket_id ?? "")?.zelf_inplannen_limiet_minuten_per_week ??
+      null;
+    const resolvedWeeklyLimit = resolveEffectiveWeeklyBookingLimit({
+      manualLimitIsSet: Boolean(
+        schedulingAccess?.zelf_inplannen_limiet_is_handmatig
+      ),
+      manualLimitMinutes:
+        schedulingAccess?.zelf_inplannen_limiet_minuten_per_week ?? null,
+      packageLimitMinutes: pakketZelfInplannenLimietMinutenPerWeek,
+    });
+    const zelfInplannenLimietMinutenPerWeek =
+      resolvedWeeklyLimit.weeklyLimitMinutes;
+    const zelfInplannenHandmatigeLimietMinutenPerWeek = Boolean(
+      schedulingAccess?.zelf_inplannen_limiet_is_handmatig
+    )
+      ? schedulingAccess?.zelf_inplannen_limiet_minuten_per_week ?? null
+      : null;
+    const zelfInplannenGebruiktMinutenDezeWeek =
+      bookedMinutesByWeekStart[weekStartKey] ?? 0;
+    const zelfInplannenResterendMinutenDezeWeek =
+      getRemainingWeeklyBookingMinutes(
+        zelfInplannenLimietMinutenPerWeek,
+        zelfInplannenGebruiktMinutenDezeWeek
+      );
 
     return {
       id: student.id,
       profileId: student.profile_id,
       naam: profile?.volledige_naam ?? "Leerling",
       pakket:
-        (student.pakket_id ? packageMap.get(student.pakket_id) : null) ??
+        (student.pakket_id ? packageMap.get(student.pakket_id)?.naam : null) ??
         latestRequest?.pakket_naam_snapshot ??
         "Nog geen pakket",
       pakketId: student.pakket_id ?? null,
@@ -531,6 +649,15 @@ export async function getInstructeurStudentsWorkspace() {
       email: profile?.email ?? "",
       telefoon: profile?.telefoon ?? "",
       zelfInplannenToegestaan,
+      zelfInplannenLimietMinutenPerWeek,
+      zelfInplannenPakketLimietMinutenPerWeek:
+        pakketZelfInplannenLimietMinutenPerWeek,
+      zelfInplannenHandmatigeLimietMinutenPerWeek,
+      zelfInplannenHandmatigeOverrideActief: Boolean(
+        schedulingAccess?.zelf_inplannen_limiet_is_handmatig
+      ),
+      zelfInplannenGebruiktMinutenDezeWeek,
+      zelfInplannenResterendMinutenDezeWeek,
       planningVrijTeGeven,
       isHandmatigGekoppeld: Boolean(manualLink),
       onboardingNotitie: manualLink?.onboarding_notitie ?? null,

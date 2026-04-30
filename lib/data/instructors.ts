@@ -18,6 +18,7 @@ import {
   filterBookableAvailabilitySlots,
   type BookingWindow,
 } from "@/lib/booking-availability";
+import { resolveInstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import type {
   BeschikbaarheidSlot,
   BeschikbaarheidWeekrooster,
@@ -45,6 +46,10 @@ type DbInstructorRow = {
   werkgebied: string[] | null;
   prijs_per_les: number | string | null;
   online_boeken_actief: boolean | null;
+  standaard_rijles_duur_minuten: number | null;
+  standaard_proefles_duur_minuten: number | null;
+  standaard_pakketles_duur_minuten: number | null;
+  standaard_examenrit_duur_minuten: number | null;
   transmissie: InstructeurProfiel["transmissie"] | null;
   beoordeling: number | string | null;
   profiel_status: string | null;
@@ -102,6 +107,7 @@ function mapInstructor(
   latestReview?: InstructeurProfiel["recente_review"]
 ): InstructeurProfiel {
   const base = instructeurs.find((item) => item.slug === row.slug);
+  const durationDefaults = resolveInstructorLessonDurationDefaults(row);
   const resolvedReviewCount =
     reviewStats?.reviewCount ?? base?.aantal_reviews ?? 0;
   const resolvedRating =
@@ -124,6 +130,10 @@ function mapInstructor(
     ervaring_jaren: row.ervaring_jaren ?? base?.ervaring_jaren ?? 0,
     prijs_per_les: toNumber(row.prijs_per_les, base?.prijs_per_les ?? 0),
     online_boeken_actief: Boolean(row.online_boeken_actief),
+    standaard_rijles_duur_minuten: durationDefaults.rijles,
+    standaard_proefles_duur_minuten: durationDefaults.proefles,
+    standaard_pakketles_duur_minuten: durationDefaults.pakketles,
+    standaard_examenrit_duur_minuten: durationDefaults.examenrit,
     beoordeling: resolvedRating,
     aantal_reviews: resolvedReviewCount,
     recente_review: latestReview ?? null,
@@ -165,7 +175,7 @@ export async function getPublicInstructors() {
   const { data: rows, error } = await supabase
     .from("instructeurs")
     .select(
-      "id, profile_id, slug, volledige_naam, avatar_url, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur"
+      "id, profile_id, slug, volledige_naam, avatar_url, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, standaard_rijles_duur_minuten, standaard_proefles_duur_minuten, standaard_pakketles_duur_minuten, standaard_examenrit_duur_minuten, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur"
     )
     .order("created_at", { ascending: false });
 
@@ -325,18 +335,15 @@ export async function getInstructorAvailability(
       .from("beschikbaarheid")
       .select("id, start_at, eind_at, beschikbaar")
       .eq("instructeur_id", instructor.id)
-      .eq("beschikbaar", true)
       .gte("eind_at", todayIso)
-      .order("start_at", { ascending: true })
-      .limit(24),
+      .order("start_at", { ascending: true }),
     supabase
       .from("beschikbaarheid_weekroosters")
       .select(
         "id, instructeur_id, weekdag, start_tijd, eind_tijd, pauze_start_tijd, pauze_eind_tijd, beschikbaar, actief"
       )
       .eq("instructeur_id", instructor.id)
-      .eq("actief", true)
-      .eq("beschikbaar", true),
+      .eq("actief", true),
     (supabase
       .from("lessen")
       .select("id, titel, start_at, duur_minuten, status")
@@ -400,7 +407,10 @@ export async function getInstructorAvailability(
       .filter(Boolean) as BookingWindow[]),
   ];
 
-  return filterBookableAvailabilitySlots([...concreteSlots, ...recurringSlots], bookingWindows)
+  return filterBookableAvailabilitySlots(
+    [...concreteSlots, ...recurringSlots].filter((slot) => slot.beschikbaar),
+    bookingWindows
+  )
     .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
     .slice(0, 24);
 }
@@ -430,7 +440,6 @@ export async function getPublicInstructorAvailabilityMap(
       .from("beschikbaarheid")
       .select("id, instructeur_id, start_at, eind_at, beschikbaar")
       .in("instructeur_id", uniqueInstructorIds)
-      .eq("beschikbaar", true)
       .gte("eind_at", todayIso)
       .order("start_at", { ascending: true }),
     supabase
@@ -439,8 +448,7 @@ export async function getPublicInstructorAvailabilityMap(
         "id, instructeur_id, weekdag, start_tijd, eind_tijd, pauze_start_tijd, pauze_eind_tijd, beschikbaar, actief"
       )
       .in("instructeur_id", uniqueInstructorIds)
-      .eq("actief", true)
-      .eq("beschikbaar", true),
+      .eq("actief", true),
     (supabase
       .from("lessen")
       .select("id, instructeur_id, titel, start_at, duur_minuten, status")
@@ -530,7 +538,7 @@ export async function getPublicInstructorAvailabilityMap(
       });
 
       const mergedSlots = filterBookableAvailabilitySlots(
-        [...concreteSlots, ...recurringSlots],
+        [...concreteSlots, ...recurringSlots].filter((slot) => slot.beschikbaar),
         bookingWindowsByInstructor.get(instructorId) ?? []
       )
         .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))

@@ -27,6 +27,7 @@ type DbPackageRow = {
   beschrijving: string | null;
   prijs: number | string | null;
   aantal_lessen: number | null;
+  zelf_inplannen_limiet_minuten_per_week: number | null;
   actief: boolean | null;
   badge: string | null;
   labels: string[] | null;
@@ -89,6 +90,8 @@ function toPackage(row: DbPackageRow, instructeurNaam?: string | null): Pakket {
     beschrijving: row.beschrijving || "",
     prijs: toPackagePrijs(row.prijs),
     lessen: row.aantal_lessen ?? 0,
+    zelf_inplannen_limiet_minuten_per_week:
+      row.zelf_inplannen_limiet_minuten_per_week ?? null,
     les_type: getRijlesType(row.les_type),
     badge: row.badge || undefined,
     labels: normalizePackageLabels(row.labels),
@@ -112,7 +115,7 @@ export async function getPublicPackages(): Promise<Pakket[]> {
   const supabase = await createServerClient();
   const { data: packageRows, error } = (await supabase
     .from("pakketten")
-    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
+    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
     .is("instructeur_id", null)
     .filter("les_type", "eq", "auto")
     .eq("actief", true)
@@ -155,7 +158,7 @@ export async function getCatalogPackagesByLessonType(
   const supabase = await createServerClient();
   const { data: packageRows, error } = (await supabase
     .from("pakketten")
-    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
+    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
     .filter("les_type", "eq", lesType)
     .eq("actief", true)
     .order("uitgelicht", { ascending: false })
@@ -221,7 +224,7 @@ export async function getPublicInstructorPackages(
   const supabase = await createServerClient();
   let query = supabase
     .from("pakketten")
-    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
+    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
     .eq("instructeur_id", instructor.id)
     .eq("actief", true);
 
@@ -269,7 +272,7 @@ export async function getPublicInstructorPackageMap(
   let query = supabase
     .from("pakketten")
     .select(
-      "id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type"
+      "id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type"
     )
     .in("instructeur_id", uniqueInstructorIds)
     .eq("actief", true);
@@ -351,7 +354,7 @@ export async function getCurrentInstructorPackages(): Promise<Pakket[]> {
   const supabase = await createServerClient();
   const { data: packageRows, error } = (await supabase
     .from("pakketten")
-    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
+    .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
     .eq("instructeur_id", instructeur.id)
     .order("uitgelicht", { ascending: false })
     .order("sort_order", { ascending: true })
@@ -392,7 +395,7 @@ export async function getCurrentStudentPackageOverview() {
       leerling.pakket_id
         ? (supabase
             .from("pakketten")
-            .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
+            .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
             .eq("id", leerling.pakket_id)
             .maybeSingle() as unknown as Promise<MaybePackageQueryResult>)
         : Promise.resolve({ data: null }),
@@ -403,7 +406,7 @@ export async function getCurrentStudentPackageOverview() {
         .order("created_at", { ascending: false }),
       (supabase
         .from("pakketten")
-        .select("id, naam, prijs, praktijk_examen_prijs, aantal_lessen, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
+        .select("id, naam, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
         .is("instructeur_id", null)
         .filter("les_type", "eq", "auto")
         .eq("actief", true)

@@ -50,6 +50,11 @@ import {
   PRAKTIJK_EXAMEN_LABEL,
 } from "@/lib/package-labels";
 import {
+  SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS,
+  formatMinutesAsHoursLabel,
+  formatWeeklyLimitLabel,
+} from "@/lib/self-scheduling-limits";
+import {
   getPackageVisualConfig,
   packageIconOptions,
   packageThemeOptions,
@@ -81,6 +86,7 @@ type PackagePreset = {
   visualTheme: string;
   prijs: string;
   aantalLessen: string;
+  weeklyBookingLimitMinutes?: string;
   beschrijving: string;
   praktijkExamenPrijs?: string;
 };
@@ -257,6 +263,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "slate",
         prijs: "549",
         aantalLessen: "10",
+        weeklyBookingLimitMinutes: "60",
         beschrijving:
           "Een helder startpakket voor leerlingen die rustig willen opbouwen met vaste structuur en duidelijke vervolgstappen.",
       },
@@ -270,6 +277,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "violet",
         prijs: "1299",
         aantalLessen: "24",
+        weeklyBookingLimitMinutes: "120",
         praktijkExamenPrijs: "289",
         beschrijving:
           "Voor leerlingen die gericht richting praktijkexamen werken met aandacht voor examenroutes, vertrouwen en een sterke eindfase.",
@@ -284,6 +292,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "amber",
         prijs: "1690",
         aantalLessen: "28",
+        weeklyBookingLimitMinutes: "240",
         praktijkExamenPrijs: "299",
         beschrijving:
           "Compact traject met hoger tempo, extra planningsruimte en duidelijke focus op snel maar gecontroleerd toewerken naar examen.",
@@ -298,6 +307,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "sky",
         prijs: "299",
         aantalLessen: "4",
+        weeklyBookingLimitMinutes: "60",
         beschrijving:
           "Voor herintreders en leerlingen die hun zekerheid, routine en rust in het verkeer snel willen terugpakken.",
       },
@@ -313,6 +323,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "emerald",
         prijs: "849",
         aantalLessen: "8",
+        weeklyBookingLimitMinutes: "120",
         beschrijving:
           "Gericht op voertuigbeheersing, balans en een sterke basis voor de AVB-onderdelen in een overzichtelijk traject.",
       },
@@ -326,6 +337,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "sky",
         prijs: "1199",
         aantalLessen: "12",
+        weeklyBookingLimitMinutes: "120",
         praktijkExamenPrijs: "289",
         beschrijving:
           "Voor motorrijders die verkeersdeelname, kijktechniek en examengericht rijden rustig maar sterk willen opbouwen.",
@@ -340,6 +352,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "violet",
         prijs: "1990",
         aantalLessen: "20",
+        weeklyBookingLimitMinutes: "180",
         praktijkExamenPrijs: "329",
         beschrijving:
           "Een compleet motortraject met opbouw van voertuigcontrole tot verkeersdeelname en een duidelijke lijn richting beide examens.",
@@ -354,6 +367,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "slate",
         prijs: "99",
         aantalLessen: "1",
+        weeklyBookingLimitMinutes: "60",
         beschrijving:
           "Een eerste kennismaking voor leerlingen die willen ervaren of motorlessen bij hun tempo, houding en ambitie passen.",
       },
@@ -369,6 +383,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "amber",
         prijs: "1990",
         aantalLessen: "12",
+        weeklyBookingLimitMinutes: "120",
         beschrijving:
           "Voor kandidaten die een rustige maar doelgerichte basis willen leggen in voertuigbeheersing, routes en praktijkopbouw.",
       },
@@ -382,6 +397,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "rose",
         prijs: "2590",
         aantalLessen: "16",
+        weeklyBookingLimitMinutes: "180",
         praktijkExamenPrijs: "399",
         beschrijving:
           "Voor leerlingen die strak richting praktijkexamen willen plannen met extra aandacht voor routevastheid en examenniveau.",
@@ -396,6 +412,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "emerald",
         prijs: "2990",
         aantalLessen: "18",
+        weeklyBookingLimitMinutes: "180",
         praktijkExamenPrijs: "399",
         beschrijving:
           "Een zakelijk en duidelijk traject voor kandidaten die rijopleiding en professionele doorgroei slim willen combineren.",
@@ -410,6 +427,7 @@ function getPackagePresets(lesType: RijlesType): PackagePreset[] {
         visualTheme: "slate",
         prijs: "0",
         aantalLessen: "0",
+        weeklyBookingLimitMinutes: "",
         beschrijving:
           "Flexibel pakket voor bedrijven of kandidaten met maatwerkbehoefte, afgestemd op planning, niveau en inzetbaarheid.",
       },
@@ -1023,6 +1041,7 @@ export function PackageStudio({
   const [hasPracticeExam, setHasPracticeExam] = useState(false);
   const [praktijkExamenPrijs, setPraktijkExamenPrijs] = useState("");
   const [aantalLessen, setAantalLessen] = useState("10");
+  const [weeklyBookingLimitMinutes, setWeeklyBookingLimitMinutes] = useState("");
   const [beschrijving, setBeschrijving] = useState("");
   const [descriptionVariantIndex, setDescriptionVariantIndex] = useState(0);
   const [selectedCreatePresetId, setSelectedCreatePresetId] = useState<string | null>(null);
@@ -1042,6 +1061,7 @@ export function PackageStudio({
   const [editHasPracticeExam, setEditHasPracticeExam] = useState(false);
   const [editPraktijkExamenPrijs, setEditPraktijkExamenPrijs] = useState("");
   const [editAantalLessen, setEditAantalLessen] = useState("10");
+  const [editWeeklyBookingLimitMinutes, setEditWeeklyBookingLimitMinutes] = useState("");
   const [editBeschrijving, setEditBeschrijving] = useState("");
   const [editDescriptionVariantIndex, setEditDescriptionVariantIndex] = useState(0);
   const [selectedEditPresetId, setSelectedEditPresetId] = useState<string | null>(null);
@@ -1180,6 +1200,7 @@ export function PackageStudio({
     setHasPracticeExam(false);
     setPraktijkExamenPrijs("");
     setAantalLessen("10");
+    setWeeklyBookingLimitMinutes("");
     setBeschrijving("");
     setDescriptionVariantIndex(0);
     setSelectedCreatePresetId(null);
@@ -1197,6 +1218,7 @@ export function PackageStudio({
     setVisualTheme(preset.visualTheme);
     setPrijs(preset.prijs);
     setAantalLessen(preset.aantalLessen);
+    setWeeklyBookingLimitMinutes(preset.weeklyBookingLimitMinutes ?? "");
     setBeschrijving(preset.beschrijving);
     setDescriptionVariantIndex(0);
     const nextPracticeExamPrice = preset.praktijkExamenPrijs ?? "";
@@ -1229,6 +1251,7 @@ export function PackageStudio({
     setEditVisualTheme(preset.visualTheme);
     setEditPrijs(preset.prijs);
     setEditAantalLessen(preset.aantalLessen);
+    setEditWeeklyBookingLimitMinutes(preset.weeklyBookingLimitMinutes ?? "");
     setEditBeschrijving(preset.beschrijving);
     setEditDescriptionVariantIndex(0);
     const nextPracticeExamPrice = preset.praktijkExamenPrijs ?? "";
@@ -1375,6 +1398,7 @@ export function PackageStudio({
         prijs,
         praktijkExamenPrijs: showPracticeExamPriceField ? praktijkExamenPrijs : "",
         aantalLessen,
+        weeklyBookingLimitMinutes,
         beschrijving,
         coverPath: uploadedCoverPath,
       });
@@ -1450,6 +1474,11 @@ export function PackageStudio({
     setEditCoverFocusX(pkg.cover_focus_x ?? null);
     setEditCoverFocusY(pkg.cover_focus_y ?? null);
     setEditPrijs(String(pkg.prijs ?? 0));
+    setEditWeeklyBookingLimitMinutes(
+      pkg.zelf_inplannen_limiet_minuten_per_week != null
+        ? String(pkg.zelf_inplannen_limiet_minuten_per_week)
+        : ""
+    );
     setEditHasPracticeExam(
       pkg.praktijk_examen_prijs !== null && pkg.praktijk_examen_prijs !== undefined
     );
@@ -1481,6 +1510,7 @@ export function PackageStudio({
     setEditCoverFocusY(null);
     setEditHasPracticeExam(false);
     setEditPraktijkExamenPrijs("");
+    setEditWeeklyBookingLimitMinutes("");
   }
 
   async function handleEditCoverChange(event: ChangeEvent<HTMLInputElement>) {
@@ -1558,6 +1588,7 @@ export function PackageStudio({
         prijs: editPrijs,
         praktijkExamenPrijs: showEditPracticeExamPriceField ? editPraktijkExamenPrijs : "",
         aantalLessen: editAantalLessen,
+        weeklyBookingLimitMinutes: editWeeklyBookingLimitMinutes,
         beschrijving: editBeschrijving,
         coverChanged: editCoverChanged,
         coverPath: editCoverChanged ? (nextCoverPath ?? null) : editCoverPath,
@@ -1909,6 +1940,68 @@ export function PackageStudio({
                     placeholder="10"
                     className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
                   />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="package_weekly_booking_limit">
+                    Zelf plannen per week
+                  </Label>
+                  <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                    <div className="flex flex-wrap gap-2">
+                      {SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS.map((minutes) => (
+                        <Button
+                          key={`create-limit-${minutes}`}
+                          type="button"
+                          variant={
+                            Number(weeklyBookingLimitMinutes) === minutes
+                              ? "default"
+                              : "outline"
+                          }
+                          className="h-8 rounded-full px-3 text-[11px]"
+                          onClick={() => setWeeklyBookingLimitMinutes(String(minutes))}
+                        >
+                          {formatMinutesAsHoursLabel(minutes)}
+                        </Button>
+                      ))}
+                      <Button
+                        type="button"
+                        variant={
+                          !weeklyBookingLimitMinutes.trim() ? "default" : "outline"
+                        }
+                        className="h-8 rounded-full px-3 text-[11px]"
+                        onClick={() => setWeeklyBookingLimitMinutes("")}
+                      >
+                        Onbeperkt
+                      </Button>
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                      <div className="space-y-2">
+                        <Input
+                          id="package_weekly_booking_limit"
+                          type="number"
+                          min="30"
+                          max="1440"
+                          step="15"
+                          value={weeklyBookingLimitMinutes}
+                          onChange={(event) =>
+                            setWeeklyBookingLimitMinutes(event.target.value)
+                          }
+                          placeholder="Bijvoorbeeld 120"
+                          className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
+                        />
+                        <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                          Leerlingen met dit pakket volgen automatisch deze weekruimte zolang je
+                          geen handmatige leerling-override instelt.
+                        </p>
+                      </div>
+                      <Badge variant="info">
+                        {formatWeeklyLimitLabel(
+                          weeklyBookingLimitMinutes.trim()
+                            ? Number.parseInt(weeklyBookingLimitMinutes, 10)
+                            : null
+                        )}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <PackageQuickExtrasBar
@@ -2515,7 +2608,7 @@ export function PackageStudio({
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-3 lg:grid-cols-3">
                     <div
                       className={cn(
                         "rounded-[1.2rem] border p-4",
@@ -2553,6 +2646,28 @@ export function PackageStudio({
                         Inbegrepen lessen
                       </p>
                       <p className="mt-2 text-xl font-semibold">{pkg.lessen || "Flexibel"}</p>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-[1.2rem] border p-4",
+                        isLeadCard
+                          ? "border-white/12 bg-white/10"
+                          : "border-slate-200 bg-white/95 dark:border-white/10 dark:bg-white/8"
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "text-[11px] font-semibold tracking-[0.16em] uppercase",
+                          isLeadCard ? "text-white/65" : "text-slate-500"
+                        )}
+                      >
+                        Zelf plannen per week
+                      </p>
+                      <p className="mt-2 text-base font-semibold">
+                        {formatWeeklyLimitLabel(
+                          pkg.zelf_inplannen_limiet_minuten_per_week ?? null
+                        )}
+                      </p>
                     </div>
                   </div>
 
@@ -2920,6 +3035,69 @@ export function PackageStudio({
                   onFocus={() => setActiveEditStudioStep("prijs")}
                   className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
                 />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="edit_package_weekly_booking_limit">
+                  Zelf plannen per week
+                </Label>
+                <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                  <div className="flex flex-wrap gap-2">
+                    {SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS.map((minutes) => (
+                      <Button
+                        key={`edit-limit-${minutes}`}
+                        type="button"
+                        variant={
+                          Number(editWeeklyBookingLimitMinutes) === minutes
+                            ? "default"
+                            : "outline"
+                        }
+                        className="h-8 rounded-full px-3 text-[11px]"
+                        onClick={() => setEditWeeklyBookingLimitMinutes(String(minutes))}
+                      >
+                        {formatMinutesAsHoursLabel(minutes)}
+                      </Button>
+                    ))}
+                    <Button
+                      type="button"
+                      variant={
+                        !editWeeklyBookingLimitMinutes.trim() ? "default" : "outline"
+                      }
+                      className="h-8 rounded-full px-3 text-[11px]"
+                      onClick={() => setEditWeeklyBookingLimitMinutes("")}
+                    >
+                      Onbeperkt
+                    </Button>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <div className="space-y-2">
+                      <Input
+                        id="edit_package_weekly_booking_limit"
+                        type="number"
+                        min="30"
+                        max="1440"
+                        step="15"
+                        value={editWeeklyBookingLimitMinutes}
+                        onChange={(event) =>
+                          setEditWeeklyBookingLimitMinutes(event.target.value)
+                        }
+                        onFocus={() => setActiveEditStudioStep("prijs")}
+                        placeholder="Bijvoorbeeld 120"
+                        className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      />
+                      <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                        Deze pakketlimiet wordt automatisch gebruikt voor leerlingen zonder
+                        handmatige leerling-override.
+                      </p>
+                    </div>
+                    <Badge variant="info">
+                      {formatWeeklyLimitLabel(
+                        editWeeklyBookingLimitMinutes.trim()
+                          ? Number.parseInt(editWeeklyBookingLimitMinutes, 10)
+                          : null
+                      )}
+                    </Badge>
+                  </div>
+                </div>
               </div>
               {showEditPracticeExamPriceField ? (
                 <PracticeExamPriceField

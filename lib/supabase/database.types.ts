@@ -274,7 +274,12 @@ export type Database = {
             created_at: string
             ervaring_jaren: number
             id: string
+            leerling_annuleren_tot_uren_voor_les: number | null
             online_boeken_actief: boolean
+            standaard_examenrit_duur_minuten: number
+            standaard_pakketles_duur_minuten: number
+            standaard_proefles_duur_minuten: number
+            standaard_rijles_duur_minuten: number
             prijs_per_les: number
             profiel_compleetheid: number
             profiel_status: string
@@ -294,7 +299,12 @@ export type Database = {
             created_at?: string
             ervaring_jaren?: number
             id?: string
+            leerling_annuleren_tot_uren_voor_les?: number | null
             online_boeken_actief?: boolean
+            standaard_examenrit_duur_minuten?: number
+            standaard_pakketles_duur_minuten?: number
+            standaard_proefles_duur_minuten?: number
+            standaard_rijles_duur_minuten?: number
             prijs_per_les?: number
             profiel_compleetheid?: number
             profiel_status?: string
@@ -314,7 +324,12 @@ export type Database = {
             created_at?: string
             ervaring_jaren?: number
             id?: string
+            leerling_annuleren_tot_uren_voor_les?: number | null
             online_boeken_actief?: boolean
+            standaard_examenrit_duur_minuten?: number
+            standaard_pakketles_duur_minuten?: number
+            standaard_proefles_duur_minuten?: number
+            standaard_rijles_duur_minuten?: number
             prijs_per_les?: number
             profiel_compleetheid?: number
             profiel_status?: string

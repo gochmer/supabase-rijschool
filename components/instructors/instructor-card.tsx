@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency, getInitials } from "@/lib/format";
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
+import type { WeeklyBookedMinutesMap } from "@/lib/self-scheduling-limits";
 import type { BeschikbaarheidSlot, InstructeurProfiel, Pakket } from "@/lib/types";
 
 function formatTransmissionLabel(transmission: InstructeurProfiel["transmissie"]) {
@@ -367,12 +368,18 @@ function InstructorCardActions({
   selectedPackage,
   availableSlots,
   directBookingEnabled,
+  weeklyBookingLimitMinutes,
+  bookedMinutesByWeekStart,
+  weeklyRemainingMinutesThisWeek,
 }: {
   detailHref: string;
   instructor: InstructeurProfiel;
   selectedPackage: Pakket | null;
   availableSlots: BeschikbaarheidSlot[];
   directBookingEnabled: boolean;
+  weeklyBookingLimitMinutes?: number | null;
+  bookedMinutesByWeekStart?: WeeklyBookedMinutesMap;
+  weeklyRemainingMinutesThisWeek?: number | null;
 }) {
   return (
     <CardFooter className="flex-col items-stretch gap-1.5 bg-transparent px-3.5 pb-3 pt-0">
@@ -382,6 +389,14 @@ function InstructorCardActions({
         selectedPackage={selectedPackage}
         availableSlots={availableSlots}
         directBookingEnabled={directBookingEnabled}
+        defaultDurationMinutes={
+          selectedPackage
+            ? instructor.standaard_pakketles_duur_minuten ?? 90
+            : instructor.standaard_rijles_duur_minuten ?? 60
+        }
+        weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+        bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+        weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
         triggerLabel={selectedPackage ? "Vraag pakket aan" : "Les aanvragen"}
         triggerClassName="!h-9 !rounded-full !text-[12px] !font-semibold"
       />
@@ -400,6 +415,10 @@ function InstructorCardActions({
           requestType="proefles"
           availableSlots={availableSlots}
           directBookingEnabled={directBookingEnabled}
+          defaultDurationMinutes={instructor.standaard_proefles_duur_minuten ?? 50}
+          weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+          bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+          weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
           triggerLabel="Plan proefles"
           triggerVariant="secondary"
           triggerClassName="!h-9 !rounded-full !text-[12px] !font-semibold"
@@ -414,6 +433,9 @@ export function InstructorCard({
   packages = [],
   availableSlots = [],
   directBookingEnabled = false,
+  weeklyBookingLimitMinutes = null,
+  bookedMinutesByWeekStart = {},
+  weeklyRemainingMinutesThisWeek = null,
   detailBasePath = "/instructeurs",
   isFavorite = false,
   showPackagePanel = true,
@@ -423,6 +445,9 @@ export function InstructorCard({
   packages?: Pakket[];
   availableSlots?: BeschikbaarheidSlot[];
   directBookingEnabled?: boolean;
+  weeklyBookingLimitMinutes?: number | null;
+  bookedMinutesByWeekStart?: WeeklyBookedMinutesMap;
+  weeklyRemainingMinutesThisWeek?: number | null;
   detailBasePath?: string;
   isFavorite?: boolean;
   showPackagePanel?: boolean;
@@ -667,12 +692,20 @@ export function InstructorCard({
                 <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
             </Button>
-            <LessonRequestDialog
+          <LessonRequestDialog
               instructorName={instructor.volledige_naam}
               instructorSlug={instructor.slug}
               selectedPackage={selectedPackage}
               availableSlots={availableSlots}
               directBookingEnabled={directBookingEnabled}
+              defaultDurationMinutes={
+                selectedPackage
+                  ? instructor.standaard_pakketles_duur_minuten ?? 90
+                  : instructor.standaard_rijles_duur_minuten ?? 60
+              }
+              weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+              bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+              weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
               triggerLabel={selectedPackage ? "Vraag pakket aan" : "Les aanvragen"}
               tone="hazard"
             />
@@ -682,6 +715,10 @@ export function InstructorCard({
               requestType="proefles"
               availableSlots={availableSlots}
               directBookingEnabled={directBookingEnabled}
+              defaultDurationMinutes={instructor.standaard_proefles_duur_minuten ?? 50}
+              weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+              bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+              weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
               triggerLabel="Plan proefles"
               triggerVariant="secondary"
               tone="hazard"
@@ -742,13 +779,16 @@ export function InstructorCard({
           <div className="mt-auto" />
         </CardContent>
 
-        <InstructorCardActions
-          detailHref={detailHref}
-          instructor={instructor}
-          selectedPackage={selectedPackage}
-          availableSlots={availableSlots}
-          directBookingEnabled={directBookingEnabled}
-        />
+          <InstructorCardActions
+            detailHref={detailHref}
+            instructor={instructor}
+            selectedPackage={selectedPackage}
+            availableSlots={availableSlots}
+            directBookingEnabled={directBookingEnabled}
+            weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+            bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+            weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
+          />
       </Card>
     </HoverTilt>
   );

@@ -57,6 +57,24 @@ export default async function InstructeursPage() {
       access.directBookingAllowed,
     ])
   );
+  const weeklyBookingLimitByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.weeklyBookingLimitMinutes,
+    ])
+  );
+  const bookedMinutesByWeekStartByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.bookedMinutesByWeekStart,
+    ])
+  );
+  const weeklyRemainingMinutesThisWeekByInstructorId = Object.fromEntries(
+    Object.entries(schedulingAccessByInstructorId).map(([instructorId, access]) => [
+      instructorId,
+      access.weeklyRemainingMinutesThisWeek,
+    ])
+  );
   const averageRating = liveInstructors.length ? (liveInstructors.reduce((total, instructor) => total + instructor.beoordeling, 0) / liveInstructors.length).toFixed(1) : null;
   const breadcrumbItems = [
     { label: "Home", href: "/" },
@@ -122,6 +140,13 @@ export default async function InstructeursPage() {
             packagesByInstructorId={packagesByInstructorId}
             availableSlotsByInstructorId={availableSlotsByInstructorId}
             directBookingEnabledByInstructorId={directBookingEnabledByInstructorId}
+            weeklyBookingLimitByInstructorId={weeklyBookingLimitByInstructorId}
+            bookedMinutesByWeekStartByInstructorId={
+              bookedMinutesByWeekStartByInstructorId
+            }
+            weeklyRemainingMinutesThisWeekByInstructorId={
+              weeklyRemainingMinutesThisWeekByInstructorId
+            }
           />
         </Reveal>
       </section>

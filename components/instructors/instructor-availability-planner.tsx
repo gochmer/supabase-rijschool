@@ -1,14 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { EventInput } from "@fullcalendar/core";
-import nlLocale from "@fullcalendar/core/locales/nl";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
+import { useMemo, useState } from "react";
 import {
-  CalendarClock,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -20,9 +13,15 @@ import {
   formatAvailabilityMoment,
   formatAvailabilityShortDay,
 } from "@/lib/availability";
+import {
+  filterAvailabilitySlotsByWeeklyLimit,
+  formatMinutesAsHoursLabel,
+  formatWeeklyLimitLabel,
+  type WeeklyBookedMinutesMap,
+} from "@/lib/self-scheduling-limits";
 import type { BeschikbaarheidSlot } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { AvailabilityCalendar } from "@/components/instructor/availability-calendar";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
 
 type AvailabilityEntry = {
@@ -65,56 +64,65 @@ export function InstructorAvailabilityPlanner({
   slots,
   directBookingEnabled = false,
   publicBookingEnabled = false,
+  regularLessonDurationMinutes = 60,
+  trialLessonDurationMinutes = 50,
+  weeklyBookingLimitMinutes = null,
+  weeklyBookingLimitSource = "none",
+  bookedMinutesByWeekStart = {},
+  weeklyRemainingMinutesThisWeek = null,
 }: {
   instructorName: string;
   instructorSlug: string;
   slots: BeschikbaarheidSlot[];
   directBookingEnabled?: boolean;
   publicBookingEnabled?: boolean;
+  regularLessonDurationMinutes?: number;
+  trialLessonDurationMinutes?: number;
+  weeklyBookingLimitMinutes?: number | null;
+  weeklyBookingLimitSource?: "manual" | "package" | "none";
+  bookedMinutesByWeekStart?: WeeklyBookedMinutesMap;
+  weeklyRemainingMinutesThisWeek?: number | null;
 }) {
-  const [compact, setCompact] = useState(false);
-
+  const visibleSlots = useMemo(
+    () =>
+      filterAvailabilitySlotsByWeeklyLimit(
+        slots,
+        regularLessonDurationMinutes,
+        weeklyBookingLimitMinutes,
+        bookedMinutesByWeekStart
+      ),
+    [
+      slots,
+      regularLessonDurationMinutes,
+      weeklyBookingLimitMinutes,
+      bookedMinutesByWeekStart,
+    ]
+  );
   const entries = useMemo(
     () =>
-      slots
+      visibleSlots
         .map(createAvailabilityEntry)
         .filter(isAvailabilityEntry)
         .sort((left, right) => left.startAt.localeCompare(right.startAt)),
-    [slots]
+    [visibleSlots]
   );
+  const blockedByWeeklyLimit =
+    weeklyBookingLimitMinutes != null && slots.length > 0 && visibleSlots.length === 0;
 
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(
     entries[0]?.id ?? null
   );
 
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 920px)");
-    const sync = () => setCompact(media.matches);
-
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedSlotId) ?? entries[0] ?? null,
     [entries, selectedSlotId]
   );
-
-  const events = useMemo<EventInput[]>(
-    () =>
-      entries.map((entry) => ({
-        id: entry.id,
-        title: "Beschikbaar",
-        start: entry.startAt,
-        end: entry.endAt,
-        backgroundColor: "#dbeafe",
-        borderColor: "#38bdf8",
-        textColor: "#0f172a",
-        classNames: ["lesson-calendar-event--availability"],
-      })),
-    [entries]
-  );
+  const weeklyLimitSourceLabel =
+    weeklyBookingLimitSource === "manual"
+      ? "Handmatig afgestemd"
+      : weeklyBookingLimitSource === "package"
+        ? "Volgt pakket"
+        : "Geen vaste limiet";
 
   if (!entries.length) {
     return (
@@ -126,19 +134,32 @@ export function InstructorAvailabilityPlanner({
           Nog geen planning beschikbaar
         </h3>
         <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-          Deze instructeur heeft op dit moment nog geen momenten voor jou vrijgezet. Je kunt
-          wel alvast een gewone aanvraag versturen, waarna de planning later wordt afgestemd.
+          {blockedByWeeklyLimit
+            ? `Je persoonlijke weekruimte is bereikt. Er staan wel open momenten in de agenda, maar niet meer binnen jouw limiet van ${formatWeeklyLimitLabel(
+                weeklyBookingLimitMinutes
+              )}.`
+            : "Deze instructeur heeft op dit moment nog geen momenten voor jou vrijgezet. Je kunt wel alvast een gewone aanvraag versturen, waarna de planning later wordt afgestemd."}
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <LessonRequestDialog
             instructorName={instructorName}
             instructorSlug={instructorSlug}
+            availableSlots={slots}
+            defaultDurationMinutes={regularLessonDurationMinutes}
+            weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+            bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+            weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
             triggerLabel="Les aanvragen"
           />
           <LessonRequestDialog
             instructorName={instructorName}
             instructorSlug={instructorSlug}
             requestType="proefles"
+            availableSlots={slots}
+            defaultDurationMinutes={trialLessonDurationMinutes}
+            weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+            bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+            weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
             triggerLabel="Plan proefles"
             triggerVariant="secondary"
           />
@@ -160,11 +181,11 @@ export function InstructorAvailabilityPlanner({
           <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
             {publicBookingEnabled
               ? directBookingEnabled
-                ? "Deze instructeur heeft online zelf-inschrijven aangezet. Klik een beschikbaar blok aan en rond je moment af vanuit dezelfde live agenda."
-                : "Deze instructeur toont live online momenten. Log in als leerling om een gekozen blok direct te boeken of als aanvraag vast te zetten."
+                ? "Deze instructeur heeft online zelf-inschrijven aangezet. Je ziet hieronder alleen vrije boekbare momenten uit de agenda."
+                : "Deze instructeur toont hieronder alleen vrije online momenten. Log in als leerling om een gekozen blok direct te boeken of als aanvraag vast te zetten."
               : directBookingEnabled
-                ? "Bekijk de actuele agenda van de instructeur, klik een beschikbaar blok aan en plan jezelf direct in op een moment dat echt vrij is."
-                : "Klik een beschikbaar blok aan en geef precies dat live moment door als je voorkeursmoment."}
+                ? "Je ziet hieronder alleen vrije momenten die echt boekbaar zijn. Klik een blok aan en plan jezelf direct in."
+                : "Klik een vrij blok aan en geef precies dat boekbare moment door als je voorkeursmoment."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -174,75 +195,77 @@ export function InstructorAvailabilityPlanner({
               ? "Online boeking aan"
               : directBookingEnabled
                 ? "Zelf plannen"
-                : "Voorkeursmoment"}
+              : "Voorkeursmoment"}
           </Badge>
+          {weeklyBookingLimitMinutes != null ? (
+            <Badge variant="default">
+              Limiet: {formatWeeklyLimitLabel(weeklyBookingLimitMinutes)}
+            </Badge>
+          ) : null}
+          {weeklyBookingLimitSource !== "none" ? (
+            <Badge
+              variant={
+                weeklyBookingLimitSource === "manual" ? "warning" : "success"
+              }
+            >
+              {weeklyLimitSourceLabel}
+            </Badge>
+          ) : null}
         </div>
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_19rem]">
+      {weeklyBookingLimitMinutes != null ? (
+        <div className="mt-4 rounded-[1.2rem] border border-slate-200 bg-slate-50/90 px-4 py-3 text-[13px] leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+          Je ziet hier alleen vrije momenten die passen binnen jouw persoonlijke weekruimte.
+          {weeklyRemainingMinutesThisWeek == null
+            ? " Deze week staat onbeperkt open."
+            : ` Nog over deze week: ${formatMinutesAsHoursLabel(
+                weeklyRemainingMinutesThisWeek
+              )}.`}
+          {weeklyBookingLimitSource === "package"
+            ? " Deze ruimte volgt automatisch het gekoppelde pakket."
+            : weeklyBookingLimitSource === "manual"
+              ? " Deze ruimte is handmatig door de instructeur op jouw traject afgestemd."
+              : ""}
+        </div>
+      ) : null}
+
+      <div className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.75fr)_19.5rem]">
         <div className="min-w-0">
-          <div className="lesson-calendar-shell rounded-[1.7rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-3">
-            <div className="lesson-calendar lesson-calendar--default">
-              <FullCalendar
-                key={compact ? "compact" : "wide"}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                locale={nlLocale}
-                initialDate={selectedEntry?.startAt ?? undefined}
-                initialView={compact ? "dayGridMonth" : "timeGridWeek"}
-                headerToolbar={
-                  compact
-                    ? {
-                        left: "prev,next",
-                        center: "title",
-                        right: "dayGridMonth,timeGridDay",
-                      }
-                    : {
-                        left: "prev,next today",
-                        center: "title",
-                        right: "dayGridMonth,timeGridWeek,timeGridDay",
-                      }
-                }
-                buttonText={{
-                  today: "Vandaag",
-                  month: "Maand",
-                  week: "Week",
-                  day: "Dag",
-                }}
-                firstDay={1}
-                allDaySlot={false}
-                nowIndicator
-                height="auto"
-                fixedWeekCount={false}
-                dayMaxEventRows={compact ? 2 : 3}
-                slotMinTime="07:00:00"
-                slotMaxTime="22:00:00"
-                eventTimeFormat={{
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }}
-                slotLabelFormat={{
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }}
-                eventOrder="start,-duration,title"
-                events={events}
-                eventClick={(info) => setSelectedSlotId(info.event.id)}
-              />
-            </div>
+          <div className="lesson-calendar-shell rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.95))] p-4 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.72),rgba(15,23,42,0.58))] dark:shadow-[0_24px_70px_-42px_rgba(2,6,23,0.55)] lg:p-5">
+            <AvailabilityCalendar
+              selectedEntryStartAt={selectedEntry?.startAt ?? undefined}
+              selectedAvailabilityId={selectedEntry?.id ?? null}
+              showFooterStats={false}
+              displayMode="booking"
+              availabilityItems={entries.map((entry) => ({
+                id: entry.id,
+                title: "Open moment",
+                startAt: entry.startAt,
+                endAt: entry.endAt,
+                available: true,
+                momentLabel: entry.momentLabel,
+                durationLabel: entry.durationLabel,
+                sourceLabel: "Live agenda",
+              }))}
+              onAvailabilityEventClick={setSelectedSlotId}
+            />
           </div>
         </div>
 
-        <div className="space-y-4">
-            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5">
+        <div className="space-y-4 2xl:sticky 2xl:top-24 2xl:self-start">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4 shadow-[0_20px_52px_-38px_rgba(15,23,42,0.2)] dark:border-white/10 dark:bg-white/5 dark:shadow-[0_20px_52px_-38px_rgba(2,6,23,0.5)] lg:p-5">
             <p className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400">
               Geselecteerd moment
             </p>
-            <h4 className="mt-3 text-lg font-semibold text-slate-950 dark:text-white">
+            <h4 className="mt-3 text-xl font-semibold text-slate-950 dark:text-white">
               {selectedEntry?.dag}
             </h4>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Alles rechts helpt je gekozen blok snel bevestigen.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
               <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
                 Beschikbaar
               </span>
@@ -255,102 +278,115 @@ export function InstructorAvailabilityPlanner({
               </span>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)] dark:bg-white/8 dark:text-slate-100 dark:shadow-none">
-                  <Clock3 className="size-4" />
-                </div>
+            <div className="mt-5 rounded-[1.25rem] border border-slate-200 bg-white/90 p-4 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                     Tijdvak
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">
+                  <p className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                     {selectedEntry?.tijdvak}
                   </p>
                 </div>
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 dark:bg-sky-400/12 dark:text-sky-100">
+                  <Clock3 className="size-4" />
+                </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)] dark:bg-white/8 dark:text-slate-100 dark:shadow-none">
-                  <CalendarClock className="size-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+              <div className="mt-4 grid gap-2.5 sm:grid-cols-2 2xl:grid-cols-1">
+                <div className="rounded-[1rem] border border-slate-200 bg-slate-50/90 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
+                  <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                     Moment
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">
+                  <p className="mt-1 text-[13px] leading-6 font-medium text-slate-900 dark:text-slate-100">
                     {selectedEntry?.momentLabel}
                   </p>
                 </div>
+                <div className="rounded-[1rem] border border-slate-200 bg-slate-50/90 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
+                  <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                    Duur
+                  </p>
+                  <p className="mt-1 text-[13px] leading-6 font-medium text-slate-900 dark:text-slate-100">
+                    {selectedEntry?.durationLabel}
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)] dark:bg-white/8 dark:text-slate-100 dark:shadow-none">
-                  <CheckCircle2 className="size-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                    Flow
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">
-                    {directBookingEnabled
-                      ? "Dit moment wordt direct vastgezet zodra je bevestigt."
-                      : "Dit tijdvak wordt als exact voorkeursmoment meegestuurd in je aanvraag."}
-                  </p>
+              <div className="mt-4 rounded-[1rem] border border-emerald-200 bg-emerald-50/80 px-3.5 py-3 text-sm leading-6 text-emerald-800 dark:border-emerald-300/16 dark:bg-emerald-400/10 dark:text-emerald-100">
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-white/80 text-emerald-700 dark:bg-white/10 dark:text-emerald-100">
+                    <CheckCircle2 className="size-3.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">
+                      {directBookingEnabled
+                        ? "Na bevestigen staat dit moment direct in de agenda."
+                        : "Na bevestigen gaat dit exacte tijdvak mee als voorkeursmoment."}
+                    </p>
+                    <p className="mt-1 text-[13px] leading-6 text-emerald-700/90 dark:text-emerald-100/80">
+                      Je kunt hieronder nog een gewone les of proefles op dit blok starten.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-5 grid gap-3">
-              <LessonRequestDialog
-                instructorName={instructorName}
-                instructorSlug={instructorSlug}
-                availableSlots={slots}
-                directBookingEnabled={directBookingEnabled}
-                defaultSlotId={selectedEntry?.id}
-                triggerLabel={directBookingEnabled ? "Boek dit moment" : "Vraag dit moment aan"}
-                triggerClassName="w-full"
-              />
-              <LessonRequestDialog
-                instructorName={instructorName}
-                instructorSlug={instructorSlug}
-                requestType="proefles"
-                availableSlots={slots}
-                directBookingEnabled={directBookingEnabled}
-                defaultSlotId={selectedEntry?.id}
-                triggerLabel={
-                  directBookingEnabled
-                    ? "Boek dit moment als proefles"
+                <LessonRequestDialog
+                  instructorName={instructorName}
+                  instructorSlug={instructorSlug}
+                  availableSlots={slots}
+                  directBookingEnabled={directBookingEnabled}
+                  defaultSlotId={selectedEntry?.id}
+                  defaultDurationMinutes={regularLessonDurationMinutes}
+                  weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+                  bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+                  weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
+                  triggerLabel={directBookingEnabled ? "Boek dit moment" : "Vraag dit moment aan"}
+                  triggerClassName="!h-10 w-full"
+                />
+                <LessonRequestDialog
+                  instructorName={instructorName}
+                  instructorSlug={instructorSlug}
+                  requestType="proefles"
+                  availableSlots={slots}
+                  directBookingEnabled={directBookingEnabled}
+                  defaultSlotId={selectedEntry?.id}
+                  defaultDurationMinutes={trialLessonDurationMinutes}
+                  weeklyBookingLimitMinutes={weeklyBookingLimitMinutes}
+                  bookedMinutesByWeekStart={bookedMinutesByWeekStart}
+                  weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
+                  triggerLabel={
+                    directBookingEnabled
+                      ? "Boek dit moment als proefles"
                     : "Vraag proefles op dit moment aan"
                 }
                 triggerVariant="secondary"
-                triggerClassName="w-full"
+                triggerClassName="!h-10 w-full"
               />
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+          <div className="grid gap-3 sm:grid-cols-3 2xl:grid-cols-1">
             {[
-              { label: "Open slots", value: `${entries.length}`, icon: CalendarDays },
+              { label: "Open momenten", value: `${entries.length}`, icon: CalendarDays },
               {
-                label: "Eerstvolgende",
+                label: "Eerst",
                 value: entries[0]?.shortDay ?? "-",
                 icon: Sparkles,
               },
               {
-                label: "Duur",
+                label: "Lesduur",
                 value: selectedEntry?.durationLabel ?? "-",
                 icon: Clock3,
               },
             ].map((item) => (
               <div
                 key={item.label}
-                className={cn(
-                  "rounded-[1.3rem] border border-slate-200 bg-slate-50/90 p-4 text-slate-950 dark:border-white/10 dark:bg-white/5 dark:text-white"
-                )}
+                className="rounded-[1.3rem] border border-slate-200 bg-slate-50/90 p-4 text-slate-950 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-white/5 dark:text-white dark:shadow-[0_16px_40px_-34px_rgba(2,6,23,0.5)]"
               >
                 <div className="flex items-center gap-2">
-                  <item.icon className="size-4 text-sky-700" />
+                  <item.icon className="size-4 text-sky-700 dark:text-sky-300" />
                   <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                     {item.label}
                   </p>

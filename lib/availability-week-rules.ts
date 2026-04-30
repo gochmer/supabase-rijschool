@@ -27,6 +27,61 @@ function overlaps(
   );
 }
 
+function subtractConcreteOverlapFromRecurringSegment(
+  segment: {
+    start_at: string;
+    eind_at: string;
+    beschikbaar: boolean;
+  },
+  concreteSlot: {
+    start_at: string;
+    eind_at: string;
+  }
+) {
+  if (
+    !overlaps(
+      segment.start_at,
+      segment.eind_at,
+      concreteSlot.start_at,
+      concreteSlot.eind_at
+    )
+  ) {
+    return [segment];
+  }
+
+  const remainingSegments: Array<{
+    start_at: string;
+    eind_at: string;
+    beschikbaar: boolean;
+  }> = [];
+
+  if (
+    new Date(concreteSlot.start_at).getTime() >
+    new Date(segment.start_at).getTime()
+  ) {
+    remainingSegments.push({
+      ...segment,
+      eind_at: concreteSlot.start_at,
+    });
+  }
+
+  if (
+    new Date(concreteSlot.eind_at).getTime() <
+    new Date(segment.eind_at).getTime()
+  ) {
+    remainingSegments.push({
+      ...segment,
+      start_at: concreteSlot.eind_at,
+    });
+  }
+
+  return remainingSegments.filter(
+    (candidate) =>
+      new Date(candidate.eind_at).getTime() >
+      new Date(candidate.start_at).getTime()
+  );
+}
+
 function buildWeekRuleSlotId(ruleId: string, dateValue: string, segmentIndex: number) {
   return `${WEEK_RULE_SLOT_PREFIX}:${ruleId}:${dateValue}:${segmentIndex}`;
 }
@@ -132,31 +187,47 @@ export function buildRecurringAvailabilitySlots(params: {
           weekIndex * 7 + (rule.weekdag - 1)
         );
 
-        const generatedSegments = buildRuleSegments(rule, dateValue).filter((segment) => {
-          if (segment.eind_at <= nowIso) {
-            return false;
-          }
-
-          return !normalizedConcreteSlots.some((concreteSlot) => {
+        const dayConcreteSlots = normalizedConcreteSlots
+          .filter((concreteSlot) => {
             if (!concreteSlot.start_at || !concreteSlot.eind_at) {
               return false;
             }
 
-            if (getAvailabilityDateValue(concreteSlot.start_at) !== dateValue) {
-              return false;
-            }
+            return getAvailabilityDateValue(concreteSlot.start_at) === dateValue;
+          })
+          .map((concreteSlot) => ({
+            start_at: concreteSlot.start_at as string,
+            eind_at: concreteSlot.eind_at as string,
+          }))
+          .sort((left, right) => left.start_at.localeCompare(right.start_at));
 
-            return overlaps(
-              segment.start_at,
-              segment.eind_at,
-              concreteSlot.start_at,
-              concreteSlot.eind_at
-            );
-          });
-        });
+        const generatedSegments = buildRuleSegments(rule, dateValue)
+          .flatMap((segment) => {
+            return dayConcreteSlots.reduce<
+              Array<{
+                start_at: string;
+                eind_at: string;
+                beschikbaar: boolean;
+              }>
+            >((remainingSegments, concreteSlot) => {
+              return remainingSegments.flatMap((candidateSegment) =>
+                subtractConcreteOverlapFromRecurringSegment(
+                  candidateSegment,
+                  concreteSlot
+                )
+              );
+            }, [
+              {
+                start_at: segment.start_at,
+                eind_at: segment.eind_at,
+                beschikbaar: segment.beschikbaar,
+              },
+            ]);
+          })
+          .filter((segment) => segment.eind_at > nowIso);
 
-        return generatedSegments.map<BeschikbaarheidSlot>((segment) => ({
-          id: segment.id,
+        return generatedSegments.map<BeschikbaarheidSlot>((segment, segmentIndex) => ({
+          id: buildWeekRuleSlotId(rule.id, dateValue, segmentIndex),
           dag: formatAvailabilityDay(segment.start_at),
           tijdvak: formatAvailabilityWindow(segment.start_at, segment.eind_at),
           beschikbaar: segment.beschikbaar,

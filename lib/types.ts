@@ -40,6 +40,11 @@ export interface InstructeurProfiel extends Profiel {
   ervaring_jaren: number;
   prijs_per_les: number;
   online_boeken_actief?: boolean;
+  leerling_annuleren_tot_uren_voor_les?: number | null;
+  standaard_rijles_duur_minuten?: number;
+  standaard_proefles_duur_minuten?: number;
+  standaard_pakketles_duur_minuten?: number;
+  standaard_examenrit_duur_minuten?: number;
   beoordeling: number;
   aantal_reviews: number;
   recente_review?: ReviewPreview | null;
@@ -87,6 +92,10 @@ export interface Les {
   attendance_reason?: string | null;
   lesson_note?: string | null;
   reminder_24h_sent_at?: string | null;
+  canSelfCancel?: boolean;
+  selfCancelDeadlineAt?: string | null;
+  selfCancelWindowHours?: number | null;
+  selfCancelMessage?: string | null;
   locatie: string;
   locatie_id?: string | null;
   leerling_naam: string;
@@ -137,6 +146,7 @@ export interface Pakket {
   prijs: number;
   beschrijving: string;
   lessen: number;
+  zelf_inplannen_limiet_minuten_per_week?: number | null;
   les_type: RijlesType;
   badge?: string;
   labels?: string[];
@@ -251,6 +261,12 @@ export interface InstructorStudentProgressRow {
   email?: string;
   telefoon?: string;
   zelfInplannenToegestaan?: boolean;
+  zelfInplannenLimietMinutenPerWeek?: number | null;
+  zelfInplannenPakketLimietMinutenPerWeek?: number | null;
+  zelfInplannenHandmatigeLimietMinutenPerWeek?: number | null;
+  zelfInplannenHandmatigeOverrideActief?: boolean;
+  zelfInplannenGebruiktMinutenDezeWeek?: number;
+  zelfInplannenResterendMinutenDezeWeek?: number | null;
   planningVrijTeGeven?: boolean;
   isHandmatigGekoppeld?: boolean;
   onboardingNotitie?: string | null;

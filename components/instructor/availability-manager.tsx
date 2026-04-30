@@ -1,130 +1,181 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import type { DateSelectArg, EventInput } from "@fullcalendar/core";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
   CalendarClock,
   CalendarDays,
-  CalendarPlus2,
-  CopyPlus,
-  Clock3,
-  Edit3,
   Eye,
   EyeOff,
+  Luggage,
+  PlusSquare,
+  Settings2,
   Sparkles,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  applyAvailabilityWeeklyBulkAction,
+  createAvailabilityWeekOverrideAction,
   createAvailabilitySlotAction,
-  deleteAvailabilitySeriesAction,
   deleteAvailabilitySlotAction,
   deleteAvailabilityWeekRuleAction,
-  duplicateAvailabilityWeekAction,
-  updateAvailabilitySeriesStatusAction,
-  updateAvailabilitySeriesTimingAction,
+  moveAvailabilityBlockAction,
+  shiftAvailabilityBlocksAction,
   updateAvailabilitySlotStatusAction,
-  updateAvailabilitySlotTimingAction,
-  updateAvailabilityWeekRuleActiveAction,
   updateAvailabilityWeekRuleAction,
+  updateAvailabilityWeekRuleActiveAction,
   updateAvailabilityWindowAction,
 } from "@/lib/actions/instructor-availability";
 import {
   addDaysToDateValue,
+  createAvailabilityTimestamp,
+  formatAvailabilityDay,
   formatAvailabilityDuration,
   formatAvailabilityMoment,
-  formatAvailabilityShortDay,
   formatAvailabilityTime,
   getAvailabilityDateValue,
   getAvailabilityDurationMinutes,
-  getAvailabilitySeriesKey,
   getAvailabilityWeekdayNumber,
   getStartOfWeekDateValue,
 } from "@/lib/availability";
-import { formatCurrency } from "@/lib/format";
 import type { BeschikbaarheidSlot, Les } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  AvailabilityCalendar,
+  AvailabilityDayPlanner,
+  type AvailabilityCalendarAvailabilityItem,
+  type AvailabilityCalendarLessonItem,
+} from "@/components/instructor/availability-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AvailabilityCalendar } from "@/components/instructor/availability-calendar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-type AvailabilityEntry = {
-  id: string;
-  startAt: string;
-  endAt: string;
-  dag: string;
-  tijdvak: string;
-  beschikbaar: boolean;
-  momentLabel: string;
-  shortDay: string;
-  durationLabel: string;
-  source: "slot" | "weekrooster";
-  weekroosterId: string | null;
-};
-
-type BookedLessonEntry = {
-  id: string;
-  title: string;
-  startAt: string;
-  endAt: string;
-  status: Les["status"];
-  learnerName: string;
-  location: string;
-  timeLabel: string;
-};
-
-type LinkedAvailabilityWindow = {
-  slots: AvailabilityEntry[];
-  startAt: string;
-  endAt: string;
-  pauseStartAt?: string | null;
-  pauseEndAt?: string | null;
-};
-
-type QuickEditDraft = {
+type LinkedWindowDraft = {
   sourceKey: string;
   startTijd: string;
   eindTijd: string;
-  useBreakWindow: boolean;
+  hasBreak: boolean;
   pauseStartTijd: string;
   pauseEindTijd: string;
 };
 
 const MAX_LINKED_WINDOW_GAP_MINUTES = 90;
-const MIN_DETECTED_BREAK_GAP_MINUTES = 20;
 
-function createAvailabilityEntry(slot: BeschikbaarheidSlot): AvailabilityEntry | null {
+const weekdayOptions = [
+  { value: 1, shortLabel: "Ma", longLabel: "Maandag" },
+  { value: 2, shortLabel: "Di", longLabel: "Dinsdag" },
+  { value: 3, shortLabel: "Wo", longLabel: "Woensdag" },
+  { value: 4, shortLabel: "Do", longLabel: "Donderdag" },
+  { value: 5, shortLabel: "Vr", longLabel: "Vrijdag" },
+  { value: 6, shortLabel: "Za", longLabel: "Zaterdag" },
+  { value: 7, shortLabel: "Zo", longLabel: "Zondag" },
+] as const;
+
+const schedulePresets = [
+  {
+    label: "Werkdag 09:00 - 17:00",
+    start: "09:00",
+    end: "17:00",
+    weekdays: [1, 2, 3, 4, 5],
+  },
+  {
+    label: "Lange dag 09:00 - 20:00",
+    start: "09:00",
+    end: "20:00",
+    weekdays: [1, 2, 3, 4, 5],
+  },
+  {
+    label: "Avond 18:00 - 21:00",
+    start: "18:00",
+    end: "21:00",
+    weekdays: [1, 2, 3, 4, 5],
+  },
+  {
+    label: "Zaterdag 10:00 - 15:00",
+    start: "10:00",
+    end: "15:00",
+    weekdays: [6],
+  },
+];
+
+const exceptionPresets = [
+  {
+    label: "Lunch 12:30 - 13:30",
+    start: "12:30",
+    end: "13:30",
+  },
+  {
+    label: "Ochtend dicht",
+    start: "09:00",
+    end: "12:00",
+  },
+  {
+    label: "Middag dicht",
+    start: "13:00",
+    end: "17:00",
+  },
+];
+
+function formatMinutesLabel(totalMinutes: number) {
+  if (totalMinutes <= 0) {
+    return "0 uur";
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (!minutes) {
+    return `${hours} uur`;
+  }
+
+  if (!hours) {
+    return `${minutes} min`;
+  }
+
+  return `${hours}u ${String(minutes).padStart(2, "0")}m`;
+}
+
+function formatDateLong(dateValue: string) {
+  return new Intl.DateTimeFormat("nl-NL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${dateValue}T12:00:00`));
+}
+
+function toAvailabilityCalendarItem(
+  slot: BeschikbaarheidSlot
+): AvailabilityCalendarAvailabilityItem | null {
   if (!slot.start_at || !slot.eind_at) {
     return null;
   }
 
   return {
     id: slot.id,
+    title: slot.beschikbaar ? "Open moment" : "Afgeschermd moment",
     startAt: slot.start_at,
     endAt: slot.eind_at,
-    dag: slot.dag,
-    tijdvak: slot.tijdvak,
-    beschikbaar: slot.beschikbaar,
+    available: slot.beschikbaar,
     momentLabel: formatAvailabilityMoment(slot.start_at, slot.eind_at),
-    shortDay: formatAvailabilityShortDay(slot.start_at),
     durationLabel: formatAvailabilityDuration(slot.start_at, slot.eind_at),
     source: slot.source ?? "slot",
-    weekroosterId: slot.weekrooster_id ?? null,
+    weekRuleId: slot.weekrooster_id ?? null,
+    sourceLabel:
+      slot.source === "weekrooster"
+        ? "Vaste weekplanning"
+        : slot.beschikbaar
+          ? "Los geopend moment"
+          : "Geblokkeerd moment",
   };
 }
 
-function createBookedLessonEntry(lesson: Les): BookedLessonEntry | null {
+function toLessonCalendarItem(
+  lesson: Les
+): AvailabilityCalendarLessonItem | null {
   if (!lesson.start_at || !lesson.end_at) {
     return null;
   }
@@ -135,40 +186,41 @@ function createBookedLessonEntry(lesson: Les): BookedLessonEntry | null {
     startAt: lesson.start_at,
     endAt: lesson.end_at,
     status: lesson.status,
-    learnerName: lesson.leerling_naam || "Leerling",
-    location: lesson.locatie || "Locatie volgt nog",
+    learnerName: lesson.leerling_naam ?? "Leerling",
+    location: lesson.locatie ?? "Locatie volgt nog",
     timeLabel: formatAvailabilityMoment(lesson.start_at, lesson.end_at),
   };
-}
-
-function isAvailabilityEntry(
-  entry: AvailabilityEntry | null
-): entry is AvailabilityEntry {
-  return entry !== null;
-}
-
-function isBookedLessonEntry(
-  entry: BookedLessonEntry | null
-): entry is BookedLessonEntry {
-  return entry !== null;
 }
 
 function getMinutesBetweenIso(startAt: string, endAt: string) {
   return Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60_000);
 }
 
-function buildLinkedAvailabilityWindow(
-  entries: AvailabilityEntry[],
+function shiftTimeValue(timeValue: string, minutes: number) {
+  const referenceDate = "2026-01-05";
+  const timestamp = createAvailabilityTimestamp(referenceDate, timeValue);
+  const shiftedDate = new Date(new Date(timestamp).getTime() + minutes * 60_000);
+  const shiftedDateValue = getAvailabilityDateValue(shiftedDate.toISOString());
+
+  if (shiftedDateValue !== referenceDate) {
+    return null;
+  }
+
+  return shiftedDate.toISOString().slice(11, 16);
+}
+
+function buildLinkedWindowDraft(
+  items: AvailabilityCalendarAvailabilityItem[],
   anchorId: string | null
-): LinkedAvailabilityWindow | null {
+): LinkedWindowDraft | null {
   if (!anchorId) {
     return null;
   }
 
-  const orderedEntries = [...entries].sort((left, right) =>
+  const orderedItems = [...items].sort((left, right) =>
     left.startAt.localeCompare(right.startAt)
   );
-  const anchorIndex = orderedEntries.findIndex((entry) => entry.id === anchorId);
+  const anchorIndex = orderedItems.findIndex((item) => item.id === anchorId);
 
   if (anchorIndex === -1) {
     return null;
@@ -178,19 +230,17 @@ function buildLinkedAvailabilityWindow(
   let endIndex = anchorIndex;
 
   while (startIndex > 0) {
-    const current = orderedEntries[startIndex];
-    const previous = orderedEntries[startIndex - 1];
-    const sameDate =
-      getAvailabilityDateValue(previous.startAt) === getAvailabilityDateValue(current.startAt);
-    const sameSource =
-      previous.source === current.source &&
-      previous.weekroosterId === current.weekroosterId;
+    const previous = orderedItems[startIndex - 1];
+    const current = orderedItems[startIndex];
+    const sameDay =
+      getAvailabilityDateValue(previous.startAt) ===
+      getAvailabilityDateValue(current.startAt);
+    const sameAvailability = previous.available === current.available;
     const gapMinutes = getMinutesBetweenIso(previous.endAt, current.startAt);
 
     if (
-      !sameDate ||
-      !sameSource ||
-      previous.beschikbaar !== current.beschikbaar ||
+      !sameDay ||
+      !sameAvailability ||
       gapMinutes < 0 ||
       gapMinutes > MAX_LINKED_WINDOW_GAP_MINUTES
     ) {
@@ -200,20 +250,17 @@ function buildLinkedAvailabilityWindow(
     startIndex -= 1;
   }
 
-  while (endIndex < orderedEntries.length - 1) {
-    const current = orderedEntries[endIndex];
-    const next = orderedEntries[endIndex + 1];
-    const sameDate =
+  while (endIndex < orderedItems.length - 1) {
+    const current = orderedItems[endIndex];
+    const next = orderedItems[endIndex + 1];
+    const sameDay =
       getAvailabilityDateValue(next.startAt) === getAvailabilityDateValue(current.startAt);
-    const sameSource =
-      next.source === current.source &&
-      next.weekroosterId === current.weekroosterId;
+    const sameAvailability = next.available === current.available;
     const gapMinutes = getMinutesBetweenIso(current.endAt, next.startAt);
 
     if (
-      !sameDate ||
-      !sameSource ||
-      next.beschikbaar !== current.beschikbaar ||
+      !sameDay ||
+      !sameAvailability ||
       gapMinutes < 0 ||
       gapMinutes > MAX_LINKED_WINDOW_GAP_MINUTES
     ) {
@@ -223,32 +270,29 @@ function buildLinkedAvailabilityWindow(
     endIndex += 1;
   }
 
-  const windowEntries = orderedEntries.slice(startIndex, endIndex + 1);
-  const detectedPause = windowEntries.reduce<{
+  const windowItems = orderedItems.slice(startIndex, endIndex + 1);
+  const largestGap = windowItems.reduce<{
     pauseStartAt: string | null;
     pauseEndAt: string | null;
     gapMinutes: number;
   }>(
-    (largestGap, entry, index) => {
-      if (index === windowEntries.length - 1) {
-        return largestGap;
+    (largest, item, index) => {
+      if (index === windowItems.length - 1) {
+        return largest;
       }
 
-      const next = windowEntries[index + 1];
-      const gapMinutes = getMinutesBetweenIso(entry.endAt, next.startAt);
+      const next = windowItems[index + 1];
+      const gapMinutes = getMinutesBetweenIso(item.endAt, next.startAt);
 
-      if (
-        gapMinutes >= MIN_DETECTED_BREAK_GAP_MINUTES &&
-        gapMinutes > largestGap.gapMinutes
-      ) {
+      if (gapMinutes >= 20 && gapMinutes > largest.gapMinutes) {
         return {
-          pauseStartAt: entry.endAt,
+          pauseStartAt: item.endAt,
           pauseEndAt: next.startAt,
           gapMinutes,
         };
       }
 
-      return largestGap;
+      return largest;
     },
     {
       pauseStartAt: null,
@@ -258,3133 +302,1361 @@ function buildLinkedAvailabilityWindow(
   );
 
   return {
-    slots: windowEntries,
-    startAt: windowEntries[0]?.startAt ?? "",
-    endAt: windowEntries[windowEntries.length - 1]?.endAt ?? "",
-    pauseStartAt: detectedPause.pauseStartAt,
-    pauseEndAt: detectedPause.pauseEndAt,
-  };
-}
-
-function getQuickEditSourceKey(workWindow: LinkedAvailabilityWindow | null) {
-  if (!workWindow) {
-    return "empty";
-  }
-
-  return workWindow.slots.map((slot) => slot.id).join("|");
-}
-
-function createQuickEditDraft(workWindow: LinkedAvailabilityWindow | null): QuickEditDraft {
-  if (!workWindow) {
-    return {
-      sourceKey: "empty",
-      startTijd: "09:00",
-      eindTijd: "10:30",
-      useBreakWindow: false,
-      pauseStartTijd: "12:30",
-      pauseEindTijd: "13:00",
-    };
-  }
-
-  return {
-    sourceKey: getQuickEditSourceKey(workWindow),
-    startTijd: formatAvailabilityTime(workWindow.startAt),
-    eindTijd: formatAvailabilityTime(workWindow.endAt),
-    useBreakWindow: Boolean(workWindow.pauseStartAt && workWindow.pauseEndAt),
-    pauseStartTijd: workWindow.pauseStartAt
-      ? formatAvailabilityTime(workWindow.pauseStartAt)
+    sourceKey: windowItems.map((item) => item.id).join("|"),
+    startTijd: formatAvailabilityTime(windowItems[0]?.startAt ?? ""),
+    eindTijd: formatAvailabilityTime(windowItems[windowItems.length - 1]?.endAt ?? ""),
+    hasBreak: Boolean(largestGap.pauseStartAt && largestGap.pauseEndAt),
+    pauseStartTijd: largestGap.pauseStartAt
+      ? formatAvailabilityTime(largestGap.pauseStartAt)
       : "12:30",
-    pauseEindTijd: workWindow.pauseEndAt
-      ? formatAvailabilityTime(workWindow.pauseEndAt)
+    pauseEindTijd: largestGap.pauseEndAt
+      ? formatAvailabilityTime(largestGap.pauseEndAt)
       : "13:00",
   };
-}
-
-function pad(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function getTodayValue() {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-
-function toDateInputValue(date: Date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function toTimeInputValue(date: Date) {
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function addMinutesToTimeValue(timeValue: string, minutesToAdd: number) {
-  const [hours, minutes] = timeValue
-    .split(":")
-    .map((part) => Number.parseInt(part, 10));
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-    return timeValue;
-  }
-
-  const totalMinutes = Math.min(hours * 60 + minutes + minutesToAdd, 23 * 60 + 59);
-  const nextHours = Math.floor(totalMinutes / 60);
-  const nextMinutes = totalMinutes % 60;
-
-  return `${pad(nextHours)}:${pad(nextMinutes)}`;
-}
-
-function timeValueToMinutes(timeValue: string) {
-  const [hours, minutes] = timeValue
-    .split(":")
-    .map((part) => Number.parseInt(part, 10));
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-    return 0;
-  }
-
-  return hours * 60 + minutes;
-}
-
-function formatMinutesLabel(totalMinutes: number) {
-  if (totalMinutes <= 0) {
-    return "0 uur";
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (minutes === 0) {
-    return `${hours} uur`;
-  }
-
-  if (hours === 0) {
-    return `${minutes} min`;
-  }
-
-  return `${hours}u ${minutes} min`;
-}
-
-function formatMinutesDeltaLabel(deltaMinutes: number) {
-  if (deltaMinutes === 0) {
-    return "gelijk aan deze week";
-  }
-
-  const direction = deltaMinutes > 0 ? "+" : "-";
-  return `${direction}${formatMinutesLabel(Math.abs(deltaMinutes))}`;
-}
-
-function countGeneratedSlotsForWindow(
-  startTimeValue: string,
-  endTimeValue: string,
-  lessonDurationMinutes: number,
-  bufferMinutes: number
-) {
-  const startMinutes = timeValueToMinutes(startTimeValue);
-  const endMinutes = timeValueToMinutes(endTimeValue);
-
-  if (
-    lessonDurationMinutes < 30 ||
-    endMinutes <= startMinutes ||
-    startMinutes + lessonDurationMinutes > endMinutes
-  ) {
-    return 0;
-  }
-
-  let cursor = startMinutes;
-  let count = 0;
-
-  while (cursor + lessonDurationMinutes <= endMinutes) {
-    count += 1;
-    cursor += lessonDurationMinutes + bufferMinutes;
-  }
-
-  return count;
-}
-
-const weekdayOptions = [
-  { value: 1, shortLabel: "Ma", longLabel: "maandag" },
-  { value: 2, shortLabel: "Di", longLabel: "dinsdag" },
-  { value: 3, shortLabel: "Wo", longLabel: "woensdag" },
-  { value: 4, shortLabel: "Do", longLabel: "donderdag" },
-  { value: 5, shortLabel: "Vr", longLabel: "vrijdag" },
-  { value: 6, shortLabel: "Za", longLabel: "zaterdag" },
-  { value: 7, shortLabel: "Zo", longLabel: "zondag" },
-] as const;
-
-const shiftPresets = [
-  { label: "Ochtend", start: "08:00", end: "12:00" },
-  { label: "Middag", start: "12:00", end: "17:00" },
-  { label: "Avond", start: "18:00", end: "21:00" },
-  { label: "Werkdag", start: "09:00", end: "17:00" },
-] as const;
-
-const breakPresets = [
-  { label: "Lunch 30 min", start: "12:30", end: "13:00" },
-  { label: "Lunch 60 min", start: "13:00", end: "14:00" },
-  { label: "Korte pauze", start: "15:30", end: "15:45" },
-] as const;
-
-const DAILY_LESSON_CAP_STORAGE_KEY = "availability-daily-lesson-cap";
-
-function formatSelectedWeekdays(weekdays: number[]) {
-  if (!weekdays.length) {
-    return "";
-  }
-
-  return weekdayOptions
-    .filter((option) => weekdays.includes(option.value))
-    .map((option) => option.longLabel)
-    .join(", ");
-}
-
-function formatWeekdayNameFromIso(isoValue: string) {
-  return new Intl.DateTimeFormat("nl-NL", { weekday: "long" }).format(new Date(isoValue));
 }
 
 export function AvailabilityManager({
   slots,
   lessons = [],
-  pricePerLesson = 0,
-  showSummarySidebar = true,
 }: {
   slots: BeschikbaarheidSlot[];
   lessons?: Les[];
   pricePerLesson?: number;
   showSummarySidebar?: boolean;
 }) {
-  const [compact, setCompact] = useState(false);
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [insightView, setInsightView] = useState<"rooster" | "health" | "suggestions">(
-    "rooster"
-  );
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(slots[0]?.id ?? null);
-  const [datum, setDatum] = useState(getTodayValue);
-  const [eindDatum, setEindDatum] = useState(getTodayValue);
-  const [startTijd, setStartTijd] = useState("09:00");
-  const [eindTijd, setEindTijd] = useState("10:30");
-  const [repeatWeeks, setRepeatWeeks] = useState("1");
-  const [createMode, setCreateMode] = useState<"beschikbaar" | "afwezig">("beschikbaar");
-  const [useDateRange, setUseDateRange] = useState(false);
-  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
-  const [useBreakWindow, setUseBreakWindow] = useState(false);
-  const [pauseStartTijd, setPauseStartTijd] = useState("12:30");
-  const [pauseEindTijd, setPauseEindTijd] = useState("13:00");
-  const [useLessonCadence, setUseLessonCadence] = useState(false);
-  const [lessonDurationMinutes, setLessonDurationMinutes] = useState("90");
-  const [bufferMinutes, setBufferMinutes] = useState("15");
-  const [dailyLessonCap, setDailyLessonCap] = useState(() => {
-    if (typeof window === "undefined") {
-      return "0";
-    }
 
-    return window.localStorage.getItem(DAILY_LESSON_CAP_STORAGE_KEY) ?? "0";
-  });
-  const [visibilityFilter, setVisibilityFilter] = useState("alles");
-  const [confirmAction, setConfirmAction] = useState<null | "delete-slot" | "delete-series">(
-    null
-  );
-  const [editAction, setEditAction] = useState<null | "edit-slot" | "edit-series">(null);
-  const [editDatum, setEditDatum] = useState(getTodayValue);
-  const [editStartTijd, setEditStartTijd] = useState("09:00");
-  const [editEindTijd, setEditEindTijd] = useState("10:30");
-  const [quickEditDraft, setQuickEditDraft] = useState<QuickEditDraft>(() =>
-    createQuickEditDraft(null)
-  );
-
-  const entries = useMemo(
+  const availabilityItems = useMemo(
     () =>
       slots
-        .map(createAvailabilityEntry)
-        .filter(isAvailabilityEntry)
+        .map(toAvailabilityCalendarItem)
+        .filter(
+          (
+            item
+          ): item is AvailabilityCalendarAvailabilityItem => item !== null
+        )
         .sort((left, right) => left.startAt.localeCompare(right.startAt)),
     [slots]
   );
-  const bookedLessons = useMemo(
+  const lessonItems = useMemo(
     () =>
       lessons
-        .filter(
-          (lesson) =>
-            (lesson.status === "geaccepteerd" || lesson.status === "ingepland") &&
-            Boolean(lesson.start_at) &&
-            Boolean(lesson.end_at)
-        )
-        .map(createBookedLessonEntry)
-        .filter(isBookedLessonEntry)
+        .map(toLessonCalendarItem)
+        .filter((item): item is AvailabilityCalendarLessonItem => item !== null)
         .sort((left, right) => left.startAt.localeCompare(right.startAt)),
     [lessons]
   );
 
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 920px)");
-    const sync = () => setCompact(media.matches);
-
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(DAILY_LESSON_CAP_STORAGE_KEY, dailyLessonCap);
-  }, [dailyLessonCap]);
-
-  const selectedEntry = useMemo(
-    () => entries.find((entry) => entry.id === selectedSlotId) ?? entries[0] ?? null,
-    [entries, selectedSlotId]
-  );
-  const selectedWorkWindow = useMemo(
-    () => buildLinkedAvailabilityWindow(entries, selectedEntry?.id ?? null),
-    [entries, selectedEntry]
-  );
-  const selectedWorkWindowKey = useMemo(
-    () => getQuickEditSourceKey(selectedWorkWindow),
-    [selectedWorkWindow]
-  );
-  const activeQuickEditDraft = useMemo(
-    () =>
-      quickEditDraft.sourceKey === selectedWorkWindowKey
-        ? quickEditDraft
-        : createQuickEditDraft(selectedWorkWindow),
-    [quickEditDraft, selectedWorkWindow, selectedWorkWindowKey]
-  );
-  const quickEditStartTijd = activeQuickEditDraft.startTijd;
-  const quickEditEindTijd = activeQuickEditDraft.eindTijd;
-  const quickEditUseBreakWindow = activeQuickEditDraft.useBreakWindow;
-  const quickEditPauseStartTijd = activeQuickEditDraft.pauseStartTijd;
-  const quickEditPauseEindTijd = activeQuickEditDraft.pauseEindTijd;
-  const quickEditHasBreakPreview =
-    Boolean(selectedEntry?.beschikbaar) &&
-    quickEditUseBreakWindow &&
-    timeValueToMinutes(quickEditPauseStartTijd) > timeValueToMinutes(quickEditStartTijd) &&
-    timeValueToMinutes(quickEditPauseEindTijd) >
-      timeValueToMinutes(quickEditPauseStartTijd) &&
-    timeValueToMinutes(quickEditPauseEindTijd) < timeValueToMinutes(quickEditEindTijd);
-  const currentWeekStart = useMemo(() => {
-    try {
-      return getStartOfWeekDateValue(datum);
-    } catch {
-      return getStartOfWeekDateValue(getTodayValue());
-    }
-  }, [datum]);
-  const nextWeekStart = useMemo(
-    () => addDaysToDateValue(currentWeekStart, 7),
-    [currentWeekStart]
-  );
-  const normalizedWeekdays = useMemo(
-    () => [...selectedWeekdays].sort((left, right) => left - right),
-    [selectedWeekdays]
-  );
-  const isWeekScheduleMode = normalizedWeekdays.length > 0;
-  const selectedWeekdaySummary = useMemo(
-    () => formatSelectedWeekdays(normalizedWeekdays),
-    [normalizedWeekdays]
-  );
-  const isBlockingMode = createMode === "afwezig";
-  const lessonDurationValue = Number.parseInt(lessonDurationMinutes, 10) || 0;
-  const bufferValue = Number.parseInt(bufferMinutes, 10) || 0;
-  const dailyLessonCapValue = Number.parseInt(dailyLessonCap, 10) || 0;
-  const nextWeekEnd = useMemo(
-    () => addDaysToDateValue(nextWeekStart, 7),
-    [nextWeekStart]
-  );
-  const filteredEntries = useMemo(() => {
-    if (visibilityFilter === "actief") {
-      return entries.filter((entry) => entry.beschikbaar);
-    }
-
-    if (visibilityFilter === "verborgen") {
-      return entries.filter((entry) => !entry.beschikbaar);
-    }
-
-    return entries;
-  }, [entries, visibilityFilter]);
-  const selectedSeriesCount = useMemo(() => {
-    if (!selectedEntry) {
-      return 0;
-    }
-
-    if (selectedEntry.source === "weekrooster") {
-      return filteredEntries.filter(
-        (entry) => entry.weekroosterId === selectedEntry.weekroosterId
-      ).length;
-    }
-
-    const seriesKey = getAvailabilitySeriesKey(
-      selectedEntry.startAt,
-      selectedEntry.endAt
-    );
-
-    return entries.filter((entry) => {
-      return (
-        entry.startAt >= selectedEntry.startAt &&
-        getAvailabilitySeriesKey(entry.startAt, entry.endAt) === seriesKey
-      );
-    }).length;
-  }, [entries, filteredEntries, selectedEntry]);
-  const isRecurringRuleEntry =
-    selectedEntry?.source === "weekrooster" && Boolean(selectedEntry.weekroosterId);
-
-  const events = useMemo<EventInput[]>(
-    () => [
-      ...filteredEntries.map((entry) => ({
-        id: entry.id,
-        title: entry.beschikbaar ? "Boekbaar" : "Niet boekbaar",
-        start: entry.startAt,
-        end: entry.endAt,
-        backgroundColor: entry.beschikbaar ? "#dbeafe" : "#e2e8f0",
-        borderColor: entry.beschikbaar ? "#38bdf8" : "#94a3b8",
-        textColor: entry.beschikbaar ? "#0f172a" : "#475569",
-        classNames: entry.beschikbaar
-          ? ["lesson-calendar-event--availability"]
-          : ["lesson-calendar-event--availability", "lesson-calendar-event--availability-muted"],
-        extendedProps: {
-          kind: "availability",
-        },
-      })),
-      ...bookedLessons.map((lesson) => ({
-        id: `lesson-${lesson.id}`,
-        title: `Les - ${lesson.learnerName}`,
-        start: lesson.startAt,
-        end: lesson.endAt,
-        backgroundColor: "#fef3c7",
-        borderColor: "#f59e0b",
-        textColor: "#78350f",
-        classNames: ["lesson-calendar-event--request"],
-        extendedProps: {
-          kind: "lesson",
-        },
-      })),
-    ],
-    [bookedLessons, filteredEntries]
-  );
-
-  const dashboardHorizonEnd = useMemo(
-    () => new Date(new Date().getTime() + 56 * 24 * 60 * 60_000),
+  const todayValue = useMemo(
+    () => getAvailabilityDateValue(new Date().toISOString()),
     []
   );
-  const bookedLessonCount = bookedLessons.filter((lesson) => {
-    const start = new Date(lesson.startAt);
-    return start <= dashboardHorizonEnd;
-  }).length;
-  const nextBookedLesson = bookedLessons[0] ?? null;
-  const activeCount = entries.filter((entry) => {
-    const start = new Date(entry.startAt);
-    return entry.beschikbaar && start <= dashboardHorizonEnd;
-  }).length;
-  const hiddenCount = entries.filter((entry) => {
-    const start = new Date(entry.startAt);
-    return !entry.beschikbaar && start <= dashboardHorizonEnd;
-  }).length;
-  const isOngoingWeekSchedule = repeatWeeks === "ongoing";
-  const repeatCount =
-    !isOngoingWeekSchedule && Number.parseInt(repeatWeeks, 10)
-      ? Number.parseInt(repeatWeeks, 10)
-      : 1;
-  const scheduleCountLabel =
-    isWeekScheduleMode && isOngoingWeekSchedule
-      ? `${normalizedWeekdays.length} werkdagen, vast`
-      : isWeekScheduleMode && repeatCount > 1
-      ? `${normalizedWeekdays.length} werkdagen, ${repeatCount} weken`
-      : isWeekScheduleMode
-        ? `${normalizedWeekdays.length} werkdagen`
-        : isOngoingWeekSchedule
-          ? "Vaste weekplanning"
-        : repeatCount > 1
-          ? `${repeatCount} weken reeks`
-          : "Eenmalig blok";
-  const hasBreakPreview =
-    useBreakWindow &&
-    timeValueToMinutes(pauseStartTijd) > timeValueToMinutes(startTijd) &&
-    timeValueToMinutes(pauseEindTijd) > timeValueToMinutes(pauseStartTijd) &&
-    timeValueToMinutes(pauseEindTijd) < timeValueToMinutes(eindTijd);
-  const cadencePreviewCount = useMemo(() => {
-    if (isBlockingMode || !useLessonCadence || lessonDurationValue < 30) {
-      return 0;
+
+  const [selectedAvailabilityId, setSelectedAvailabilityId] = useState<string | null>(
+    availabilityItems[0]?.id ?? null
+  );
+  const [selectedAvailabilityIds, setSelectedAvailabilityIds] = useState<string[]>(
+    availabilityItems[0]?.id ? [availabilityItems[0].id] : []
+  );
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedDateValue, setSelectedDateValue] = useState(
+    availabilityItems[0]?.startAt
+      ? getAvailabilityDateValue(availabilityItems[0].startAt)
+      : todayValue
+  );
+  const [startTijd, setStartTijd] = useState("09:00");
+  const [eindTijd, setEindTijd] = useState("17:00");
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [useBreakWindow, setUseBreakWindow] = useState(false);
+  const [pauseStartTijd, setPauseStartTijd] = useState("13:00");
+  const [pauseEindTijd, setPauseEindTijd] = useState("14:00");
+  const [exceptionStartTijd, setExceptionStartTijd] = useState("09:00");
+  const [exceptionEindTijd, setExceptionEindTijd] = useState("12:00");
+  const [vacationStartDate, setVacationStartDate] = useState(todayValue);
+  const [vacationEndDate, setVacationEndDate] = useState(
+    addDaysToDateValue(todayValue, 2)
+  );
+  const [bulkCutoffTime, setBulkCutoffTime] = useState("18:00");
+  const [editDraft, setEditDraft] = useState<LinkedWindowDraft>({
+    sourceKey: "empty",
+    startTijd: "09:00",
+    eindTijd: "20:00",
+    hasBreak: false,
+    pauseStartTijd: "13:00",
+    pauseEindTijd: "14:00",
+  });
+
+  const resolvedSelectedAvailabilityId = useMemo(() => {
+    if (!availabilityItems.length) {
+      return null;
     }
 
-    if (useBreakWindow && hasBreakPreview) {
-      return (
-        countGeneratedSlotsForWindow(startTijd, pauseStartTijd, lessonDurationValue, bufferValue) +
-        countGeneratedSlotsForWindow(
-          pauseEindTijd,
-          eindTijd,
-          lessonDurationValue,
-          bufferValue
-        )
-      );
+    if (
+      selectedAvailabilityId &&
+      availabilityItems.some((item) => item.id === selectedAvailabilityId)
+    ) {
+      return selectedAvailabilityId;
     }
 
-    return countGeneratedSlotsForWindow(startTijd, eindTijd, lessonDurationValue, bufferValue);
-  }, [
-    bufferValue,
-    eindTijd,
-    hasBreakPreview,
-    isBlockingMode,
-    lessonDurationValue,
-    pauseEindTijd,
-    pauseStartTijd,
-    startTijd,
-    useBreakWindow,
-    useLessonCadence,
-  ]);
-  const cadencePreviewAfterCap =
-    dailyLessonCapValue > 0
-      ? Math.min(cadencePreviewCount, dailyLessonCapValue)
-      : cadencePreviewCount;
-  const dailyLessonCapWillTrim =
-    useLessonCadence &&
-    dailyLessonCapValue > 0 &&
-    cadencePreviewCount > dailyLessonCapValue;
-  const currentWeekActiveEntries = useMemo(
-    () =>
-      entries.filter((entry) => {
-        const dateValue = getAvailabilityDateValue(entry.startAt);
-        return (
-          entry.beschikbaar &&
-          dateValue >= currentWeekStart &&
-          dateValue < nextWeekStart
-        );
-      }),
-    [currentWeekStart, entries, nextWeekStart]
-  );
-  const nextWeekActiveEntries = useMemo(
-    () =>
-      entries.filter((entry) => {
-        const dateValue = getAvailabilityDateValue(entry.startAt);
-        return entry.beschikbaar && dateValue >= nextWeekStart && dateValue < nextWeekEnd;
-      }),
-    [entries, nextWeekEnd, nextWeekStart]
-  );
-  const overlapIndex = useMemo(
-    () =>
-      entries.map((entry) => ({
-        dateValue: getAvailabilityDateValue(entry.startAt),
-        startMinutes: timeValueToMinutes(formatAvailabilityTime(entry.startAt)),
-        endMinutes: timeValueToMinutes(formatAvailabilityTime(entry.endAt)),
-        weekday: getAvailabilityWeekdayNumber(entry.startAt),
-        beschikbaar: entry.beschikbaar,
-      })),
-    [entries]
-  );
+    return (
+      availabilityItems.find(
+        (item) => getAvailabilityDateValue(item.startAt) === selectedDateValue
+      )?.id ??
+      availabilityItems[0]?.id ??
+      null
+    );
+  }, [availabilityItems, selectedAvailabilityId, selectedDateValue]);
 
-  const nextWeekEveningSuggestion = (() => {
-    for (const weekday of [1, 3, 4]) {
-      const dateValue = addDaysToDateValue(nextWeekStart, weekday - 1);
+  const selectedAvailabilityItem =
+    availabilityItems.find((item) => item.id === resolvedSelectedAvailabilityId) ?? null;
+  const isRecurringSelection = selectedAvailabilityItem?.source === "weekrooster";
+  const resolvedSelectedAvailabilityIds = useMemo(() => {
+    const validIds = Array.from(new Set(selectedAvailabilityIds)).filter((id) =>
+      availabilityItems.some((item) => item.id === id)
+    );
 
-      const overlaps = overlapIndex.some((entry) => {
-        return (
-          entry.dateValue === dateValue &&
-          entry.startMinutes < timeValueToMinutes("20:30") &&
-          entry.endMinutes > timeValueToMinutes("18:30")
-        );
+    if (validIds.length) {
+      return validIds;
+    }
+
+    return resolvedSelectedAvailabilityId ? [resolvedSelectedAvailabilityId] : [];
+  }, [availabilityItems, resolvedSelectedAvailabilityId, selectedAvailabilityIds]);
+  const selectedAvailabilitySelectionItems = useMemo(
+    () =>
+      availabilityItems.filter((item) =>
+        resolvedSelectedAvailabilityIds.includes(item.id)
+      ),
+    [availabilityItems, resolvedSelectedAvailabilityIds]
+  );
+  const selectedAvailabilitySelectionCount =
+    selectedAvailabilitySelectionItems.length;
+  const selectedRecurringSelectionCount = selectedAvailabilitySelectionItems.filter(
+    (item) => item.source === "weekrooster"
+  ).length;
+
+  const selectedEntryStartAt = useMemo(
+    () => selectedAvailabilityItem?.startAt ?? availabilityItems[0]?.startAt,
+    [availabilityItems, selectedAvailabilityItem]
+  );
+  const selectedDaySlots = useMemo(
+    () =>
+      availabilityItems.filter(
+        (item) => getAvailabilityDateValue(item.startAt) === selectedDateValue
+      ),
+    [availabilityItems, selectedDateValue]
+  );
+  const selectedDayLessons = useMemo(
+    () =>
+      lessonItems.filter(
+        (item) => getAvailabilityDateValue(item.startAt) === selectedDateValue
+      ),
+    [lessonItems, selectedDateValue]
+  );
+  const linkedWindowDraft = useMemo(
+    () => buildLinkedWindowDraft(selectedDaySlots, resolvedSelectedAvailabilityId),
+    [resolvedSelectedAvailabilityId, selectedDaySlots]
+  );
+  const activeEditDraft =
+    linkedWindowDraft && editDraft.sourceKey === linkedWindowDraft.sourceKey
+      ? editDraft
+      : linkedWindowDraft ?? editDraft;
+
+  const openSlotCount = availabilityItems.filter((item) => item.available).length;
+  const blockedSlotCount = availabilityItems.filter((item) => !item.available).length;
+  const recurringSlotCount = availabilityItems.filter(
+    (item) => item.sourceLabel === "Vaste weekplanning"
+  ).length;
+  const selectedDayOpenMinutes = selectedDaySlots
+    .filter((item) => item.available)
+    .reduce(
+      (total, item) => total + getAvailabilityDurationMinutes(item.startAt, item.endAt),
+      0
+    );
+  const selectedDayBlockedMinutes = selectedDaySlots
+    .filter((item) => !item.available)
+    .reduce(
+      (total, item) => total + getAvailabilityDurationMinutes(item.startAt, item.endAt),
+      0
+    );
+  const selectedWeekStart = getStartOfWeekDateValue(selectedDateValue || todayValue);
+
+  function handleAvailabilityEventClick(eventId: string) {
+    const clickedItem = availabilityItems.find((item) => item.id === eventId);
+    setSelectedAvailabilityId(eventId);
+    if (multiSelectMode) {
+      setSelectedAvailabilityIds((current) => {
+        if (current.includes(eventId)) {
+          const next = current.filter((id) => id !== eventId);
+          return next.length ? next : [eventId];
+        }
+
+        return [...current, eventId];
       });
+    } else {
+      setSelectedAvailabilityIds([eventId]);
+    }
 
-      if (!overlaps) {
-        return {
-          dateValue,
-          label: `${["", "maandag", "dinsdag", "woensdag", "donderdag"][weekday]} 18:30 - 20:30`,
-        };
+    if (clickedItem?.startAt) {
+      setSelectedDateValue(getAvailabilityDateValue(clickedItem.startAt));
+    }
+  }
+
+  function handleDateSelect(dateValue: string) {
+    setSelectedDateValue(dateValue);
+
+    const firstSlotOnDay =
+      availabilityItems.find(
+        (item) => getAvailabilityDateValue(item.startAt) === dateValue
+      ) ?? null;
+
+    if (firstSlotOnDay) {
+      setSelectedAvailabilityId(firstSlotOnDay.id);
+      if (!multiSelectMode) {
+        setSelectedAvailabilityIds([firstSlotOnDay.id]);
       }
     }
+  }
 
-    return null;
-  })();
+  function toggleMultiSelectMode() {
+    setMultiSelectMode((current) => {
+      const next = !current;
 
-  const nextWeekWeekendSuggestion = (() => {
-    const weekendActive = overlapIndex.some((entry) => {
-      return (
-        entry.beschikbaar &&
-        (entry.weekday === 6 || entry.weekday === 7) &&
-        entry.dateValue >= nextWeekStart &&
-        entry.dateValue < nextWeekEnd
-      );
+      if (next) {
+        setSelectedAvailabilityIds((existing) =>
+          existing.length
+            ? existing
+            : resolvedSelectedAvailabilityId
+              ? [resolvedSelectedAvailabilityId]
+              : []
+        );
+      } else {
+        setSelectedAvailabilityIds(
+          resolvedSelectedAvailabilityId ? [resolvedSelectedAvailabilityId] : []
+        );
+      }
+
+      return next;
     });
+  }
 
-    if (weekendActive) {
+  function handleSelectAllForDay() {
+    setSelectedAvailabilityIds(selectedDaySlots.map((item) => item.id));
+    if (selectedDaySlots[0]) {
+      setSelectedAvailabilityId(selectedDaySlots[0].id);
+    }
+    setMultiSelectMode(true);
+  }
+
+  function clearSelection() {
+    setSelectedAvailabilityIds(
+      resolvedSelectedAvailabilityId ? [resolvedSelectedAvailabilityId] : []
+    );
+  }
+
+  function patchEditDraft(patch: Partial<LinkedWindowDraft>) {
+    setEditDraft({
+      sourceKey: linkedWindowDraft?.sourceKey ?? activeEditDraft.sourceKey,
+      startTijd: activeEditDraft.startTijd,
+      eindTijd: activeEditDraft.eindTijd,
+      hasBreak: activeEditDraft.hasBreak,
+      pauseStartTijd: activeEditDraft.pauseStartTijd,
+      pauseEindTijd: activeEditDraft.pauseEindTijd,
+      ...patch,
+    });
+  }
+
+  function getEditDraftForAvailabilityItemId(itemId: string) {
+    const anchorItem = availabilityItems.find((item) => item.id === itemId);
+
+    if (!anchorItem) {
       return null;
     }
 
-    const saturdayDate = addDaysToDateValue(nextWeekStart, 5);
-    const overlaps = overlapIndex.some((entry) => {
-      return (
-        entry.dateValue === saturdayDate &&
-        entry.startMinutes < timeValueToMinutes("12:00") &&
-        entry.endMinutes > timeValueToMinutes("09:00")
-      );
-    });
+    const daySlots = availabilityItems.filter(
+      (item) =>
+        getAvailabilityDateValue(item.startAt) ===
+        getAvailabilityDateValue(anchorItem.startAt)
+    );
 
-    if (overlaps) {
-      return null;
-    }
+    return buildLinkedWindowDraft(daySlots, itemId);
+  }
 
-    return {
-      dateValue: saturdayDate,
-      label: "zaterdag 09:00 - 12:00",
-    };
-  })();
-  const currentWeekTotalMinutes = currentWeekActiveEntries.reduce(
-    (total, entry) => total + getAvailabilityDurationMinutes(entry.startAt, entry.endAt),
-    0
-  );
-  const nextWeekTotalMinutes = nextWeekActiveEntries.reduce(
-    (total, entry) => total + getAvailabilityDurationMinutes(entry.startAt, entry.endAt),
-    0
-  );
-  const nextWeekEveningEntries = nextWeekActiveEntries.filter((entry) => {
-    const startMinutes = timeValueToMinutes(formatAvailabilityTime(entry.startAt));
-    const endMinutes = timeValueToMinutes(formatAvailabilityTime(entry.endAt));
+  function toggleWeekday(value: number) {
+    setSelectedWeekdays((current) =>
+      current.includes(value)
+        ? current.filter((day) => day !== value)
+        : [...current, value].sort((left, right) => left - right)
+    );
+  }
 
-    return startMinutes < timeValueToMinutes("21:00") && endMinutes > timeValueToMinutes("18:00");
-  });
-  const nextWeekWeekendEntries = nextWeekActiveEntries.filter((entry) => {
-    const weekday = getAvailabilityWeekdayNumber(entry.startAt);
-    return weekday === 6 || weekday === 7;
-  });
-  const nextWeekDaySpread = new Set(
-    nextWeekActiveEntries.map((entry) => getAvailabilityWeekdayNumber(entry.startAt))
-  ).size;
-  const recurringRuleSummaries = useMemo(() => {
-    const seenRuleIds = new Set<string>();
+  function applyPreset(preset: (typeof schedulePresets)[number]) {
+    setStartTijd(preset.start);
+    setEindTijd(preset.end);
+    setSelectedWeekdays(preset.weekdays);
+    toast.success(`${preset.label} staat klaar als vaste werkweek.`);
+  }
 
-    return entries
-      .filter((entry) => entry.source === "weekrooster" && entry.weekroosterId)
-      .sort((left, right) => left.startAt.localeCompare(right.startAt))
-      .flatMap((entry) => {
-        const ruleId = entry.weekroosterId;
+  function applyExceptionPreset(preset: (typeof exceptionPresets)[number]) {
+    setExceptionStartTijd(preset.start);
+    setExceptionEindTijd(preset.end);
+    toast.success(`${preset.label} staat klaar als losse uitzondering.`);
+  }
 
-        if (!ruleId || seenRuleIds.has(ruleId)) {
-          return [];
-        }
+  function runAction(
+    action: () => Promise<{ success: boolean; message: string; detail?: string }>
+  ) {
+    startTransition(async () => {
+      const result = await action();
 
-        seenRuleIds.add(ruleId);
-
-        const window = buildLinkedAvailabilityWindow(entries, entry.id);
-        const startAt = window?.startAt ?? entry.startAt;
-        const endAt = window?.endAt ?? entry.endAt;
-
-        return [
-          {
-            ruleId,
-            slotId: entry.id,
-            weekdayNumber: getAvailabilityWeekdayNumber(startAt),
-            dayLabel: formatWeekdayNameFromIso(startAt),
-            timeLabel: `${formatAvailabilityTime(startAt)} - ${formatAvailabilityTime(endAt)}`,
-            pauseLabel:
-              window?.pauseStartAt && window.pauseEndAt
-                ? `${formatAvailabilityTime(window.pauseStartAt)} - ${formatAvailabilityTime(window.pauseEndAt)}`
-                : null,
-            beschikbaar: entry.beschikbaar,
-          },
-        ];
-      })
-      .sort((left, right) => left.weekdayNumber - right.weekdayNumber);
-  }, [entries]);
-  const upcomingExceptionWindows = useMemo(() => {
-    const seenSlotIds = new Set<string>();
-
-    return entries
-      .filter((entry) => {
-        if (entry.source !== "slot") {
-          return false;
-        }
-
-        const dateValue = getAvailabilityDateValue(entry.startAt);
-        return dateValue >= currentWeekStart && dateValue < addDaysToDateValue(nextWeekStart, 21);
-      })
-      .sort((left, right) => left.startAt.localeCompare(right.startAt))
-      .flatMap((entry) => {
-        if (seenSlotIds.has(entry.id)) {
-          return [];
-        }
-
-        const window = buildLinkedAvailabilityWindow(entries, entry.id);
-
-        if (!window) {
-          return [];
-        }
-
-        window.slots.forEach((slot) => {
-          seenSlotIds.add(slot.id);
-        });
-
-        return [
-          {
-            key: window.slots.map((slot) => slot.id).join("|"),
-            slotId: window.slots[0]?.id ?? entry.id,
-            dayLabel: window.slots[0]?.dag ?? entry.dag,
-            momentLabel: `${formatAvailabilityTime(window.startAt)} - ${formatAvailabilityTime(window.endAt)}`,
-            beschikbaar: window.slots[0]?.beschikbaar ?? entry.beschikbaar,
-            kindLabel:
-              window.slots[0]?.beschikbaar ?? entry.beschikbaar
-                ? "Los beschikbaar blok"
-                : "Afwezig of dicht",
-          },
-        ];
-      })
-      .slice(0, 6);
-  }, [currentWeekStart, entries, nextWeekStart]);
-  const nextWeekDailyLoads = useMemo(() => {
-    const counts = new Map<string, { dateValue: string; dayLabel: string; count: number }>();
-
-    nextWeekActiveEntries.forEach((entry) => {
-      const dateValue = getAvailabilityDateValue(entry.startAt);
-      const current = counts.get(dateValue);
-
-      if (current) {
-        current.count += 1;
+      if (!result.success) {
+        toast.error(result.message);
         return;
       }
 
-      counts.set(dateValue, {
-        dateValue,
-        dayLabel: entry.dag,
-        count: 1,
-      });
+      toast.success(result.detail ? `${result.message} ${result.detail}` : result.message);
+      router.refresh();
     });
-
-    return Array.from(counts.values()).sort((left, right) => {
-      if (right.count !== left.count) {
-        return right.count - left.count;
-      }
-
-      return left.dateValue.localeCompare(right.dateValue);
-    });
-  }, [nextWeekActiveEntries]);
-  const highestDailyLoad = nextWeekDailyLoads[0] ?? null;
-  const daysOverDailyCap =
-    dailyLessonCapValue > 0
-      ? nextWeekDailyLoads.filter((day) => day.count > dailyLessonCapValue)
-      : [];
-  const capacityDeltaMinutes = nextWeekTotalMinutes - currentWeekTotalMinutes;
-  const nextWeekHealthScore = Math.max(
-    18,
-    Math.min(
-      100,
-      (nextWeekTotalMinutes >= 480
-        ? 40
-        : nextWeekTotalMinutes >= 300
-          ? 28
-          : nextWeekTotalMinutes >= 180
-            ? 16
-            : 6) +
-        (nextWeekEveningEntries.length >= 2
-          ? 24
-          : nextWeekEveningEntries.length === 1
-            ? 15
-            : 0) +
-        (nextWeekWeekendEntries.length >= 1 ? 14 : 0) +
-        (nextWeekDaySpread >= 4
-          ? 22
-          : nextWeekDaySpread === 3
-            ? 16
-            : nextWeekDaySpread === 2
-              ? 10
-              : nextWeekDaySpread === 1
-                ? 4
-                : 0)
-    )
-  );
-  const nextWeekHealthBadge =
-    nextWeekHealthScore >= 78
-      ? {
-          label: "Sterk vooruitzicht",
-          className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-          barClassName: "bg-[linear-gradient(90deg,#10b981,#34d399)]",
-        }
-      : nextWeekHealthScore >= 55
-        ? {
-            label: "Goed, nog aanscherpen",
-            className: "border-sky-200 bg-sky-50 text-sky-700",
-            barClassName: "bg-[linear-gradient(90deg,#0ea5e9,#38bdf8)]",
-          }
-        : {
-            label: "Te dun gepland",
-            className: "border-amber-200 bg-amber-50 text-amber-700",
-            barClassName: "bg-[linear-gradient(90deg,#f59e0b,#fbbf24)]",
-          };
-  const nextWeekHealthInsights = [
-    nextWeekTotalMinutes < 240
-      ? {
-          tone: "watch",
-          eyebrow: "Capaciteit",
-          title: "Volgende week staat nog licht open",
-          description: `Je hebt nu ${formatMinutesLabel(nextWeekTotalMinutes)} aan actieve beschikbaarheid. Richt op minimaal 4 tot 6 uur om genoeg boekbare momenten te tonen.`,
-        }
-      : capacityDeltaMinutes < -120
-        ? {
-            tone: "watch",
-            eyebrow: "Capaciteit",
-            title: "Je capaciteit zakt terug ten opzichte van deze week",
-            description: `Je verliest ${formatMinutesLabel(Math.abs(capacityDeltaMinutes))}. Een duplicatie of extra avond houdt je ritme stabiel.`,
-          }
-        : {
-            tone: "good",
-            eyebrow: "Capaciteit",
-            title: "Je open uren blijven goed op niveau",
-            description: `Volgende week staat ${formatMinutesLabel(nextWeekTotalMinutes)} open, ${formatMinutesDeltaLabel(capacityDeltaMinutes)} vergeleken met deze week.`,
-          },
-    nextWeekEveningEntries.length === 0
-      ? {
-          tone: "watch",
-          eyebrow: "Prime time",
-          title: "Er staat nog geen avondmoment open",
-          description: "Na werk of studie wordt vaak het meest geboekt. Voeg minimaal een avondslot toe om zichtbaarder te zijn.",
-        }
-      : nextWeekEveningEntries.length === 1
-        ? {
-            tone: "neutral",
-            eyebrow: "Prime time",
-            title: "Een avondslot is een goede basis",
-            description: "Met een tweede avondmoment spreid je de vraag beter en ben je aantrekkelijker voor leerlingen met drukke werkdagen.",
-          }
-        : {
-            tone: "good",
-            eyebrow: "Prime time",
-            title: "Je avonddekking is sterk",
-            description: `Je hebt ${nextWeekEveningEntries.length} avondmomenten openstaan. Dat is sterk voor leerlingen die overdag minder flexibel zijn.`,
-          },
-    nextWeekDaySpread <= 1
-      ? {
-          tone: "watch",
-          eyebrow: "Spreiding",
-          title: "Je planning zit nu op een enkele dag geconcentreerd",
-          description: "Spreid beschikbaarheid over minstens twee of drie dagen om uitval beter op te vangen en meer voorkeuren te bedienen.",
-        }
-      : nextWeekDaySpread === 2 && nextWeekWeekendEntries.length === 0
-        ? {
-            tone: "neutral",
-            eyebrow: "Spreiding",
-            title: "Je planning is bruikbaar, maar nog vrij smal",
-            description: "Je zit op twee dagen zonder weekenddekking. Een extra doordeweekse dag of zaterdagblok maakt je agenda flexibeler.",
-          }
-        : nextWeekWeekendEntries.length === 0
-          ? {
-              tone: "neutral",
-              eyebrow: "Spreiding",
-              title: "Doordeweeks staat goed, weekend is nog dicht",
-              description: "Niet verplicht, maar een weekendblok trekt vaak leerlingen die doordeweeks minder ruimte hebben.",
-            }
-          : {
-              tone: "good",
-              eyebrow: "Spreiding",
-              title: "Je planning is mooi verdeeld",
-              description: `Je bent verspreid over ${nextWeekDaySpread} dagen beschikbaar en hebt ook een weekendmoment openstaan.`,
-            },
-  ];
-  const currentWeekRevenuePotential = currentWeekActiveEntries.length * pricePerLesson;
-  const nextWeekRevenuePotential = nextWeekActiveEntries.length * pricePerLesson;
-  const bookingChanceScore = Math.max(
-    22,
-    Math.min(
-      96,
-      nextWeekHealthScore +
-        (nextWeekActiveEntries.length >= 6
-          ? 8
-          : nextWeekActiveEntries.length >= 4
-            ? 4
-            : nextWeekActiveEntries.length === 0
-              ? -12
-              : 0) +
-        (nextWeekEveningEntries.length >= 2
-          ? 6
-          : nextWeekEveningEntries.length === 0
-            ? -6
-            : 0) +
-        (nextWeekWeekendEntries.length >= 1 ? 4 : 0)
-    )
-  );
-  const bookingChanceTone =
-    bookingChanceScore >= 78
-      ? {
-          label: "Hoog",
-          className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        }
-      : bookingChanceScore >= 56
-        ? {
-            label: "Gemiddeld",
-            className: "border-sky-200 bg-sky-50 text-sky-700",
-          }
-        : {
-            label: "Laag",
-            className: "border-amber-200 bg-amber-50 text-amber-700",
-          };
-  const projectedFillRate =
-    bookingChanceScore >= 82
-      ? 0.82
-      : bookingChanceScore >= 70
-        ? 0.71
-        : bookingChanceScore >= 58
-          ? 0.58
-          : bookingChanceScore >= 44
-            ? 0.46
-            : 0.34;
-  const projectedBookings = Number(
-    (nextWeekActiveEntries.length * projectedFillRate).toFixed(1)
-  );
-  const projectedRevenue = Math.round(nextWeekRevenuePotential * projectedFillRate);
-  const stretchRevenue = Math.round(
-    nextWeekRevenuePotential * Math.min(projectedFillRate + 0.16, 0.94)
-  );
-  const revenueDelta = nextWeekRevenuePotential - currentWeekRevenuePotential;
-  const averageSlotMinutes = nextWeekActiveEntries.length
-    ? Math.round(nextWeekTotalMinutes / nextWeekActiveEntries.length)
-    : 0;
-  const revenueInsights =
-    pricePerLesson <= 0
-      ? [
-          {
-            tone: "watch",
-            eyebrow: "Prijs ontbreekt",
-            title: "Vul eerst je prijs per les aan",
-            description:
-              "Zonder lesprijs kunnen we je omzetindicatie nog niet berekenen. Zodra je prijs in je profiel staat, zie je hier meteen je commerciële potentieel.",
-          },
-        ]
-      : [
-          nextWeekActiveEntries.length === 0
-            ? {
-                tone: "watch",
-                eyebrow: "Omzet",
-                title: "Zonder open slots blijft je weekomzet op nul",
-                description:
-                  "Open minimaal een paar blokken om zichtbaar en boekbaar te worden voor leerlingen in de komende week.",
-              }
-            : projectedRevenue < currentWeekRevenuePotential * 0.65
-              ? {
-                  tone: "watch",
-                  eyebrow: "Omzet",
-                  title: "Je verwachte omzet zakt terug",
-                  description: `Bij de huidige planning kom je indicatief uit op ${formatCurrency(projectedRevenue)}. Een extra avond of duplicatie van deze week trekt dat sneller omhoog.`,
-                }
-              : {
-                  tone: "good",
-                  eyebrow: "Omzet",
-                  title: "Je weekpotentieel ziet er commercieel sterk uit",
-                  description: `Bij de huidige opzet ligt je realistische weekomzet rond ${formatCurrency(projectedRevenue)} met een stretch naar ${formatCurrency(stretchRevenue)}.`,
-                },
-          nextWeekActiveEntries.length < 3
-            ? {
-                tone: "watch",
-                eyebrow: "Volume",
-                title: "Je hebt nog weinig boekbare momenten open",
-                description: `Je staat nu op ${nextWeekActiveEntries.length} open ${nextWeekActiveEntries.length === 1 ? "slot" : "slots"} voor volgende week. Meer volume geeft leerlingen sneller een passend moment.`,
-              }
-            : nextWeekActiveEntries.length >= 6
-              ? {
-                  tone: "good",
-                  eyebrow: "Volume",
-                  title: "Je volume ondersteunt een sterke boekingskans",
-                  description: `Met ${nextWeekActiveEntries.length} open slots en gemiddeld ${formatMinutesLabel(averageSlotMinutes)} per blok staat je agenda aantrekkelijk open.`,
-                }
-              : {
-                  tone: "neutral",
-                  eyebrow: "Volume",
-                  title: "Je volume is netjes, maar kan nog groeien",
-                  description: `Je hebt ${nextWeekActiveEntries.length} open slots klaarstaan. Een extra avond- of weekendmoment kan je boekingskans verder optillen.`,
-                },
-          nextWeekRevenuePotential <= 0
-            ? {
-                tone: "neutral",
-                eyebrow: "Potentieel",
-                title: "Zodra er slots openstaan zie je hier je weekpotentieel",
-                description:
-                  "De omzetindicatie wordt automatisch opgebouwd uit je actieve slots en je actuele prijs per les.",
-              }
-            : {
-                tone: "neutral",
-                eyebrow: "Potentieel",
-                title: "Je maximale weekpotentieel staat helder in beeld",
-                description: `Als al je open momenten worden geboekt, ligt je plafond voor volgende week op ${formatCurrency(nextWeekRevenuePotential)} ${revenueDelta === 0 ? "en dat is gelijk aan deze week" : revenueDelta > 0 ? `(${formatCurrency(revenueDelta)} hoger dan deze week)` : `(${formatCurrency(Math.abs(revenueDelta))} lager dan deze week)`}.`,
-            },
-        ];
-  const combinedPlanningInsights = [...nextWeekHealthInsights, ...revenueInsights].slice(0, 5);
-  const hasWeekCopySuggestion =
-    currentWeekActiveEntries.length > 0 &&
-    nextWeekActiveEntries.length < currentWeekActiveEntries.length;
-  const smartSuggestionCount =
-    Number(hasWeekCopySuggestion) +
-    Number(Boolean(nextWeekEveningSuggestion)) +
-    Number(Boolean(nextWeekWeekendSuggestion));
-  const repeatSummaryText = isBlockingMode
-    ? useDateRange
-      ? `Je blokkeert deze tijd van ${datum} tot en met ${eindDatum}${selectedWeekdaySummary ? ` op ${selectedWeekdaySummary}` : ""}.`
-      : isOngoingWeekSchedule
-        ? `Je blokkeert ${selectedWeekdaySummary || "de gekozen dag"} nu als vaste weekplanning. Dit blijft elke week doorlopen tot je het wijzigt.`
-        : repeatCount > 1
-          ? `Je blokkeert ${selectedWeekdaySummary || "de gekozen dag"} automatisch voor ${repeatCount} weken. Deze tijd wordt dan niet boekbaar.`
-          : "Gebruik dit om afwezigheid, vakantie of een gesloten moment netjes af te schermen."
-    : isWeekScheduleMode
-      ? isOngoingWeekSchedule
-        ? `Je opent ${selectedWeekdaySummary} nu als vaste weekplanning. Deze werktijden blijven elke week terugkomen tot je ze wijzigt.`
-        : repeatCount > 1
-          ? `Je opent ${selectedWeekdaySummary} automatisch voor ${repeatCount} weken met dezelfde werktijden.`
-          : `Je opent ${selectedWeekdaySummary} in de week van ${currentWeekStart} met dezelfde werktijden.`
-      : isOngoingWeekSchedule
-        ? "Dit moment wordt nu je vaste weekplanning en blijft elke week terugkomen totdat je hem wijzigt."
-        : repeatCount > 1
-          ? `Dit blok wordt automatisch ${repeatCount} weken achter elkaar ingepland op dezelfde dag en tijd.`
-          : "Kies een terugkerende reeks als je vaste weekblokken wilt openen.";
-
-  function handleCalendarSelect(selection: DateSelectArg) {
-    if (selection.allDay) {
-      return;
-    }
-
-    setDatum(toDateInputValue(selection.start));
-    setStartTijd(toTimeInputValue(selection.start));
-    setEindTijd(
-      toTimeInputValue(
-        selection.end ?? new Date(selection.start.getTime() + 90 * 60_000)
-      )
-    );
   }
 
-  function handleCreateSlot() {
-    startTransition(async () => {
-      const result = await createAvailabilitySlotAction({
-        datum,
-        eindDatum: isBlockingMode && useDateRange ? eindDatum : undefined,
+  function handleSaveFixedWeekSchedule() {
+    const normalizedWeekdays =
+      selectedWeekdays.length
+        ? selectedWeekdays
+        : [
+            getAvailabilityWeekdayNumber(
+              createAvailabilityTimestamp(selectedDateValue, "12:00")
+            ),
+          ];
+
+    runAction(() =>
+      createAvailabilitySlotAction({
+        datum: selectedDateValue || todayValue,
         startTijd,
         eindTijd,
-        repeatWeeks: isOngoingWeekSchedule ? "ongoing" : repeatCount,
+        repeatWeeks: "ongoing",
         weekdagen: normalizedWeekdays,
-        pauzeStartTijd:
-          !isBlockingMode && useBreakWindow ? pauseStartTijd : undefined,
-        pauzeEindTijd:
-          !isBlockingMode && useBreakWindow ? pauseEindTijd : undefined,
-        beschikbaar: !isBlockingMode,
-        lesduurMinuten:
-          !isBlockingMode && useLessonCadence ? lessonDurationValue : undefined,
-        bufferMinuten:
-          !isBlockingMode && useLessonCadence ? bufferValue : undefined,
-        maxLessenPerDag:
-          !isBlockingMode && useLessonCadence && dailyLessonCapValue > 0
-            ? dailyLessonCapValue
-            : undefined,
-      });
-
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleApplyDurationPreset(durationMinutes: number) {
-    setEindTijd(addMinutesToTimeValue(startTijd, durationMinutes));
-  }
-
-  function handleApplyShiftPreset(start: string, end: string) {
-    setStartTijd(start);
-    setEindTijd(end);
-  }
-
-  function handleToggleWeekday(weekday: number) {
-    setSelectedWeekdays((current) =>
-      current.includes(weekday)
-        ? current.filter((value) => value !== weekday)
-        : [...current, weekday]
+        pauzeStartTijd: useBreakWindow ? pauseStartTijd : undefined,
+        pauzeEindTijd: useBreakWindow ? pauseEindTijd : undefined,
+        beschikbaar: true,
+      })
     );
   }
 
-  function handleApplyWeekdayPreset(weekdays: number[]) {
-    setSelectedWeekdays(weekdays);
+  function handleCreateExceptionBlock() {
+    runAction(() =>
+      createAvailabilitySlotAction({
+        datum: selectedDateValue || todayValue,
+        startTijd: exceptionStartTijd,
+        eindTijd: exceptionEindTijd,
+        beschikbaar: false,
+      })
+    );
   }
 
-  function handleApplyBreakPreset(start: string, end: string) {
-    setUseBreakWindow(true);
-    setPauseStartTijd(start);
-    setPauseEindTijd(end);
+  function handleCreateVacationBlock() {
+    runAction(() =>
+      createAvailabilitySlotAction({
+        datum: vacationStartDate,
+        eindDatum: vacationEndDate,
+        startTijd: "00:00",
+        eindTijd: "23:59",
+        beschikbaar: false,
+      })
+    );
   }
 
-  function handleApplyLessonCadencePreset(duration: number, buffer: number) {
-    setUseLessonCadence(true);
-    setLessonDurationMinutes(String(duration));
-    setBufferMinutes(String(buffer));
+  function handleAvailabilityDrop(eventId: string, targetDateValue: string) {
+    const draggedItem = availabilityItems.find((item) => item.id === eventId);
+
+    if (!draggedItem) {
+      return;
+    }
+
+    const currentDateValue = getAvailabilityDateValue(draggedItem.startAt);
+
+    if (currentDateValue === targetDateValue) {
+      return;
+    }
+
+    runAction(() =>
+      moveAvailabilityBlockAction({
+        slotId: eventId,
+        targetDateValue,
+      })
+    );
   }
 
-  function updateQuickEditDraft(
-    patch:
-      | Partial<Omit<QuickEditDraft, "sourceKey">>
-      | ((draft: QuickEditDraft) => Partial<Omit<QuickEditDraft, "sourceKey">>)
+  function handleAvailabilityResize(
+    eventId: string,
+    edge: "start" | "end",
+    minutes: number
   ) {
-    const nextPatch =
-      typeof patch === "function" ? patch(activeQuickEditDraft) : patch;
+    const targetItem = availabilityItems.find((item) => item.id === eventId);
 
-    setQuickEditDraft({
-      ...activeQuickEditDraft,
-      ...nextPatch,
-      sourceKey: selectedWorkWindowKey,
-    });
-  }
-
-  function handleResetQuickEdit() {
-    setQuickEditDraft(createQuickEditDraft(selectedWorkWindow));
-  }
-
-  function handleApplyQuickDurationPreset(durationMinutes: number) {
-    updateQuickEditDraft((draft) => ({
-      eindTijd: addMinutesToTimeValue(draft.startTijd, durationMinutes),
-    }));
-  }
-
-  function openEditDialog(mode: "edit-slot" | "edit-series") {
-    if (!selectedEntry) {
+    if (!targetItem) {
       return;
     }
 
-    setEditDatum(getAvailabilityDateValue(selectedEntry.startAt));
-    setEditStartTijd(formatAvailabilityTime(selectedEntry.startAt));
-    setEditEindTijd(formatAvailabilityTime(selectedEntry.endAt));
-    setEditAction(mode);
-  }
+    const sourceDraft =
+      getEditDraftForAvailabilityItemId(eventId) ??
+      ({
+        sourceKey: eventId,
+        startTijd: formatAvailabilityTime(targetItem.startAt),
+        eindTijd: formatAvailabilityTime(targetItem.endAt),
+        hasBreak: false,
+        pauseStartTijd: "12:30",
+        pauseEindTijd: "13:00",
+      } satisfies LinkedWindowDraft);
 
-  function handleSaveQuickEdit() {
-    if (!selectedEntry) {
+    const nextStartTijd =
+      edge === "start"
+        ? shiftTimeValue(sourceDraft.startTijd, minutes)
+        : sourceDraft.startTijd;
+    const nextEindTijd =
+      edge === "end"
+        ? shiftTimeValue(sourceDraft.eindTijd, minutes)
+        : sourceDraft.eindTijd;
+
+    if (!nextStartTijd || !nextEindTijd) {
+      toast.error("Dit blok kan niet buiten dezelfde dag worden vergroot of verkleind.");
       return;
     }
 
-    startTransition(async () => {
-      const result =
-        isRecurringRuleEntry && selectedEntry.weekroosterId
-          ? await updateAvailabilityWeekRuleAction({
-              ruleId: selectedEntry.weekroosterId,
-              startTijd: quickEditStartTijd,
-              eindTijd: quickEditEindTijd,
-              pauzeStartTijd:
-                selectedEntry.beschikbaar && quickEditUseBreakWindow
-                  ? quickEditPauseStartTijd
-                  : undefined,
-              pauzeEindTijd:
-                selectedEntry.beschikbaar && quickEditUseBreakWindow
-                  ? quickEditPauseEindTijd
-                  : undefined,
-            })
-          : await updateAvailabilityWindowAction({
-              slotId: selectedEntry.id,
-              startTijd: quickEditStartTijd,
-              eindTijd: quickEditEindTijd,
-              pauzeStartTijd:
-                selectedEntry.beschikbaar && quickEditUseBreakWindow
-                  ? quickEditPauseStartTijd
-                  : undefined,
-              pauzeEindTijd:
-                selectedEntry.beschikbaar && quickEditUseBreakWindow
-                  ? quickEditPauseEindTijd
-                  : undefined,
-            });
+    if (targetItem.source === "weekrooster" && targetItem.weekRuleId) {
+      runAction(() =>
+        updateAvailabilityWeekRuleAction({
+          ruleId: targetItem.weekRuleId ?? "",
+          startTijd: nextStartTijd,
+          eindTijd: nextEindTijd,
+          pauzeStartTijd: sourceDraft.hasBreak ? sourceDraft.pauseStartTijd : undefined,
+          pauzeEindTijd: sourceDraft.hasBreak ? sourceDraft.pauseEindTijd : undefined,
+        })
+      );
+      return;
+    }
 
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
+    runAction(() =>
+      updateAvailabilityWindowAction({
+        slotId: eventId,
+        startTijd: nextStartTijd,
+        eindTijd: nextEindTijd,
+        pauzeStartTijd: sourceDraft.hasBreak ? sourceDraft.pauseStartTijd : undefined,
+        pauzeEindTijd: sourceDraft.hasBreak ? sourceDraft.pauseEindTijd : undefined,
+      })
+    );
+  }
+
+  function handleBulkCloseAfterTime() {
+    runAction(() =>
+      applyAvailabilityWeeklyBulkAction({
+        weekStartDateValue: selectedWeekStart,
+        action: "close_after_time",
+        cutoffTime: bulkCutoffTime,
+      })
+    );
+  }
+
+  function handleBulkOpenAfterTime() {
+    runAction(() =>
+      applyAvailabilityWeeklyBulkAction({
+        weekStartDateValue: selectedWeekStart,
+        action: "open_after_time",
+        cutoffTime: bulkCutoffTime,
+      })
+    );
+  }
+
+  function handleBulkCloseWeekend() {
+    runAction(() =>
+      applyAvailabilityWeeklyBulkAction({
+        weekStartDateValue: selectedWeekStart,
+        action: "close_weekend",
+      })
+    );
+  }
+
+  function handleShiftSelectedBlocks(minutes: number) {
+    const slotIds = multiSelectMode
+      ? resolvedSelectedAvailabilityIds
+      : selectedAvailabilityItem
+        ? [selectedAvailabilityItem.id]
+        : [];
+
+    if (!slotIds.length) {
+      toast.error("Kies eerst een of meer blokken in je agenda.");
+      return;
+    }
+
+    runAction(() =>
+      shiftAvailabilityBlocksAction({
+        slotIds,
+        minutes,
+      })
+    );
+  }
+
+  function handleCreateWeekOverride(available: boolean) {
+    if (!selectedAvailabilityItem || selectedAvailabilityItem.source !== "weekrooster") {
+      toast.error("Kies eerst een vast weekblok om alleen deze week los op te slaan.");
+      return;
+    }
+
+    runAction(() =>
+      createAvailabilityWeekOverrideAction({
+        slotId: selectedAvailabilityItem.id,
+        startTijd: activeEditDraft.startTijd,
+        eindTijd: activeEditDraft.eindTijd,
+        pauzeStartTijd: activeEditDraft.hasBreak
+          ? activeEditDraft.pauseStartTijd
+          : undefined,
+        pauzeEindTijd: activeEditDraft.hasBreak
+          ? activeEditDraft.pauseEindTijd
+          : undefined,
+        beschikbaar: available,
+      })
+    );
+  }
+
+  function handleUpdateSelectedWindow() {
+    if (!selectedAvailabilityItem) {
+      toast.error("Kies eerst een open moment uit de agenda.");
+      return;
+    }
+
+    if (selectedAvailabilityItem.source === "weekrooster" && selectedAvailabilityItem.weekRuleId) {
+      runAction(() =>
+        updateAvailabilityWeekRuleAction({
+          ruleId: selectedAvailabilityItem.weekRuleId ?? "",
+          startTijd: activeEditDraft.startTijd,
+          eindTijd: activeEditDraft.eindTijd,
+          pauzeStartTijd: activeEditDraft.hasBreak
+            ? activeEditDraft.pauseStartTijd
+            : undefined,
+          pauzeEindTijd: activeEditDraft.hasBreak
+            ? activeEditDraft.pauseEindTijd
+            : undefined,
+        })
+      );
+      return;
+    }
+
+    runAction(() =>
+      updateAvailabilityWindowAction({
+        slotId: selectedAvailabilityItem.id,
+        startTijd: activeEditDraft.startTijd,
+        eindTijd: activeEditDraft.eindTijd,
+        pauzeStartTijd: activeEditDraft.hasBreak
+          ? activeEditDraft.pauseStartTijd
+          : undefined,
+        pauzeEindTijd: activeEditDraft.hasBreak
+          ? activeEditDraft.pauseEindTijd
+          : undefined,
+      })
+    );
   }
 
   function handleToggleSelectedSlot() {
-    if (!selectedEntry) {
+    if (!selectedAvailabilityItem) {
+      toast.error("Kies eerst een open moment uit de agenda.");
       return;
     }
 
-    startTransition(async () => {
-      const result =
-        isRecurringRuleEntry && selectedEntry.weekroosterId
-          ? await updateAvailabilityWeekRuleActiveAction({
-              ruleId: selectedEntry.weekroosterId,
-              beschikbaar: !selectedEntry.beschikbaar,
-            })
-          : await updateAvailabilitySlotStatusAction({
-              slotId: selectedEntry.id,
-              beschikbaar: !selectedEntry.beschikbaar,
-            });
+    if (selectedAvailabilityItem.source === "weekrooster" && selectedAvailabilityItem.weekRuleId) {
+      runAction(() =>
+        updateAvailabilityWeekRuleActiveAction({
+          ruleId: selectedAvailabilityItem.weekRuleId ?? "",
+          beschikbaar: !selectedAvailabilityItem.available,
+        })
+      );
+      return;
+    }
 
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
+    runAction(() =>
+      updateAvailabilitySlotStatusAction({
+        slotId: selectedAvailabilityItem.id,
+        beschikbaar: !selectedAvailabilityItem.available,
+      })
+    );
   }
 
   function handleDeleteSelectedSlot() {
-    if (!selectedEntry) {
+    if (!selectedAvailabilityItem) {
+      toast.error("Kies eerst een open moment uit de agenda.");
       return;
     }
 
-    startTransition(async () => {
-      const result =
-        isRecurringRuleEntry && selectedEntry.weekroosterId
-          ? await deleteAvailabilityWeekRuleAction({
-              ruleId: selectedEntry.weekroosterId,
-            })
-          : await deleteAvailabilitySlotAction({
-              slotId: selectedEntry.id,
-            });
-
-      if (result.success) {
-        setConfirmAction(null);
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleToggleSelectedSeries() {
-    if (!selectedEntry) {
+    if (!window.confirm("Weet je zeker dat je dit geselecteerde moment wilt verwijderen?")) {
       return;
     }
 
-    startTransition(async () => {
-      const result = await updateAvailabilitySeriesStatusAction({
-        slotId: selectedEntry.id,
-        beschikbaar: !selectedEntry.beschikbaar,
-      });
-
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleDeleteSelectedSeries() {
-    if (!selectedEntry) {
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await deleteAvailabilitySeriesAction({
-        slotId: selectedEntry.id,
-      });
-
-      if (result.success) {
-        setConfirmAction(null);
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleDuplicateSelectedToNextWeek() {
-    if (!selectedEntry) {
-      return;
-    }
-
-    startTransition(async () => {
-      const nextWeekDate = addDaysToDateValue(
-        getAvailabilityDateValue(selectedEntry.startAt),
-        7
+    if (selectedAvailabilityItem.source === "weekrooster" && selectedAvailabilityItem.weekRuleId) {
+      runAction(() =>
+        deleteAvailabilityWeekRuleAction({
+          ruleId: selectedAvailabilityItem.weekRuleId ?? "",
+        })
       );
-      const result = await createAvailabilitySlotAction({
-        datum: nextWeekDate,
-        startTijd: formatAvailabilityTime(selectedEntry.startAt),
-        eindTijd: formatAvailabilityTime(selectedEntry.endAt),
-        repeatWeeks: 1,
-        beschikbaar: selectedEntry.beschikbaar,
-      });
-
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleSaveEditAction() {
-    if (!selectedEntry || !editAction) {
       return;
     }
 
-    startTransition(async () => {
-      const result =
-        editAction === "edit-series"
-          ? await updateAvailabilitySeriesTimingAction({
-              slotId: selectedEntry.id,
-              startTijd: editStartTijd,
-              eindTijd: editEindTijd,
-            })
-          : await updateAvailabilitySlotTimingAction({
-              slotId: selectedEntry.id,
-              datum: editDatum,
-              startTijd: editStartTijd,
-              eindTijd: editEindTijd,
-            });
-
-      if (result.success) {
-        setEditAction(null);
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleDuplicateCurrentWeekToNextWeek() {
-    startTransition(async () => {
-      const result = await duplicateAvailabilityWeekAction({
-        sourceWeekStartDatum: currentWeekStart,
-        targetWeekStartDatum: nextWeekStart,
-      });
-
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleApplyEveningSuggestion() {
-    if (!nextWeekEveningSuggestion) {
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await createAvailabilitySlotAction({
-        datum: nextWeekEveningSuggestion.dateValue,
-        startTijd: "18:30",
-        eindTijd: "20:30",
-        repeatWeeks: 1,
-      });
-
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleApplyWeekendSuggestion() {
-    if (!nextWeekWeekendSuggestion) {
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await createAvailabilitySlotAction({
-        datum: nextWeekWeekendSuggestion.dateValue,
-        startTijd: "09:00",
-        eindTijd: "12:00",
-        repeatWeeks: 1,
-      });
-
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
+    runAction(() =>
+      deleteAvailabilitySlotAction({
+        slotId: selectedAvailabilityItem.id,
+      })
+    );
   }
 
   return (
-    <div className="availability-manager space-y-4">
-      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
-        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
-              Stap 1 - Tijd openen
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        {[
+          {
+            label: "Open",
+            value: `${openSlotCount}`,
+            hint: "Boekbaar",
+            icon: Sparkles,
+          },
+          {
+            label: "Dicht",
+            value: `${blockedSlotCount}`,
+            hint: "Geblokkeerd",
+            icon: EyeOff,
+          },
+          {
+            label: "Weekritme",
+            value: `${recurringSlotCount}`,
+            hint: "Terugkerend",
+            icon: CalendarDays,
+          },
+          {
+            label: "Lessen",
+            value: `${lessonItems.length}`,
+            hint: "In agenda",
+            icon: CalendarClock,
+          },
+        ].map((item) => (
+          <div
+            key={item.label}
+            className="rounded-[1.4rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5"
+          >
+            <div className="flex items-center gap-2">
+              <item.icon className="size-4 text-sky-700 dark:text-sky-300" />
+              <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                {item.label}
+              </p>
+            </div>
+            <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
+              {item.value}
             </p>
-            <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-              Bouw je rooster, buffers en afwezigheid rustig op
-            </h2>
-            <p className="max-w-3xl text-[13px] leading-6 text-slate-600">
-              Zet werkuren open, blokkeer afwezigheid of verdeel een dag direct in lesblokken.
-            </p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.hint}</p>
           </div>
-          <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
-            {scheduleCountLabel}
-          </Badge>
-        </div>
+        ))}
+      </div>
 
-        <div
-          className={cn(
-            "mt-4 grid gap-4",
-            showSummarySidebar
-              ? "2xl:grid-cols-[minmax(0,1.1fr)_22rem]"
-              : "2xl:grid-cols-1"
-          )}
-        >
-          <div className="space-y-4">
-            <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                    Handmatig plannen
-                  </p>
-                  <h3 className="mt-1.5 text-base font-semibold text-slate-950">
-                    Kies type blok, datum of werkweek, tijd en eventuele herhaling
-                  </h3>
-                  <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                    Vul tijden in of blokkeer meteen afwezigheid en vakantie.
-                  </p>
-                </div>
-                <Badge className="border border-slate-200 bg-white text-slate-700">
-                  {isWeekScheduleMode ? `Week van ${currentWeekStart}` : `Start op ${datum}`}
-                </Badge>
+      <div className="space-y-6">
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                  Basisrooster
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                  Vaste werktijden
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  Dit is je standaard open werkweek.
+                </p>
               </div>
+              <Badge className="border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">
+                {formatDateLong(selectedDateValue || todayValue)}
+              </Badge>
+            </div>
 
-              <div className="mt-3 rounded-[0.95rem] border border-slate-200 bg-white p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-[13px] font-semibold text-slate-950">Type planning</p>
-                    <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      Kies of dit blok boekbaar is of juist intern dicht blijft.
-                    </p>
-                  </div>
-                </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {schedulePresets.map((preset) => (
+                <Button
+                  key={preset.label}
+                  type="button"
+                  variant="outline"
+                  className="rounded-full border-slate-200 bg-white text-xs dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                  onClick={() => applyPreset(preset)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "rounded-full border-slate-200 bg-white",
-                      createMode === "beschikbaar" &&
-                        "border-sky-300 bg-sky-50 text-sky-700"
-                    )}
-                    onClick={() => setCreateMode("beschikbaar")}
-                  >
-                    <Eye className="size-4" />
-                    Boekbaar voor leerlingen
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "rounded-full border-slate-200 bg-white",
-                      createMode === "afwezig" &&
-                        "border-slate-300 bg-slate-100 text-slate-800"
-                    )}
-                    onClick={() => {
-                      setCreateMode("afwezig");
-                      setUseLessonCadence(false);
-                    }}
-                  >
-                    <EyeOff className="size-4" />
-                    Afwezig of vakantie blokkeren
-                  </Button>
-                </div>
-
-                {isBlockingMode ? (
-                  <div className="mt-4 rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "rounded-full border-slate-200 bg-white",
-                          !useDateRange && "border-slate-950 bg-slate-950 text-white"
-                        )}
-                        onClick={() => setUseDateRange(false)}
-                      >
-                        Los afwezig blok
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "rounded-full border-slate-200 bg-white",
-                          useDateRange && "border-slate-950 bg-slate-950 text-white"
-                        )}
-                        onClick={() => {
-                          setUseDateRange(true);
-                          setEindDatum(datum);
-                          if (repeatWeeks === "ongoing") {
-                            setRepeatWeeks("1");
-                          }
-                        }}
-                      >
-                        Vakantieperiode van-tot
-                      </Button>
-                    </div>
-                    <p className="mt-2.5 text-[13px] leading-6 text-slate-600">
-                      Handig voor langere afwezigheid zonder elke dag los te blokkeren.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-
-              <div
-                className={cn(
-                  "mt-4 grid gap-3 md:grid-cols-2",
-                  isBlockingMode && useDateRange ? "xl:grid-cols-5" : "xl:grid-cols-4"
-                )}
-              >
+            <div className="mt-4 grid gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-slate-700">Datum</label>
-                  <Input
-                    type="date"
-                    value={datum}
-                    onChange={(event) => setDatum(event.target.value)}
-                    className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                  />
-                </div>
-                {isBlockingMode && useDateRange ? (
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-medium text-slate-700">Tot en met</label>
-                    <Input
-                      type="date"
-                      value={eindDatum}
-                      onChange={(event) => setEindDatum(event.target.value)}
-                      className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                    />
-                  </div>
-                ) : null}
-                <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-slate-700">Starttijd</label>
+                  <Label>Werkdag start</Label>
                   <Input
                     type="time"
                     value={startTijd}
                     onChange={(event) => setStartTijd(event.target.value)}
-                    className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
+                    className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-slate-700">Eindtijd</label>
+                  <Label>Werkdag eind</Label>
                   <Input
                     type="time"
                     value={eindTijd}
                     onChange={(event) => setEindTijd(event.target.value)}
-                    className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
+                    className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-slate-700">Herhaling</label>
-                  <select
-                    value={repeatWeeks}
-                    onChange={(event) => setRepeatWeeks(event.target.value)}
-                    className="native-select h-10 w-full rounded-[0.9rem] px-3 text-[13px]"
-                  >
-                    <option value="1">Eenmalig</option>
-                    <option value="2">Elke week, 2 weken totaal</option>
-                    <option value="4">Elke week, 4 weken totaal</option>
-                    <option value="6">Elke week, 6 weken totaal</option>
-                    <option value="8">Elke week, 8 weken totaal</option>
-                    <option value="12">Elke week, 12 weken totaal</option>
-                    {!useDateRange ? (
-                      <option value="ongoing">Vaste weekplanning, elke week doorlopend</option>
-                    ) : null}
-                  </select>
-                </div>
               </div>
 
-              <p className="mt-2.5 text-[13px] leading-6 text-slate-500">
-                {repeatSummaryText}
-              </p>
-
-              <div className="mt-3 rounded-[0.95rem] border border-slate-200 bg-white p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">
-                      Snelle werkdag-presets
-                    </p>
-                    <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-                      Zet met één klik een veelgebruikte werktijd klaar.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {shiftPresets.map((preset) => (
-                    <Button
-                      key={preset.label}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full border-slate-200 bg-slate-50"
-                      onClick={() => handleApplyShiftPreset(preset.start, preset.end)}
-                    >
-                      {preset.label} {preset.start}-{preset.end}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {!isBlockingMode ? (
-                <div className="mt-3 rounded-[0.95rem] border border-slate-200 bg-white p-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-[13px] font-semibold text-slate-950">
-                        Lesblokken en buffer
-                      </p>
-                      <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                        Deel een groter werkblok automatisch op in kleinere boekbare lessen.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "rounded-full border-slate-200 bg-slate-50",
-                        useLessonCadence && "border-sky-300 bg-sky-50 text-sky-700"
-                      )}
-                      onClick={() => setUseLessonCadence((current) => !current)}
-                    >
-                      {useLessonCadence ? "Buffer actief" : "Lesblokken gebruiken"}
-                    </Button>
-                  </div>
-
-                  {useLessonCadence ? (
-                    <>
-                      <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-700">
-                            Lesduur
-                          </label>
-                          <select
-                            value={lessonDurationMinutes}
-                            onChange={(event) => setLessonDurationMinutes(event.target.value)}
-                            className="native-select h-10 w-full rounded-[0.9rem] px-3 text-[13px]"
-                          >
-                            <option value="60">60 minuten</option>
-                            <option value="75">75 minuten</option>
-                            <option value="90">90 minuten</option>
-                            <option value="120">120 minuten</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-700">
-                            Buffer tussen lessen
-                          </label>
-                          <select
-                            value={bufferMinutes}
-                            onChange={(event) => setBufferMinutes(event.target.value)}
-                            className="native-select h-10 w-full rounded-[0.9rem] px-3 text-[13px]"
-                          >
-                            <option value="0">Geen buffer</option>
-                            <option value="10">10 minuten</option>
-                            <option value="15">15 minuten</option>
-                            <option value="20">20 minuten</option>
-                            <option value="30">30 minuten</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-700">
-                            Max lessen per dag
-                          </label>
-                          <select
-                            value={dailyLessonCap}
-                            onChange={(event) => setDailyLessonCap(event.target.value)}
-                            className="native-select h-10 w-full rounded-[0.9rem] px-3 text-[13px]"
-                          >
-                            <option value="0">Geen limiet</option>
-                            <option value="4">4 lessen</option>
-                            <option value="5">5 lessen</option>
-                            <option value="6">6 lessen</option>
-                            <option value="8">8 lessen</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full border-slate-200 bg-slate-50"
-                          onClick={() => handleApplyLessonCadencePreset(90, 15)}
-                        >
-                          90 min + 15 buffer
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full border-slate-200 bg-slate-50"
-                          onClick={() => handleApplyLessonCadencePreset(60, 10)}
-                        >
-                          60 min + 10 buffer
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full border-slate-200 bg-slate-50"
-                          onClick={() => handleApplyLessonCadencePreset(120, 15)}
-                        >
-                          120 min + 15 buffer
-                        </Button>
-                      </div>
-
-                      <p className="mt-2.5 text-[13px] leading-6 text-slate-500">
-                        {cadencePreviewCount > 0
-                          ? dailyLessonCapWillTrim
-                            ? `${cadencePreviewCount} lesblokken passen in dit tijdvak, maar je daglimiet bewaart er ${cadencePreviewAfterCap}.`
-                            : `${cadencePreviewCount} boekbare lesblok${cadencePreviewCount === 1 ? "" : "ken"} passen in dit tijdvak${useBreakWindow && hasBreakPreview ? ", rekening houdend met je pauze" : ""}.`
-                          : "Binnen dit tijdvak past nog geen geldig lesblok. Verleng je werktijd of kies een kortere lesduur."}
-                      </p>
-                    </>
-                  ) : (
-                      <p className="mt-2.5 text-[13px] leading-6 text-slate-500">
-                        Handig als je liever met vaste lesblokken werkt.
-                      </p>
-                  )}
-                </div>
-              ) : null}
-
-              <div className="mt-3 rounded-[0.95rem] border border-slate-200 bg-white p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                      <p className="text-[13px] font-semibold text-slate-950">
-                      Werkdagen instellen
-                    </p>
-                      <p className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      Selecteer werkdagen als je dezelfde tijden in een week of reeks wilt openen.
-                    </p>
-                  </div>
-                  {isWeekScheduleMode ? (
-                    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-sky-700 uppercase">
-                      {normalizedWeekdays.length} dag{normalizedWeekdays.length === 1 ? "" : "en"} gekozen
-                    </span>
-                  ) : (
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                      Optioneel
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {weekdayOptions.map((weekday) => {
-                    const active = normalizedWeekdays.includes(weekday.value);
-
+              <div className="space-y-2">
+                <Label>Werkdagen</Label>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                  {weekdayOptions.map((option) => {
+                    const active = selectedWeekdays.includes(option.value);
                     return (
                       <Button
-                        key={weekday.value}
+                        key={option.value}
                         type="button"
-                        variant="outline"
-                        size="sm"
+                        variant={active ? "default" : "outline"}
                         className={cn(
-                          "rounded-full border-slate-200 bg-white px-4",
-                          active &&
-                            "border-sky-300 bg-sky-50 text-sky-700 shadow-[0_10px_24px_-18px_rgba(14,165,233,0.8)]"
+                          "h-10 rounded-xl px-0 text-xs",
+                          !active &&
+                            "border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
                         )}
-                        onClick={() => handleToggleWeekday(weekday.value)}
+                        onClick={() => toggleWeekday(option.value)}
                       >
-                        {weekday.shortLabel}
+                        {option.shortLabel}
                       </Button>
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                      Pauze meenemen
+                    </p>
+                    <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
+                      Splitst je rooster in twee open delen.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={useBreakWindow ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => setUseBreakWindow((current) => !current)}
+                  >
+                    {useBreakWindow ? "Aan" : "Uit"}
+                  </Button>
+                </div>
+
+                {useBreakWindow ? (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Pauze start</Label>
+                      <Input
+                        type="time"
+                        value={pauseStartTijd}
+                        onChange={(event) => setPauseStartTijd(event.target.value)}
+                        className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Pauze eind</Label>
+                      <Input
+                        type="time"
+                        value={pauseEindTijd}
+                        onChange={(event) => setPauseEindTijd(event.target.value)}
+                        className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  className="h-11 rounded-full"
+                  disabled={isPending}
+                  onClick={handleSaveFixedWeekSchedule}
+                >
+                  <PlusSquare className="size-4" />
+                  Vaste werktijden opslaan
+                </Button>
+              </div>
+
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+            <div className="space-y-4">
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                  Uitzondering toevoegen
+                </p>
+                <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
+                  Los moment dichtzetten
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  Alleen voor een losse afwijking.
+                </p>
+              </div>
+
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Datum van uitzondering</Label>
+                    <Input
+                      type="date"
+                      value={selectedDateValue}
+                      onChange={(event) => setSelectedDateValue(event.target.value)}
+                      className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Snelle voorbeelden</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {exceptionPresets.map((preset) => (
+                        <Button
+                          key={preset.label}
+                          type="button"
+                          variant="outline"
+                          className="rounded-full border-slate-200 bg-white text-xs dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                          onClick={() => applyExceptionPreset(preset)}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Starttijd dicht</Label>
+                    <Input
+                      type="time"
+                      value={exceptionStartTijd}
+                      onChange={(event) => setExceptionStartTijd(event.target.value)}
+                      className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Eindtijd dicht</Label>
+                    <Input
+                      type="time"
+                      value={exceptionEindTijd}
+                      onChange={(event) => setExceptionEindTijd(event.target.value)}
+                      className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    className="h-11 rounded-full"
+                    disabled={isPending}
+                    onClick={handleCreateExceptionBlock}
+                  >
+                    <EyeOff className="size-4" />
+                    Uitzondering blokkeren
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-[1rem] border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-300/20 dark:bg-amber-400/10">
+                <div className="flex items-start gap-3">
+                  <Luggage className="mt-0.5 size-4 text-amber-700 dark:text-amber-200" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                      Vakantie blokkeren
+                    </p>
+                    <p className="mt-1 text-xs leading-6 text-amber-900/80 dark:text-amber-100/85">
+                      Zet meteen een hele periode dicht.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Van</Label>
+                    <Input
+                      type="date"
+                      value={vacationStartDate}
+                      onChange={(event) => setVacationStartDate(event.target.value)}
+                      className="h-11 rounded-xl border-amber-200 bg-white/90 dark:border-amber-300/20 dark:bg-white/5 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tot en met</Label>
+                    <Input
+                      type="date"
+                      value={vacationEndDate}
+                      onChange={(event) => setVacationEndDate(event.target.value)}
+                      className="h-11 rounded-xl border-amber-200 bg-white/90 dark:border-amber-300/20 dark:bg-white/5 dark:text-white"
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className="rounded-full border-slate-200 bg-slate-50"
-                    onClick={() => handleApplyWeekdayPreset([1, 2, 3, 4, 5])}
+                    className="h-11 rounded-full border-amber-200 bg-white/85 text-amber-900 dark:border-amber-300/20 dark:bg-white/10 dark:text-amber-100"
+                    disabled={isPending}
+                    onClick={handleCreateVacationBlock}
                   >
-                    Ma-vr
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full border-slate-200 bg-slate-50"
-                    onClick={() => handleApplyWeekdayPreset([6, 7])}
-                  >
-                    Weekend
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full border-slate-200 bg-slate-50"
-                    onClick={() => setSelectedWeekdays([])}
-                  >
-                    Alleen losse datum
+                    Hele periode dichtzetten
                   </Button>
                 </div>
               </div>
 
-              {!isBlockingMode ? (
-                <div className="mt-3 rounded-[0.95rem] border border-slate-200 bg-white p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-950">
-                      Pauzemoment inplannen
+                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                      Weekacties
                     </p>
-                    <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-                      Splits je werkdag automatisch in twee boekbare blokken met een pauze ertussen.
+                    <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">
+                      Snel een hele week opschonen.
                     </p>
                   </div>
+                  <Badge className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
+                    Week van {formatAvailabilityDay(createAvailabilityTimestamp(selectedWeekStart, "12:00"))}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <Label>Sluit alles na</Label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      type="time"
+                      value={bulkCutoffTime}
+                      onChange={(event) => setBulkCutoffTime(event.target.value)}
+                      className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    />
+                    <Button
+                      type="button"
+                      className="h-11 rounded-full"
+                      disabled={isPending}
+                      onClick={handleBulkCloseAfterTime}
+                    >
+                      Alles sluiten na dit uur
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                      disabled={isPending}
+                      onClick={handleBulkOpenAfterTime}
+                    >
+                      Alles weer open na dit uur
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className={cn(
-                      "rounded-full border-slate-200 bg-slate-50",
-                      useBreakWindow && "border-sky-300 bg-sky-50 text-sky-700"
-                    )}
-                    onClick={() => setUseBreakWindow((current) => !current)}
+                    className="h-11 rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                    disabled={isPending}
+                    onClick={handleBulkCloseWeekend}
                   >
-                    {useBreakWindow ? "Pauze actief" : "Pauze toevoegen"}
+                    Weekend dicht zetten
                   </Button>
                 </div>
-
-                {useBreakWindow ? (
-                  <>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">
-                          Pauze start
-                        </label>
-                        <Input
-                          type="time"
-                          value={pauseStartTijd}
-                          onChange={(event) => setPauseStartTijd(event.target.value)}
-                          className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">
-                          Pauze einde
-                        </label>
-                        <Input
-                          type="time"
-                          value={pauseEindTijd}
-                          onChange={(event) => setPauseEindTijd(event.target.value)}
-                          className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {breakPresets.map((preset) => (
-                        <Button
-                          key={preset.label}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full border-slate-200 bg-slate-50"
-                          onClick={() => handleApplyBreakPreset(preset.start, preset.end)}
-                        >
-                          {preset.label}
-                        </Button>
-                      ))}
-                    </div>
-
-                    <p className="mt-3 text-sm leading-7 text-slate-500">
-                      {hasBreakPreview
-                        ? `Leerlingen zien dan twee boekbare blokken: ${startTijd}-${pauseStartTijd} en ${pauseEindTijd}-${eindTijd}${isWeekScheduleMode ? " op elke gekozen werkdag" : ""}.`
-                        : "Kies een pauze die binnen je werktijd valt en houd voor en na de pauze minimaal 30 minuten over."}
-                    </p>
-                  </>
-                ) : (
-                  <p className="mt-3 text-sm leading-6 text-slate-500">
-                    Handig voor lunch of een korte rustpauze zonder alles los op te knippen.
-                  </p>
-                )}
-              </div>
-              ) : null}
-
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Button
-                  onClick={handleCreateSlot}
-                  disabled={isPending || !datum || !startTijd || !eindTijd}
-                  className={cn(
-                    "h-10 rounded-full px-4 text-[13px] text-white shadow-[0_18px_38px_-24px_rgba(14,116,144,0.4)]",
-                    isBlockingMode
-                      ? "bg-[linear-gradient(135deg,#334155,#475569,#64748b)]"
-                      : "bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)]"
-                  )}
-                >
-                  <CalendarPlus2 className="size-4" />
-                  {isPending
-                    ? "Opslaan..."
-                    : isBlockingMode
-                      ? repeatCount > 1 || isWeekScheduleMode
-                        ? "Afwezigheid blokkeren"
-                        : "Afwezig blok toevoegen"
-                    : isWeekScheduleMode
-                      ? repeatCount > 1
-                        ? "Werkrooster toevoegen"
-                        : "Werkdagen toevoegen"
-                      : useLessonCadence
-                        ? "Lesblokken toevoegen"
-                      : useBreakWindow
-                        ? "Werkdag met pauze toevoegen"
-                      : repeatCount > 1
-                        ? "Wekelijkse reeks toevoegen"
-                        : "Tijdslot toevoegen"}
-                </Button>
-                <span className="text-sm text-slate-500">
-                  {isBlockingMode
-                    ? "Deze tijd blijft intern zichtbaar, maar is niet boekbaar voor leerlingen."
-                    : useLessonCadence
-                      ? "Je werkblok wordt automatisch opgesplitst in aparte lesblokken."
-                    : useBreakWindow
-                    ? "Voor en na de pauze moet minimaal 30 minuten boekbare tijd overblijven."
-                    : "Een blok van minimaal 30 minuten werkt het best voor directe planning."}
-                </span>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-slate-600">Snelle duur:</span>
-                {[60, 90, 120].map((duration) => (
-                  <Button
-                    key={duration}
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full border-slate-200 bg-white"
-                    onClick={() => handleApplyDurationPreset(duration)}
-                  >
-                    {duration} min
-                  </Button>
-                ))}
               </div>
             </div>
           </div>
 
-          {showSummarySidebar ? (
-            <div className="space-y-4">
-              <div className="rounded-[1.1rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.9))] p-3 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.18)]">
-                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                  Overzicht
-                </p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                  Je planning in een oogopslag
-                </h3>
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+              Dagoverzicht
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
+              {formatDateLong(selectedDateValue || todayValue)}
+            </h3>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                  {[
-                    { label: "Actieve slots", value: `${activeCount}`, icon: Sparkles },
-                    {
-                      label: "Volgende week open",
-                      value: formatMinutesLabel(nextWeekTotalMinutes),
-                      icon: CalendarDays,
-                    },
-                    {
-                      label: "Ingeplande lessen",
-                      value: `${bookedLessonCount}`,
-                      icon: CalendarClock,
-                    },
-                    { label: "Niet boekbaar", value: `${hiddenCount}`, icon: EyeOff },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-[0.9rem] border border-white/90 bg-white/92 p-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <item.icon className="size-4 text-sky-700" />
-                        <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                          {item.label}
-                        </p>
-                      </div>
-                      <p className="mt-3 text-2xl font-semibold text-slate-950">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                  Open uren
+                </p>
+                <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                  {formatMinutesLabel(selectedDayOpenMinutes)}
+                </p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  {selectedDaySlots.filter((item) => item.available).length} blokken
+                </p>
               </div>
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                  Geblokkeerd
+                </p>
+                <p className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                  {formatMinutesLabel(selectedDayBlockedMinutes)}
+                </p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  {selectedDayLessons.length} lessen
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <AvailabilityCalendar
+            availabilityItems={availabilityItems}
+            lessonItems={lessonItems}
+            selectedEntryStartAt={selectedEntryStartAt}
+            selectedAvailabilityId={resolvedSelectedAvailabilityId}
+            selectedDateValue={selectedDateValue}
+            onDateSelect={handleDateSelect}
+            onAvailabilityEventClick={handleAvailabilityEventClick}
+            onAvailabilityEventDrop={handleAvailabilityDrop}
+            onAvailabilityResize={handleAvailabilityResize}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                Dagplanner
+              </p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                {formatAvailabilityDay(createAvailabilityTimestamp(selectedDateValue, "12:00"))}
+              </h3>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Badge className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
+                {selectedDaySlots.length + selectedDayLessons.length} items
+              </Badge>
+              {selectedDaySlots.length ? (
+                <Button
+                  type="button"
+                  variant={multiSelectMode ? "default" : "outline"}
+                  className="h-9 rounded-full"
+                  onClick={toggleMultiSelectMode}
+              >
+                {multiSelectMode ? "Meerdere actief" : "Meerdere selecteren"}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+          {multiSelectMode && selectedDaySlots.length ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-[1rem] border border-sky-200 bg-sky-50/80 p-3 text-sm text-sky-900 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">
+              <span>{selectedAvailabilitySelectionCount} blokken geselecteerd.</span>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 rounded-full border-sky-200 bg-white/80 text-sky-900 dark:border-sky-300/20 dark:bg-white/10 dark:text-sky-100"
+                onClick={handleSelectAllForDay}
+              >
+                Alles op deze dag
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 rounded-full border-sky-200 bg-white/80 text-sky-900 dark:border-sky-300/20 dark:bg-white/10 dark:text-sky-100"
+                onClick={clearSelection}
+              >
+                Selectie opschonen
+              </Button>
             </div>
           ) : null}
-        </div>
-      </div>
 
-      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
-              Stap 2 - Agenda beheren
-            </p>
-            <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-              Bekijk je agenda en beheer je tijdsloten vanuit een vaste plek
-            </h3>
-            <p className="max-w-3xl text-[13px] leading-6 text-slate-600">
-              Gebruik de kalender als hoofdweergave en beheer rechts je geselecteerde blok.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={visibilityFilter}
-              onChange={(event) => setVisibilityFilter(event.target.value)}
-              className="native-select h-9 rounded-full px-3 text-sm"
-            >
-              <option value="alles">Alles tonen</option>
-              <option value="actief">Alleen boekbaar</option>
-              <option value="verborgen">Alleen niet boekbaar</option>
-            </select>
-            <Badge variant="info">Boekbaar voor leerling</Badge>
-            <Badge className="border border-slate-200 bg-slate-100 text-slate-700">
-              Niet boekbaar intern
-            </Badge>
-            <Badge className="border border-amber-200 bg-amber-50 text-amber-700">
-              {bookedLessonCount} les{bookedLessonCount === 1 ? "" : "sen"} ingepland
-            </Badge>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_20rem]">
-          <div className="min-w-0 space-y-4">
-            <div className="lesson-calendar-shell rounded-[1.2rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-2.5">
-              <div className="lesson-calendar lesson-calendar--default">
-                <AvailabilityCalendar
-                  compact={compact}
-                  selectedEntryStartAt={selectedEntry?.startAt ?? undefined}
-                  events={events}
-                  onSelect={handleCalendarSelect}
-                  onAvailabilityEventClick={setSelectedSlotId}
-                />
-              </div>
-            </div>
-
-            {bookedLessons.length ? (
-              <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Geplande lessen
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                      Deze momenten blokkeren automatisch je boekbare agenda.
-                    </p>
-                  </div>
-                  {nextBookedLesson ? (
-                    <Badge className="border border-amber-200 bg-amber-50 text-amber-700">
-                      Volgende: {nextBookedLesson.timeLabel}
-                    </Badge>
-                  ) : null}
-                </div>
-
-                <div className="mt-3 grid gap-2">
-                  {bookedLessons.slice(0, 3).map((lesson) => (
-                    <div
-                      key={lesson.id}
-                      className="rounded-[0.95rem] border border-white bg-white/92 px-3 py-2.5 shadow-[0_14px_30px_-26px_rgba(15,23,42,0.18)]"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-950">
-                          {lesson.learnerName}
-                        </p>
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-amber-700 uppercase">
-                          {lesson.status}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-slate-700">{lesson.timeLabel}</p>
-                      <p className="mt-1 text-[13px] text-slate-500">
-                        {lesson.title} · {lesson.location}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-4 self-start 2xl:sticky 2xl:top-6">
-            <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              {selectedEntry ? (
-                <>
-                  <p className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">
-                    Geselecteerd tijdslot
-                  </p>
-                  <h4 className="mt-3 text-lg font-semibold text-slate-950">
-                    {selectedEntry.dag}
-                  </h4>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold",
-                        selectedEntry.beschikbaar
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-slate-200 bg-slate-100 text-slate-700"
-                      )}
-                    >
-                      {selectedEntry.beschikbaar ? "Boekbaar voor leerlingen" : "Niet boekbaar"}
-                    </span>
-                    {selectedSeriesCount > 1 ? (
-                      <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                        Reeks vanaf hier: {selectedSeriesCount} blokken
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)]">
-                        <Clock3 className="size-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                          Tijdvak
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-slate-700">
-                          {selectedEntry.tijdvak}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)]">
-                        <CalendarClock className="size-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                          Moment
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-slate-700">
-                          {selectedEntry.momentLabel}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.18)]">
-                        <Sparkles className="size-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                          Duur
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-slate-700">
-                          {selectedEntry.durationLabel}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 border-t border-slate-200/80 pt-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                          Snelle aanpassing
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-slate-950">
-                          Pas werktijd en pauze direct aan
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-slate-600">
-                          Werk tijden en pauze direct bij. De agenda ververst na opslaan.
-                        </p>
-                      </div>
-                      {selectedWorkWindow ? (
-                        <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
-                          {selectedWorkWindow.slots.length > 1
-                            ? `${selectedWorkWindow.slots.length} gekoppelde blokken`
-                            : "1 blok"}
-                        </Badge>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Starttijd</label>
-                        <Input
-                          type="time"
-                          value={quickEditStartTijd}
-                          onChange={(event) =>
-                            updateQuickEditDraft({ startTijd: event.target.value })
-                          }
-                          className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Eindtijd</label>
-                        <Input
-                          type="time"
-                          value={quickEditEindTijd}
-                          onChange={(event) =>
-                            updateQuickEditDraft({ eindTijd: event.target.value })
-                          }
-                          className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {[60, 90, 120].map((duration) => (
-                        <Button
-                          key={duration}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full border-slate-200 bg-white"
-                          onClick={() => handleApplyQuickDurationPreset(duration)}
-                        >
-                          {duration} min
-                        </Button>
-                      ))}
-                    </div>
-
-                    {selectedEntry.beschikbaar ? (
-                      <div className="mt-4 rounded-[0.95rem] border border-slate-200 bg-white p-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-950">Pauze inplannen</p>
-                            <p className="mt-1 text-sm leading-7 text-slate-600">
-                              Handig voor lunch of een korte rustpauze midden in je werkblok.
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="rounded-full border-slate-200 bg-white"
-                            onClick={() =>
-                              updateQuickEditDraft((draft) => ({
-                                useBreakWindow: !draft.useBreakWindow,
-                              }))
-                            }
-                          >
-                            {quickEditUseBreakWindow ? "Pauze actief" : "Pauze toevoegen"}
-                          </Button>
-                        </div>
-
-                        {quickEditUseBreakWindow ? (
-                          <>
-                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">
-                                  Pauze start
-                                </label>
-                                <Input
-                                  type="time"
-                                  value={quickEditPauseStartTijd}
-                                  onChange={(event) =>
-                                    updateQuickEditDraft({
-                                      pauseStartTijd: event.target.value,
-                                    })
-                                  }
-                                  className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">
-                                  Pauze einde
-                                </label>
-                                <Input
-                                  type="time"
-                                  value={quickEditPauseEindTijd}
-                                  onChange={(event) =>
-                                    updateQuickEditDraft({
-                                      pauseEindTijd: event.target.value,
-                                    })
-                                  }
-                                  className="h-10 rounded-[0.9rem] border-slate-200 bg-white text-[13px]"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {breakPresets.map((preset) => (
-                                <Button
-                                  key={preset.label}
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full border-slate-200 bg-white"
-                                  onClick={() =>
-                                    updateQuickEditDraft({
-                                      useBreakWindow: true,
-                                      pauseStartTijd: preset.start,
-                                      pauseEindTijd: preset.end,
-                                    })
-                                  }
-                                >
-                                  {preset.label}
-                                </Button>
-                              ))}
-                            </div>
-                          </>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div className="mt-4 rounded-[0.95rem] border border-slate-200 bg-white p-3 text-sm leading-7 text-slate-600">
-                        Dit is nu een niet-boekbaar blok. Je kunt hier wel begin- en eindtijd aanpassen;
-                        een pauze is alleen relevant voor boekbare werktijden.
-                      </div>
-                    )}
-
-                    <div className="mt-3 rounded-[0.95rem] border border-slate-200 bg-white p-3">
-                      <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                        Agenda preview
-                      </p>
-                      <p className="mt-2 text-sm leading-7 text-slate-700">
-                        {selectedEntry.beschikbaar && quickEditUseBreakWindow
-                          ? quickEditHasBreakPreview
-                            ? `Na opslaan toont je agenda ${quickEditStartTijd}-${quickEditPauseStartTijd} en ${quickEditPauseEindTijd}-${quickEditEindTijd}.`
-                            : "Kies een pauze die binnen je werktijd valt en houd voor en na de pauze minimaal 30 minuten over."
-                          : `Na opslaan toont je agenda een blok van ${quickEditStartTijd} tot ${quickEditEindTijd}.`}
-                      </p>
-                    </div>
-
-                    <div className="mt-3 flex flex-col gap-2">
-                      <Button
-                        className="h-11 rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white"
-                        onClick={handleSaveQuickEdit}
-                        disabled={
-                          isPending ||
-                          !quickEditStartTijd ||
-                          !quickEditEindTijd ||
-                          (selectedEntry.beschikbaar &&
-                            quickEditUseBreakWindow &&
-                            (!quickEditPauseStartTijd || !quickEditPauseEindTijd))
-                        }
-                      >
-                        <Edit3 className="size-4" />
-                        {isPending
-                          ? "Agenda bijwerken..."
-                          : isRecurringRuleEntry
-                            ? "Vaste weekplanning bijwerken"
-                            : "Werkblok direct bijwerken"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="h-10 rounded-full border-slate-200 bg-white"
-                        onClick={handleResetQuickEdit}
-                        disabled={isPending}
-                      >
-                        Reset naar huidige selectie
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 border-t border-slate-200/80 pt-4">
-                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      {isRecurringRuleEntry ? "Vaste weekplanning" : "Los blok"}
-                    </p>
-                    <div className="mt-3 flex flex-col gap-2">
-                      {!isRecurringRuleEntry ? (
-                        <Button
-                          variant="outline"
-                          className="h-11 rounded-full border-slate-200 bg-white"
-                          onClick={() => openEditDialog("edit-slot")}
-                          disabled={isPending}
-                        >
-                          <Edit3 className="size-4" />
-                          Bewerk tijdslot
-                        </Button>
-                      ) : null}
-                      <Button
-                        variant="outline"
-                        className="h-11 rounded-full border-slate-200 bg-white"
-                        onClick={handleToggleSelectedSlot}
-                        disabled={isPending}
-                      >
-                        {selectedEntry.beschikbaar ? (
-                          <>
-                            <EyeOff className="size-4" />
-                            Maak niet boekbaar
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="size-4" />
-                            Maak weer boekbaar
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="h-11 rounded-full"
-                        onClick={() => setConfirmAction("delete-slot")}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="size-4" />
-                        {isRecurringRuleEntry
-                          ? "Verwijder vaste weekplanning"
-                          : "Verwijder tijdslot"}
-                      </Button>
-                    </div>
-                    {isRecurringRuleEntry ? (
-                      <p className="mt-3 text-sm leading-7 text-slate-500">
-                        Deze vaste weekplanning blijft elke week zichtbaar totdat je haar
-                        hier wijzigt of verwijdert.
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {!isRecurringRuleEntry ? (
-                    <>
-                      <div className="mt-4 border-t border-slate-200/80 pt-4">
-                        <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                          Hele reeks vanaf hier
-                        </p>
-                        <div className="mt-3 flex flex-col gap-2">
-                          <Button
-                            variant="outline"
-                            className="h-11 rounded-full border-slate-200 bg-white"
-                            onClick={() => openEditDialog("edit-series")}
-                            disabled={isPending || selectedSeriesCount <= 1}
-                          >
-                            <Edit3 className="size-4" />
-                            Bewerk reeks
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="h-11 rounded-full border-slate-200 bg-white"
-                            onClick={handleToggleSelectedSeries}
-                            disabled={isPending || selectedSeriesCount <= 1}
-                          >
-                            {selectedEntry.beschikbaar ? (
-                              <>
-                                <EyeOff className="size-4" />
-                                Verberg reeks
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="size-4" />
-                                Activeer reeks
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            className="h-11 rounded-full"
-                            onClick={() => setConfirmAction("delete-series")}
-                            disabled={isPending || selectedSeriesCount <= 1}
-                          >
-                            <Trash2 className="size-4" />
-                            Verwijder reeks
-                          </Button>
-                        </div>
-                        <p className="mt-3 text-sm leading-7 text-slate-500">
-                          Reeksacties pakken alle toekomstige blokken mee met dezelfde weekdag en
-                          hetzelfde tijdvak als dit geselecteerde moment.
-                        </p>
-                      </div>
-
-                      <div className="mt-4 border-t border-slate-200/80 pt-4">
-                        <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                          Snelle actie
-                        </p>
-                        <div className="mt-3">
-                          <Button
-                            variant="outline"
-                            className="h-11 w-full rounded-full border-slate-200 bg-white"
-                            onClick={handleDuplicateSelectedToNextWeek}
-                            disabled={isPending}
-                          >
-                            <CopyPlus className="size-4" />
-                            Kopieer naar volgende week
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <p className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">
-                    Nog leeg
-                  </p>
-                  <h4 className="mt-3 text-lg font-semibold text-slate-950">
-                    Je agenda heeft nog geen tijdsloten
-                  </h4>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">
-                    Voeg hierboven je eerste beschikbare blok toe. Daarna kun je
-                    die hier blijven aanscherpen en later gericht vrijgeven voor planning.
-                  </p>
-                </>
+          <div className="mt-4 space-y-3">
+            <AvailabilityDayPlanner
+              availabilityItems={availabilityItems.filter(
+                (item) => getAvailabilityDateValue(item.startAt) === selectedDateValue
               )}
-            </div>
+              lessonItems={lessonItems.filter(
+                (item) => getAvailabilityDateValue(item.startAt) === selectedDateValue
+              )}
+              dateValue={selectedDateValue}
+              selectedAvailabilityId={resolvedSelectedAvailabilityId}
+              onAvailabilityEventClick={handleAvailabilityEventClick}
+              onAvailabilityResize={handleAvailabilityResize}
+            />
 
+            <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              Klik in deze dagplanner op een open of afgeschermd blok om het rechts verder te beheren.
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-[1.4rem] border border-white/70 bg-white/88 p-3.5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)]">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold tracking-[0.22em] text-primary uppercase">
-              Stap 3 - Rooster en advies
-            </p>
-            <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-              Houd je vaste ritme en slimme opvolging strak bij elkaar
-            </h3>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">
-              Je vaste weekrooster, losse uitzonderingen en de belangrijkste signalen staan hier zonder dubbele tussenlagen onder elkaar.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              {
-                key: "rooster",
-                label: "Rooster",
-                meta:
-                  recurringRuleSummaries.length > 0
-                    ? `${recurringRuleSummaries.length} vast`
-                    : upcomingExceptionWindows.length > 0
-                      ? `${upcomingExceptionWindows.length} los`
-                      : "Nog leeg",
-              },
-              { key: "health", label: "Inzicht", meta: `${nextWeekHealthScore}/100` },
-              {
-                key: "suggestions",
-                label: "Acties",
-                meta: smartSuggestionCount ? `${smartSuggestionCount} live` : "Rustig",
-              },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() =>
-                  setInsightView(tab.key as "rooster" | "health" | "suggestions")
-                }
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                Geselecteerd moment
+              </p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                {multiSelectMode && selectedAvailabilitySelectionCount > 1
+                  ? `${selectedAvailabilitySelectionCount} blokken geselecteerd`
+                  : selectedAvailabilityItem
+                  ? selectedAvailabilityItem.momentLabel
+                  : "Nog geen moment gekozen"}
+              </h3>
+              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                {multiSelectMode && selectedAvailabilitySelectionCount > 1
+                  ? "Meerdere blokken tegelijk beheren."
+                  : isRecurringSelection
+                  ? "Dit blok hoort bij je vaste weekritme."
+                  : "Beheer dit losse moment direct vanuit je agenda."}
+              </p>
+            </div>
+            {selectedAvailabilityItem ? (
+              <Badge
                 className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-medium transition-all",
-                  insightView === tab.key
-                    ? "border-slate-950 bg-slate-950 text-white shadow-[0_18px_40px_-26px_rgba(15,23,42,0.45)]"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950"
+                  "border",
+                  selectedAvailabilityItem.available
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-100"
+                    : "border-slate-200 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100"
                 )}
               >
-                {tab.label} - {tab.meta}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {insightView === "rooster" ? (
-          <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-            <div className="space-y-3">
-              <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Standaard weekrooster
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                      Dit zijn je vaste terugkerende werktijden
-                    </h3>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Klik een regel open als je die vaste weekplanning direct wilt aanpassen.
-                    </p>
-                  </div>
-                  <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
-                    {recurringRuleSummaries.length
-                      ? `${recurringRuleSummaries.length} vaste dagen`
-                      : "Nog leeg"}
-                  </Badge>
-                </div>
-
-                <div className="mt-3 grid gap-2.5">
-                  {recurringRuleSummaries.length ? (
-                    recurringRuleSummaries.map((rule) => (
-                      <button
-                        key={rule.ruleId}
-                        type="button"
-                        onClick={() => setSelectedSlotId(rule.slotId)}
-                        className="rounded-[0.95rem] border border-white/80 bg-white/90 p-3 text-left shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-950 capitalize">
-                              {rule.dayLabel}
-                            </p>
-                            <p className="mt-1 text-sm text-slate-600">{rule.timeLabel}</p>
-                            {rule.pauseLabel ? (
-                              <p className="mt-1 text-xs text-slate-500">
-                                Pauze {rule.pauseLabel}
-                              </p>
-                            ) : null}
-                          </div>
-                          <span
-                            className={cn(
-                              "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-                              rule.beschikbaar
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-slate-200 bg-slate-100 text-slate-700"
-                            )}
-                          >
-                            {rule.beschikbaar ? "Boekbaar" : "Dicht"}
-                          </span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-white p-3 text-sm leading-6 text-slate-600">
-                      Je hebt nog geen vaste weekplanning. Kies bij herhaling voor
-                      <span className="font-semibold text-slate-950">
-                        {" "}vaste weekplanning
-                      </span>{" "}
-                      als je standaard werkdagen wekelijks wilt laten terugkomen.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Uitzonderingen en losse blokken
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                      Eenmalige aanvullingen of blokkades
-                    </h3>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Handig om snel te zien wat afwijkt van je vaste weekritme.
-                    </p>
-                  </div>
-                  <Badge className="border border-slate-200 bg-slate-50 text-slate-700">
-                    {upcomingExceptionWindows.length
-                      ? `${upcomingExceptionWindows.length} zichtbaar`
-                      : "Rustig"}
-                  </Badge>
-                </div>
-
-                <div className="mt-3 grid gap-2.5">
-                  {upcomingExceptionWindows.length ? (
-                    upcomingExceptionWindows.map((entry) => (
-                      <button
-                        key={entry.key}
-                        type="button"
-                        onClick={() => setSelectedSlotId(entry.slotId)}
-                        className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3 text-left transition-colors hover:border-slate-300 hover:bg-white"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-950">
-                              {entry.dayLabel}
-                            </p>
-                            <p className="mt-1 text-sm text-slate-600">{entry.momentLabel}</p>
-                            <p className="mt-1 text-xs text-slate-500">{entry.kindLabel}</p>
-                          </div>
-                          <span
-                            className={cn(
-                              "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-                              entry.beschikbaar
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-slate-200 bg-slate-100 text-slate-700"
-                            )}
-                          >
-                            {entry.beschikbaar ? "Open" : "Dicht"}
-                          </span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-slate-50/70 p-3 text-sm leading-6 text-slate-600">
-                      Er staan nu geen losse uitzonderingen op korte termijn. Dat betekent meestal
-                      dat je agenda vooral op je vaste weekritme draait.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
-                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                  Max lessen per dag
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
-                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                      Gekozen limiet
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {dailyLessonCapValue > 0 ? `${dailyLessonCapValue} per dag` : "Geen limiet"}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Geldt direct voor nieuwe lesblokken met buffer.
-                    </p>
-                  </div>
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
-                    <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                      Piek volgende week
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {highestDailyLoad
-                        ? `${highestDailyLoad.count} lesblok${highestDailyLoad.count === 1 ? "" : "ken"}`
-                        : "Nog leeg"}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {highestDailyLoad ? highestDailyLoad.dayLabel : "Geen actieve lesdag gevonden"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  {dailyLessonCapValue > 0 ? (
-                    daysOverDailyCap.length ? (
-                      <div className="rounded-[0.95rem] border border-amber-200 bg-amber-50/80 p-3">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="mt-0.5 size-4 text-amber-700" />
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-slate-950">
-                              Een paar dagen gaan boven je gekozen limiet
-                            </p>
-                            <div className="text-sm leading-6 text-slate-600">
-                              {daysOverDailyCap.slice(0, 3).map((day) => (
-                                <p key={day.dateValue}>
-                                  {day.dayLabel}: {day.count} lesblokken
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-[0.95rem] border border-emerald-200 bg-emerald-50/80 p-3 text-sm leading-6 text-slate-700">
-                        Je volgende week blijft binnen je gekozen daglimiet. Dat geeft meestal een
-                        rustiger rooster en minder overvolle dagen.
-                      </div>
-                    )
-                  ) : (
-                    <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm leading-6 text-slate-600">
-                      Kies hier een limiet als je minder volle lesdagen wilt plannen of jezelf wat
-                      meer lucht wilt geven tussen drukke dagen.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </div>
-        ) : null}
-
-        {insightView === "health" ? (
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]">
-            <div className="space-y-4">
-              <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Weekinzicht
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                      Zie snel hoe je volgende week ervoor staat
-                    </h3>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      We kijken vooral naar volume, spreiding en avonddekking.
-                    </p>
-                  </div>
-                  <Badge className={cn("border", nextWeekHealthBadge.className)}>
-                    {nextWeekHealthBadge.label} - {nextWeekHealthScore}/100
-                  </Badge>
-                </div>
-
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className={cn("h-full rounded-full", nextWeekHealthBadge.barClassName)}
-                    style={{ width: `${nextWeekHealthScore}%` }}
-                  />
-                </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {[
-                    {
-                      label: "Open uren",
-                      value: formatMinutesLabel(nextWeekTotalMinutes),
-                      hint: "Volgende week",
-                    },
-                    {
-                      label: "Actieve dagen",
-                      value: `${nextWeekDaySpread} ${nextWeekDaySpread === 1 ? "dag" : "dagen"}`,
-                      hint: "Verspreiding",
-                    },
-                    {
-                      label: "Trend",
-                      value: formatMinutesDeltaLabel(capacityDeltaMinutes),
-                      hint: "Vs deze week",
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-[0.9rem] border border-white/80 bg-white/90 p-2.5 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]"
-                    >
-                      <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                        {item.label}
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-slate-950">{item.value}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.hint}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[1.1rem] border border-slate-200 bg-white p-3 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)]">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                      Boekingsbeeld
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                      Wat je open agenda ongeveer kan dragen
-                    </h3>
-                  </div>
-                  <Badge className={cn("border", bookingChanceTone.className)}>
-                    Boekingskans {bookingChanceTone.label} - {bookingChanceScore}%
-                  </Badge>
-                </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {[
-                    {
-                      label: "Prijs per les",
-                      value: pricePerLesson > 0 ? formatCurrency(pricePerLesson) : "Nog leeg",
-                      hint: "Profielprijs",
-                    },
-                    {
-                      label: "Verwachte boekingen",
-                      value: nextWeekActiveEntries.length > 0 ? `${projectedBookings}` : "0",
-                      hint: "Indicatief",
-                    },
-                    {
-                      label: "Weekomzet",
-                      value:
-                        pricePerLesson > 0 ? formatCurrency(projectedRevenue) : "Vul prijs in",
-                      hint: "Realistisch",
-                    },
-                    {
-                      label: "Vol potentieel",
-                      value:
-                        pricePerLesson > 0
-                          ? formatCurrency(nextWeekRevenuePotential)
-                          : "Nog niet berekend",
-                      hint: "Als alles boekt",
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-[0.9rem] border border-slate-200 bg-slate-50/70 p-3"
-                    >
-                      <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                        {item.label}
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-slate-950">{item.value}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.hint}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              {combinedPlanningInsights.map((insight) => (
-                <div
-                  key={`${insight.eyebrow}-${insight.title}`}
-                  className={cn(
-                    "rounded-[1.2rem] border p-4",
-                    insight.tone === "good"
-                      ? "border-emerald-200 bg-emerald-50/70"
-                      : insight.tone === "watch"
-                        ? "border-amber-200 bg-amber-50/80"
-                        : "border-slate-200 bg-white/90"
-                  )}
-                >
-                  <p
-                    className={cn(
-                      "text-[11px] font-semibold tracking-[0.16em] uppercase",
-                      insight.tone === "good"
-                        ? "text-emerald-700"
-                        : insight.tone === "watch"
-                          ? "text-amber-700"
-                          : "text-slate-500"
-                    )}
-                  >
-                    {insight.eyebrow}
-                  </p>
-                  <p className="mt-2 font-semibold text-slate-950">{insight.title}</p>
-                  <p className="mt-1 text-sm leading-7 text-slate-600">{insight.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {insightView === "suggestions" ? (
-          <div className="mt-4 rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                    Slimme suggesties
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                    Snelle acties op basis van je planning
-                  </h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Alleen zichtbaar als er echt een logisch gat of kans ligt.
-                  </p>
-                </div>
-                <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
-                  {smartSuggestionCount ? `${smartSuggestionCount} live` : "In balans"}
-                </Badge>
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {hasWeekCopySuggestion ? (
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="font-semibold text-slate-950">
-                      Volgende week heeft minder open blokken dan deze week
-                    </p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Deze week heeft {currentWeekActiveEntries.length} actieve blokken en volgende
-                      week {nextWeekActiveEntries.length}. Je kunt de actieve blokken van deze week
-                      in één keer doorschuiven.
-                    </p>
-                    <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        className="h-10 rounded-full border-slate-200 bg-white"
-                        onClick={handleDuplicateCurrentWeekToNextWeek}
-                        disabled={isPending}
-                      >
-                        <CopyPlus className="size-4" />
-                        Dupliceer deze week naar volgende week
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {nextWeekEveningSuggestion ? (
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="font-semibold text-slate-950">
-                      Open een extra avondslot volgende week
-                    </p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Voeg direct {nextWeekEveningSuggestion.label} toe om beter zichtbaar te zijn
-                      voor leerlingen na werk of studie.
-                    </p>
-                    <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        className="h-10 rounded-full border-slate-200 bg-white"
-                        onClick={handleApplyEveningSuggestion}
-                        disabled={isPending}
-                      >
-                        <CalendarPlus2 className="size-4" />
-                        Avondslot toevoegen
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {nextWeekWeekendSuggestion ? (
-                  <div className="rounded-[0.95rem] border border-slate-200 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.18)]">
-                    <p className="font-semibold text-slate-950">Je weekend heeft nog ruimte</p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600">
-                      Voeg direct {nextWeekWeekendSuggestion.label} toe als je meer flexibiliteit
-                      voor leerlingen wilt tonen.
-                    </p>
-                    <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        className="h-10 rounded-full border-slate-200 bg-white"
-                        onClick={handleApplyWeekendSuggestion}
-                        disabled={isPending}
-                      >
-                        <CalendarPlus2 className="size-4" />
-                        Weekendblok toevoegen
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {!smartSuggestionCount ? (
-                  <div className="rounded-[0.95rem] border border-dashed border-slate-200 bg-white p-3 text-sm leading-6 text-slate-600">
-                    Je komende planning ziet er nu mooi in balans uit. Zodra er weer gaten
-                    ontstaan, verschijnen hier automatisch nieuwe suggesties.
-                  </div>
-                ) : null}
-              </div>
-          </div>
-        ) : null}
-      </div>
-
-      <Dialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setConfirmAction(null);
-          }
-        }}
-      >
-        <DialogContent className="availability-manager-dialog max-w-md border border-slate-200 bg-white p-0 shadow-[0_32px_90px_-54px_rgba(15,23,42,0.36)]">
-          <div className="p-4">
-            <DialogHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-700">
-                  <AlertTriangle className="size-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-slate-950">
-                    {confirmAction === "delete-series"
-                      ? "Hele reeks verwijderen"
-                      : "Tijdslot verwijderen"}
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-slate-600">
-                    {confirmAction === "delete-series"
-                      ? "Deze actie verwijdert alle toekomstige blokken in dezelfde reeks vanaf het geselecteerde moment."
-                      : "Deze actie verwijdert alleen het geselecteerde tijdslot uit je agenda."}
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-
-            {selectedEntry ? (
-              <div className="mt-4 rounded-[1rem] border border-slate-200 bg-slate-50/90 p-3">
-                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                  Controleer wat je verwijdert
-                </p>
-                <p className="mt-2 text-base font-semibold text-slate-950">
-                  {selectedEntry.dag}
-                </p>
-                <p className="mt-1 text-sm text-slate-600">{selectedEntry.tijdvak}</p>
-                {confirmAction === "delete-series" && selectedSeriesCount > 1 ? (
-                  <p className="mt-3 text-sm leading-7 text-slate-600">
-                    Je staat op het punt om <span className="font-semibold text-slate-950">
-                      {selectedSeriesCount}
-                    </span>{" "}
-                    toekomstige blokken uit deze reeks te verwijderen.
-                  </p>
-                ) : null}
-              </div>
+                {multiSelectMode && selectedAvailabilitySelectionCount > 1
+                  ? "Bulkselectie"
+                  : isRecurringSelection
+                  ? "Vaste weekplanning"
+                  : selectedAvailabilityItem.available
+                    ? "Boekbaar"
+                    : "Verborgen"}
+              </Badge>
             ) : null}
           </div>
 
-          <DialogFooter className="availability-manager-dialog-footer bg-slate-50/90">
-            <Button
-              variant="outline"
-              className="rounded-full border-slate-200 bg-white"
-              onClick={() => setConfirmAction(null)}
-              disabled={isPending}
-            >
-              Annuleren
-            </Button>
-            <Button
-              variant="destructive"
-              className="rounded-full"
-              onClick={
-                confirmAction === "delete-series"
-                  ? handleDeleteSelectedSeries
-                  : handleDeleteSelectedSlot
-              }
-              disabled={isPending}
-            >
-              <Trash2 className="size-4" />
-              {isPending
-                ? "Bezig..."
-                : confirmAction === "delete-series"
-                  ? "Verwijder reeks"
-                  : "Verwijder tijdslot"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {multiSelectMode && selectedAvailabilitySelectionCount > 1 ? (
+            <div className="mt-4 space-y-4">
+              <div className="rounded-[1rem] border border-sky-200 bg-sky-50/80 p-4 dark:border-sky-300/20 dark:bg-sky-400/10">
+                <p className="text-sm font-semibold text-sky-950 dark:text-sky-100">
+                  {selectedAvailabilitySelectionCount} blokken tegelijk geselecteerd
+                </p>
+                <p className="mt-2 text-sm leading-7 text-sky-900/80 dark:text-sky-100/85">
+                  {selectedRecurringSelectionCount
+                    ? `${selectedRecurringSelectionCount} uit vaste weekplanning.`
+                    : "Alle blokken zijn losse momenten."}
+                </p>
+              </div>
 
-      <Dialog
-        open={editAction !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditAction(null);
-          }
-        }}
-      >
-        <DialogContent className="availability-manager-dialog max-w-md border border-slate-200 bg-white p-0 shadow-[0_32px_90px_-54px_rgba(15,23,42,0.36)]">
-          <div className="p-4">
-            <DialogHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
-                  <Edit3 className="size-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-slate-950">
-                    {editAction === "edit-series"
-                      ? "Bewerk reeks vanaf hier"
-                      : "Bewerk tijdslot"}
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-slate-600">
-                    {editAction === "edit-series"
-                      ? "Pas het tijdvak aan voor alle toekomstige blokken in deze reeks."
-                      : "Werk datum en tijden van dit losse blok direct bij."}
-                  </DialogDescription>
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                  Tijd verschuiven
+                </p>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {[
+                    { label: "15 min eerder", value: -15 },
+                    { label: "30 min eerder", value: -30 },
+                    { label: "15 min later", value: 15 },
+                    { label: "30 min later", value: 30 },
+                  ].map((shift) => (
+                    <Button
+                      key={shift.label}
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                      disabled={isPending}
+                      onClick={() => handleShiftSelectedBlocks(shift.value)}
+                    >
+                      {shift.label}
+                    </Button>
+                  ))}
                 </div>
               </div>
-            </DialogHeader>
+            </div>
+          ) : selectedAvailabilityItem ? (
+            <div className="mt-4 space-y-4">
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                  Tijd verschuiven
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {[
+                    { label: "15 min eerder", value: -15 },
+                    { label: "15 min later", value: 15 },
+                  ].map((shift) => (
+                    <Button
+                      key={shift.label}
+                      type="button"
+                      variant="outline"
+                      className="h-10 rounded-xl border-slate-200 bg-white text-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                      disabled={isPending}
+                      onClick={() => handleShiftSelectedBlocks(shift.value)}
+                    >
+                      {shift.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
-            <div className="mt-5 space-y-4">
-              {selectedEntry ? (
-                <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/90 p-3">
-                  <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                    Huidige selectie
+              {isRecurringSelection ? (
+                <div className="rounded-[1rem] border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-300/20 dark:bg-amber-400/10">
+                  <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                    Alleen deze week afwijken
                   </p>
-                  <p className="mt-2 font-semibold text-slate-950">{selectedEntry.dag}</p>
-                  <p className="mt-1 text-sm text-slate-600">{selectedEntry.tijdvak}</p>
+                  <p className="mt-1 text-xs leading-6 text-amber-900/80 dark:text-amber-100/85">
+                    Maak van dit vaste blok alleen voor deze week een losse afwijking.
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 rounded-full border-amber-200 bg-white/80 text-amber-900 dark:border-amber-300/20 dark:bg-white/10 dark:text-amber-100"
+                      disabled={isPending}
+                      onClick={() => handleCreateWeekOverride(true)}
+                    >
+                      Deze week los boekbaar opslaan
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 rounded-full border-amber-200 bg-white/80 text-amber-900 dark:border-amber-300/20 dark:bg-white/10 dark:text-amber-100"
+                      disabled={isPending}
+                      onClick={() => handleCreateWeekOverride(false)}
+                    >
+                      Deze week los dichtzetten
+                    </Button>
+                  </div>
                 </div>
               ) : null}
-
-              {editAction === "edit-slot" ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Datum</label>
-                  <Input
-                    type="date"
-                    value={editDatum}
-                    onChange={(event) => setEditDatum(event.target.value)}
-                    className="h-11 rounded-xl border-slate-200 bg-white"
-                  />
-                </div>
-              ) : (
-                <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/90 p-3 text-sm leading-7 text-slate-600">
-                  De gekozen datum blijft per weekblok hetzelfde. Je past hier alleen de tijden
-                  aan voor de hele reeks.
-                </div>
-              )}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Starttijd</label>
+                  <Label>Werkdag start</Label>
                   <Input
                     type="time"
-                    value={editStartTijd}
-                    onChange={(event) => setEditStartTijd(event.target.value)}
-                    className="h-11 rounded-xl border-slate-200 bg-white"
+                    value={activeEditDraft.startTijd}
+                    onChange={(event) =>
+                      patchEditDraft({ startTijd: event.target.value })
+                    }
+                    className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Eindtijd</label>
+                  <Label>Werkdag eind</Label>
                   <Input
                     type="time"
-                    value={editEindTijd}
-                    onChange={(event) => setEditEindTijd(event.target.value)}
-                    className="h-11 rounded-xl border-slate-200 bg-white"
+                    value={activeEditDraft.eindTijd}
+                    onChange={(event) =>
+                      patchEditDraft({ eindTijd: event.target.value })
+                    }
+                    className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {[60, 90, 120].map((duration) => (
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                      Pauze voor dit venster
+                    </p>
+                    <p className="text-xs leading-6 text-slate-600 dark:text-slate-300">
+                      Optioneel voor dit moment.
+                    </p>
+                  </div>
                   <Button
-                    key={duration}
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full border-slate-200 bg-white"
-                    onClick={() => setEditEindTijd(addMinutesToTimeValue(editStartTijd, duration))}
+                    type="button"
+                    variant={activeEditDraft.hasBreak ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() =>
+                      patchEditDraft({ hasBreak: !activeEditDraft.hasBreak })
+                    }
                   >
-                    {duration} min
+                    {activeEditDraft.hasBreak ? "Aan" : "Uit"}
                   </Button>
-                ))}
+                </div>
+
+                {activeEditDraft.hasBreak ? (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Pauze start</Label>
+                      <Input
+                        type="time"
+                        value={activeEditDraft.pauseStartTijd}
+                        onChange={(event) =>
+                          patchEditDraft({ pauseStartTijd: event.target.value })
+                        }
+                        className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Pauze eind</Label>
+                      <Input
+                        type="time"
+                        value={activeEditDraft.pauseEindTijd}
+                        onChange={(event) =>
+                          patchEditDraft({ pauseEindTijd: event.target.value })
+                        }
+                        className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="grid gap-2">
+                <Button
+                  type="button"
+                  className="h-11 rounded-full"
+                  disabled={isPending}
+                  onClick={handleUpdateSelectedWindow}
+                >
+                  <Settings2 className="size-4" />
+                  {isRecurringSelection ? "Weekplanning bijwerken" : "Werkvenster bijwerken"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                  disabled={isPending}
+                  onClick={handleToggleSelectedSlot}
+                >
+                  {selectedAvailabilityItem.available ? (
+                    <>
+                      <EyeOff className="size-4" />
+                      Niet boekbaar maken
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="size-4" />
+                      Weer boekbaar maken
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="h-11 rounded-full"
+                  disabled={isPending}
+                  onClick={handleDeleteSelectedSlot}
+                >
+                  <Trash2 className="size-4" />
+                  Geselecteerd moment verwijderen
+                </Button>
               </div>
             </div>
-          </div>
-
-          <DialogFooter className="availability-manager-dialog-footer bg-slate-50/90">
-            <Button
-              variant="outline"
-              className="rounded-full border-slate-200 bg-white"
-              onClick={() => setEditAction(null)}
-              disabled={isPending}
-            >
-              Annuleren
-            </Button>
-            <Button
-              className="rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white"
-              onClick={handleSaveEditAction}
-              disabled={isPending || !editStartTijd || !editEindTijd}
-            >
-              <Edit3 className="size-4" />
-              {isPending ? "Opslaan..." : "Wijzigingen opslaan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          ) : (
+            <div className="mt-4 rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              Klik in de agenda op een open of afgeschermd moment om het verder te beheren.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

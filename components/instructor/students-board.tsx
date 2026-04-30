@@ -24,7 +24,11 @@ import {
   clearStudentProgressAssessmentAction,
   saveStudentProgressAssessmentAction,
 } from "@/lib/actions/student-progress";
-import { updateStudentSelfSchedulingAccessAction } from "@/lib/actions/student-scheduling";
+import {
+  updateStudentSelfSchedulingAccessAction,
+  updateStudentWeeklyBookingLimitAction,
+} from "@/lib/actions/student-scheduling";
+import type { InstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import { MANUAL_LEARNER_INTAKE_ITEMS } from "@/lib/manual-learner-intake";
 import { getFirstLessonTemplateForPackage } from "@/lib/package-first-lesson-template";
 import type {
@@ -35,6 +39,11 @@ import type {
   StudentProgressLessonNote,
   StudentProgressStatus,
 } from "@/lib/types";
+import {
+  SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS,
+  formatMinutesAsHoursLabel,
+  formatWeeklyLimitLabel,
+} from "@/lib/self-scheduling-limits";
 import {
   getStudentAutomaticNotifications,
   getStudentExamReadiness,
@@ -210,12 +219,14 @@ export function StudentsBoard({
   notes,
   locationOptions = [],
   packages = [],
+  lessonDurationDefaults,
 }: {
   students: InstructorStudentProgressRow[];
   assessments: StudentProgressAssessment[];
   notes: StudentProgressLessonNote[];
   locationOptions?: LocationOption[];
   packages?: Pakket[];
+  lessonDurationDefaults: InstructorLessonDurationDefaults;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("alles");
@@ -226,6 +237,14 @@ export function StudentsBoard({
   const [localStudents, setLocalStudents] = useState(students);
   const [localAssessments, setLocalAssessments] = useState(assessments);
   const [localNotes, setLocalNotes] = useState(notes);
+  const [weeklyBookingLimitDraft, setWeeklyBookingLimitDraft] = useState(() => ({
+    studentId: students[0]?.id ?? "",
+    value:
+      students[0]?.zelfInplannenHandmatigeOverrideActief &&
+      students[0]?.zelfInplannenHandmatigeLimietMinutenPerWeek != null
+        ? String(students[0].zelfInplannenHandmatigeLimietMinutenPerWeek)
+        : "",
+  }));
   const [isPending, startTransition] = useTransition();
 
   const filteredStudents = useMemo(() => {
@@ -396,6 +415,53 @@ export function StudentsBoard({
   const selectedStudentLastSignInLabel = selectedStudent?.lastSignInAt
     ? formatDateTimeLabel(selectedStudent.lastSignInAt)
     : null;
+  const selectedStudentWeeklyLimitLabel = selectedStudent
+    ? formatWeeklyLimitLabel(selectedStudent.zelfInplannenLimietMinutenPerWeek ?? null)
+    : "Onbeperkt";
+  const selectedStudentWeeklyLimitSource = !selectedStudent
+    ? "none"
+    : selectedStudent.zelfInplannenHandmatigeOverrideActief
+      ? "manual"
+      : selectedStudent.zelfInplannenPakketLimietMinutenPerWeek != null
+        ? "package"
+        : "none";
+  const selectedStudentWeeklyLimitSourceLabel =
+    selectedStudentWeeklyLimitSource === "manual"
+      ? "Handmatige override"
+      : selectedStudentWeeklyLimitSource === "package"
+        ? "Pakketstandaard"
+        : "Geen limiet";
+  const selectedStudentPackageWeeklyLimitLabel = selectedStudent
+    ? formatWeeklyLimitLabel(
+        selectedStudent.zelfInplannenPakketLimietMinutenPerWeek ?? null
+      )
+    : "Onbeperkt";
+  const selectedStudentManualWeeklyLimitLabel = selectedStudent
+    ? selectedStudent.zelfInplannenHandmatigeOverrideActief
+      ? formatWeeklyLimitLabel(
+          selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek ?? null
+        )
+      : "Niet actief"
+    : "Niet actief";
+  const selectedStudentWeeklyUsedLabel = selectedStudent
+    ? formatMinutesAsHoursLabel(
+        selectedStudent.zelfInplannenGebruiktMinutenDezeWeek ?? 0
+      )
+    : "0 min";
+  const selectedStudentWeeklyRemainingLabel =
+    selectedStudent?.zelfInplannenResterendMinutenDezeWeek == null
+      ? "Onbeperkt"
+      : formatMinutesAsHoursLabel(
+          selectedStudent.zelfInplannenResterendMinutenDezeWeek
+        );
+  const weeklyBookingLimitInput =
+    selectedStudent && weeklyBookingLimitDraft.studentId === selectedStudent.id
+      ? weeklyBookingLimitDraft.value
+      : selectedStudent?.zelfInplannenHandmatigeOverrideActief
+        ? selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek != null
+          ? String(selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek)
+          : ""
+        : "";
   const canDetachSelectedStudent = selectedStudent
     ? selectedStudent.isHandmatigGekoppeld &&
       selectedStudent.gekoppeldeLessen === 0 &&
@@ -523,6 +589,89 @@ export function StudentsBoard({
           current.map((student) =>
             student.id === selectedStudent.id
               ? { ...student, zelfInplannenToegestaan: previousAllowed }
+              : student
+          )
+        );
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+    });
+  }
+
+  function handleWeeklyBookingLimitSave(
+    nextLimit: number | null,
+    mode: "manual" | "package" = "manual"
+  ) {
+    if (!selectedStudent?.planningVrijTeGeven) {
+      return;
+    }
+
+    const previousLimit = selectedStudent.zelfInplannenLimietMinutenPerWeek ?? null;
+    const previousManualLimit =
+      selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek ?? null;
+    const previousManualOverrideActive = Boolean(
+      selectedStudent.zelfInplannenHandmatigeOverrideActief
+    );
+    const previousRemaining =
+      selectedStudent.zelfInplannenResterendMinutenDezeWeek ?? null;
+    const packageLimit =
+      selectedStudent.zelfInplannenPakketLimietMinutenPerWeek ?? null;
+    const usedMinutes = selectedStudent.zelfInplannenGebruiktMinutenDezeWeek ?? 0;
+    const nextEffectiveLimit = mode === "package" ? packageLimit : nextLimit;
+    const nextRemaining =
+      nextEffectiveLimit == null
+        ? null
+        : Math.max(nextEffectiveLimit - usedMinutes, 0);
+
+    setWeeklyBookingLimitDraft({
+      studentId: selectedStudent.id,
+      value:
+        mode === "manual" ? (nextLimit == null ? "" : String(nextLimit)) : "",
+    });
+    setLocalStudents((current) =>
+      current.map((student) =>
+        student.id === selectedStudent.id
+          ? {
+              ...student,
+              zelfInplannenLimietMinutenPerWeek: nextEffectiveLimit,
+              zelfInplannenHandmatigeLimietMinutenPerWeek:
+                mode === "manual" ? nextLimit : null,
+              zelfInplannenHandmatigeOverrideActief: mode === "manual",
+              zelfInplannenResterendMinutenDezeWeek: nextRemaining,
+            }
+          : student
+      )
+    );
+
+    startTransition(async () => {
+      const result = await updateStudentWeeklyBookingLimitAction(
+        selectedStudent.id,
+        nextLimit,
+        mode
+      );
+
+      if (!result.success) {
+        setWeeklyBookingLimitDraft({
+          studentId: selectedStudent.id,
+          value:
+            previousManualOverrideActive && previousManualLimit != null
+              ? String(previousManualLimit)
+              : "",
+        });
+        setLocalStudents((current) =>
+          current.map((student) =>
+            student.id === selectedStudent.id
+              ? {
+                  ...student,
+                  zelfInplannenLimietMinutenPerWeek: previousLimit,
+                  zelfInplannenHandmatigeLimietMinutenPerWeek:
+                    previousManualLimit,
+                  zelfInplannenHandmatigeOverrideActief:
+                    previousManualOverrideActive,
+                  zelfInplannenResterendMinutenDezeWeek: previousRemaining,
+                }
               : student
           )
         );
@@ -662,7 +811,19 @@ export function StudentsBoard({
                     <button
                       key={student.id}
                       type="button"
-                      onClick={() => setSelectedStudentId(student.id)}
+                      onClick={() => {
+                        setSelectedStudentId(student.id);
+                        setWeeklyBookingLimitDraft({
+                          studentId: student.id,
+                          value:
+                            student.zelfInplannenHandmatigeOverrideActief &&
+                            student.zelfInplannenHandmatigeLimietMinutenPerWeek != null
+                              ? String(
+                                  student.zelfInplannenHandmatigeLimietMinutenPerWeek
+                                )
+                              : "",
+                        });
+                      }}
                       className={cn(
                         "w-full rounded-[1.2rem] border p-3 text-left transition-all",
                         isSelected
@@ -781,6 +942,7 @@ export function StudentsBoard({
                           }
                           locationOptions={locationOptions}
                           template={firstLessonTemplate}
+                          durationDefaults={lessonDurationDefaults}
                         />
                         {selectedStudent.isHandmatigGekoppeld ? (
                           <StudentDetachDialog
@@ -1020,24 +1182,246 @@ export function StudentsBoard({
                                 : "De agenda blijft afgeschermd tot je deze leerling actief koppelt of een traject start."}
                           </p>
                         </div>
-                        {selectedStudent.planningVrijTeGeven ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="h-9 rounded-full text-[12px]"
-                            onClick={() =>
-                              handleSelfSchedulingToggle(
-                                !selectedStudent.zelfInplannenToegestaan
-                              )
-                            }
-                            disabled={isPending}
-                          >
-                            {selectedStudent.zelfInplannenToegestaan
-                              ? "Zet zelf inplannen uit"
-                              : "Sta zelf inplannen toe"}
-                          </Button>
-                        ) : null}
+                        <div className="flex flex-wrap gap-2">
+                          {selectedStudent.planningVrijTeGeven ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-9 rounded-full text-[12px]"
+                              onClick={() =>
+                                handleSelfSchedulingToggle(
+                                  !selectedStudent.zelfInplannenToegestaan
+                                )
+                              }
+                              disabled={isPending}
+                            >
+                              {selectedStudent.zelfInplannenToegestaan
+                                ? "Zet zelf inplannen uit"
+                                : "Sta zelf inplannen toe"}
+                            </Button>
+                          ) : null}
+                        </div>
                       </div>
+
+                      {selectedStudent.planningVrijTeGeven ? (
+                        <div className="mt-4 space-y-3">
+                          <div className="grid gap-2 md:grid-cols-4">
+                            {[
+                              {
+                                label: "Actieve limiet",
+                                value: selectedStudentWeeklyLimitLabel,
+                                context: "Dit is de ruimte die nu echt geldt voor zelfstandig boeken",
+                              },
+                              {
+                                label: "Bron",
+                                value: selectedStudentWeeklyLimitSourceLabel,
+                                context:
+                                  selectedStudentWeeklyLimitSource === "manual"
+                                    ? "Jij hebt deze leerling handmatig anders ingesteld dan het pakket"
+                                    : selectedStudentWeeklyLimitSource === "package"
+                                      ? "Deze leerling volgt nu automatisch de pakketstandaard"
+                                      : "Er staat nu geen weeklimiet actief op deze leerling",
+                              },
+                              {
+                                label: "Pakketstandaard",
+                                value: selectedStudentPackageWeeklyLimitLabel,
+                                context:
+                                  selectedStudent.zelfInplannenPakketLimietMinutenPerWeek == null
+                                    ? "Dit pakket heeft geen eigen weeklimiet en laat plannen onbeperkt open"
+                                    : "Zodra je geen override gebruikt, volgt de leerling weer deze pakketruimte",
+                              },
+                              {
+                                label: "Deze week gebruikt",
+                                value: selectedStudentWeeklyUsedLabel,
+                                context: "Lessen en actieve boekingen in deze week",
+                              },
+                              {
+                                label: "Nog over",
+                                value: selectedStudentWeeklyRemainingLabel,
+                                context:
+                                  selectedStudent.zelfInplannenLimietMinutenPerWeek == null
+                                    ? "Geen limiet ingesteld"
+                                    : "Ruimte die de leerling nog zelf mag boeken",
+                              },
+                            ].map((item) => (
+                              <div
+                                key={item.label}
+                                className="rounded-[1rem] border border-slate-200/80 bg-white/90 p-3 dark:border-white/10 dark:bg-white/6"
+                              >
+                                <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                  {item.label}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                                  {item.value}
+                                </p>
+                                <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                                  {item.context}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="rounded-[1rem] border border-slate-200/80 bg-white/90 p-3 dark:border-white/10 dark:bg-white/6">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                  Zelf plannen per week
+                                </p>
+                                <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                                  Laat deze leerling het pakket volgen of zet bewust een handmatige override voor meer of minder weekruimte.
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <Badge variant="info">
+                                  {selectedStudent.pakket !== "Nog geen pakket"
+                                    ? selectedStudent.pakket
+                                    : "Nog geen pakket"}
+                                </Badge>
+                                <Badge
+                                  variant={
+                                    selectedStudentWeeklyLimitSource === "manual"
+                                      ? "warning"
+                                      : selectedStudentWeeklyLimitSource === "package"
+                                        ? "success"
+                                        : "default"
+                                  }
+                                >
+                                  {selectedStudentWeeklyLimitSourceLabel}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 grid gap-2 md:grid-cols-2">
+                              <div className="rounded-[0.9rem] border border-slate-200/80 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                                <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                                  Pakketstandaard
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                                  {selectedStudentPackageWeeklyLimitLabel}
+                                </p>
+                                <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                                  Dit volgt de leerling automatisch zodra je geen losse override actief hebt.
+                                </p>
+                              </div>
+                              <div className="rounded-[0.9rem] border border-slate-200/80 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
+                                <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                                  Handmatige override
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                                  {selectedStudentManualWeeklyLimitLabel}
+                                </p>
+                                <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                                  Gebruik dit alleen als deze leerling bewust meer, minder of onbeperkt weekruimte nodig heeft.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS.map((minutes) => (
+                                <Button
+                                  key={minutes}
+                                  type="button"
+                                  variant={
+                                    selectedStudent.zelfInplannenHandmatigeOverrideActief &&
+                                    Number(weeklyBookingLimitInput) === minutes
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  className="h-8 rounded-full px-3 text-[11px]"
+                                  onClick={() =>
+                                    handleWeeklyBookingLimitSave(minutes, "manual")
+                                  }
+                                  disabled={isPending}
+                                >
+                                  {formatMinutesAsHoursLabel(minutes)}
+                                </Button>
+                              ))}
+                              <Button
+                                type="button"
+                                variant={
+                                  selectedStudent.zelfInplannenHandmatigeOverrideActief &&
+                                  !weeklyBookingLimitInput.trim()
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className="h-8 rounded-full px-3 text-[11px]"
+                                onClick={() =>
+                                  handleWeeklyBookingLimitSave(null, "manual")
+                                }
+                                disabled={isPending}
+                              >
+                                Handmatig onbeperkt
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-8 rounded-full px-3 text-[11px]"
+                                onClick={() =>
+                                  handleWeeklyBookingLimitSave(null, "package")
+                                }
+                                disabled={isPending}
+                              >
+                                {selectedStudent.zelfInplannenPakketLimietMinutenPerWeek !=
+                                null
+                                  ? "Volg pakketlimiet"
+                                  : "Gebruik standaard zonder limiet"}
+                              </Button>
+                            </div>
+
+                            <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                                  Handmatige override in minuten
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={30}
+                                  max={1440}
+                                  step={15}
+                                  value={weeklyBookingLimitInput}
+                                  onChange={(event) =>
+                                    setWeeklyBookingLimitDraft({
+                                      studentId: selectedStudent.id,
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  placeholder="Bijvoorbeeld 120"
+                                  className="h-10 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-10 rounded-full px-4 text-[12px]"
+                                onClick={() => {
+                                  const parsed = Number.parseInt(
+                                    weeklyBookingLimitInput,
+                                    10
+                                  );
+                                  handleWeeklyBookingLimitSave(
+                                    Number.isFinite(parsed) ? parsed : null,
+                                    "manual"
+                                  );
+                                }}
+                                disabled={isPending}
+                              >
+                                Override opslaan
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-10 rounded-full px-4 text-[12px]"
+                                onClick={() =>
+                                  handleWeeklyBookingLimitSave(null, "package")
+                                }
+                                disabled={isPending}
+                              >
+                                Terug naar pakket
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -8,6 +8,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
+import { getLearnerLessonCancellationAvailability } from "@/lib/lesson-cancellation";
 import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
 import { formatCurrency } from "@/lib/format";
 import { getRijlesType } from "@/lib/lesson-types";
@@ -295,7 +296,7 @@ export async function getLeerlingLessons(): Promise<Les[]> {
     instructeurIds.length
       ? supabase
           .from("instructeurs")
-          .select("id, profile_id")
+          .select("id, profile_id, leerling_annuleren_tot_uren_voor_les")
           .in("id", instructeurIds)
       : Promise.resolve({ data: [] }),
     locatieIds.length
@@ -314,6 +315,12 @@ export async function getLeerlingLessons(): Promise<Les[]> {
   const instructeurMap = new Map(
     (instructeurs ?? []).map((row) => [row.id, row.profile_id])
   );
+  const instructorCancellationWindowMap = new Map(
+    (instructeurs ?? []).map((row) => [
+      row.id,
+      row.leerling_annuleren_tot_uren_voor_les ?? null,
+    ])
+  );
   const profileMap = new Map(
     (profiles ?? []).map((row) => [row.id, row.volledige_naam])
   );
@@ -324,28 +331,45 @@ export async function getLeerlingLessons(): Promise<Les[]> {
     ])
   );
 
-  return rows.map((row) => ({
-    id: row.id,
-    titel: row.titel,
-    datum: row.start_at ? formatDate(row.start_at) : "Nog niet gepland",
-    tijd: row.start_at ? formatTime(row.start_at) : "--:--",
-    start_at: row.start_at,
-    end_at: getEndAt(row.start_at, row.duur_minuten),
-    duur_minuten: row.duur_minuten ?? 60,
-    status: row.status,
-    attendance_status: row.aanwezigheid_status,
-    attendance_confirmed_at: row.aanwezigheid_bevestigd_at,
-    attendance_reason: row.afwezigheids_reden,
-    lesson_note: row.lesnotitie,
-    reminder_24h_sent_at: row.herinnering_24h_verstuurd_at,
-    locatie: row.locatie_id ? locatieMap.get(row.locatie_id) ?? "Nog onbekend" : "Nog onbekend",
-    locatie_id: row.locatie_id,
-    leerling_naam: "",
-    instructeur_naam:
-      row.instructeur_id
-        ? profileMap.get(instructeurMap.get(row.instructeur_id) ?? "") ?? "Instructeur"
-        : "Instructeur",
-  }));
+  return rows.map((row) => {
+    const selfCancellation = getLearnerLessonCancellationAvailability({
+      startAt: row.start_at,
+      status: row.status,
+      cancellationWindowHours: row.instructeur_id
+        ? instructorCancellationWindowMap.get(row.instructeur_id) ?? null
+        : null,
+    });
+
+    return {
+      id: row.id,
+      titel: row.titel,
+      datum: row.start_at ? formatDate(row.start_at) : "Nog niet gepland",
+      tijd: row.start_at ? formatTime(row.start_at) : "--:--",
+      start_at: row.start_at,
+      end_at: getEndAt(row.start_at, row.duur_minuten),
+      duur_minuten: row.duur_minuten ?? 60,
+      status: row.status,
+      attendance_status: row.aanwezigheid_status,
+      attendance_confirmed_at: row.aanwezigheid_bevestigd_at,
+      attendance_reason: row.afwezigheids_reden,
+      lesson_note: row.lesnotitie,
+      reminder_24h_sent_at: row.herinnering_24h_verstuurd_at,
+      canSelfCancel: selfCancellation.canCancel,
+      selfCancelDeadlineAt: selfCancellation.deadlineAt,
+      selfCancelWindowHours: selfCancellation.windowHours,
+      selfCancelMessage: selfCancellation.message,
+      locatie: row.locatie_id
+        ? locatieMap.get(row.locatie_id) ?? "Nog onbekend"
+        : "Nog onbekend",
+      locatie_id: row.locatie_id,
+      leerling_naam: "",
+      instructeur_naam:
+        row.instructeur_id
+          ? profileMap.get(instructeurMap.get(row.instructeur_id) ?? "") ??
+            "Instructeur"
+          : "Instructeur",
+    };
+  });
 }
 
 export async function getInstructeurLessons(): Promise<Les[]> {

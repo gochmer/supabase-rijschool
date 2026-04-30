@@ -10,10 +10,14 @@ import {
 import { parseRequestWindow } from "@/lib/booking-availability";
 import {
   buildRecurringAvailabilitySlotFromRule,
+  buildRecurringAvailabilitySlots,
   parseWeekRuleSlotId,
 } from "@/lib/availability-week-rules";
 import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
-import { getLearnerInstructorSchedulingAccess } from "@/lib/data/student-scheduling";
+import {
+  getLearnerInstructorBookingLimitSnapshot,
+  getLearnerInstructorSchedulingAccess,
+} from "@/lib/data/student-scheduling";
 import {
   ensureCurrentUserContext,
   getCurrentLeerlingRecord,
@@ -23,16 +27,29 @@ import {
   buildLessonRequestReference,
 } from "@/lib/lesson-request-flow";
 import {
+  getLessonDurationForKind,
+  type LessonDurationKind,
+} from "@/lib/lesson-durations";
+import {
+  formatMinutesAsHoursLabel,
+  getRemainingWeeklyBookingMinutes,
+  getWeekStartKey,
+  getWeekRangeLabel,
+} from "@/lib/self-scheduling-limits";
+import {
   notifyInstructorAboutDirectBooking,
   notifyInstructorAboutNewRequest,
 } from "@/lib/notification-events";
 import { createServerClient } from "@/lib/supabase/server";
+import type { BeschikbaarheidWeekrooster, LesStatus } from "@/lib/types";
 
 type CreateLessonRequestInput = {
   instructorSlug: string;
   datum?: string;
   tijdvak?: string;
   slotId?: string;
+  startAt?: string;
+  endAt?: string;
   bericht?: string;
   packageId?: string;
   requestType?: "algemeen" | "proefles";
@@ -41,6 +58,8 @@ type CreateLessonRequestInput = {
 type CreateDirectLessonBookingInput = {
   instructorSlug: string;
   slotId: string;
+  startAt?: string;
+  endAt?: string;
   bericht?: string;
   packageId?: string;
   requestType?: "algemeen" | "proefles";
@@ -66,7 +85,41 @@ type DuplicateLessonRequestRow = {
   pakket_id: string | null;
   voorkeursdatum: string | null;
   tijdvak: string | null;
+  status: LesStatus;
 };
+
+type InstructorDurationRow = {
+  id: string;
+  online_boeken_actief?: boolean | null;
+  standaard_rijles_duur_minuten?: number | null;
+  standaard_proefles_duur_minuten?: number | null;
+  standaard_pakketles_duur_minuten?: number | null;
+  standaard_examenrit_duur_minuten?: number | null;
+};
+
+function getWeeklyBookingLimitMessage(params: {
+  weeklyLimitMinutes: number;
+  weeklyBookedMinutes: number;
+  slotStartAt: string;
+  requestedMinutes: number;
+}) {
+  const remainingMinutes = getRemainingWeeklyBookingMinutes(
+    params.weeklyLimitMinutes,
+    params.weeklyBookedMinutes
+  );
+
+  return `Je hebt je limiet van ${formatMinutesAsHoursLabel(
+    params.weeklyLimitMinutes
+  )} voor de week van ${getWeekRangeLabel(
+    params.slotStartAt
+  )} bereikt. Er staat al ${formatMinutesAsHoursLabel(
+    params.weeklyBookedMinutes
+  )} ingepland${remainingMinutes === 0 ? "" : ` en nog ${formatMinutesAsHoursLabel(
+    remainingMinutes ?? 0
+  )} over`}, maar dit blok van ${formatMinutesAsHoursLabel(
+    params.requestedMinutes
+  )} past daar niet meer binnen. Neem contact op met je instructeur als je extra lessen wilt plannen.`;
+}
 
 function revalidateLessonRequestPaths(instructorSlug?: string) {
   revalidatePath("/leerling/boekingen");
@@ -99,17 +152,119 @@ function getLessonRequestTitle({
   return "Rijles";
 }
 
+function getRequestedLessonDurationKind(params: {
+  hasSelectedPackage: boolean;
+  requestType: "algemeen" | "proefles";
+}): LessonDurationKind {
+  if (params.hasSelectedPackage) {
+    return "pakketles";
+  }
+
+  if (params.requestType === "proefles") {
+    return "proefles";
+  }
+
+  return "rijles";
+}
+
+async function requestedWindowFitsCurrentAvailability(params: {
+  supabase: Awaited<ReturnType<typeof createServerClient>>;
+  instructorId: string;
+  startAt: string;
+  endAt: string;
+}) {
+  const dateValue = getAvailabilityDateValue(params.startAt);
+
+  if (!dateValue || getAvailabilityDateValue(params.endAt) !== dateValue) {
+    return false;
+  }
+
+  const dayStartAt = createAvailabilityTimestamp(dateValue, "00:00");
+  const dayEndAt = createAvailabilityTimestamp(dateValue, "23:59");
+  const [{ data: concreteSlotRows }, { data: ruleRows }] = await Promise.all([
+    params.supabase
+      .from("beschikbaarheid")
+      .select("id, start_at, eind_at, beschikbaar")
+      .eq("instructeur_id", params.instructorId)
+      .lt("start_at", dayEndAt)
+      .gt("eind_at", dayStartAt),
+    params.supabase
+      .from("beschikbaarheid_weekroosters")
+      .select(
+        "id, instructeur_id, weekdag, start_tijd, eind_tijd, pauze_start_tijd, pauze_eind_tijd, beschikbaar, actief"
+      )
+      .eq("instructeur_id", params.instructorId)
+      .eq("actief", true),
+  ]);
+
+  const concreteSlots = (concreteSlotRows ?? []).map((slot) => ({
+    id: slot.id,
+    start_at: slot.start_at,
+    eind_at: slot.eind_at,
+    beschikbaar: slot.beschikbaar,
+    weekrooster_id: null,
+    dag: "",
+    tijdvak: "",
+  }));
+
+  const recurringSlots = buildRecurringAvailabilitySlots({
+    rules: (ruleRows ?? []) as BeschikbaarheidWeekrooster[],
+    concreteSlots,
+    startDateValue: dateValue,
+    weeks: 1,
+  });
+
+  return [...concreteSlots, ...recurringSlots]
+    .filter((slot) => slot.beschikbaar && slot.start_at && slot.eind_at)
+    .some(
+      (slot) =>
+        new Date(slot.start_at as string).getTime() <=
+          new Date(params.startAt).getTime() &&
+        new Date(slot.eind_at as string).getTime() >=
+          new Date(params.endAt).getTime()
+    );
+}
+
 async function resolveRequestedLessonMoment(params: {
   supabase: Awaited<ReturnType<typeof createServerClient>>;
   instructorId: string;
   datum?: string | null;
   tijdvak?: string | null;
   slotId?: string | null;
+  startAt?: string | null;
+  endAt?: string | null;
+  fallbackDurationMinutes?: number;
 }) {
   let voorkeursdatum = params.datum?.trim() ?? "";
   let tijdvak = params.tijdvak?.trim() ?? "";
   let startAt: string | null = null;
   let endAt: string | null = null;
+  const exactStartAt = params.startAt?.trim() ?? "";
+  const exactEndAt = params.endAt?.trim() ?? "";
+
+  if (exactStartAt && exactEndAt) {
+    const isAvailable = await requestedWindowFitsCurrentAvailability({
+      supabase: params.supabase,
+      instructorId: params.instructorId,
+      startAt: exactStartAt,
+      endAt: exactEndAt,
+    });
+
+    if (!isAvailable) {
+      return {
+        success: false as const,
+        message: "Dit gekozen lesblok is niet meer open in de agenda.",
+      };
+    }
+
+    return {
+      success: true as const,
+      voorkeursdatum: getAvailabilityDateValue(exactStartAt),
+      tijdvak: formatAvailabilityWindow(exactStartAt, exactEndAt),
+      startAt: exactStartAt,
+      endAt: exactEndAt,
+    };
+  }
 
   if (params.slotId?.trim()) {
     const recurringReference = parseWeekRuleSlotId(params.slotId.trim());
@@ -238,7 +393,11 @@ async function resolveRequestedLessonMoment(params: {
   }
 
   if (!startAt || !endAt) {
-    const parsedRequestWindow = parseRequestWindow(voorkeursdatum, tijdvak);
+    const parsedRequestWindow = parseRequestWindow(
+      voorkeursdatum,
+      tijdvak,
+      params.fallbackDurationMinutes
+    );
     startAt = parsedRequestWindow.startAt;
     endAt = parsedRequestWindow.endAt;
   }
@@ -363,7 +522,7 @@ export async function rescheduleLessonRequestAction(input: MutateLessonRequestIn
 
   const { data: existingRequests } = (await supabase
     .from("lesaanvragen")
-    .select("id, pakket_id, voorkeursdatum, tijdvak")
+    .select("id, pakket_id, voorkeursdatum, tijdvak, status")
     .eq("leerling_id", leerling.id)
     .eq("instructeur_id", request.instructeur_id)
     .neq("id", input.requestId)
@@ -466,11 +625,15 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     };
   }
 
-  const { data: instructeur } = await supabase
+  const { data: instructeur } = ((await supabase
     .from("instructeurs")
-    .select("id")
+    .select(
+      "id, standaard_rijles_duur_minuten, standaard_proefles_duur_minuten, standaard_pakketles_duur_minuten, standaard_examenrit_duur_minuten"
+    )
     .eq("slug", input.instructorSlug)
-    .maybeSingle();
+    .maybeSingle()) as unknown as {
+    data: InstructorDurationRow | null;
+  });
 
   if (!instructeur) {
     return {
@@ -480,6 +643,11 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
   }
 
   const requestType = input.requestType === "proefles" ? "proefles" : "algemeen";
+  const durationKind = getRequestedLessonDurationKind({
+    hasSelectedPackage: Boolean(input.packageId?.trim()),
+    requestType,
+  });
+  const fallbackDurationMinutes = getLessonDurationForKind(instructeur, durationKind);
   let selectedPackage:
     | {
         id: string;
@@ -532,6 +700,9 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     datum: input.datum,
     tijdvak: input.tijdvak,
     slotId: input.slotId,
+    startAt: input.startAt,
+    endAt: input.endAt,
+    fallbackDurationMinutes,
   });
 
   if (!resolvedMoment.success) {
@@ -543,10 +714,24 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
 
   const { voorkeursdatum, tijdvak, startAt: requestedStartAt, endAt: requestedEndAt } =
     resolvedMoment;
+  const requestedDurationMinutes = Math.max(
+    30,
+    Math.round(
+      (new Date(requestedEndAt).getTime() - new Date(requestedStartAt).getTime()) / 60000
+    )
+  );
+
+  if (input.startAt?.trim() && input.endAt?.trim() && requestedDurationMinutes !== fallbackDurationMinutes) {
+    return {
+      success: false,
+      message:
+        "Dit gekozen blok past niet meer bij de standaardduur van dit lestype. Kies opnieuw een actueel blok uit de agenda.",
+    };
+  }
 
   const { data: existingRequests } = (await supabase
     .from("lesaanvragen")
-    .select("id, pakket_id, voorkeursdatum, tijdvak")
+    .select("id, pakket_id, voorkeursdatum, tijdvak, status")
     .eq("leerling_id", leerling.id)
     .eq("instructeur_id", instructeur.id)
     .in("status", ["aangevraagd", "geaccepteerd", "ingepland"])) as unknown as {
@@ -589,6 +774,30 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     return {
       success: false,
       message: schedulingConflict.message,
+    };
+  }
+
+  const bookingLimitSnapshot = await getLearnerInstructorBookingLimitSnapshot(
+    instructeur.id,
+    leerling.id
+  );
+  const requestedWeekKey = getWeekStartKey(requestedStartAt);
+  const alreadyBookedMinutesThisWeek =
+    bookingLimitSnapshot.bookedMinutesByWeekStart[requestedWeekKey] ?? 0;
+
+  if (
+    bookingLimitSnapshot.weeklyBookingLimitMinutes != null &&
+    alreadyBookedMinutesThisWeek + requestedDurationMinutes >
+      bookingLimitSnapshot.weeklyBookingLimitMinutes
+  ) {
+    return {
+      success: false,
+      message: getWeeklyBookingLimitMessage({
+        weeklyLimitMinutes: bookingLimitSnapshot.weeklyBookingLimitMinutes,
+        weeklyBookedMinutes: alreadyBookedMinutesThisWeek,
+        slotStartAt: requestedStartAt,
+        requestedMinutes: requestedDurationMinutes,
+      }),
     };
   }
 
@@ -666,11 +875,15 @@ export async function createDirectLessonBookingAction(
     };
   }
 
-  const { data: instructeur } = await supabase
+  const { data: instructeur } = ((await supabase
     .from("instructeurs")
-    .select("id, online_boeken_actief")
+    .select(
+      "id, online_boeken_actief, standaard_rijles_duur_minuten, standaard_proefles_duur_minuten, standaard_pakketles_duur_minuten, standaard_examenrit_duur_minuten"
+    )
     .eq("slug", input.instructorSlug)
-    .maybeSingle();
+    .maybeSingle()) as unknown as {
+    data: InstructorDurationRow | null;
+  });
 
   if (!instructeur) {
     return {
@@ -693,6 +906,11 @@ export async function createDirectLessonBookingAction(
   }
 
   const requestType = input.requestType === "proefles" ? "proefles" : "algemeen";
+  const durationKind = getRequestedLessonDurationKind({
+    hasSelectedPackage: Boolean(input.packageId?.trim()),
+    requestType,
+  });
+  const expectedDurationMinutes = getLessonDurationForKind(instructeur, durationKind);
   let selectedPackage:
     | {
         id: string;
@@ -743,6 +961,9 @@ export async function createDirectLessonBookingAction(
     supabase,
     instructorId: instructeur.id,
     slotId: input.slotId,
+    startAt: input.startAt,
+    endAt: input.endAt,
+    fallbackDurationMinutes: expectedDurationMinutes,
   });
 
   if (!resolvedMoment.success) {
@@ -753,9 +974,22 @@ export async function createDirectLessonBookingAction(
   }
 
   const { voorkeursdatum, tijdvak, startAt, endAt } = resolvedMoment;
+  const durationMinutes = Math.max(
+    30,
+    Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60000)
+  );
+
+  if (durationMinutes !== expectedDurationMinutes) {
+    return {
+      success: false,
+      message:
+        "Dit gekozen blok past niet meer bij de standaardduur van dit lestype. Kies opnieuw een actueel blok uit de agenda.",
+      refreshAvailability: true,
+    };
+  }
   const { data: existingRequests } = (await supabase
     .from("lesaanvragen")
-    .select("id, pakket_id, voorkeursdatum, tijdvak")
+    .select("id, pakket_id, voorkeursdatum, tijdvak, status")
     .eq("leerling_id", leerling.id)
     .eq("instructeur_id", instructeur.id)
     .in("status", ["aangevraagd", "geaccepteerd", "ingepland"])) as unknown as {
@@ -767,10 +1001,35 @@ export async function createDirectLessonBookingAction(
         (request) => request.pakket_id === selectedPackage.id
       )
     : false;
-  const hasDuplicateSlot = (existingRequests ?? []).some(
-    (request) =>
-      request.voorkeursdatum === voorkeursdatum && request.tijdvak === tijdvak
-  );
+  const duplicateSlotRequest =
+    (existingRequests ?? []).find(
+      (request) =>
+        request.voorkeursdatum === voorkeursdatum && request.tijdvak === tijdvak
+    ) ?? null;
+  const hasDuplicateSlot = Boolean(duplicateSlotRequest);
+
+  const { data: existingDirectLesson } = await supabase
+    .from("lessen")
+    .select("id, status")
+    .eq("leerling_id", leerling.id)
+    .eq("instructeur_id", instructeur.id)
+    .eq("start_at", startAt)
+    .neq("status", "geannuleerd")
+    .maybeSingle();
+
+  const alreadyDirectBooked =
+    Boolean(existingDirectLesson) ||
+    duplicateSlotRequest?.status === "ingepland";
+
+  if (alreadyDirectBooked) {
+    return {
+      success: false,
+      message:
+        "Dit moment stond al voor je ingepland. Ik heb de agenda ververst zodat je meteen de actuele open tijden ziet.",
+      refreshAvailability: true,
+      existingBookingState: "already_booked" as const,
+    };
+  }
 
   if (hasDuplicatePackage) {
     return {
@@ -782,7 +1041,10 @@ export async function createDirectLessonBookingAction(
   if (hasDuplicateSlot) {
     return {
       success: false,
-      message: "Dit tijdslot is al door jou vastgezet in een andere boeking of aanvraag.",
+      message:
+        "Dit tijdslot heb je al in een andere aanvraag vastgezet. Ik ververs de agenda zodat je alleen nog open momenten ziet.",
+      refreshAvailability: true,
+      existingBookingState: "already_requested" as const,
     };
   }
 
@@ -798,6 +1060,31 @@ export async function createDirectLessonBookingAction(
     return {
       success: false,
       message: schedulingConflict.message,
+    };
+  }
+
+  const bookingLimitSnapshot = await getLearnerInstructorBookingLimitSnapshot(
+    instructeur.id,
+    leerling.id
+  );
+  const requestedWeekKey = getWeekStartKey(startAt);
+  const alreadyBookedMinutesThisWeek =
+    bookingLimitSnapshot.bookedMinutesByWeekStart[requestedWeekKey] ?? 0;
+
+  if (
+    bookingLimitSnapshot.weeklyBookingLimitMinutes != null &&
+    alreadyBookedMinutesThisWeek + durationMinutes >
+      bookingLimitSnapshot.weeklyBookingLimitMinutes
+  ) {
+    return {
+      success: false,
+      message: getWeeklyBookingLimitMessage({
+        weeklyLimitMinutes: bookingLimitSnapshot.weeklyBookingLimitMinutes,
+        weeklyBookedMinutes: alreadyBookedMinutesThisWeek,
+        slotStartAt: startAt,
+        requestedMinutes: durationMinutes,
+      }),
+      refreshAvailability: true,
     };
   }
 
@@ -830,14 +1117,6 @@ export async function createDirectLessonBookingAction(
       message: "De directe boeking kon niet worden opgeslagen.",
     };
   }
-
-  const durationMinutes = Math.max(
-    30,
-    Math.round(
-      (new Date(endAt).getTime() - new Date(startAt).getTime()) / 60000
-    )
-  );
-
   const { error: lessonError } = await supabase.from("lessen").insert({
     leerling_id: leerling.id,
     instructeur_id: instructeur.id,
@@ -851,9 +1130,15 @@ export async function createDirectLessonBookingAction(
   if (lessonError) {
     await supabase.from("lesaanvragen").delete().eq("id", insertedRequest.id);
 
+    const lessonInsertBlockedByPolicy =
+      lessonError.code === "42501" ||
+      lessonError.message.toLowerCase().includes("row-level security");
+
     return {
       success: false,
-      message: "De les kon niet direct worden ingepland.",
+      message: lessonInsertBlockedByPolicy
+        ? "Direct online inplannen staat nog niet volledig open voor deze instructeur. Probeer het zo opnieuw of gebruik tijdelijk een gewone aanvraag."
+        : "De les kon niet direct worden ingepland.",
     };
   }
 
@@ -879,5 +1164,6 @@ export async function createDirectLessonBookingAction(
         : selectedPackage
           ? `${selectedPackage.naam} staat direct ingepland.`
           : "Je les staat direct ingepland.",
+    refreshAvailability: true,
   };
 }

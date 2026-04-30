@@ -13,7 +13,10 @@ import {
   formatAvailabilitySeriesLabel,
   getAvailabilitySeriesKey,
 } from "@/lib/availability";
-import { getWeekdayNumberFromDateValue } from "@/lib/availability-week-rules";
+import {
+  getWeekdayNumberFromDateValue,
+  parseWeekRuleSlotId,
+} from "@/lib/availability-week-rules";
 import {
   ACTIVE_BOOKED_LESSON_STATUSES,
   createBookingWindowFromLesson,
@@ -100,6 +103,31 @@ type ApplyAvailabilityTemplateInput = {
 type DuplicateAvailabilityWeekInput = {
   sourceWeekStartDatum: string;
   targetWeekStartDatum: string;
+};
+
+type MoveAvailabilityBlockInput = {
+  slotId: string;
+  targetDateValue: string;
+};
+
+type ApplyAvailabilityWeeklyBulkActionInput = {
+  weekStartDateValue: string;
+  action: "close_after_time" | "open_after_time" | "close_weekend";
+  cutoffTime?: string;
+};
+
+type ShiftAvailabilityBlocksInput = {
+  slotIds: string[];
+  minutes: number;
+};
+
+type CreateAvailabilityWeekOverrideInput = {
+  slotId: string;
+  startTijd: string;
+  eindTijd: string;
+  pauzeStartTijd?: string;
+  pauzeEindTijd?: string;
+  beschikbaar: boolean;
 };
 
 const MAX_LINKED_WINDOW_GAP_MINUTES = 90;
@@ -411,6 +439,67 @@ function getDateValuesBetween(startDateValue: string, endDateValue: string) {
   return Array.from({ length: totalDays + 1 }, (_, dayIndex) =>
     addDaysToDateValue(startDateValue, dayIndex)
   );
+}
+
+function normalizePauseWindow(params: {
+  startTijd: string;
+  eindTijd: string;
+  pauzeStartTijd?: string | null;
+  pauzeEindTijd?: string | null;
+}) {
+  const {
+    startTijd,
+    eindTijd,
+    pauzeStartTijd = null,
+    pauzeEindTijd = null,
+  } = params;
+
+  if (!pauzeStartTijd || !pauzeEindTijd) {
+    return {
+      pauzeStartTijd: null,
+      pauzeEindTijd: null,
+    };
+  }
+
+  try {
+    const referenceDate = "2026-01-05";
+    const validationMessage = getAvailabilityBreakValidationMessage(
+      createAvailabilityTimestamp(referenceDate, startTijd),
+      createAvailabilityTimestamp(referenceDate, eindTijd),
+      createAvailabilityTimestamp(referenceDate, pauzeStartTijd),
+      createAvailabilityTimestamp(referenceDate, pauzeEindTijd)
+    );
+
+    if (validationMessage) {
+      return {
+        pauzeStartTijd: null,
+        pauzeEindTijd: null,
+      };
+    }
+  } catch {
+    return {
+      pauzeStartTijd: null,
+      pauzeEindTijd: null,
+    };
+  }
+
+  return {
+    pauzeStartTijd,
+    pauzeEindTijd,
+  };
+}
+
+function addMinutesToTimeValue(timeValue: string, minutes: number) {
+  const referenceDate = "2026-01-05";
+  const timestamp = createAvailabilityTimestamp(referenceDate, timeValue);
+  const shiftedDate = new Date(new Date(timestamp).getTime() + minutes * 60_000);
+  const shiftedDateValue = getAvailabilityDateValue(shiftedDate.toISOString());
+
+  if (shiftedDateValue !== referenceDate) {
+    return null;
+  }
+
+  return shiftedDate.toISOString().slice(11, 16);
 }
 
 function buildPlannedSlotsForWindow(params: {
@@ -1269,6 +1358,879 @@ export async function duplicateAvailabilityWeekAction(
       insertableSlots.length === plannedSlots.length
         ? `${insertableSlots.length} blokken uit de bronweek zijn doorgeschoven naar de volgende week.`
         : `${insertableSlots.length} blokken doorgeschoven. ${conflictResult.conflictingDates.length} ${conflictResult.conflictingDates.length === 1 ? "blok is" : "blokken zijn"} overgeslagen door overlap.`,
+  };
+}
+
+export async function moveAvailabilityBlockAction(
+  input: MoveAvailabilityBlockInput
+) {
+  const access = await ensureInstructorAccess();
+
+  if (!access.ok) {
+    return {
+      success: false,
+      message: access.message,
+    };
+  }
+
+  const slotId = input.slotId.trim();
+  const targetDateValue = input.targetDateValue.trim();
+
+  if (!slotId || !targetDateValue) {
+    return {
+      success: false,
+      message: "Kies een blok en een doeldag om te verplaatsen.",
+    };
+  }
+
+  const supabase = await createServerClient();
+  const parsedWeekRuleSlot = parseWeekRuleSlotId(slotId);
+
+  if (parsedWeekRuleSlot) {
+    const { data: rule } = await supabase
+      .from("beschikbaarheid_weekroosters")
+      .select(
+        "id, instructeur_id, weekdag, start_tijd, eind_tijd, pauze_start_tijd, pauze_eind_tijd, beschikbaar, actief"
+      )
+      .eq("id", parsedWeekRuleSlot.ruleId)
+      .eq("instructeur_id", access.instructeur.id)
+      .maybeSingle();
+
+    if (!rule) {
+      return {
+        success: false,
+        message: "Deze vaste weekplanning is niet gevonden.",
+      };
+    }
+
+    const targetWeekday = getWeekdayNumberFromDateValue(targetDateValue);
+
+    if (rule.weekdag === targetWeekday) {
+      return {
+        success: true,
+        message: "Dit vaste blok stond al op die weekdag.",
+      };
+    }
+
+    const ruleConflictResult = await findAvailabilityWeekRuleConflicts(
+      supabase,
+      access.instructeur.id,
+      [
+        {
+          weekdag: targetWeekday,
+          startTijd: rule.start_tijd,
+          eindTijd: rule.eind_tijd,
+        },
+      ],
+      [rule.id]
+    );
+
+    if (!ruleConflictResult.success) {
+      return ruleConflictResult;
+    }
+
+    const { error } = await supabase
+      .from("beschikbaarheid_weekroosters")
+      .update({
+        weekdag: targetWeekday,
+      })
+      .eq("id", rule.id)
+      .eq("instructeur_id", access.instructeur.id);
+
+    if (error) {
+      return {
+        success: false,
+        message: "De vaste weekplanning kon niet worden verplaatst.",
+      };
+    }
+
+    revalidateAvailabilityPaths(access.instructeur.slug);
+
+    return {
+      success: true,
+      message: `De vaste weekplanning staat nu op ${formatAvailabilityDay(
+        createAvailabilityTimestamp(targetDateValue, "12:00")
+      )}.`,
+    };
+  }
+
+  const { data: slot } = await supabase
+    .from("beschikbaarheid")
+    .select("id, start_at, eind_at")
+    .eq("id", slotId)
+    .eq("instructeur_id", access.instructeur.id)
+    .maybeSingle();
+
+  if (!slot) {
+    return {
+      success: false,
+      message: "Dit agendablok is niet gevonden.",
+    };
+  }
+
+  const currentDateValue = getAvailabilityDateValue(slot.start_at);
+
+  if (currentDateValue === targetDateValue) {
+    return {
+      success: true,
+      message: "Dit blok stond al op die dag.",
+    };
+  }
+
+  let startAt = "";
+  let eindAt = "";
+
+  try {
+    startAt = createAvailabilityTimestamp(
+      targetDateValue,
+      formatAvailabilityTime(slot.start_at)
+    );
+    eindAt = createAvailabilityTimestamp(
+      targetDateValue,
+      formatAvailabilityTime(slot.eind_at)
+    );
+  } catch {
+    return {
+      success: false,
+      message: "De nieuwe dag kon niet goed worden verwerkt.",
+    };
+  }
+
+  const validationMessage = getAvailabilityWindowValidationMessage(startAt, eindAt);
+
+  if (validationMessage) {
+    return {
+      success: false,
+      message: validationMessage,
+    };
+  }
+
+  const conflictResult = await findAvailabilityConflicts(
+    supabase,
+    access.instructeur.id,
+    [
+      {
+        id: slot.id,
+        start_at: startAt,
+        eind_at: eindAt,
+        dateLabel: formatAvailabilityDay(startAt),
+      },
+    ],
+    [slot.id]
+  );
+
+  if (!conflictResult.success) {
+    return {
+      success: false,
+      message: conflictResult.message,
+    };
+  }
+
+  if (conflictResult.conflictingDates.length) {
+    return {
+      success: false,
+      message: "Dat doeldagblok overlapt met een ander moment of een les in je agenda.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("beschikbaarheid")
+    .update({
+      start_at: startAt,
+      eind_at: eindAt,
+    })
+    .eq("id", slot.id)
+    .eq("instructeur_id", access.instructeur.id);
+
+  if (error) {
+    return {
+      success: false,
+      message: "Het blok kon niet naar die dag worden verplaatst.",
+    };
+  }
+
+  revalidateAvailabilityPaths(access.instructeur.slug);
+
+  return {
+    success: true,
+    message: `Het blok is verplaatst naar ${formatAvailabilityDay(startAt)}.`,
+  };
+}
+
+export async function shiftAvailabilityBlocksAction(
+  input: ShiftAvailabilityBlocksInput
+) {
+  const access = await ensureInstructorAccess();
+
+  if (!access.ok) {
+    return {
+      success: false,
+      message: access.message,
+    };
+  }
+
+  const slotIds = Array.from(
+    new Set(
+      (input.slotIds ?? [])
+        .map((slotId) => slotId.trim())
+        .filter(Boolean)
+    )
+  );
+  const minutes = Number(input.minutes);
+
+  if (!slotIds.length || !Number.isFinite(minutes) || minutes === 0) {
+    return {
+      success: false,
+      message: "Kies minimaal één blok en een geldige verschuiving.",
+    };
+  }
+
+  const supabase = await createServerClient();
+  const parsedWeekRuleSlots = slotIds
+    .map((slotId) => ({
+      slotId,
+      parsed: parseWeekRuleSlotId(slotId),
+    }))
+    .filter(
+      (
+        item
+      ): item is {
+        slotId: string;
+        parsed: NonNullable<ReturnType<typeof parseWeekRuleSlotId>>;
+      } => Boolean(item.parsed)
+    );
+  const weekRuleIds = Array.from(
+    new Set(parsedWeekRuleSlots.map((item) => item.parsed.ruleId))
+  );
+  const concreteSlotIds = slotIds.filter(
+    (slotId) => !parsedWeekRuleSlots.some((item) => item.slotId === slotId)
+  );
+
+  if (weekRuleIds.length) {
+    const { data: weekRules, error: weekRuleError } = await supabase
+      .from("beschikbaarheid_weekroosters")
+      .select(
+        "id, instructeur_id, weekdag, start_tijd, eind_tijd, pauze_start_tijd, pauze_eind_tijd, beschikbaar, actief"
+      )
+      .eq("instructeur_id", access.instructeur.id)
+      .in("id", weekRuleIds);
+
+    if (weekRuleError || (weekRules ?? []).length !== weekRuleIds.length) {
+      return {
+        success: false,
+        message: "Een deel van de vaste weekplanning kon niet worden geladen.",
+      };
+    }
+
+    const shiftedRules = [];
+
+    for (const rule of weekRules ?? []) {
+      const shiftedStartTijd = addMinutesToTimeValue(rule.start_tijd, minutes);
+      const shiftedEindTijd = addMinutesToTimeValue(rule.eind_tijd, minutes);
+      const shiftedPauseStartTijd = rule.pauze_start_tijd
+        ? addMinutesToTimeValue(rule.pauze_start_tijd, minutes)
+        : null;
+      const shiftedPauseEindTijd = rule.pauze_eind_tijd
+        ? addMinutesToTimeValue(rule.pauze_eind_tijd, minutes)
+        : null;
+
+      if (!shiftedStartTijd || !shiftedEindTijd) {
+        return {
+          success: false,
+          message:
+            "Een vaste weekplanning zou buiten dezelfde dag vallen. Kies een kleinere tijdverschuiving.",
+        };
+      }
+
+      const normalizedPauseWindow = normalizePauseWindow({
+        startTijd: shiftedStartTijd,
+        eindTijd: shiftedEindTijd,
+        pauzeStartTijd: shiftedPauseStartTijd,
+        pauzeEindTijd: shiftedPauseEindTijd,
+      });
+
+      shiftedRules.push({
+        id: rule.id,
+        weekdag: rule.weekdag,
+        startTijd: shiftedStartTijd,
+        eindTijd: shiftedEindTijd,
+        pauzeStartTijd: normalizedPauseWindow.pauzeStartTijd,
+        pauzeEindTijd: normalizedPauseWindow.pauzeEindTijd,
+      });
+    }
+
+    const ruleConflictResult = await findAvailabilityWeekRuleConflicts(
+      supabase,
+      access.instructeur.id,
+      shiftedRules.map((rule) => ({
+        weekdag: rule.weekdag,
+        startTijd: rule.startTijd,
+        eindTijd: rule.eindTijd,
+      })),
+      shiftedRules.map((rule) => rule.id)
+    );
+
+    if (!ruleConflictResult.success) {
+      return ruleConflictResult;
+    }
+
+    const weekRuleResults = await Promise.all(
+      shiftedRules.map((rule) =>
+        supabase
+          .from("beschikbaarheid_weekroosters")
+          .update({
+            start_tijd: rule.startTijd,
+            eind_tijd: rule.eindTijd,
+            pauze_start_tijd: rule.pauzeStartTijd,
+            pauze_eind_tijd: rule.pauzeEindTijd,
+          })
+          .eq("id", rule.id)
+          .eq("instructeur_id", access.instructeur.id)
+      )
+    );
+
+    if (weekRuleResults.some((result) => result.error)) {
+      return {
+        success: false,
+        message: "De vaste weekplanning kon niet volledig worden verschoven.",
+      };
+    }
+  }
+
+  if (concreteSlotIds.length) {
+    const { data: concreteSlots, error: concreteError } = await supabase
+      .from("beschikbaarheid")
+      .select("id, start_at, eind_at, beschikbaar")
+      .eq("instructeur_id", access.instructeur.id)
+      .in("id", concreteSlotIds)
+      .order("start_at", { ascending: true });
+
+    if (concreteError || (concreteSlots ?? []).length !== concreteSlotIds.length) {
+      return {
+        success: false,
+        message: "Een deel van de losse agendablokken kon niet worden geladen.",
+      };
+    }
+
+    const shiftedSlots: PlannedAvailabilitySlot[] = [];
+
+    for (const slot of concreteSlots ?? []) {
+      const startDate = new Date(slot.start_at);
+      const endDate = new Date(slot.eind_at);
+      const shiftedStartDate = new Date(startDate.getTime() + minutes * 60_000);
+      const shiftedEndDate = new Date(endDate.getTime() + minutes * 60_000);
+
+      if (
+        getAvailabilityDateValue(shiftedStartDate.toISOString()) !==
+        getAvailabilityDateValue(slot.start_at) ||
+        getAvailabilityDateValue(shiftedEndDate.toISOString()) !==
+          getAvailabilityDateValue(slot.eind_at)
+      ) {
+        return {
+          success: false,
+          message:
+            "Een los agendablok zou buiten dezelfde dag vallen. Kies een kleinere tijdverschuiving.",
+        };
+      }
+
+      shiftedSlots.push({
+        id: slot.id,
+        start_at: shiftedStartDate.toISOString(),
+        eind_at: shiftedEndDate.toISOString(),
+        dateLabel: formatAvailabilityDay(shiftedStartDate.toISOString()),
+      });
+    }
+
+    const conflictResult = await findAvailabilityConflicts(
+      supabase,
+      access.instructeur.id,
+      shiftedSlots,
+      shiftedSlots.flatMap((slot) => (slot.id ? [slot.id] : []))
+    );
+
+    if (!conflictResult.success) {
+      return {
+        success: false,
+        message: conflictResult.message,
+      };
+    }
+
+    if (conflictResult.conflictingDates.length) {
+      return {
+        success: false,
+        message: "Een of meer verschoven blokken overlappen met bestaande agenda-items.",
+      };
+    }
+
+    const concreteResults = await Promise.all(
+      shiftedSlots.map((slot) =>
+        supabase
+          .from("beschikbaarheid")
+          .update({
+            start_at: slot.start_at,
+            eind_at: slot.eind_at,
+          })
+          .eq("id", slot.id ?? "")
+          .eq("instructeur_id", access.instructeur.id)
+      )
+    );
+
+    if (concreteResults.some((result) => result.error)) {
+      return {
+        success: false,
+        message: "De losse agendablokken konden niet volledig worden verschoven.",
+      };
+    }
+  }
+
+  revalidateAvailabilityPaths(access.instructeur.slug);
+
+  return {
+    success: true,
+    message: `De geselecteerde blokken zijn ${minutes > 0 ? `${minutes} minuten later` : `${Math.abs(minutes)} minuten eerder`} gezet.`,
+    detail: `${slotIds.length} blok${slotIds.length === 1 ? "" : "ken"}`,
+  };
+}
+
+export async function createAvailabilityWeekOverrideAction(
+  input: CreateAvailabilityWeekOverrideInput
+) {
+  const access = await ensureInstructorAccess();
+
+  if (!access.ok) {
+    return {
+      success: false,
+      message: access.message,
+    };
+  }
+
+  const slotId = input.slotId.trim();
+  const startTijd = input.startTijd.trim();
+  const eindTijd = input.eindTijd.trim();
+  const pauzeStartTijd = input.pauzeStartTijd?.trim() ?? "";
+  const pauzeEindTijd = input.pauzeEindTijd?.trim() ?? "";
+  const hasBreakWindow = Boolean(pauzeStartTijd || pauzeEindTijd);
+
+  if (!slotId || !startTijd || !eindTijd) {
+    return {
+      success: false,
+      message: "Vul een starttijd en eindtijd in voor deze week-override.",
+    };
+  }
+
+  if (hasBreakWindow && (!pauzeStartTijd || !pauzeEindTijd)) {
+    return {
+      success: false,
+      message: "Vul zowel een pauze-starttijd als een pauze-eindtijd in.",
+    };
+  }
+
+  const parsedWeekRuleSlot = parseWeekRuleSlotId(slotId);
+
+  if (!parsedWeekRuleSlot) {
+    return {
+      success: false,
+      message: "Alleen vaste weekplanning kan als losse week-override worden opgeslagen.",
+    };
+  }
+
+  const supabase = await createServerClient();
+  const { data: rule } = await supabase
+    .from("beschikbaarheid_weekroosters")
+    .select(
+      "id, instructeur_id, weekdag, start_tijd, eind_tijd, pauze_start_tijd, pauze_eind_tijd, beschikbaar, actief"
+    )
+    .eq("id", parsedWeekRuleSlot.ruleId)
+    .eq("instructeur_id", access.instructeur.id)
+    .maybeSingle();
+
+  if (!rule) {
+    return {
+      success: false,
+      message: "De vaste weekplanning achter dit blok is niet gevonden.",
+    };
+  }
+
+  const dateValue = parsedWeekRuleSlot.dateValue;
+  let startAt = "";
+  let eindAt = "";
+  let pauseStartAt = "";
+  let pauseEndAt = "";
+
+  try {
+    startAt = createAvailabilityTimestamp(dateValue, startTijd);
+    eindAt = createAvailabilityTimestamp(dateValue, eindTijd);
+
+    if (hasBreakWindow) {
+      pauseStartAt = createAvailabilityTimestamp(dateValue, pauzeStartTijd);
+      pauseEndAt = createAvailabilityTimestamp(dateValue, pauzeEindTijd);
+    }
+  } catch {
+    return {
+      success: false,
+      message: "De gekozen override-tijden konden niet goed worden verwerkt.",
+    };
+  }
+
+  const validationMessage = getAvailabilityWindowValidationMessage(startAt, eindAt);
+
+  if (validationMessage) {
+    return {
+      success: false,
+      message: validationMessage,
+    };
+  }
+
+  if (hasBreakWindow) {
+    const breakValidationMessage = getAvailabilityBreakValidationMessage(
+      startAt,
+      eindAt,
+      pauseStartAt,
+      pauseEndAt
+    );
+
+    if (breakValidationMessage) {
+      return {
+        success: false,
+        message: breakValidationMessage,
+      };
+    }
+  }
+
+  const plannedSlots: PlannedAvailabilitySlot[] = hasBreakWindow
+    ? [
+        {
+          start_at: startAt,
+          eind_at: pauseStartAt,
+          dateLabel: formatAvailabilityDay(startAt),
+        },
+        {
+          start_at: pauseEndAt,
+          eind_at: eindAt,
+          dateLabel: formatAvailabilityDay(pauseEndAt),
+        },
+      ]
+    : [
+        {
+          start_at: startAt,
+          eind_at: eindAt,
+          dateLabel: formatAvailabilityDay(startAt),
+        },
+      ];
+
+  const conflictResult = await findAvailabilityConflicts(
+    supabase,
+    access.instructeur.id,
+    plannedSlots
+  );
+
+  if (!conflictResult.success) {
+    return {
+      success: false,
+      message: conflictResult.message,
+    };
+  }
+
+  if (conflictResult.conflictingDates.length) {
+    return {
+      success: false,
+      message:
+        "Deze week-override overlapt met een bestaand slot of een les op die datum.",
+    };
+  }
+
+  const { error } = await supabase.from("beschikbaarheid").insert(
+    plannedSlots.map((slot) => ({
+      instructeur_id: access.instructeur.id,
+      start_at: slot.start_at,
+      eind_at: slot.eind_at,
+      beschikbaar: input.beschikbaar,
+    }))
+  );
+
+  if (error) {
+    return {
+      success: false,
+      message: "De week-override kon niet worden opgeslagen.",
+    };
+  }
+
+  revalidateAvailabilityPaths(access.instructeur.slug);
+
+  return {
+    success: true,
+    message: input.beschikbaar
+      ? "Deze week is nu los overschreven met een boekbaar moment."
+      : "Deze week is nu los overschreven als niet-boekbaar moment.",
+    detail: formatAvailabilityDay(startAt),
+  };
+}
+
+export async function applyAvailabilityWeeklyBulkAction(
+  input: ApplyAvailabilityWeeklyBulkActionInput
+) {
+  const access = await ensureInstructorAccess();
+
+  if (!access.ok) {
+    return {
+      success: false,
+      message: access.message,
+    };
+  }
+
+  const weekStartDateValue = getStartOfWeekDateValue(input.weekStartDateValue.trim());
+  const action = input.action;
+  const cutoffTime = input.cutoffTime?.trim() ?? "";
+
+  if (!weekStartDateValue || !action) {
+    return {
+      success: false,
+      message: "Kies eerst een week en een bulkactie.",
+    };
+  }
+
+  if ((action === "close_after_time" || action === "open_after_time") && !cutoffTime) {
+    return {
+      success: false,
+      message: "Vul een tijd in, bijvoorbeeld 18:00.",
+    };
+  }
+
+  const weekEndDateValue = addDaysToDateValue(weekStartDateValue, 7);
+  const weekStartAt = createAvailabilityTimestamp(weekStartDateValue, "00:00");
+  const weekEndAt = createAvailabilityTimestamp(weekEndDateValue, "00:00");
+  const supabase = await createServerClient();
+
+  const [{ data: concreteSlots, error: concreteError }, { data: weekRules, error: ruleError }] =
+    await Promise.all([
+      supabase
+        .from("beschikbaarheid")
+        .select("id, start_at, eind_at, beschikbaar")
+        .eq("instructeur_id", access.instructeur.id)
+        .gte("start_at", weekStartAt)
+        .lt("start_at", weekEndAt)
+        .order("start_at", { ascending: true }),
+      supabase
+        .from("beschikbaarheid_weekroosters")
+        .select(
+          "id, instructeur_id, weekdag, start_tijd, eind_tijd, pauze_start_tijd, pauze_eind_tijd, beschikbaar, actief"
+        )
+        .eq("instructeur_id", access.instructeur.id)
+        .eq("actief", true),
+    ]);
+
+  if (concreteError || ruleError) {
+    return {
+      success: false,
+      message: "De week kon niet volledig worden voorbereid voor deze bulkactie.",
+    };
+  }
+
+  const concreteUpdates: Array<{
+    id: string;
+    patch: {
+      beschikbaar?: boolean;
+      eind_at?: string;
+    };
+  }> = [];
+  const ruleUpdates: Array<{
+    id: string;
+    patch: {
+      beschikbaar?: boolean;
+      eind_tijd?: string;
+      pauze_start_tijd?: string | null;
+      pauze_eind_tijd?: string | null;
+    };
+  }> = [];
+
+  for (const slot of concreteSlots ?? []) {
+    const dateValue = getAvailabilityDateValue(slot.start_at);
+    const weekday = getWeekdayNumberFromDateValue(dateValue);
+
+    if (action === "close_weekend") {
+      if (weekday >= 6 && slot.beschikbaar) {
+        concreteUpdates.push({
+          id: slot.id,
+          patch: {
+            beschikbaar: false,
+          },
+        });
+      }
+
+      continue;
+    }
+
+    const cutoffAt = createAvailabilityTimestamp(dateValue, cutoffTime);
+
+    if (action === "open_after_time") {
+      if (
+        new Date(slot.eind_at).getTime() > new Date(cutoffAt).getTime() &&
+        !slot.beschikbaar
+      ) {
+        concreteUpdates.push({
+          id: slot.id,
+          patch: {
+            beschikbaar: true,
+          },
+        });
+      }
+
+      continue;
+    }
+
+    if (new Date(slot.eind_at).getTime() <= new Date(cutoffAt).getTime()) {
+      continue;
+    }
+
+    if (new Date(slot.start_at).getTime() >= new Date(cutoffAt).getTime()) {
+      if (slot.beschikbaar) {
+        concreteUpdates.push({
+          id: slot.id,
+          patch: {
+            beschikbaar: false,
+          },
+        });
+      }
+
+      continue;
+    }
+
+    if (slot.eind_at !== cutoffAt) {
+      concreteUpdates.push({
+        id: slot.id,
+        patch: {
+          eind_at: cutoffAt,
+        },
+      });
+    }
+  }
+
+  for (const rule of weekRules ?? []) {
+    if (action === "close_weekend") {
+      if (rule.weekdag >= 6 && rule.beschikbaar) {
+        ruleUpdates.push({
+          id: rule.id,
+          patch: {
+            beschikbaar: false,
+          },
+        });
+      }
+
+      continue;
+    }
+
+    if (action === "open_after_time") {
+      if (rule.eind_tijd > cutoffTime && !rule.beschikbaar) {
+        ruleUpdates.push({
+          id: rule.id,
+          patch: {
+            beschikbaar: true,
+          },
+        });
+      }
+
+      continue;
+    }
+
+    if (rule.eind_tijd <= cutoffTime) {
+      continue;
+    }
+
+    if (rule.start_tijd >= cutoffTime) {
+      if (rule.beschikbaar) {
+        ruleUpdates.push({
+          id: rule.id,
+          patch: {
+            beschikbaar: false,
+          },
+        });
+      }
+
+      continue;
+    }
+
+    const normalizedPauseWindow = normalizePauseWindow({
+      startTijd: rule.start_tijd,
+      eindTijd: cutoffTime,
+      pauzeStartTijd: rule.pauze_start_tijd,
+      pauzeEindTijd: rule.pauze_eind_tijd,
+    });
+
+    if (
+      rule.eind_tijd !== cutoffTime ||
+      (rule.pauze_start_tijd ?? null) !== normalizedPauseWindow.pauzeStartTijd ||
+      (rule.pauze_eind_tijd ?? null) !== normalizedPauseWindow.pauzeEindTijd
+    ) {
+      ruleUpdates.push({
+        id: rule.id,
+        patch: {
+          eind_tijd: cutoffTime,
+          pauze_start_tijd: normalizedPauseWindow.pauzeStartTijd,
+          pauze_eind_tijd: normalizedPauseWindow.pauzeEindTijd,
+        },
+      });
+    }
+  }
+
+  if (!concreteUpdates.length && !ruleUpdates.length) {
+    return {
+      success: true,
+      message:
+        action === "close_weekend"
+          ? "Er hoefde niets extra gesloten te worden in deze week."
+          : action === "open_after_time"
+            ? `Er stonden al geen bestaande avondblokken dicht na ${cutoffTime}.`
+            : `Er stond al niets open na ${cutoffTime} in deze week.`,
+    };
+  }
+
+  const concreteResults = await Promise.all(
+    concreteUpdates.map((update) =>
+      supabase
+        .from("beschikbaarheid")
+        .update(update.patch)
+        .eq("id", update.id)
+        .eq("instructeur_id", access.instructeur.id)
+    )
+  );
+  const ruleResults = await Promise.all(
+    ruleUpdates.map((update) =>
+      supabase
+        .from("beschikbaarheid_weekroosters")
+        .update(update.patch)
+        .eq("id", update.id)
+        .eq("instructeur_id", access.instructeur.id)
+    )
+  );
+
+  if (
+    concreteResults.some((result) => result.error) ||
+    ruleResults.some((result) => result.error)
+  ) {
+    return {
+      success: false,
+      message: "De bulkactie kon niet volledig worden opgeslagen.",
+    };
+  }
+
+  revalidateAvailabilityPaths(access.instructeur.slug);
+
+  const detail = [
+    concreteUpdates.length ? `${concreteUpdates.length} losse blokken` : null,
+    ruleUpdates.length ? `${ruleUpdates.length} vaste weekregels` : null,
+  ]
+    .filter(Boolean)
+    .join(" en ");
+
+  return {
+    success: true,
+    message:
+      action === "close_weekend"
+        ? "De geselecteerde weekendmomenten zijn gesloten."
+        : action === "open_after_time"
+          ? `Bestaande avondblokken na ${cutoffTime} zijn weer boekbaar gemaakt.`
+          : `Alles na ${cutoffTime} is bijgewerkt voor deze week.`,
+    detail,
   };
 }
 
