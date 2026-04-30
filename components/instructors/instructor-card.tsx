@@ -155,7 +155,7 @@ function InstructorCardHeader({
   const topRated = instructor.beoordeling >= 4.9;
 
   return (
-    <CardHeader className="gap-2 border-b border-slate-100/90 px-3 pb-2.5 pt-2.5 dark:border-white/10">
+    <CardHeader className="gap-1.5 border-b border-slate-100/90 px-3 pb-2 pt-2 dark:border-white/10">
       <div className="flex items-center justify-between gap-2">
         <div className="inline-flex items-center gap-1 rounded-full border border-violet-200/70 bg-violet-50/80 px-1.5 py-0.5 text-[7px] font-semibold tracking-[0.14em] text-violet-700 uppercase shadow-[0_10px_20px_-20px_rgba(109,40,217,0.18)] dark:border-violet-300/14 dark:bg-violet-400/10 dark:text-violet-100 dark:shadow-[0_10px_20px_-20px_rgba(15,23,42,0.34)]">
           <Sparkles className="size-3" />
@@ -291,7 +291,7 @@ function InstructorCardPackagePanel({
   }
 
   return (
-    <div className="space-y-1.5 rounded-[0.9rem] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.92))] p-2 shadow-[0_16px_28px_-26px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(30,41,59,0.4))] dark:shadow-[0_16px_28px_-26px_rgba(15,23,42,0.4)]">
+    <div className="space-y-1 rounded-[0.85rem] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.92))] p-1.5 shadow-[0_16px_28px_-26px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(30,41,59,0.4))] dark:shadow-[0_16px_28px_-26px_rgba(15,23,42,0.4)]">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-[8px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-300">
@@ -307,7 +307,7 @@ function InstructorCardPackagePanel({
       </div>
 
       <Select value={selectedPackageId} onValueChange={onPackageChange}>
-        <SelectTrigger className="h-9 w-full rounded-[0.75rem] border-slate-200 bg-white/95 text-left text-[10px] text-slate-950 shadow-[0_12px_24px_-22px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/8 dark:text-white dark:shadow-none">
+        <SelectTrigger className="h-8 w-full rounded-[0.7rem] border-slate-200 bg-white/95 text-left text-[10px] text-slate-950 shadow-[0_12px_24px_-22px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/8 dark:text-white dark:shadow-none">
           <SelectValue placeholder="Kies een pakket" />
         </SelectTrigger>
         <SelectContent className="rounded-[1rem] border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950 dark:text-white">
@@ -385,7 +385,7 @@ function InstructorCardActions({
   weeklyRemainingMinutesThisWeek?: number | null;
 }) {
   return (
-    <CardFooter className="flex-col items-stretch gap-1.5 bg-transparent px-3.5 pb-3 pt-0">
+      <CardFooter className="flex-col items-stretch gap-1 bg-transparent px-3 pb-2.5 pt-0">
       <LessonRequestDialog
         instructorName={instructor.volledige_naam}
         instructorSlug={instructor.slug}
@@ -401,16 +401,16 @@ function InstructorCardActions({
         bookedMinutesByWeekStart={bookedMinutesByWeekStart}
         weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
         triggerLabel={selectedPackage ? "Vraag pakket aan" : "Les aanvragen"}
-        triggerClassName="!h-9 !rounded-full !text-[12px] !font-semibold"
+        triggerClassName="!h-8 !rounded-full !text-[11px] !font-semibold"
       />
 
       <div
         className={cn(
-          "grid gap-1.5",
+          "grid gap-1",
           trialLessonAvailable ? "grid-cols-2" : "grid-cols-1"
         )}
       >
-        <Button asChild variant="outline" className="h-9 rounded-full px-2.5 text-[10px]">
+        <Button asChild variant="outline" className="h-8 rounded-full px-2.5 text-[10px]">
           <Link href={detailHref}>
             Bekijk profiel
             <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -430,7 +430,7 @@ function InstructorCardActions({
             weeklyRemainingMinutesThisWeek={weeklyRemainingMinutesThisWeek}
             triggerLabel="Plan proefles"
             triggerVariant="secondary"
-            triggerClassName="!h-9 !rounded-full !text-[12px] !font-semibold"
+            triggerClassName="!h-8 !rounded-full !text-[11px] !font-semibold"
           />
         ) : null}
       </div>
@@ -762,8 +762,8 @@ export function InstructorCard({
           citiesLabel={citiesLabel}
         />
 
-        <CardContent className="flex flex-1 flex-col space-y-1.5 px-3 pb-2.5 pt-2">
-          <p className="line-clamp-2 text-[10px] leading-4 text-muted-foreground dark:text-slate-300">
+        <CardContent className="flex flex-1 flex-col space-y-1 px-3 pb-2 pt-1.5">
+          <p className="line-clamp-2 text-[10px] leading-3.5 text-muted-foreground dark:text-slate-300">
             {instructor.bio}
           </p>
 

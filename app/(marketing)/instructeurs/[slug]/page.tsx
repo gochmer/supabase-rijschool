@@ -293,41 +293,41 @@ export default async function InstructeurDetailPage({
                 </div>
               </div>
 
-              <div className="border-t border-slate-200 bg-slate-50/85 p-4 dark:border-white/10 dark:bg-white/[0.04] sm:p-5 xl:border-l xl:border-t-0">
-                <div className="space-y-3">
-                  <div className="rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,0.96),rgba(224,242,254,0.88),rgba(255,255,255,0.92))] p-3.5 shadow-[0_22px_50px_-34px_rgba(14,165,233,0.22)] dark:border-sky-300/14 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.72),rgba(8,47,73,0.52),rgba(14,165,233,0.18))] dark:shadow-[0_22px_50px_-34px_rgba(15,23,42,0.5)]">
+              <div className="border-t border-slate-200 bg-slate-50/85 p-3.5 dark:border-white/10 dark:bg-white/[0.04] sm:p-4 xl:border-l xl:border-t-0">
+                <div className="space-y-2.5">
+                  <div className="rounded-[1.25rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,0.96),rgba(224,242,254,0.88),rgba(255,255,255,0.92))] p-3 shadow-[0_22px_50px_-34px_rgba(14,165,233,0.22)] dark:border-sky-300/14 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.72),rgba(8,47,73,0.52),rgba(14,165,233,0.18))] dark:shadow-[0_22px_50px_-34px_rgba(15,23,42,0.5)]">
                     <div className="flex items-start gap-3">
                       <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-sky-700 dark:bg-white/10 dark:text-sky-100">
                         <CalendarClock className="size-4" />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <p className="text-[10px] font-semibold tracking-[0.18em] text-sky-700 uppercase dark:text-sky-100">
                           Planningstatus
                         </p>
                         <p className="text-base font-semibold text-slate-950 dark:text-white">
                           {planningStateLabel}
                         </p>
-                        <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
+                        <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
                           {planningAccess.publicBookingEnabled
                             ? planningAccess.directBookingAllowed
-                              ? "Deze instructeur laat online zelf-inschrijven toe. Kies een vrij moment uit de live agenda en zet het direct goed neer."
-                              : "Deze instructeur laat online boekbare momenten zien. Log in als leerling om een gekozen tijdvak direct of als aanvraag vast te zetten."
+                              ? "Kies een vrij moment uit de live agenda en rond direct af."
+                              : "Log in als leerling om een gekozen tijdvak vast te zetten."
                             : planningAccess.directBookingAllowed
-                              ? "Je kunt nu direct een geschikt moment kiezen en meteen laten inplannen in de agenda van deze instructeur."
+                              ? "Kies een moment en laat het direct inplannen."
                             : planningAccess.canViewAgenda
-                              ? "Je kunt al live momenten kiezen; na bevestigen gaat precies dit kalenderblok mee als voorkeursmoment."
+                              ? "Kies een live moment als duidelijke voorkeur."
                             : planningAccess.hasActiveRelationship
-                              ? "Je traject is al actief. Zodra deze instructeur plannen voor jou vrijgeeft, verschijnt de agenda hieronder."
+                              ? "Je traject is actief; agenda-toegang volgt na vrijgave."
                               : planningAccess.trialLessonAvailable
-                                ? "Vraag eerst een proefles of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."
-                                : "Vraag eerst een les of pakket aan. Daarna kan de instructeur jouw agenda-toegang vrijgeven."}
+                                ? "Vraag eerst een proefles of pakket aan."
+                                : "Vraag eerst een les of pakket aan."}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[1.2rem] border border-slate-200 bg-white/92 p-3.5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <div className="rounded-[1.05rem] border border-slate-200 bg-white/92 p-3 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
                       <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                         Eerstvolgende moment
                       </p>
@@ -335,7 +335,7 @@ export default async function InstructeurDetailPage({
                         {nextPlanningMoment}
                       </p>
                     </div>
-                    <div className="rounded-[1.2rem] border border-slate-200 bg-white/92 p-3.5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
+                    <div className="rounded-[1.05rem] border border-slate-200 bg-white/92 p-3 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6">
                       <div className="flex items-start gap-3">
                         <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
                           <ShieldCheck className="size-4" />
@@ -346,10 +346,10 @@ export default async function InstructeurDetailPage({
                               ? "Online boeken staat open"
                               : "Agenda op vrijgave"}
                           </p>
-                          <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                          <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
                             {planningAccess.publicBookingEnabled
-                              ? "Deze instructeur heeft publieke online boeking aangezet. Zodra je als leerling bent ingelogd, kun je precies het gekozen kalenderblok gebruiken."
-                              : "De instructeur bepaalt per leerling wanneer zelf inplannen open mag."}
+                              ? "Ingelogde leerlingen kunnen een kalenderblok gebruiken."
+                              : "Zelf plannen opent per leerling of traject."}
                           </p>
                         </div>
                       </div>
@@ -425,7 +425,7 @@ export default async function InstructeurDetailPage({
                           className="relative h-full rounded-[1.45rem] [perspective:1200px]"
                         >
                           <Card
-                            className={`group relative flex h-full min-h-[24.5rem] flex-col overflow-hidden border p-0 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] transition-[transform,box-shadow,border-color] duration-500 ${
+                            className={`group relative flex h-full min-h-[22.75rem] flex-col overflow-hidden border p-0 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] transition-[transform,box-shadow,border-color] duration-500 ${
                               isPrimaryPackage
                                 ? `${visual.featuredCardClass} hover:shadow-[0_38px_110px_-48px_rgba(14,165,233,0.42)]`
                                 : `${visual.softCardClass} hover:shadow-[0_36px_100px_-44px_rgba(15,23,42,0.2)]`
@@ -433,7 +433,7 @@ export default async function InstructeurDetailPage({
                           >
                             {displayCoverUrl ? (
                               <div
-                                className={`relative z-10 mx-3.5 mt-3.5 h-24 overflow-hidden rounded-[1rem] border ${
+                                className={`relative z-10 mx-3 mt-3 h-20 overflow-hidden rounded-[0.9rem] border ${
                                   isPrimaryPackage
                                     ? "border-white/10"
                                     : "border-slate-200/80 dark:border-white/10"
@@ -457,7 +457,7 @@ export default async function InstructeurDetailPage({
                               </div>
                             ) : null}
 
-                            <CardHeader className="relative z-10 space-y-2.5 px-3.5 pb-2.5">
+                            <CardHeader className="relative z-10 space-y-2 px-3 pb-2">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <Badge
                                   className={`border px-2 py-0.5 text-[9px] tracking-[0.14em] ${
@@ -513,7 +513,7 @@ export default async function InstructeurDetailPage({
                                     {pkg.naam}
                                   </CardTitle>
                                   <CardDescription
-                                    className={`mt-1 line-clamp-2 text-[12px] leading-5 ${
+                                    className={`mt-1 line-clamp-1 text-[12px] leading-5 ${
                                       isPrimaryPackage
                                         ? "text-white/72"
                                         : "text-slate-600 dark:text-slate-300"
@@ -525,10 +525,10 @@ export default async function InstructeurDetailPage({
                               </div>
                             </CardHeader>
 
-                            <CardContent className="relative z-10 flex flex-1 flex-col space-y-2.5 px-3.5 pb-3.5">
+                            <CardContent className="relative z-10 flex flex-1 flex-col space-y-2 px-3 pb-3">
                               <div>
                                 <p
-                                  className={`text-[1.45rem] font-semibold ${
+                                  className={`text-[1.3rem] font-semibold ${
                                     isPrimaryPackage
                                       ? "text-white"
                                       : "text-slate-950 dark:text-white"
@@ -563,7 +563,7 @@ export default async function InstructeurDetailPage({
                               </div>
 
                               <div
-                                className={`grid gap-1.5 rounded-[1rem] p-2 ${
+                                className={`grid gap-1.5 rounded-[0.9rem] p-1.5 ${
                                   isPrimaryPackage
                                     ? "border border-white/10 bg-white/8"
                                     : "border border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/6"
@@ -657,7 +657,7 @@ export default async function InstructeurDetailPage({
                                   planningAccess.weeklyRemainingMinutesThisWeek
                                 }
                                 triggerLabel="Vraag dit pakket aan"
-                                triggerClassName="!h-9 !w-full !rounded-full !text-[13px]"
+                                triggerClassName="!h-8 !w-full !rounded-full !text-[12px]"
                               />
                             </CardContent>
 
@@ -693,12 +693,10 @@ export default async function InstructeurDetailPage({
                     Beschikbaarheid
                   </p>
                   <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
-                    Kies direct in een ruime, rustige agenda.
+                    Kies een beschikbaar moment.
                   </h2>
                   <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
-                    De planning staat hier bewust centraal. De agenda krijgt de meeste ruimte,
-                    zodat je week- en dagweergave in een echte boekingsflow kunt lezen zonder
-                    te zoeken naar open momenten.
+                    Bekijk open momenten en rond je aanvraag of boeking zonder extra uitlegblokken af.
                   </p>
                 </div>
 
@@ -856,7 +854,7 @@ export default async function InstructeurDetailPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-[15px]">
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-[15px]">
                     {instructor.bio}
                   </p>
 
@@ -912,8 +910,7 @@ export default async function InstructeurDetailPage({
                 Echte ervaringen van leerlingen.
               </h2>
               <p className="text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
-                Compacte reviewkaarten met score, titel, korte tekst en eventuele reactie van
-                de instructeur.
+                Korte reviewkaarten met score, titel en eventuele reactie van de instructeur.
               </p>
             </div>
             <div className="rounded-full border border-slate-200 bg-white/92 px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-white/6 dark:text-slate-200">
@@ -947,7 +944,7 @@ export default async function InstructeurDetailPage({
                         </div>
                       </div>
 
-                      <p className="line-clamp-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                      <p className="line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                         {review.tekst}
                       </p>
 

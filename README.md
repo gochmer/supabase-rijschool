@@ -69,7 +69,7 @@ Open daarna `http://localhost:3000`.
 
 ## Environment variables
 
-Maak lokaal een `.env.local` bestand. De app gebruikt deze variabelen:
+Kopieer `.env.example` naar `.env.local` en vul de waarden in. De app gebruikt deze variabelen:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
@@ -118,6 +118,7 @@ npm run supabase:seed:demo
 npm run dev
 npm run lint
 npm run build
+npm run check:links
 npm run start
 npm run playwright:clickcheck
 npm run supabase:seed:demo

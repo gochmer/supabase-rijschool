@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check:links": "node scripts/check-internal-links.mjs",
     "playwright:clickcheck": "node scripts/playwright-clickcheck.mjs",
     "supabase:types": "supabase gen types --linked --lang typescript --schema public > lib/supabase/database.types.ts",
     "supabase:seed:demo": "node scripts/supabase-seed-demo.mjs"
