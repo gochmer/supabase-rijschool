@@ -1,36 +1,161 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RijBasis
 
-## Getting Started
+RijBasis is een Next.js en Supabase platform voor rijscholen, instructeurs en leerlingen. De app combineert publieke SEO-pagina's met dashboards voor leerlingen, instructeurs en beheerders.
 
-First, run the development server:
+## Rollen
+
+- Leerling: zoekt instructeurs, vraagt proeflessen of pakketten aan, beheert boekingen, betalingen, berichten en reviews.
+- Instructeur: beheert profiel, pakketten, beschikbaarheid, aanvragen, leerlingen, lessen, berichten en inkomsten.
+- Admin: beheert gebruikers, instructeurs, leerlingen, lessen, betalingen, pakketten, reviews, support en instellingen.
+
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Supabase Auth, Database, Realtime en Storage
+- Tailwind CSS 4
+- shadcn/Radix UI componenten
+- Playwright scripts voor belangrijke flows
+
+## Belangrijke routes
+
+Publiek:
+
+- `/`
+- `/instructeurs`
+- `/instructeurs/[slug]`
+- `/pakketten`
+- `/tips`
+- `/vergelijk`
+- `/rijschool/[stad]`
+- `/automaat/[stad]`
+- `/schakel/[stad]`
+- `/proefles/[stad]`
+- `/spoedcursus/[stad]`
+
+Dashboards:
+
+- `/dashboard` redirect naar het juiste dashboard op basis van rol
+- `/leerling/profiel`
+- `/leerling/boekingen`
+- `/leerling/instructeurs`
+- `/instructeur/dashboard`
+- `/instructeur/beschikbaarheid`
+- `/instructeur/aanvragen`
+- `/admin/dashboard`
+- `/admin/gebruikers`
+
+API:
+
+- `/auth/callback`
+- `/api/cron/lesson-reminders`
+
+## Vereisten
+
+- Node.js 20 of nieuwer
+- npm
+- Een Supabase project
+- Supabase CLI voor database migrations en type generatie
+
+## Installatie
+
+```bash
+npm ci
+npm run dev
+```
+
+Open daarna `http://localhost:3000`.
+
+## Environment variables
+
+Maak lokaal een `.env.local` bestand. De app gebruikt deze variabelen:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+# Of, voor oudere Supabase projecten:
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+SUPABASE_SERVICE_ROLE_KEY=
+# Alternatief in development voor admin key lookup:
+SUPABASE_ACCESS_TOKEN=
+
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+LESSON_REMINDER_CRON_SECRET=local-lesson-reminder-secret
+
+RESEND_API_KEY=
+NOTIFICATION_FROM_EMAIL=
+NOTIFICATION_REPLY_TO_EMAIL=
+NOTIFICATION_TEST_TO_EMAIL=
+
+PLAYWRIGHT_BASE_URL=http://localhost:3000
+PLAYWRIGHT_NOTIFICATION_TEST_EMAIL=
+PLAYWRIGHT_TEST_PASSWORD=
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` en `RESEND_API_KEY` zijn server-only secrets. Zet ze nooit in clientcode.
+
+## Supabase
+
+Database migrations staan in `supabase/migrations`.
+
+Handige commando's:
+
+```bash
+npx supabase db push --linked
+npm run supabase:types
+npm run supabase:seed:demo
+```
+
+`npm run supabase:types` werkt `lib/supabase/database.types.ts` bij op basis van het gekoppelde Supabase project.
+
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
+npm run start
+npm run playwright:clickcheck
+npm run supabase:seed:demo
+npm run supabase:types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Checks voor wijzigingen
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Draai minimaal:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+Voor booking, notificaties en reviews zijn er extra Playwright scripts in `scripts/`, zoals:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+node scripts/playwright-direct-booking-check.mjs
+node scripts/playwright-notification-flows-check.mjs
+node scripts/playwright-review-flow-check.mjs
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Projectstructuur
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `app/`: routes, layouts, dashboards, auth en API endpoints.
+- `components/`: UI componenten, dashboard onderdelen, instructeur flows en marketingblokken.
+- `lib/actions/`: server actions voor mutaties.
+- `lib/data/`: data loaders en query helpers.
+- `lib/supabase/`: Supabase clients en gegenereerde database types.
+- `lib/seo-*`: SEO configuratie voor steden, intenties, tips en vergelijkingspagina's.
+- `supabase/migrations/`: database schema, policies en storage wijzigingen.
+- `scripts/`: demo seed en Playwright flow checks.
 
-## Deploy on Vercel
+## Ontwikkelprioriteiten
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Houd `npm run lint` en `npm run build` groen.
+2. Bescherm de booking flow: proefles, pakket aanvraag, beschikbaarheid, self-scheduling en annuleren.
+3. Houd dashboards taakgericht per rol.
+4. Verhoog SEO-kwaliteit met unieke content, interne links en structured data.
+5. Houd Supabase RLS en storage policies scherp bij iedere databasewijziging.

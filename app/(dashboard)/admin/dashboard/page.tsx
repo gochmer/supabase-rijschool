@@ -34,7 +34,9 @@ export default async function AdminDashboardPage() {
             <Button asChild variant="outline" className="h-9 rounded-full text-[13px]">
               <Link href="/admin/support">Open support</Link>
             </Button>
-            <Button className="h-9 rounded-full text-[13px]">Rapport exporteren</Button>
+            <Button asChild className="h-9 rounded-full text-[13px]">
+              <Link href="/admin/betalingen">Bekijk betalingen</Link>
+            </Button>
           </>
         }
       />
@@ -73,7 +75,7 @@ export default async function AdminDashboardPage() {
       <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
         <InsightPanel
           title="Controlekamer"
-          description="Operationele aandachtspunten die het platform vandaag direct beïnvloeden."
+          description="Operationele aandachtspunten die het platform vandaag direct beinvloeden."
           items={[
             {
               label: "Goedkeuringsqueue",

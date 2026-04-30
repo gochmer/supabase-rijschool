@@ -52,7 +52,7 @@ export default async function LeerlingDashboardPage() {
     <>
       <PageHeader
         title="Leerling dashboard"
-        description="Volg je aanvragen, geplande lessen, voortgang en meldingen vanuit één rustig overzicht."
+        description="Volg je aanvragen, geplande lessen, voortgang en meldingen vanuit een rustig overzicht."
         actions={
           <>
             <RealtimeDashboardSync profileLabel="leerling-dashboard" />
@@ -89,7 +89,7 @@ export default async function LeerlingDashboardPage() {
               "Controleer welke aanvragen nog wachten en welke lessen al zijn bevestigd.",
           },
           {
-            href: "/leerling/favorieten",
+            href: "/leerling/instructeurs",
             label: "Favorieten",
             title: "Opgeslagen instructeurs",
             description:

@@ -20,7 +20,7 @@ function cityLabel(citySlug?: string) {
 
 export function AutomaticInternalLinks({
   title = "Slim verder lezen",
-  description = "Automatisch gekozen interne links die bezoekers én zoekmachines helpen de juiste route te vinden.",
+  description = "Automatisch gekozen interne links die bezoekers en zoekmachines helpen de juiste route te vinden.",
   citySlug,
   currentPath = "",
   limit = 8,
@@ -34,6 +34,9 @@ export function AutomaticInternalLinks({
         { href: `/proefles/${citySlug}`, label: `Proefles ${city}` },
         { href: `/spoedcursus/${citySlug}`, label: `Spoedcursus ${city}` },
         { href: `/faalangst/${citySlug}`, label: `Faalangst rijles ${city}` },
+        { href: `/praktijkexamen/${citySlug}`, label: `Praktijkexamen ${city}` },
+        { href: `/examengericht/${citySlug}`, label: `Examengericht rijden ${city}` },
+        { href: `/opfriscursus/${citySlug}`, label: `Opfriscursus ${city}` },
       ]
     : seoCityConfigs.slice(0, 4).flatMap((entry) => [
         { href: `/rijschool/${entry.slug}`, label: `Rijschool ${entry.name}` },
