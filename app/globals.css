@@ -321,6 +321,63 @@
     background: rgba(248, 250, 252, 0.78);
   }
 
+  .instructor-standard .surface-panel {
+    border-color: rgba(226, 232, 240, 0.92);
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    backdrop-filter: none;
+  }
+
+  .instructor-standard .surface-card,
+  .instructor-standard .surface-muted {
+    border-color: rgba(226, 232, 240, 0.94);
+    border-radius: 0.72rem;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: none;
+  }
+
+  .instructor-standard .surface-empty {
+    border-radius: 0.72rem;
+    background: rgba(248, 250, 252, 0.88);
+  }
+
+  .instructor-standard main [class*="rounded-[1."],
+  .instructor-standard main [class*="rounded-[2"] {
+    border-radius: 0.75rem !important;
+  }
+
+  .instructor-standard main [class*="shadow-["] {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+  }
+
+  .instructor-standard main [class*="bg-[linear-gradient"] {
+    background: rgba(255, 255, 255, 0.96) !important;
+    color: rgb(15, 23, 42) !important;
+  }
+
+  .instructor-standard main [class*="bg-[linear-gradient"] [class*="text-white"] {
+    color: rgb(15, 23, 42) !important;
+  }
+
+  .instructor-standard main [class*="bg-[linear-gradient"] [class*="text-white/"] {
+    color: rgb(71, 85, 105) !important;
+  }
+
+  .instructor-standard main section[class*="p-5"],
+  .instructor-standard main section[class*="p-6"],
+  .instructor-standard main section[class*="p-7"] {
+    padding: 1rem !important;
+  }
+
+  .instructor-standard main [class*="min-h-12"] {
+    min-height: 2.5rem !important;
+  }
+
+  .instructor-standard main [class*="min-h-10"] {
+    min-height: 2.25rem !important;
+  }
+
   .dark .surface-panel {
     border-color: rgba(255, 255, 255, 0.1);
     background: linear-gradient(
@@ -346,6 +403,27 @@
   .dark .surface-empty {
     border-color: rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .instructor-standard .surface-panel,
+  .dark .instructor-standard .surface-card,
+  .dark .instructor-standard .surface-muted {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.055);
+    box-shadow: none;
+  }
+
+  .dark .instructor-standard main [class*="bg-[linear-gradient"] {
+    background: rgba(255, 255, 255, 0.055) !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  .dark .instructor-standard main [class*="bg-[linear-gradient"] [class*="text-white"] {
+    color: rgb(255, 255, 255) !important;
+  }
+
+  .dark .instructor-standard main [class*="bg-[linear-gradient"] [class*="text-white/"] {
+    color: rgb(203, 213, 225) !important;
   }
 
   .re-scanlines {

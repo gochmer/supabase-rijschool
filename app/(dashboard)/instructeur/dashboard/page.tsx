@@ -1,7 +1,6 @@
 import {
   CalendarClock,
   CalendarPlus,
-  Flame,
   Inbox,
   MessageSquare,
   PackageCheck,
@@ -24,6 +23,7 @@ import {
   OnboardingPanel,
   type OnboardingStep,
 } from "@/components/dashboard/onboarding-panel";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
 import { getCurrentInstructorLessonCheckinBoards } from "@/lib/data/lesson-checkins";
@@ -295,31 +295,16 @@ export default async function InstructeurDashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[2.2rem] border border-white/70 bg-[linear-gradient(135deg,#020617,#172554,#0284c7)] p-6 text-white shadow-[0_34px_110px_-58px_rgba(15,23,42,0.78)] dark:border-white/10 sm:p-7">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.18),transparent_26%),radial-gradient(circle_at_88%_18%,rgba(56,189,248,0.24),transparent_24%),radial-gradient(circle_at_70%_86%,rgba(249,115,22,0.16),transparent_24%)]" />
-        <div className="relative">
-          <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/78 uppercase">
-                <Flame className="size-3.5" />
-                Instructeur cockpit
-              </div>
-              <RealtimeDashboardSync profileLabel="instructeur-dashboard" />
-            </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-              Vandaag draaien om aanvragen, lessen en conversie.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/72 sm:text-[15px]">
-              Een scherp overzicht voor je planning, nieuwe leerlingen,
-              meldingen en profielacties. Geen ruis, alleen wat vandaag geld,
-              vertrouwen en voortgang oplevert.
-            </p>
-          </div>
-        </div>
-      </section>
+    <div className="space-y-4">
+      <PageHeader
+        eyebrow="Instructeur"
+        title="Dashboard"
+        description="Klein, standaard en snel: aanvragen, lessen, agenda en leerlingen staan direct bovenaan."
+        actions={<RealtimeDashboardSync profileLabel="instructeur-dashboard" />}
+      />
 
       <DashboardActionHub
+        compact
         title="Alles wat je vaak nodig hebt"
         description="Zoals een accountoverzicht: aanvragen, lessen, agenda en aanbod staan direct klaar als duidelijke tegels."
         primaryHref={firstOpenRequest ? "/instructeur/aanvragen" : "/instructeur/beschikbaarheid"}
@@ -328,6 +313,7 @@ export default async function InstructeurDashboardPage() {
       />
 
       <DashboardFocusPanel
+        compact
         eyebrow="Vandaag eerst"
         title="Je cockpit begint met de acties die geld en rust opleveren"
         description="Nieuwe aanvragen, lessen van vandaag en agenda-gaten staan vooraan, zodat je niet hoeft te zoeken naar de eerstvolgende stap."
@@ -336,6 +322,7 @@ export default async function InstructeurDashboardPage() {
       />
 
       <OnboardingPanel
+        compact
         eyebrow="Nieuwe instructeur"
         title="Van account naar boekbaar profiel"
         description="Deze checklist helpt je om snel verkoopklaar te zijn: profiel, pakketten, beschikbaarheid en online boeken op een rij."

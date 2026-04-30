@@ -24,6 +24,8 @@ export async function DashboardShell({
   const roleLabel =
     role === "admin" ? "Beheerder" : role === "instructeur" ? "Instructeur" : "Leerling";
   const isLearner = role === "leerling";
+  const isInstructor = role === "instructeur";
+  const isStandardCompact = isInstructor;
   const today = new Intl.DateTimeFormat("nl-NL", {
     weekday: "long",
     day: "numeric",
@@ -61,8 +63,11 @@ export async function DashboardShell({
     <div
       className={cn(
         "relative min-h-screen overflow-hidden",
+        isStandardCompact && "instructor-standard",
         isLearner
           ? "bg-[linear-gradient(180deg,#0f172a_0%,#111827_54%,#0f172a_100%)] text-white"
+          : isStandardCompact
+            ? "bg-slate-50 dark:bg-slate-950"
           : "bg-[linear-gradient(180deg,#f8fafc_0%,#eef4ff_50%,#f8fafc_100%)] dark:bg-[linear-gradient(180deg,#020617_0%,#0f172a_52%,#111827_100%)]"
       )}
     >
@@ -70,19 +75,29 @@ export async function DashboardShell({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.16),transparent_28%),radial-gradient(circle_at_82%_14%,rgba(56,189,248,0.09),transparent_24%)]" />
       ) : null}
 
-      <div className="mx-auto grid min-h-screen w-full max-w-[1440px] items-start gap-5 px-4 py-5 xl:grid-cols-[280px_minmax(0,1fr)] xl:px-6">
+      <div
+        className={cn(
+          "mx-auto grid min-h-screen w-full items-start",
+          isStandardCompact
+            ? "max-w-[1360px] gap-4 px-3 py-3 xl:grid-cols-[232px_minmax(0,1fr)] xl:px-4"
+            : "max-w-[1440px] gap-5 px-4 py-5 xl:grid-cols-[280px_minmax(0,1fr)] xl:px-6"
+        )}
+      >
         <aside
           className={cn(
             "min-h-0 xl:self-start",
-            !isLearner && "xl:sticky xl:top-6"
+            !isLearner && (isStandardCompact ? "xl:sticky xl:top-4" : "xl:sticky xl:top-6")
           )}
         >
           <div
             className={cn(
-              "flex flex-col rounded-[1.55rem] backdrop-blur-xl",
-              isLearner ? "gap-3 p-3" : "gap-5 p-4",
+              "flex flex-col backdrop-blur-xl",
+              isLearner || isStandardCompact ? "gap-3 p-3" : "gap-5 p-4",
+              isStandardCompact ? "rounded-xl" : "rounded-[1.55rem]",
               isLearner
                 ? "border border-white/10 bg-slate-950/82 shadow-[0_28px_86px_-48px_rgba(15,23,42,0.82)]"
+                : isStandardCompact
+                  ? "border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.05]"
                 : "surface-panel"
             )}
           >
@@ -92,10 +107,12 @@ export async function DashboardShell({
 
             <div
               className={cn(
-                "shrink-0 rounded-[1.15rem]",
-                isLearner ? "p-3" : "p-4",
+                "shrink-0",
+                isLearner || isStandardCompact ? "rounded-lg p-3" : "rounded-[1.15rem] p-4",
                 isLearner
                   ? "border border-white/10 bg-white/6"
+                  : isStandardCompact
+                    ? "border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]"
                   : "surface-card"
               )}
             >
@@ -116,17 +133,20 @@ export async function DashboardShell({
             </div>
 
             <div className="shrink-0">
-              <ThemeToggle surface={isLearner ? "dark" : "light"} compact={isLearner} />
+              <ThemeToggle
+                surface={isLearner ? "dark" : "light"}
+                compact={isLearner || isStandardCompact}
+              />
             </div>
 
             <div className="space-y-4">
               <DashboardNav
                 items={dashboardNavigation[role]}
                 tone={isLearner ? "urban" : "default"}
-                compact={isLearner}
+                compact={isLearner || isStandardCompact}
               />
-              <div className={cn(isLearner ? "grid gap-3" : "space-y-4")}>
-                <CommandPalette role={role} compact={isLearner} />
+              <div className={cn(isLearner || isStandardCompact ? "grid gap-3" : "space-y-4")}>
+                <CommandPalette role={role} compact={isLearner || isStandardCompact} />
                 <ActivityDrawer
                   title={role === "admin" ? "Activiteit en platformfeed" : "Notificaties en updates"}
                   description={
@@ -136,7 +156,7 @@ export async function DashboardShell({
                   }
                   items={drawerItems}
                   tone={isLearner ? "urban" : "default"}
-                  compact={isLearner}
+                  compact={isLearner || isStandardCompact}
                 />
               </div>
             </div>
@@ -144,10 +164,12 @@ export async function DashboardShell({
             <div className="shrink-0">
               <div
                 className={cn(
-                  "rounded-[1.25rem] shadow-[0_24px_64px_-38px_rgba(15,23,42,0.62)]",
-                  isLearner ? "p-3.5" : "p-5",
+                  "shadow-[0_24px_64px_-38px_rgba(15,23,42,0.62)]",
+                  isLearner || isStandardCompact ? "rounded-lg p-3.5" : "rounded-[1.25rem] p-5",
                   isLearner
                     ? "border border-white/10 bg-white/7 text-white"
+                    : isStandardCompact
+                      ? "border border-slate-200 bg-slate-50 text-slate-950 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
                     : "border border-slate-200 bg-slate-950 text-primary-foreground dark:border-white/10 dark:bg-white/7"
                 )}
               >
@@ -159,8 +181,12 @@ export async function DashboardShell({
                 </div>
                 <p
                   className={cn(
-                    isLearner ? "mt-1.5 text-[13px]/5" : "mt-2 text-sm/7",
-                    isLearner ? "text-slate-200/88" : "text-primary-foreground/85"
+                    isLearner || isStandardCompact ? "mt-1.5 text-[13px]/5" : "mt-2 text-sm/7",
+                    isLearner
+                      ? "text-slate-200/88"
+                      : isStandardCompact
+                        ? "text-slate-600 dark:text-slate-300"
+                      : "text-primary-foreground/85"
                   )}
                 >
                   {isLearner
@@ -169,9 +195,13 @@ export async function DashboardShell({
                 </p>
                 <SignOutButton
                   className={cn(
-                    isLearner ? "mt-2.5 h-9 rounded-full px-4" : "mt-4 rounded-full",
+                    isLearner || isStandardCompact
+                      ? "mt-2.5 h-9 rounded-lg px-4"
+                      : "mt-4 rounded-full",
                     isLearner
                       ? "border border-white/12 bg-[linear-gradient(135deg,#f8fafc,#cbd5e1)] text-slate-950 hover:brightness-[1.03]"
+                      : isStandardCompact
+                        ? "bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                       : "bg-white text-primary hover:bg-white/90"
                   )}
                 />
@@ -182,17 +212,23 @@ export async function DashboardShell({
 
         <main
           className={cn(
-            "dashboard-fade min-w-0 space-y-5 rounded-[1.65rem] p-2 sm:p-3",
+            "dashboard-fade min-w-0",
+            isStandardCompact ? "space-y-4" : "space-y-5 rounded-[1.65rem] p-2 sm:p-3",
             isLearner
               ? "border border-white/10 bg-white/5 backdrop-blur-md"
+              : isStandardCompact
+                ? ""
               : "border border-white/55 bg-white/45 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-md"
           )}
         >
           <div
             className={cn(
-              "sticky top-2 z-20 flex flex-col gap-3 rounded-[1.25rem] border px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between",
+              "sticky z-20 flex flex-col gap-3 border backdrop-blur sm:flex-row sm:items-center sm:justify-between",
+              isStandardCompact ? "top-3 rounded-lg px-3 py-2" : "top-2 rounded-[1.25rem] px-4 py-3",
               isLearner
                 ? "border-white/10 bg-slate-950/64"
+                : isStandardCompact
+                  ? "border-slate-200 bg-white/92 shadow-sm dark:border-white/10 dark:bg-slate-950/86"
                 : "border-white/70 bg-white/84 dark:border-white/10 dark:bg-slate-950/72"
             )}
           >

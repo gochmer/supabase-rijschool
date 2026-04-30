@@ -21,6 +21,7 @@ export function OnboardingPanel({
   steps,
   accent = "sky",
   hideWhenComplete = false,
+  compact = false,
 }: {
   eyebrow: string;
   title: string;
@@ -28,6 +29,7 @@ export function OnboardingPanel({
   steps: OnboardingStep[];
   accent?: "sky" | "emerald" | "amber";
   hideWhenComplete?: boolean;
+  compact?: boolean;
 }) {
   const completedCount = steps.filter((step) => step.complete).length;
   const progress = steps.length ? Math.round((completedCount / steps.length) * 100) : 0;
@@ -40,6 +42,97 @@ export function OnboardingPanel({
 
   if (hideWhenComplete && steps.length > 0 && completedCount === steps.length) {
     return null;
+  }
+
+  if (compact) {
+    return (
+      <section className="surface-panel p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase dark:text-sky-300">
+              {eyebrow}
+            </p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-950 dark:text-white">
+              {title}
+            </h2>
+            <p className="mt-1 text-[12px] leading-5 text-muted-foreground dark:text-slate-300">
+              {description}
+            </p>
+          </div>
+          <div className="min-w-[9rem] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-white/10 dark:bg-white/[0.04]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                {completedCount}/{steps.length} klaar
+              </span>
+              <span className="text-sm font-semibold text-slate-950 dark:text-white">
+                {progress}%
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+              <div
+                className={cn("h-full rounded-full bg-gradient-to-r", accentClassName)}
+                style={{ width: `${Math.max(progress, 6)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {steps.map((step) => {
+            const StatusIcon = step.complete ? CheckCircle2 : CircleDashed;
+
+            return (
+              <Link
+                key={step.label}
+                href={step.href}
+                className="group min-w-0 rounded-lg border border-slate-200 bg-white p-3 transition-all hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/8"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <div
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                        step.complete
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-100"
+                          : "bg-sky-50 text-sky-700 dark:bg-sky-400/10 dark:text-sky-100"
+                      )}
+                    >
+                      <step.icon className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold tracking-[0.16em] text-primary uppercase dark:text-sky-300">
+                        {step.label}
+                      </p>
+                      <h3 className="mt-0.5 line-clamp-2 text-sm font-semibold leading-5 text-slate-950 dark:text-white">
+                        {step.title}
+                      </h3>
+                    </div>
+                  </div>
+                  <StatusIcon
+                    className={cn(
+                      "mt-1 size-4 shrink-0",
+                      step.complete
+                        ? "text-emerald-600 dark:text-emerald-200"
+                        : "text-slate-400 dark:text-slate-500"
+                    )}
+                  />
+                </div>
+
+                {step.meta ? (
+                  <p className="mt-2 truncate rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
+                    {step.meta}
+                  </p>
+                ) : null}
+                <div className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-950 dark:text-slate-100">
+                  {step.ctaLabel}
+                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+    );
   }
 
   return (

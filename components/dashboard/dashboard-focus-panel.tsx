@@ -42,9 +42,11 @@ function getToneClasses(tone: DashboardFocusItem["tone"] = "default") {
 function FocusCard({
   item,
   featured = false,
+  compact = false,
 }: {
   item: DashboardFocusItem;
   featured?: boolean;
+  compact?: boolean;
 }) {
   const toneClasses = getToneClasses(item.tone);
 
@@ -52,25 +54,32 @@ function FocusCard({
     <Link
       href={item.href}
       className={cn(
-        "group flex min-w-0 flex-col rounded-[1.25rem] border transition-all duration-300 hover:-translate-y-0.5",
-        featured
+        "group flex min-w-0 flex-col border transition-all duration-300 hover:-translate-y-0.5",
+        compact
+          ? "rounded-lg bg-white p-3 hover:bg-slate-50 dark:bg-white/[0.05] dark:hover:bg-white/8"
+          : "rounded-[1.25rem]",
+        featured && !compact
           ? "border-slate-200 bg-slate-950 p-4 text-white shadow-[0_26px_80px_-42px_rgba(15,23,42,0.7)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(2,6,23,0.98),rgba(30,41,59,0.94))]"
-          : "surface-card p-3.5 hover:bg-white dark:hover:bg-white/8"
+          : compact && featured
+            ? "border-sky-200 text-slate-950 dark:border-sky-300/20 dark:text-white"
+            : "surface-card p-3.5 hover:bg-white dark:hover:bg-white/8"
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-2xl",
-            featured ? "bg-white/10 text-sky-100" : toneClasses.icon
+            "flex shrink-0 items-center justify-center",
+            compact ? "size-8 rounded-lg" : "size-10 rounded-2xl",
+            featured && !compact ? "bg-white/10 text-sky-100" : toneClasses.icon
           )}
         >
           <item.icon className="size-4" />
         </div>
         <span
           className={cn(
-            "rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] uppercase",
-            featured
+            "border font-semibold tracking-[0.14em] uppercase",
+            compact ? "rounded-md px-2 py-0.5 text-[9px]" : "rounded-full px-2.5 py-1 text-[10px]",
+            featured && !compact
               ? "border-white/14 bg-white/10 text-white/80"
               : toneClasses.badge
           )}
@@ -79,27 +88,29 @@ function FocusCard({
         </span>
       </div>
 
-      <div className="mt-4 min-w-0">
+      <div className={cn("min-w-0", compact ? "mt-3" : "mt-4")}>
         <p
           className={cn(
-            "text-[10px] font-semibold tracking-[0.18em] uppercase",
-            featured ? "text-sky-100/70" : "text-primary dark:text-sky-300"
+            "font-semibold tracking-[0.18em] uppercase",
+            compact ? "text-[9px]" : "text-[10px]",
+            featured && !compact ? "text-sky-100/70" : "text-primary dark:text-sky-300"
           )}
         >
           {item.label}
         </p>
         <h3
           className={cn(
-            "mt-1.5 text-base font-semibold leading-6",
-            featured ? "text-white" : "text-slate-950 dark:text-white"
+            "font-semibold",
+            compact ? "mt-1 text-sm leading-5" : "mt-1.5 text-base leading-6",
+            featured && !compact ? "text-white" : "text-slate-950 dark:text-white"
           )}
         >
           {item.title}
         </h3>
         <p
           className={cn(
-            "mt-1.5 text-[13px] leading-6",
-            featured ? "text-slate-300" : "text-muted-foreground dark:text-slate-300"
+            compact ? "mt-1 line-clamp-2 text-[12px] leading-5" : "mt-1.5 text-[13px] leading-6",
+            featured && !compact ? "text-slate-300" : "text-muted-foreground dark:text-slate-300"
           )}
         >
           {item.description}
@@ -108,8 +119,9 @@ function FocusCard({
 
       <div
         className={cn(
-          "mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold",
-          featured ? "text-sky-100" : "text-slate-950 dark:text-slate-100"
+          "inline-flex items-center gap-1.5 font-semibold",
+          compact ? "mt-3 text-[12px]" : "mt-4 text-[13px]",
+          featured && !compact ? "text-sky-100" : "text-slate-950 dark:text-slate-100"
         )}
       >
         {item.ctaLabel}
@@ -125,34 +137,36 @@ export function DashboardFocusPanel({
   description,
   primary,
   items,
+  compact = false,
 }: {
   eyebrow: string;
   title: string;
   description: string;
   primary: DashboardFocusItem;
   items: DashboardFocusItem[];
+  compact?: boolean;
 }) {
   return (
-    <section className="surface-panel p-4">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <section className={cn("surface-panel", compact ? "p-3" : "p-4")}>
+      <div className={cn("flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between", compact ? "mb-3" : "mb-4")}>
         <div className="max-w-3xl">
-          <p className="text-[11px] font-semibold tracking-[0.22em] text-primary uppercase dark:text-sky-300">
+          <p className={cn("font-semibold tracking-[0.22em] text-primary uppercase dark:text-sky-300", compact ? "text-[10px]" : "text-[11px]")}>
             {eyebrow}
           </p>
-          <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-2xl">
+          <h2 className={cn("mt-1.5 font-semibold tracking-tight text-slate-950 dark:text-white", compact ? "text-lg" : "text-xl sm:text-2xl")}>
             {title}
           </h2>
-          <p className="mt-1.5 text-[13px] leading-6 text-muted-foreground dark:text-slate-300">
+          <p className={cn("mt-1.5 text-muted-foreground dark:text-slate-300", compact ? "text-[12px] leading-5" : "text-[13px] leading-6")}>
             {description}
           </p>
         </div>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[0.95fr_1.45fr]">
-        <FocusCard item={primary} featured />
-        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+      <div className={cn("grid gap-3", compact ? "xl:grid-cols-4" : "xl:grid-cols-[0.95fr_1.45fr]")}>
+        <FocusCard item={primary} featured compact={compact} />
+        <div className={cn("grid gap-3 md:grid-cols-2", compact ? "xl:col-span-3 2xl:grid-cols-3" : "2xl:grid-cols-4")}>
           {items.map((item) => (
-            <FocusCard key={`${item.href}-${item.label}`} item={item} />
+            <FocusCard key={`${item.href}-${item.label}`} item={item} compact={compact} />
           ))}
         </div>
       </div>

@@ -188,40 +188,40 @@ export function InstructorDashboardTabs({
   }
 
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-5">
-      <div className="rounded-[1.8rem] border border-white/70 bg-white/88 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.3)] dark:border-white/10 dark:bg-white/6">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-white/6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase dark:text-sky-300">
               Dashboard flow
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
+            <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
               Kies waar je nu op wilt sturen
             </h2>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
+            <p className="mt-1 text-[12px] leading-5 text-slate-600 dark:text-slate-300">
               Minder lange scroll, meer focus per laag: wat vandaag direct speelt,
               wat met leerlingen beweegt en wat groei kan opleveren.
             </p>
           </div>
           <TabsList
             variant="line"
-            className="!h-auto min-h-12 w-full justify-start gap-1 overflow-x-auto overflow-y-hidden rounded-full bg-slate-100/80 p-1 [-ms-overflow-style:none] [scrollbar-width:none] dark:bg-white/6 lg:w-auto [&::-webkit-scrollbar]:hidden"
+            className="!h-auto min-h-10 w-full justify-start gap-1 overflow-x-auto overflow-y-hidden rounded-lg bg-slate-100/80 p-1 [-ms-overflow-style:none] [scrollbar-width:none] dark:bg-white/6 lg:w-auto [&::-webkit-scrollbar]:hidden"
           >
             <TabsTrigger
               value="vandaag"
-              className="rounded-full px-4 py-2 text-[13px] data-active:bg-sky-600 data-active:text-white dark:data-active:bg-sky-300 dark:data-active:text-slate-950"
+              className="rounded-md px-3 py-1.5 text-[12px] data-active:bg-sky-600 data-active:text-white dark:data-active:bg-sky-300 dark:data-active:text-slate-950"
             >
               Vandaag
             </TabsTrigger>
             <TabsTrigger
               value="leerlingen"
-              className="rounded-full px-4 py-2 text-[13px] data-active:bg-emerald-600 data-active:text-white dark:data-active:bg-emerald-300 dark:data-active:text-slate-950"
+              className="rounded-md px-3 py-1.5 text-[12px] data-active:bg-emerald-600 data-active:text-white dark:data-active:bg-emerald-300 dark:data-active:text-slate-950"
             >
               Leerlingen
             </TabsTrigger>
             <TabsTrigger
               value="groei"
-              className="rounded-full px-4 py-2 text-[13px] data-active:bg-amber-500 data-active:text-slate-950 dark:data-active:bg-amber-300"
+              className="rounded-md px-3 py-1.5 text-[12px] data-active:bg-amber-500 data-active:text-slate-950 dark:data-active:bg-amber-300"
             >
               Groei
             </TabsTrigger>
@@ -229,61 +229,61 @@ export function InstructorDashboardTabs({
         </div>
       </div>
 
-      <TabsContent value="vandaag" className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <TabsContent value="vandaag" className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {metrics.map((metric) => (
             <MetricCard key={metric.label} {...metric} />
           ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {quickLinks.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="group rounded-[1.35rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.32)] transition-all hover:-translate-y-0.5 hover:shadow-[0_28px_78px_-48px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-white/6"
+              className="group rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 dark:border-white/10 dark:bg-white/6 dark:hover:bg-white/8"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
-                  <item.icon className="size-5" />
+                <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-white/10 dark:text-sky-200">
+                  <item.icon className="size-4" />
                 </div>
                 <ArrowUpRight className="size-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </div>
-              <p className="mt-4 text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
+              <p className="mt-3 text-[9px] font-semibold tracking-[0.18em] text-primary uppercase">
                 {item.label}
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+              <h3 className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
                 {item.title}
               </h3>
-              <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              <p className="mt-1 text-[12px] leading-5 text-slate-600 dark:text-slate-300">
                 {item.text}
               </p>
             </Link>
           ))}
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-          <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-white/6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
                   Planning
                 </p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
+                <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
                   Volgende lessen
                 </h2>
               </div>
-              <Button asChild variant="outline" className="rounded-full">
+              <Button asChild variant="outline" size="sm" className="rounded-lg">
                 <Link href="/instructeur/beschikbaarheid">Agenda beheren</Link>
               </Button>
             </div>
 
-            <div className="mt-4 grid gap-3">
+            <div className="mt-3 grid gap-2.5">
               {nextLessons.length ? (
                 nextLessons.map((lesson) => (
                   <div
                     key={lesson.id}
-                    className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5 sm:grid-cols-[1fr_auto] sm:items-center"
+                    className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5 sm:grid-cols-[1fr_auto] sm:items-center"
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -316,8 +316,8 @@ export function InstructorDashboardTabs({
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {lesson.locatie}
                       </p>
-                      <LessonQuickActions lesson={lesson} className="mt-3" />
-                      <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                      <LessonQuickActions lesson={lesson} className="mt-2" />
+                      <div className="mt-2 grid gap-2.5 xl:grid-cols-2">
                         <LessonAttendanceActions lesson={lesson} />
                         <LessonNoteEditor lesson={lesson} />
                       </div>
@@ -329,7 +329,7 @@ export function InstructorDashboardTabs({
                   </div>
                 ))
               ) : (
-                <div className="rounded-[1.25rem] border border-dashed border-slate-300 p-6 text-sm leading-6 text-slate-600 dark:border-white/12 dark:text-slate-300">
+                <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm leading-6 text-slate-600 dark:border-white/12 dark:text-slate-300">
                   Nog geen geplande lessen. Accepteer een aanvraag of voeg
                   beschikbaarheid toe om je planning te vullen.
                 </div>
@@ -337,27 +337,27 @@ export function InstructorDashboardTabs({
             </div>
           </section>
 
-          <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+          <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-white/6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
                   Inbox
                 </p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
+                <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
                   Nieuwe aanvragen
                 </h2>
               </div>
-              <Button asChild variant="outline" className="rounded-full">
+              <Button asChild variant="outline" size="sm" className="rounded-lg">
                 <Link href="/instructeur/aanvragen">Alles bekijken</Link>
               </Button>
             </div>
 
-            <div className="mt-4 grid gap-3">
+            <div className="mt-3 grid gap-2.5">
               {openRequests.slice(0, 4).length ? (
                 openRequests.slice(0, 4).map((request) => (
                   <div
                     key={request.id}
-                    className="rounded-[1.25rem] border border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5"
+                    className="rounded-lg border border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -385,7 +385,7 @@ export function InstructorDashboardTabs({
                   </div>
                 ))
               ) : (
-                <div className="rounded-[1.25rem] border border-dashed border-slate-300 p-6 text-sm leading-6 text-slate-600 dark:border-white/12 dark:text-slate-300">
+                <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm leading-6 text-slate-600 dark:border-white/12 dark:text-slate-300">
                   Geen open aanvragen. Je inbox is schoon.
                 </div>
               )}
@@ -393,20 +393,20 @@ export function InstructorDashboardTabs({
           </section>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-          <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
+        <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+          <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-white/6">
             <div className="flex items-center gap-2">
               <Bell className="size-4 text-primary" />
-              <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
+              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
                 Meldingen
               </h2>
             </div>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-3 grid gap-2">
               {notifications.slice(0, 5).length ? (
                 notifications.slice(0, 5).map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[1rem] border border-slate-200 bg-slate-50/85 px-3 py-2.5 text-sm dark:border-white/10 dark:bg-white/5"
+                    className="rounded-lg border border-slate-200 bg-slate-50/85 px-3 py-2.5 text-sm dark:border-white/10 dark:bg-white/5"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -431,18 +431,18 @@ export function InstructorDashboardTabs({
             </div>
           </section>
 
-          <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
+          <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-white/6">
             <p className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
               Vandaag slimst
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
+            <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
               Waar zit nu de meeste directe winst?
             </h2>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-3 grid gap-2">
               {todayTips.map((tip) => (
                 <div
                   key={tip}
-                  className="rounded-[1rem] bg-white/80 px-3 py-2.5 text-sm leading-6 text-slate-700 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6 dark:text-slate-300"
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm leading-6 text-slate-700 dark:border-white/10 dark:bg-white/6 dark:text-slate-300"
                 >
                   {tip}
                 </div>
@@ -452,7 +452,7 @@ export function InstructorDashboardTabs({
         </div>
       </TabsContent>
 
-      <TabsContent value="leerlingen" className="space-y-5">
+      <TabsContent value="leerlingen" className="space-y-4">
         <InstructorDashboardLearnerTab
           lessonCompassBoards={lessonCompassBoards}
           lessonCheckinBoards={lessonCheckinBoards}
@@ -463,7 +463,7 @@ export function InstructorDashboardTabs({
         />
       </TabsContent>
 
-      <TabsContent value="groei" className="space-y-5">
+      <TabsContent value="groei" className="space-y-4">
         <InstructorDashboardGrowthTab
           growthInsights={growthInsights}
           growthTips={growthTips}
