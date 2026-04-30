@@ -17,6 +17,7 @@ import {
 } from "@/components/dashboard/onboarding-panel";
 import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentLearnerLessonCheckinBoards } from "@/lib/data/lesson-checkins";
 import { getCurrentLearnerLessonCompassBoards } from "@/lib/data/lesson-compass";
 import {
@@ -225,43 +226,62 @@ export default async function LeerlingDashboardPage() {
         hideWhenComplete
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
-        ))}
-      </div>
+      <Tabs defaultValue="vandaag" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto rounded-2xl border border-border/70 bg-background/70 p-1">
+          <TabsTrigger value="vandaag" className="h-10 rounded-full px-4">
+            Vandaag
+          </TabsTrigger>
+          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4">
+            Voortgang
+          </TabsTrigger>
+          <TabsTrigger value="planning" className="h-10 rounded-full px-4">
+            Planning
+          </TabsTrigger>
+        </TabsList>
 
-      <SharedLessonCompass
-        boards={lessonCompassBoards.slice(0, 3)}
-        role="leerling"
-      />
+        <TabsContent value="vandaag" className="mt-0">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {metrics.map((metric) => (
+              <MetricCard key={metric.label} {...metric} />
+            ))}
+          </div>
+        </TabsContent>
 
-      <LessonCheckinPanel boards={lessonCheckinBoards} role="leerling" />
+        <TabsContent value="voortgang" className="mt-0 space-y-4">
+          <SharedLessonCompass
+            boards={lessonCompassBoards.slice(0, 3)}
+            role="leerling"
+          />
+          <LessonCheckinPanel boards={lessonCheckinBoards} role="leerling" />
+        </TabsContent>
 
-      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-        <DataTableCard
-          title="Komende lessen"
-          description="Je eerstvolgende lessen en geplande afspraken."
-          headers={["Les", "Datum", "Instructeur", "Locatie", "Status"]}
-          rows={upcomingLessons.map((lesson) => [
-            lesson.titel,
-            `${lesson.datum} - ${lesson.tijd}`,
-            lesson.instructeur_naam,
-            lesson.locatie,
-            lesson.status,
-          ])}
-          badgeColumns={[4]}
-          emptyTitle="Nog geen lessen ingepland"
-          emptyDescription="Zodra een instructeur je aanvraag accepteert of een les plant, verschijnt die hier."
-        />
-        <LearnerRequestOverview
-          title="Je lesaanvragen"
-          description="Alle aanvragen die via de booking flow naar instructeurs zijn verstuurd, inclusief verplaatsen of annuleren zolang ze nog open staan."
-          requests={requests}
-          emptyTitle="Nog geen aanvragen"
-          emptyDescription="Start met vergelijken en vraag direct een proefles of pakket aan bij een instructeur."
-        />
-      </div>
+        <TabsContent value="planning" className="mt-0">
+          <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+            <DataTableCard
+              title="Komende lessen"
+              description="Je eerstvolgende lessen en geplande afspraken."
+              headers={["Les", "Datum", "Instructeur", "Locatie", "Status"]}
+              rows={upcomingLessons.map((lesson) => [
+                lesson.titel,
+                `${lesson.datum} - ${lesson.tijd}`,
+                lesson.instructeur_naam,
+                lesson.locatie,
+                lesson.status,
+              ])}
+              badgeColumns={[4]}
+              emptyTitle="Nog geen lessen ingepland"
+              emptyDescription="Zodra een instructeur je aanvraag accepteert of een les plant, verschijnt die hier."
+            />
+            <LearnerRequestOverview
+              title="Je lesaanvragen"
+              description="Compact overzicht van je aanvragen. Open alleen details wanneer je statusflow of acties nodig hebt."
+              requests={requests}
+              emptyTitle="Nog geen aanvragen"
+              emptyDescription="Start met vergelijken en vraag direct een proefles of pakket aan bij een instructeur."
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

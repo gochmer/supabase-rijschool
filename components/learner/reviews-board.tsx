@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquareQuote, PencilLine, Search, Star } from "lucide-react";
+import {
+  ChevronDown,
+  MessageSquareQuote,
+  PencilLine,
+  Search,
+  Star,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { saveLearnerReviewAction } from "@/lib/actions/reviews";
@@ -240,13 +246,13 @@ export function ReviewsBoard({
       </div>
 
       {filteredOpportunities.length ? (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {filteredOpportunities.map((opportunity) => (
-            <article
+            <details
               key={opportunity.lessonId}
-              className="rounded-[1.55rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.32)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))]"
+              className="group overflow-hidden rounded-[1.55rem] border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.32)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))]"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 transition hover:bg-slate-50/80 dark:hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
                 <div className="space-y-1">
                   <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                     {opportunity.lessonTitle}
@@ -259,15 +265,20 @@ export function ReviewsBoard({
                   </p>
                 </div>
 
-                <Badge
-                  variant={opportunity.existingReview ? "success" : "warning"}
-                  className="self-start"
-                >
-                  {opportunity.existingReview ? "Review geplaatst" : "Klaar voor review"}
-                </Badge>
-              </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant={opportunity.existingReview ? "success" : "warning"}
+                  >
+                    {opportunity.existingReview ? "Review geplaatst" : "Klaar voor review"}
+                  </Badge>
+                  <span className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-white/6 dark:text-slate-100">
+                    Details
+                    <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                  </span>
+                </div>
+              </summary>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="grid gap-3 border-t border-slate-200/80 p-4 dark:border-white/10 md:grid-cols-[1fr_auto] md:items-end">
                 <div className="rounded-[1rem] border border-slate-200 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
                   {opportunity.existingReview ? (
                     <div className="space-y-2">
@@ -312,7 +323,7 @@ export function ReviewsBoard({
                   <ReviewFormDialog opportunity={opportunity} />
                 </div>
               </div>
-            </article>
+            </details>
           ))}
         </div>
       ) : (

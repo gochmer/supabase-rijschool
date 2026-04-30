@@ -1,22 +1,73 @@
 import Link from "next/link";
-import { CheckCircle2, CreditCard, Sparkles, Wallet } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  CreditCard,
+  Sparkles,
+  Wallet,
+} from "lucide-react";
 
-import { InsightPanel } from "@/components/dashboard/insight-panel";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { TrendCard } from "@/components/dashboard/trend-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentStudentPackageOverview } from "@/lib/data/packages";
 
 const urbanCardClassName =
-  "rounded-[2rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] p-6 shadow-[0_28px_88px_-46px_rgba(15,23,42,0.78)]";
+  "rounded-[2rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] p-5 shadow-[0_28px_88px_-46px_rgba(15,23,42,0.78)]";
+
+const tabTriggerClassName =
+  "h-10 rounded-full px-4 text-slate-300 data-active:bg-white data-active:text-slate-950";
+
+function getPackageDescription(pkg: unknown) {
+  if (typeof pkg === "object" && pkg && "beschrijving" in pkg) {
+    const description = (pkg as { beschrijving?: unknown }).beschrijving;
+
+    if (typeof description === "string" && description.trim()) {
+      return description;
+    }
+  }
+
+  return "Geschikt om aan je leerlingprofiel en betaaloverzicht te koppelen.";
+}
 
 export default async function LeerlingBetalingenPage() {
   const overview = await getCurrentStudentPackageOverview();
-  const paidCount = overview.payments.filter((payment) => payment.status === "betaald").length;
-  const openCount = overview.payments.filter((payment) => payment.status !== "betaald").length;
+  const paidCount = overview.payments.filter(
+    (payment) => payment.status === "betaald"
+  ).length;
+  const openCount = overview.payments.filter(
+    (payment) => payment.status !== "betaald"
+  ).length;
   const recommendedPackage =
     overview.availablePackages[1] ?? overview.availablePackages[0] ?? null;
+  const paymentStats = [
+    {
+      icon: Wallet,
+      label: "Actief pakket",
+      value: overview.assignedPackage?.naam ?? "Nog niet gekoppeld",
+      detail: overview.assignedPackage
+        ? `${overview.assignedPackage.lessen || "Flexibel"} lessen - ${overview.assignedPackage.prijsLabel}`
+        : "Klaar om aan een traject gekoppeld te worden.",
+    },
+    {
+      icon: CreditCard,
+      label: "Betalingen",
+      value: `${overview.payments.length}`,
+      detail:
+        overview.payments.length > 0
+          ? `${paidCount} betaald, ${openCount} nog open.`
+          : "Nog geen betaalhistorie.",
+    },
+    {
+      icon: Sparkles,
+      label: "Aanbevolen",
+      value: recommendedPackage?.naam ?? "Nog geen opties",
+      detail: recommendedPackage
+        ? `${recommendedPackage.lessen || "Flexibel"} lessen - ${recommendedPackage.prijsLabel}`
+        : "Er zijn nog geen pakketten om te vergelijken.",
+    },
+  ];
 
   return (
     <div className="space-y-6 text-white">
@@ -24,7 +75,7 @@ export default async function LeerlingBetalingenPage() {
         tone="urban"
         eyebrow="Betalingen"
         title="Betalingen en pakketten"
-        description="Bekijk je pakketoverzicht, betaalstatus en beschikbare trajecten in een rustigere, luxere en meer zakelijke leerlingomgeving."
+        description="Je pakket, betaalstatus en beschikbare trajecten staan nu in een compactere omgeving met duidelijke tabs."
         actions={
           <>
             <Button
@@ -44,241 +95,218 @@ export default async function LeerlingBetalingenPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          {
-            icon: Wallet,
-            label: "Actief pakket",
-            value: overview.assignedPackage?.naam ?? "Nog niet gekoppeld",
-            detail: overview.assignedPackage
-              ? `${overview.assignedPackage.lessen || "Flexibel"} lessen • ${overview.assignedPackage.prijsLabel}`
-              : "Je account is klaar om aan een pakket of traject gekoppeld te worden.",
-          },
-          {
-            icon: CreditCard,
-            label: "Betalingen",
-            value: `${overview.payments.length}`,
-            detail:
-              overview.payments.length > 0
-                ? `${paidCount} betaald en ${openCount} nog in behandeling.`
-                : "Zodra er activiteit is verschijnt hier je betaalhistorie.",
-          },
-          {
-            icon: Sparkles,
-            label: "Aanbevolen traject",
-            value: recommendedPackage?.naam ?? "Nog geen opties",
-            detail: recommendedPackage
-              ? `${recommendedPackage.lessen || "Flexibel"} lessen • ${recommendedPackage.prijsLabel}`
-              : "Er zijn nog geen actieve pakketten om te vergelijken.",
-          },
-        ].map((item) => (
-          <div key={item.label} className={urbanCardClassName}>
-            <div className="flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-slate-100">
-              <item.icon className="size-5" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {paymentStats.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-[1.45rem] border border-white/10 bg-white/6 p-4 shadow-[0_20px_58px_-42px_rgba(15,23,42,0.7)]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
+                <item.icon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
+                  {item.label}
+                </p>
+                <p className="mt-1 truncate text-lg font-semibold text-white">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-slate-300">
+                  {item.detail}
+                </p>
+              </div>
             </div>
-            <p className="mt-4 text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-              {item.label}
-            </p>
-            <p className="mt-2 text-xl font-semibold text-white">{item.value}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{item.detail}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <TrendCard
-          tone="urban"
-          title="Betaaltrend"
-          value={`${overview.payments.length}`}
-          change={paidCount > 0 ? "+12%" : "Stand-by"}
-          description="Overzicht van betaalmomenten en activiteit binnen je huidige traject."
-          data={[2, 3, 3, 4, 5, 6, 7]}
-        />
-        <InsightPanel
-          tone="urban"
-          title="Pakketfocus"
-          description="De belangrijkste punten rond je huidige of volgende pakket."
-          items={[
-            {
-              label: "Actief pakket",
-              value: overview.assignedPackage?.naam ?? "Nog niet toegewezen",
-              status: overview.assignedPackage ? "Actief" : "Open",
-            },
-            {
-              label: "Aantal betalingen",
-              value: `${overview.payments.length} geregistreerde betaling(en)`,
-            },
-            {
-              label: "Beschikbare opties",
-              value: `${overview.availablePackages.length} pakket(en) klaar om te kiezen`,
-            },
-          ]}
-        />
-      </div>
+      <Tabs defaultValue="pakket" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-white/6 p-1 text-slate-300">
+          <TabsTrigger value="pakket" className={tabTriggerClassName}>
+            Pakket
+          </TabsTrigger>
+          <TabsTrigger value="opties" className={tabTriggerClassName}>
+            Opties
+          </TabsTrigger>
+          <TabsTrigger value="betalingen" className={tabTriggerClassName}>
+            Betalingen
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <section className={urbanCardClassName}>
-          <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(135deg,#0f172a,#1e293b,#334155)] p-6 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-white/12">
-                <Wallet className="size-5" />
-              </div>
+        <TabsContent value="pakket" className="mt-0">
+          <section className={urbanCardClassName}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm text-white/72">Jouw traject</p>
-                <h2 className="text-2xl font-semibold">
+                <Badge variant={overview.assignedPackage ? "success" : "warning"}>
+                  {overview.assignedPackage ? "Actief" : "Nog niet gekoppeld"}
+                </Badge>
+                <h2 className="mt-3 text-2xl font-semibold text-white">
                   {overview.assignedPackage?.naam ?? "Nog geen pakket toegewezen"}
                 </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
+                  {overview.assignedPackage
+                    ? overview.assignedPackage.beschrijving
+                    : "Zodra een admin of instructeur een pakket koppelt, zie je hier meteen de belangrijkste details."}
+                </p>
               </div>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-5">
-            {overview.assignedPackage ? (
-              <div className="rounded-[1.85rem] border border-emerald-400/16 bg-emerald-500/8 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">
-                      {overview.assignedPackage.naam}
-                    </h3>
-                    <p className="mt-2 text-sm leading-7 text-slate-300">
-                      {overview.assignedPackage.beschrijving}
-                    </p>
-                  </div>
-                  <Badge variant="success">Actief</Badge>
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <p className="text-sm text-slate-300">Aantal lessen</p>
-                    <p className="mt-1 text-xl font-semibold text-white">
+              {overview.assignedPackage ? (
+                <div className="grid gap-2 sm:min-w-56">
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-3">
+                    <p className="text-[11px] text-slate-300">Aantal lessen</p>
+                    <p className="mt-1 text-lg font-semibold text-white">
                       {overview.assignedPackage.lessen || "Flexibel"}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <p className="text-sm text-slate-300">Pakketwaarde</p>
-                    <p className="mt-1 text-xl font-semibold text-white">
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-3">
+                    <p className="text-[11px] text-slate-300">Waarde</p>
+                    <p className="mt-1 text-lg font-semibold text-white">
                       {overview.assignedPackage.prijsLabel}
                     </p>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/4 p-6">
-                <h3 className="text-lg font-semibold text-white">
-                  Nog geen pakket toegewezen
-                </h3>
-                <p className="mt-2 text-sm leading-7 text-slate-300">
-                  Zodra een admin of instructeur een pakket koppelt, zie je het hier direct terug in je overzicht.
+              ) : null}
+            </div>
+          </section>
+        </TabsContent>
+
+        <TabsContent value="opties" className="mt-0">
+          <section className={urbanCardClassName}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
+                  Pakketopties
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Beschikbare trajecten
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-300">
+                  Open een pakket alleen als je details wilt lezen; de prijs en omvang staan direct zichtbaar.
                 </p>
               </div>
-            )}
+              <Badge variant="info">
+                {overview.availablePackages.length} optie(s)
+              </Badge>
+            </div>
 
-            <div className="grid gap-4">
-              {overview.availablePackages.map((pkg) => {
-                const isRecommended = recommendedPackage?.id === pkg.id;
+            <div className="mt-5 grid gap-3">
+              {overview.availablePackages.length ? (
+                overview.availablePackages.map((pkg) => {
+                  const isRecommended = recommendedPackage?.id === pkg.id;
 
-                return (
-                  <div
-                    key={pkg.id}
-                    className={
-                      isRecommended
-                        ? "rounded-[1.75rem] border border-white/12 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(148,163,184,0.12),rgba(15,23,42,0.34))] p-5 shadow-[0_20px_48px_-30px_rgba(15,23,42,0.52)]"
-                        : "rounded-[1.75rem] border border-white/10 bg-white/5 p-5"
-                    }
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-white">{pkg.naam}</h3>
-                          {isRecommended ? <Badge variant="info">Aanbevolen</Badge> : null}
+                  return (
+                    <details
+                      key={pkg.id}
+                      className="group overflow-hidden rounded-[1.45rem] border border-white/10 bg-white/6"
+                    >
+                      <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 transition hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-white">{pkg.naam}</p>
+                            {isRecommended ? (
+                              <Badge variant="info">Aanbevolen</Badge>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-sm text-slate-300">
+                            {pkg.lessen ? `${pkg.lessen} lessen` : "Flexibel aantal lessen"} - {pkg.prijsLabel}
+                          </p>
                         </div>
+                        <span className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 text-xs font-semibold text-slate-100">
+                          Details
+                          <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                        </span>
+                      </summary>
+                      <div className="border-t border-white/10 p-4">
+                        <div className="flex items-start gap-2 text-sm leading-7 text-slate-300">
+                          <CheckCircle2 className="mt-1 size-4 shrink-0 text-emerald-300" />
+                          <p>
+                            {getPackageDescription(pkg)}
+                          </p>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                })
+              ) : (
+                <div className="rounded-[1.45rem] border border-dashed border-white/10 bg-white/4 p-5 text-sm leading-7 text-slate-300">
+                  Er zijn nog geen actieve pakketten om te vergelijken.
+                </div>
+              )}
+            </div>
+          </section>
+        </TabsContent>
+
+        <TabsContent value="betalingen" className="mt-0">
+          <section className={urbanCardClassName}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
+                  Payment history
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Betalingsgeschiedenis
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-300">
+                  Openstaande en afgeronde betalingen blijven compact onder elkaar.
+                </p>
+              </div>
+              <Badge variant={openCount > 0 ? "warning" : "success"}>
+                {openCount} open
+              </Badge>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+              {overview.payments.length ? (
+                overview.payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex flex-col gap-3 rounded-[1.35rem] border border-white/10 bg-white/6 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-2xl bg-white/8 text-slate-100">
+                        <CreditCard className="size-5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">
+                          {payment.omschrijving}
+                        </p>
                         <p className="mt-1 text-sm text-slate-300">
-                          {pkg.lessen ? `${pkg.lessen} lessen` : "Flexibel aantal lessen"}
+                          {payment.datum}
                         </p>
                       </div>
-                      <span className="text-lg font-semibold text-white">
-                        {pkg.prijsLabel}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-white">
+                        {payment.bedrag}
                       </span>
-                    </div>
-                    <div className="mt-4 flex items-center gap-2 text-sm text-slate-200">
-                      <CheckCircle2 className="size-4 text-emerald-300" />
-                      Geschikt om direct aan je leerlingprofiel en betaaloverzicht te koppelen.
-                    </div>
-                    {isRecommended ? (
-                      <div className="mt-4 rounded-[1.2rem] bg-black/12 px-4 py-3 text-sm leading-7 text-slate-200">
-                        Mooie balans tussen prijs, structuur en examenvoorbereiding.
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className={urbanCardClassName}>
-          <div className="space-y-2">
-            <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
-              Payment history
-            </p>
-            <h2 className="text-2xl font-semibold text-white">Betalingsgeschiedenis</h2>
-            <p className="text-sm leading-7 text-slate-300">
-              Live overzicht van openstaande en afgeronde betalingen binnen je account.
-            </p>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {overview.payments.length ? (
-              overview.payments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex flex-col gap-4 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))] p-5 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-11 items-center justify-center rounded-2xl bg-white/8 text-slate-100">
-                      <CreditCard className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white">{payment.omschrijving}</h3>
-                      <p className="mt-1 text-sm text-slate-300">{payment.datum}</p>
+                      <Badge
+                        variant={
+                          payment.status === "betaald"
+                            ? "success"
+                            : payment.status === "open"
+                              ? "warning"
+                              : "info"
+                        }
+                      >
+                        {payment.status}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-white">{payment.bedrag}</span>
-                    <Badge
-                      variant={
-                        payment.status === "betaald"
-                          ? "success"
-                          : payment.status === "open"
-                            ? "warning"
-                            : "info"
-                      }
-                    >
-                      {payment.status}
-                    </Badge>
-                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.45rem] border border-dashed border-white/10 bg-white/4 p-5">
+                  <h3 className="text-lg font-semibold text-white">
+                    Nog geen betalingen
+                  </h3>
+                  <p className="mt-2 text-sm leading-7 text-slate-300">
+                    Hier verschijnen automatisch nieuwe pakketbetalingen en losse lesbetalingen.
+                  </p>
                 </div>
-              ))
-            ) : (
-              <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/4 p-6">
-                <h3 className="text-lg font-semibold text-white">Nog geen betalingen</h3>
-                <p className="mt-2 text-sm leading-7 text-slate-300">
-                  Hier verschijnen automatisch nieuwe pakketbetalingen en losse lesbetalingen.
-                </p>
-              </div>
-            )}
-
-            <div className="rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,#0f172a,#1e293b,#334155)] p-5 text-white shadow-[0_26px_62px_-38px_rgba(15,23,42,0.42)]">
-              <div className="flex items-center gap-3">
-                <Sparkles className="size-4 text-slate-200" />
-                <p className="font-semibold">Premium betaaloverzicht</p>
-              </div>
-              <p className="mt-2 text-sm leading-7 text-white/75">
-                Deze basis is nu veel geschikter om later uit te breiden met betaalherinneringen, iDEAL en extra factuuracties.
-              </p>
+              )}
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

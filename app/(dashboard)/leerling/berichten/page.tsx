@@ -4,6 +4,7 @@ import { BellRing, Radio, Send } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MessageCenter } from "@/components/messages/message-center";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getCurrentMessageInbox,
   getMessageRecipientsForCurrentUser,
@@ -47,7 +48,7 @@ export default async function LeerlingBerichtenPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {[
           {
             icon: BellRing,
@@ -76,53 +77,87 @@ export default async function LeerlingBerichtenPage() {
               : "Zodra er een bericht binnenkomt wordt hier de laatste update getoond.",
           },
         ].map((item) => (
-          <div key={item.label} className={urbanCardClassName}>
-            <div className="flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-slate-100">
-              <item.icon className="size-5" />
+          <div key={item.label} className="rounded-[1.45rem] border border-white/10 bg-white/6 p-4 shadow-[0_20px_58px_-42px_rgba(15,23,42,0.7)]">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
+                <item.icon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
+                  {item.label}
+                </p>
+                <p className="mt-1 truncate text-lg font-semibold text-white">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-slate-300">
+                  {item.detail}
+                </p>
+              </div>
             </div>
-            <p className="mt-4 text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-              {item.label}
-            </p>
-            <p className="mt-2 text-xl font-semibold text-white">{item.value}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{item.detail}</p>
           </div>
         ))}
       </div>
 
-      <MessageCenter
-        inbox={inbox}
-        recipients={recipients}
-        recipientLabel="Instructeur"
-        tone="urban"
-      />
+      <Tabs defaultValue="berichten" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-white/6 p-1 text-slate-300">
+          <TabsTrigger value="berichten" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+            Berichten
+          </TabsTrigger>
+          <TabsTrigger value="contacten" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+            Contacten
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        {[
-          {
-            icon: Send,
-            title: "Helder formuleren",
-            text: "Korte en duidelijke berichten zorgen bijna altijd voor snellere en betere reacties.",
-          },
-          {
-            icon: BellRing,
-            title: "Sneller opvolgen",
-            text: "Met een rustiger inboxoverzicht zie je nieuwe berichten sneller terug zonder visuele drukte.",
-          },
-          {
-            icon: Radio,
-            title: "Professionele uitstraling",
-            text: "Deze berichtenmodule oogt nu serieuzer en premium, maar blijft eenvoudig in gebruik.",
-          },
-        ].map((item) => (
-          <div key={item.title} className={urbanCardClassName}>
-            <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-slate-100">
-              <item.icon className="size-5" />
+        <TabsContent value="berichten" className="mt-0">
+          <MessageCenter
+            inbox={inbox}
+            recipients={recipients}
+            recipientLabel="Instructeur"
+            tone="urban"
+          />
+        </TabsContent>
+
+        <TabsContent value="contacten" className="mt-0">
+          <div className={urbanCardClassName}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
+                  Contacten
+                </p>
+                <h2 className="mt-2 text-xl font-semibold text-white">
+                  Beschikbare ontvangers
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-300">
+                  Alleen gekoppelde instructeurs of beschikbare platformcontacten verschijnen hier.
+                </p>
+              </div>
+              <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-semibold text-slate-100">
+                {recipients.length} contact(en)
+              </div>
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-white">{item.title}</h3>
-            <p className="mt-2 text-sm leading-7 text-slate-300">{item.text}</p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {recipients.length ? (
+                recipients.map((recipient) => (
+                  <div
+                    key={recipient.id}
+                    className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4"
+                  >
+                    <p className="font-semibold text-white">{recipient.label}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-300">
+                      Klaar om vanuit de berichtenmodule te benaderen.
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.2rem] border border-dashed border-white/10 bg-white/4 p-4 text-sm leading-6 text-slate-300 sm:col-span-2 xl:col-span-3">
+                  Er zijn nog geen directe contacten beschikbaar. Zodra een traject loopt, verschijnen ze hier.
+                </div>
+              )}
+            </div>
           </div>
-        ))}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

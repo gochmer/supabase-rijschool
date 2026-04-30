@@ -11,6 +11,7 @@ import {
 import { StudentProgressReadOnlyCard } from "@/components/progress/student-progress-readonly-card";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentStudentPackageOverview } from "@/lib/data/packages";
 import {
   getLeerlingLessonRequests,
@@ -306,80 +307,95 @@ export default async function LeerlingProfielPage() {
         ))}
       </div>
 
-      <section
-        id="profielstudio"
-        className={`p-6 sm:p-7 print:hidden ${shellCardClassName}`}
-      >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
-                Profielstudio
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">
-                Je leerlinggegevens professioneel op orde
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
-                Vul je gegevens in en zie meteen hoe compleet je profielkaart is.
-                Zo blijven boekingen, contact en voortgang overzichtelijk bij elkaar.
-              </p>
-            </div>
-            <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-slate-200 uppercase">
-              Leerling account
-            </div>
-          </div>
+      <Tabs defaultValue="profiel" className="space-y-4 print:hidden">
+        <TabsList className="w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-white/6 p-1 text-slate-300">
+          <TabsTrigger value="profiel" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+            Profiel
+          </TabsTrigger>
+          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
+            Voortgang
+          </TabsTrigger>
+        </TabsList>
 
-          <div className="mt-6">
-            <ProfileForm
-              role="leerling"
-              tone="urban"
-              initialValues={{
-                volledigeNaam: profile?.volledige_naam ?? "",
-                telefoon: profile?.telefoon ?? "",
-              }}
-            />
-          </div>
-
-          <div className="mt-5 rounded-[1.45rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(148,163,184,0.08),rgba(15,23,42,0.26))] p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
-                  <NextProfileStepIcon className="size-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-                    {nextProfileStep.label}
-                  </p>
-                  <h3 className="mt-1 text-lg font-semibold text-white">
-                    {nextProfileStep.title}
-                  </h3>
-                  <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
-                    {nextProfileStep.text}
-                  </p>
-                </div>
+        <TabsContent value="profiel" className="mt-0">
+          <section
+            id="profielstudio"
+            className={`p-6 sm:p-7 ${shellCardClassName}`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
+                  Profielstudio
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Je leerlinggegevens professioneel op orde
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
+                  Vul je gegevens in en zie meteen hoe compleet je profielkaart is.
+                  De voortgang staat in een aparte tab, zodat deze pagina korter blijft.
+                </p>
               </div>
-              <Button
-                asChild
-                variant="outline"
-                className="h-11 rounded-full border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 md:shrink-0"
-              >
-                <Link href={nextProfileStep.href}>
-                  {nextProfileStep.action}
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
+              <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-slate-200 uppercase">
+                Leerling account
+              </div>
             </div>
-          </div>
-      </section>
 
-      <StudentProgressReadOnlyCard
-        assessments={progressWorkspace.assessments}
-        notes={progressWorkspace.notes}
-        progressValue={progressValue}
-        volgendeLes={
-          nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland"
-        }
-        laatsteInstructeurNaam={progressWorkspace.laatsteInstructeurNaam}
-      />
+            <div className="mt-6">
+              <ProfileForm
+                role="leerling"
+                tone="urban"
+                initialValues={{
+                  volledigeNaam: profile?.volledige_naam ?? "",
+                  telefoon: profile?.telefoon ?? "",
+                }}
+              />
+            </div>
+
+            <div className="mt-5 rounded-[1.45rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(148,163,184,0.08),rgba(15,23,42,0.26))] p-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
+                    <NextProfileStepIcon className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
+                      {nextProfileStep.label}
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold text-white">
+                      {nextProfileStep.title}
+                    </h3>
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
+                      {nextProfileStep.text}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-11 rounded-full border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 md:shrink-0"
+                >
+                  <Link href={nextProfileStep.href}>
+                    {nextProfileStep.action}
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </section>
+        </TabsContent>
+
+        <TabsContent value="voortgang" className="mt-0">
+          <StudentProgressReadOnlyCard
+            assessments={progressWorkspace.assessments}
+            notes={progressWorkspace.notes}
+            progressValue={progressValue}
+            volgendeLes={
+              nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland"
+            }
+            laatsteInstructeurNaam={progressWorkspace.laatsteInstructeurNaam}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,18 +1,22 @@
 import Link from "next/link";
-import { CalendarDays, Clock3, MapPin } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  Clock3,
+  MapPin,
+  UserRound,
+} from "lucide-react";
 
 import { LessonCalendar } from "@/components/calendar/lesson-calendar";
-import { DataTableCard } from "@/components/dashboard/data-table-card";
-import { InsightPanel } from "@/components/dashboard/insight-panel";
-import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
 import { LearnerLessonActions } from "@/components/dashboard/learner-lesson-actions";
+import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
 import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
 import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { TrendCard } from "@/components/dashboard/trend-card";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getLeerlingLessonRequests,
   getLeerlingLessons,
@@ -22,11 +26,11 @@ import {
   getLessonAttendanceLabel,
   getLessonAttendanceVariant,
 } from "@/lib/lesson-utilities";
-import { cn } from "@/lib/utils";
 import {
   formatMinutesAsHoursLabel,
   formatWeeklyLimitLabel,
 } from "@/lib/self-scheduling-limits";
+import { cn } from "@/lib/utils";
 
 function getRequestLabel(request: {
   aanvraag_type?: "algemeen" | "pakket" | "proefles";
@@ -70,6 +74,9 @@ function getWeeklyLimitSourceVariant(source: "manual" | "package" | "none") {
 const urbanCardClassName =
   "rounded-[1.9rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] p-5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]";
 
+const tabTriggerClassName =
+  "h-10 rounded-full px-4 text-slate-300 data-active:bg-white data-active:text-slate-950";
+
 export default async function LeerlingBoekingenPage() {
   const [requests, lessons, bookingOverview] = await Promise.all([
     getLeerlingLessonRequests(),
@@ -86,6 +93,63 @@ export default async function LeerlingBoekingenPage() {
   const nextLesson = lessons.find(
     (item) => item.status === "ingepland" || item.status === "geaccepteerd"
   );
+  const totalOpenSlots = bookingOverview.eligibleInstructors.reduce(
+    (total, item) => total + item.availableSlots.length,
+    0
+  );
+  const totalTrialSlots = bookingOverview.eligibleInstructors.reduce(
+    (total, item) => total + item.trialAvailableSlots.length,
+    0
+  );
+  const activeInstructorCount =
+    bookingOverview.eligibleInstructors.length +
+    bookingOverview.waitingApprovalInstructors.length;
+  const requestsWithLabels = requests.map((request) => ({
+    ...request,
+    pakket_naam: request.pakket_naam ?? getRequestLabel(request),
+  }));
+  const planningStats = [
+    {
+      icon: CalendarDays,
+      label: "Volgende les",
+      value: nextLesson ? nextLesson.datum : "Nog niet ingepland",
+      detail: nextLesson
+        ? `${nextLesson.tijd} met ${nextLesson.instructeur_naam}`
+        : "Plan zodra je een instructeur hebt gekozen.",
+    },
+    {
+      icon: Clock3,
+      label: "Open aanvragen",
+      value: `${pendingRequests}`,
+      detail:
+        pendingRequests > 0
+          ? "Wachten nog op reactie van instructeurs."
+          : "Geen losse opvolging nodig.",
+    },
+    {
+      icon: UserRound,
+      label: "Actieve instructeurs",
+      value: `${activeInstructorCount}`,
+      detail:
+        activeInstructorCount > 0
+          ? "Je kunt vanuit deze koppelingen plannen of volgen."
+          : "Start met een aanvraag bij een instructeur.",
+    },
+    {
+      icon: MapPin,
+      label: "Vrije blokken",
+      value: `${totalOpenSlots}`,
+      detail:
+        totalOpenSlots > 0
+          ? `${totalTrialSlots} proeflesblok${totalTrialSlots === 1 ? "" : "ken"} beschikbaar.`
+          : "Nog geen vrij planblok open.",
+    },
+  ];
+  const hasNoInstructorState =
+    bookingOverview.totalKnownInstructors > 0 &&
+    !bookingOverview.eligibleInstructors.length &&
+    !bookingOverview.waitingApprovalInstructors.length &&
+    !bookingOverview.pendingInstructors.length;
 
   return (
     <div className="space-y-6 text-white">
@@ -93,7 +157,7 @@ export default async function LeerlingBoekingenPage() {
         tone="urban"
         eyebrow="Planning"
         title="Boekingen en aanvragen"
-        description="Volg aanvragen, bevestigde lessen en de belangrijkste planningsinformatie in een rustige, luxe en professionele leeromgeving."
+        description="Alles rond plannen, aanvragen en bevestigde lessen staat nu in een compactere werkruimte met duidelijke tabs."
         actions={
           <>
             <Button
@@ -113,46 +177,28 @@ export default async function LeerlingBoekingenPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          {
-            icon: CalendarDays,
-            label: "Volgende les",
-            value: nextLesson
-              ? `${nextLesson.datum} om ${nextLesson.tijd}`
-              : "Nog niet ingepland",
-            detail: nextLesson
-              ? `${nextLesson.instructeur_naam} • ${nextLesson.locatie}`
-              : "Bevestigde lessen verschijnen hier automatisch.",
-          },
-          {
-            icon: Clock3,
-            label: "Open aanvragen",
-            value: `${pendingRequests}`,
-            detail:
-              pendingRequests > 0
-                ? "Er wachten nog reacties op een of meer aanvragen."
-                : "Er staan momenteel geen open aanvragen uit.",
-          },
-          {
-            icon: MapPin,
-            label: "Actieve planning",
-            value: `${plannedLessons} les(sen)`,
-            detail:
-              plannedLessons > 0
-                ? "Je planning staat klaar en blijft hier overzichtelijk in beeld."
-                : "Zodra er lessen vastliggen wordt dit overzicht direct aangevuld.",
-          },
-        ].map((item) => (
-          <div key={item.label} className={urbanCardClassName}>
-            <div className="flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-slate-100">
-              <item.icon className="size-5" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {planningStats.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-[1.45rem] border border-white/10 bg-white/6 p-4 shadow-[0_20px_58px_-42px_rgba(15,23,42,0.7)]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
+                <item.icon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
+                  {item.label}
+                </p>
+                <p className="mt-1 truncate text-lg font-semibold text-white">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-slate-300">
+                  {item.detail}
+                </p>
+              </div>
             </div>
-            <p className="mt-4 text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-              {item.label}
-            </p>
-            <p className="mt-2 text-xl font-semibold text-white">{item.value}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{item.detail}</p>
           </div>
         ))}
       </div>
@@ -164,318 +210,317 @@ export default async function LeerlingBoekingenPage() {
         description={
           nextLesson
             ? `Praktisch lesmoment met ${nextLesson.instructeur_naam}. Voeg hem toe aan je agenda of open direct je route.`
-          : undefined
+            : undefined
         }
       />
 
-      <div className={urbanCardClassName}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-2">
-            <Badge variant="info">Zelf inplannen</Badge>
-            <h3 className="text-xl font-semibold text-white">
-              Alleen na aanmelding en acceptatie door je instructeur
-            </h3>
-            <p className="max-w-3xl text-sm leading-7 text-slate-300">
-              Je ziet hier alleen vrije boekbare momenten. De volledige agenda van de instructeur,
-              bezette lessen, namen van andere leerlingen en interne afspraken blijven verborgen.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="success">
-              {bookingOverview.eligibleInstructors.length} instructeur
-              {bookingOverview.eligibleInstructors.length === 1 ? "" : "s"} open
-            </Badge>
-            <Badge variant="warning">
-              {bookingOverview.pendingInstructors.length} in behandeling
-            </Badge>
-          </div>
-        </div>
+      <Tabs defaultValue="zelf-plannen" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-white/6 p-1 text-slate-300">
+          <TabsTrigger value="zelf-plannen" className={tabTriggerClassName}>
+            Zelf plannen
+          </TabsTrigger>
+          <TabsTrigger value="aanvragen" className={tabTriggerClassName}>
+            Aanvragen
+          </TabsTrigger>
+          <TabsTrigger value="lessen" className={tabTriggerClassName}>
+            Lessen
+          </TabsTrigger>
+          <TabsTrigger value="agenda" className={tabTriggerClassName}>
+            Agenda
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-3">
-          {!bookingOverview.totalKnownInstructors ? (
-            <div className="rounded-[1.35rem] border border-white/10 bg-white/6 p-4 xl:col-span-3">
-              <p className="text-sm font-semibold text-white">
-                Je bent nog niet gekoppeld aan een instructeur
-              </p>
-              <p className="mt-2 text-sm leading-7 text-slate-300">
-                Dien eerst een aanvraag of proefles in via de rijschool. Zodra een instructeur
-                je traject accepteert, verschijnt hier automatisch of je zelf mag plannen.
-              </p>
-              <div className="mt-4">
+        <TabsContent value="zelf-plannen" className="mt-0">
+          <div className={urbanCardClassName}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-2">
+                <Badge variant="info">Zelf inplannen</Badge>
+                <h3 className="text-xl font-semibold text-white">
+                  Plan alleen bij instructeurs die al aan jou gekoppeld zijn
+                </h3>
+                <p className="max-w-3xl text-sm leading-7 text-slate-300">
+                  Je ziet alleen vrije blokken die je mag gebruiken. Details en limieten staan nu per instructeur achter een compacte uitklapkaart.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="success">
+                  {bookingOverview.eligibleInstructors.length} open
+                </Badge>
+                <Badge variant="info">{totalOpenSlots} rijlesblokken</Badge>
+                <Badge variant="warning">
+                  {bookingOverview.pendingInstructors.length} in behandeling
+                </Badge>
+              </div>
+            </div>
+
+            {!bookingOverview.totalKnownInstructors ? (
+              <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-white/6 p-4">
+                <p className="text-sm font-semibold text-white">
+                  Je bent nog niet gekoppeld aan een instructeur
+                </p>
+                <p className="mt-2 text-sm leading-7 text-slate-300">
+                  Start eerst een aanvraag of proefles. Zodra een instructeur je accepteert, verschijnt hier vanzelf of je zelf mag plannen.
+                </p>
                 <Button
                   asChild
-                  className="rounded-full border border-white/12 bg-[linear-gradient(135deg,#f8fafc,#cbd5e1)] text-slate-950 shadow-[0_22px_46px_-26px_rgba(148,163,184,0.42)] hover:brightness-[1.03]"
+                  className="mt-4 rounded-full border border-white/12 bg-[linear-gradient(135deg,#f8fafc,#cbd5e1)] text-slate-950 shadow-[0_22px_46px_-26px_rgba(148,163,184,0.42)] hover:brightness-[1.03]"
                 >
-                  <Link href="/leerling/instructeurs">Vraag eerst een instructeur aan</Link>
+                  <Link href="/leerling/instructeurs">Instructeur kiezen</Link>
                 </Button>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {bookingOverview.eligibleInstructors.map((item) => (
-            <div
-              key={`eligible-${item.instructorId}`}
-              className="rounded-[1.35rem] border border-emerald-300/18 bg-emerald-400/8 p-4"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-lg font-semibold text-white">{item.instructorName}</p>
-                <Badge variant="success">Geaccepteerd</Badge>
-                <Badge variant={item.directBookingAllowed ? "info" : "default"}>
-                  {item.directBookingAllowed ? "Direct boeken aan" : "Exact moment kiezen"}
-                </Badge>
-              </div>
-              <p className="mt-2 text-sm leading-7 text-slate-300">
-                {item.directBookingAllowed
-                  ? "Je traject is actief en je kunt nu direct vrije boekbare momenten kiezen en vastzetten."
-                  : "Je traject is actief. Je kunt nu vrije momenten van deze instructeur zien en precies dat moment als leskeuze doorgeven."}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Badge variant="info">
-                  {item.availableSlots.length} open blok
-                  {item.availableSlots.length === 1 ? "" : "ken"}
-                </Badge>
-                <Badge
-                  variant={getWeeklyLimitSourceVariant(item.weeklyBookingLimitSource)}
-                >
-                  {getWeeklyLimitSourceLabel(item.weeklyBookingLimitSource)}
-                </Badge>
-                <Badge variant="default">
-                  Limiet: {formatWeeklyLimitLabel(item.weeklyBookingLimitMinutes)}
-                </Badge>
-                <Badge variant="default">
-                  Deze week gebruikt:{" "}
-                  {formatMinutesAsHoursLabel(item.weeklyBookedMinutesThisWeek)}
-                </Badge>
-                <Badge
-                  variant={
-                    item.weeklyRemainingMinutesThisWeek === 0
-                      ? "warning"
-                      : "success"
-                  }
-                >
-                  Nog over:{" "}
-                  {item.weeklyRemainingMinutesThisWeek == null
-                    ? "Onbeperkt"
-                    : formatMinutesAsHoursLabel(item.weeklyRemainingMinutesThisWeek)}
-                </Badge>
-                {item.availableSlots[0] ? (
-                  <Badge variant="default">
-                    Eerst: {item.availableSlots[0].dag} - {item.availableSlots[0].tijdvak}
-                  </Badge>
-                  ) : (
-                    <Badge variant="warning">Nog geen vrij blok opengezet</Badge>
-                  )}
-              </div>
-              {item.weeklyBookingLimitSource === "package" ? (
-                <p className="mt-3 text-[12px] leading-6 text-slate-300">
-                  Je weekruimte volgt nu automatisch het gekoppelde pakket van deze instructeur.
-                </p>
-              ) : null}
-              {item.weeklyBookingLimitSource === "manual" ? (
-                <p className="mt-3 text-[12px] leading-6 text-slate-300">
-                  Deze weekruimte is handmatig door je instructeur afgestemd op jouw traject.
-                </p>
-              ) : null}
-              {!item.directBookingAllowed ? (
-                <p className="mt-3 text-[12px] leading-6 text-slate-300">
-                  Kies een vrij moment en stuur dat door als exact voorkeursblok. Andere lessen
-                  en interne afspraken van de instructeur blijven verborgen.
-                </p>
-              ) : null}
-              {item.currentWeekLimitReached ? (
-                <p className="mt-3 text-[12px] leading-6 text-amber-100/90">
-                  Je hebt voor deze week je ruimte bereikt. Kies een later moment of vraag je
-                  instructeur om extra ruimte vrij te geven als je eerder nog wilt plannen.
-                </p>
-              ) : null}
-              {!item.availableSlots.length && item.trialAvailableSlots.length ? (
-                <p className="mt-3 text-[12px] leading-6 text-slate-300">
-                  Een gewone rijles past nu niet meer binnen je resterende weekruimte, maar een
-                  proefles of korter blok nog wel.
-                </p>
-              ) : null}
-              {!item.trialLessonAvailable ? (
-                <p className="mt-3 text-[12px] leading-6 text-slate-300">
-                  Je proefles is al gebruikt. Daarom kun je hier alleen vervolglessen plannen.
-                </p>
-              ) : null}
-              {item.availableSlots.length ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {item.availableSlots.slice(0, 3).map((slot) => (
-                    <span
-                      key={slot.id}
-                      className="inline-flex rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-medium text-slate-200"
-                    >
-                      {slot.dag} - {slot.tijdvak}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              <div
-                className={cn(
-                  "mt-4 grid gap-2",
-                  item.trialLessonAvailable ? "sm:grid-cols-2" : "sm:grid-cols-1"
-                )}
-              >
-                <LessonRequestDialog
-                  instructorName={item.instructorName}
-                  instructorSlug={item.instructorSlug}
-                  availableSlots={item.availableSlots}
-                  directBookingEnabled={item.directBookingAllowed}
-                  defaultDurationMinutes={item.regularLessonDurationMinutes}
-                  weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
-                  bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
-                  weeklyRemainingMinutesThisWeek={item.weeklyRemainingMinutesThisWeek}
-                  triggerLabel={
-                    item.directBookingAllowed
-                      ? item.availableSlots.length
-                        ? "Plan rijles"
-                        : "Vraag nieuw moment aan"
-                      : item.availableSlots.length
-                        ? "Kies rijlesmoment"
-                        : "Vraag rijles aan"
-                  }
-                  triggerClassName="!h-10 !w-full"
-                />
-                {item.trialLessonAvailable ? (
-                  <LessonRequestDialog
-                    instructorName={item.instructorName}
-                    instructorSlug={item.instructorSlug}
-                    requestType="proefles"
-                    availableSlots={item.trialAvailableSlots}
-                    directBookingEnabled={item.directBookingAllowed}
-                    defaultDurationMinutes={item.trialLessonDurationMinutes}
-                    weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
-                    bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
-                    weeklyRemainingMinutesThisWeek={item.weeklyRemainingMinutesThisWeek}
-                    triggerLabel={
-                      item.directBookingAllowed
-                        ? item.trialAvailableSlots.length
-                          ? "Plan proefles"
-                          : "Vraag proefles aan"
-                        : item.trialAvailableSlots.length
-                          ? "Kies proeflesmoment"
-                          : "Vraag proefles aan"
-                    }
-                    triggerVariant="secondary"
-                    triggerClassName="!h-10 !w-full"
-                  />
+            {bookingOverview.totalKnownInstructors ? (
+              <div className="mt-4 grid gap-3">
+                {bookingOverview.eligibleInstructors.map((item) => (
+                  <details
+                    key={`eligible-${item.instructorId}`}
+                    className="group overflow-hidden rounded-[1.35rem] border border-emerald-300/18 bg-emerald-400/8"
+                  >
+                    <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 transition hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-lg font-semibold text-white">
+                            {item.instructorName}
+                          </p>
+                          <Badge variant="success">Geaccepteerd</Badge>
+                          <Badge
+                            variant={item.directBookingAllowed ? "info" : "default"}
+                          >
+                            {item.directBookingAllowed
+                              ? "Direct boeken"
+                              : "Voorkeursblok"}
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-slate-300">
+                          {item.availableSlots.length} open rijlesblok
+                          {item.availableSlots.length === 1 ? "" : "ken"} beschikbaar
+                          {item.availableSlots[0]
+                            ? `, eerst ${item.availableSlots[0].dag} - ${item.availableSlots[0].tijdvak}`
+                            : "."}
+                        </p>
+                      </div>
+                      <span className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 text-xs font-semibold text-slate-100">
+                        Open plannen
+                        <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                      </span>
+                    </summary>
+
+                    <div className="space-y-4 border-t border-white/10 p-4">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge
+                          variant={getWeeklyLimitSourceVariant(
+                            item.weeklyBookingLimitSource
+                          )}
+                        >
+                          {getWeeklyLimitSourceLabel(item.weeklyBookingLimitSource)}
+                        </Badge>
+                        <Badge variant="default">
+                          Limiet{" "}
+                          {formatWeeklyLimitLabel(item.weeklyBookingLimitMinutes)}
+                        </Badge>
+                        <Badge variant="default">
+                          Gebruikt{" "}
+                          {formatMinutesAsHoursLabel(
+                            item.weeklyBookedMinutesThisWeek
+                          )}
+                        </Badge>
+                        <Badge
+                          variant={
+                            item.weeklyRemainingMinutesThisWeek === 0
+                              ? "warning"
+                              : "success"
+                          }
+                        >
+                          Over{" "}
+                          {item.weeklyRemainingMinutesThisWeek == null
+                            ? "onbeperkt"
+                            : formatMinutesAsHoursLabel(
+                                item.weeklyRemainingMinutesThisWeek
+                              )}
+                        </Badge>
+                      </div>
+
+                      {item.availableSlots.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {item.availableSlots.slice(0, 4).map((slot) => (
+                            <span
+                              key={slot.id}
+                              className="inline-flex rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-medium text-slate-200"
+                            >
+                              {slot.dag} - {slot.tijdvak}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="rounded-2xl border border-amber-300/18 bg-amber-400/8 px-3 py-2 text-sm leading-6 text-amber-100">
+                          Nog geen rijlesblok open. Je kunt wel een nieuw moment aanvragen.
+                        </p>
+                      )}
+
+                      {item.currentWeekLimitReached ? (
+                        <p className="rounded-2xl border border-amber-300/18 bg-amber-400/8 px-3 py-2 text-sm leading-6 text-amber-100">
+                          Je weekruimte is bereikt. Kies een later moment of vraag je instructeur om extra ruimte.
+                        </p>
+                      ) : null}
+
+                      {!item.trialLessonAvailable ? (
+                        <p className="text-[12px] leading-6 text-slate-300">
+                          Je proefles is al gebruikt; je plant hier alleen vervolglessen.
+                        </p>
+                      ) : null}
+
+                      <div
+                        className={cn(
+                          "grid gap-2",
+                          item.trialLessonAvailable
+                            ? "sm:grid-cols-2"
+                            : "sm:grid-cols-1"
+                        )}
+                      >
+                        <LessonRequestDialog
+                          instructorName={item.instructorName}
+                          instructorSlug={item.instructorSlug}
+                          availableSlots={item.availableSlots}
+                          directBookingEnabled={item.directBookingAllowed}
+                          defaultDurationMinutes={item.regularLessonDurationMinutes}
+                          weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
+                          bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
+                          weeklyRemainingMinutesThisWeek={
+                            item.weeklyRemainingMinutesThisWeek
+                          }
+                          triggerLabel={
+                            item.directBookingAllowed
+                              ? item.availableSlots.length
+                                ? "Plan rijles"
+                                : "Vraag nieuw moment aan"
+                              : item.availableSlots.length
+                                ? "Kies rijlesmoment"
+                                : "Vraag rijles aan"
+                          }
+                          triggerClassName="!h-10 !w-full"
+                        />
+                        {item.trialLessonAvailable ? (
+                          <LessonRequestDialog
+                            instructorName={item.instructorName}
+                            instructorSlug={item.instructorSlug}
+                            requestType="proefles"
+                            availableSlots={item.trialAvailableSlots}
+                            directBookingEnabled={item.directBookingAllowed}
+                            defaultDurationMinutes={item.trialLessonDurationMinutes}
+                            weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
+                            bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
+                            weeklyRemainingMinutesThisWeek={
+                              item.weeklyRemainingMinutesThisWeek
+                            }
+                            triggerLabel={
+                              item.directBookingAllowed
+                                ? item.trialAvailableSlots.length
+                                  ? "Plan proefles"
+                                  : "Vraag proefles aan"
+                                : item.trialAvailableSlots.length
+                                  ? "Kies proeflesmoment"
+                                  : "Vraag proefles aan"
+                            }
+                            triggerVariant="secondary"
+                            triggerClassName="!h-10 !w-full"
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                  </details>
+                ))}
+
+                {bookingOverview.waitingApprovalInstructors.map((item) => (
+                  <div
+                    key={`waiting-${item.instructorId}`}
+                    className="rounded-[1.35rem] border border-white/10 bg-white/6 p-4"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-lg font-semibold text-white">
+                        {item.instructorName}
+                      </p>
+                      <Badge variant="default">Traject actief</Badge>
+                      <Badge variant="warning">Wacht op vrijgave</Badge>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">
+                      Deze instructeur moet zelf inplannen nog voor jou openzetten.
+                    </p>
+                  </div>
+                ))}
+
+                {bookingOverview.pendingInstructors.map((item) => (
+                  <div
+                    key={`pending-${item.instructorId}`}
+                    className="rounded-[1.35rem] border border-amber-300/18 bg-amber-400/8 p-4"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-lg font-semibold text-white">
+                        {item.instructorName}
+                      </p>
+                      <Badge variant="warning">Aanvraag in behandeling</Badge>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">
+                      Na acceptatie verschijnen hier de planmogelijkheden.
+                    </p>
+                  </div>
+                ))}
+
+                {hasNoInstructorState ? (
+                  <div className="rounded-[1.35rem] border border-white/10 bg-white/6 p-4">
+                    <p className="font-semibold text-white">
+                      Nog geen planopties beschikbaar
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">
+                      Je koppelingen zijn bekend, maar er staat nog geen open planning klaar.
+                    </p>
+                  </div>
                 ) : null}
               </div>
-            </div>
-          ))}
+            ) : null}
+          </div>
+        </TabsContent>
 
-          {bookingOverview.waitingApprovalInstructors.map((item) => (
-            <div
-              key={`waiting-${item.instructorId}`}
-              className="rounded-[1.35rem] border border-white/10 bg-white/6 p-4"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-lg font-semibold text-white">{item.instructorName}</p>
-                <Badge variant="default">Traject actief</Badge>
-                <Badge variant="warning">Wacht op vrijgave</Badge>
-              </div>
-              <p className="mt-2 text-sm leading-7 text-slate-300">
-                Je bent al gekoppeld aan deze instructeur, maar zelf inplannen staat nog niet
-                open. Wacht tot de instructeur plannen voor jou vrijgeeft.
-              </p>
-            </div>
-          ))}
+        <TabsContent value="aanvragen" className="mt-0">
+          <LearnerRequestOverview
+            tone="urban"
+            title="Lesaanvragen"
+            description="Compact overzicht van je aanvragen. Open alleen de aanvraag waarvan je details, statusflow of acties wilt zien."
+            requests={requestsWithLabels}
+            emptyTitle="Nog geen lesaanvragen"
+            emptyDescription="Zodra je een aanvraag verstuurt, verschijnt hier automatisch je volledige statusoverzicht."
+          />
+        </TabsContent>
 
-          {bookingOverview.pendingInstructors.map((item) => (
-            <div
-              key={`pending-${item.instructorId}`}
-              className="rounded-[1.35rem] border border-amber-300/18 bg-amber-400/8 p-4"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-lg font-semibold text-white">{item.instructorName}</p>
-                <Badge variant="warning">Aanvraag in behandeling</Badge>
-              </div>
-              <p className="mt-2 text-sm leading-7 text-slate-300">
-                Je aanvraag loopt al, maar deze instructeur heeft je nog niet geaccepteerd.
-                Daarom kun je hier nog geen lessen zelf inplannen.
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <LessonCalendar
-        lessons={lessons}
-        requests={requests}
-        tone="urban"
-        title="Agenda"
-        description="Je bevestigde lessen en open lesaanvragen staan nu samen in een echte kalender, zodat je hele planning in een oogopslag zichtbaar blijft."
-        emptyDescription="Zodra een les of aanvraag een concreet moment heeft, verschijnt die hier automatisch in je agenda."
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <TrendCard
-          tone="urban"
-          title="Boekingsritme"
-          value={`${requests.length + lessons.length}`}
-          change={plannedLessons > 0 ? "+18%" : "Stand-by"}
-          description="Totaal aantal boekingsmomenten en aanvragen in je huidige traject."
-          data={[4, 6, 5, 7, 8, 9, 10]}
-        />
-        <InsightPanel
-          tone="urban"
-          title="Snelle status"
-          description="De belangrijkste punten om je planning netjes en voorspelbaar te houden."
-          items={[
-            {
-              label: "Open aanvragen",
-              value: `${pendingRequests} aanvraag(en) wachten op reactie`,
-              status: pendingRequests > 0 ? "Open" : "Rustig",
-            },
-            {
-              label: "Ingeplande lessen",
-              value: `${plannedLessons} les(sen) staan vast in je agenda`,
-            },
-            {
-              label: "Aankomende locatie",
-              value: nextLesson?.locatie ?? "Nog geen leslocatie bekend",
-            },
-          ]}
-        />
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <LearnerRequestOverview
-          tone="urban"
-          title="Lesaanvragen"
-          description="Statussen: aangevraagd, geaccepteerd, geweigerd, ingepland, afgerond en geannuleerd."
-          requests={requests.map((request) => ({
-            ...request,
-            pakket_naam: request.pakket_naam ?? getRequestLabel(request),
-          }))}
-          emptyTitle="Nog geen lesaanvragen"
-          emptyDescription="Zodra je een aanvraag verstuurt, verschijnt hier automatisch je volledige statusoverzicht."
-        />
-        <div className="space-y-4">
+        <TabsContent value="lessen" className="mt-0">
           <div className={urbanCardClassName}>
-            <div className="mb-3">
-              <h3 className="text-lg font-semibold text-white">Geplande lessen</h3>
-              <p className="mt-1 text-[13px] leading-6 text-slate-300">
-                Voeg bevestigde lessen toe aan je agenda, open je route en annuleer op tijd als jouw instructeur dat toestaat.
-              </p>
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <Badge variant="info">Geplande lessen</Badge>
+                <h3 className="mt-2 text-xl font-semibold text-white">
+                  Je bevestigde lessen
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-300">
+                  De lijst blijft compact; route, agenda en annuleren staan achter details.
+                </p>
+              </div>
+              <Badge variant="success">{plannedLessons} actief</Badge>
             </div>
 
             {lessons.length ? (
               <div className="grid gap-3">
-                {lessons.slice(0, 4).map((lesson) => (
-                  <div
+                {lessons.map((lesson) => (
+                  <details
                     key={lesson.id}
-                    className="rounded-[1.1rem] border border-white/10 bg-white/6 p-3"
+                    className="group overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/6"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-white">{lesson.titel}</p>
-                        <p className="mt-1 text-[13px] text-slate-300">
-                          {lesson.datum} om {lesson.tijd}
+                    <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 transition hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-white">
+                          {lesson.titel}
                         </p>
-                        <p className="mt-1 text-[12px] text-slate-400">
-                          {lesson.locatie}
+                        <p className="mt-1 text-sm text-slate-300">
+                          {lesson.datum} om {lesson.tijd} - {lesson.locatie}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -487,20 +532,22 @@ export default async function LeerlingBoekingenPage() {
                         >
                           {getLessonAttendanceLabel(lesson.attendance_status)}
                         </Badge>
+                        <span className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 text-xs font-semibold text-slate-100">
+                          Details
+                          <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                        </span>
                       </div>
+                    </summary>
+                    <div className="border-t border-white/10 p-4">
+                      {lesson.lesson_note?.trim() ? (
+                        <p className="mb-3 rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[12px] leading-6 text-slate-300">
+                          Coachnotitie: {lesson.lesson_note.trim()}
+                        </p>
+                      ) : null}
+                      <LessonQuickActions lesson={lesson} tone="urban" />
+                      <LearnerLessonActions lesson={lesson} />
                     </div>
-                    {lesson.lesson_note?.trim() ? (
-                      <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                        Coachnotitie: {lesson.lesson_note.trim()}
-                      </p>
-                    ) : null}
-                    <LessonQuickActions
-                      lesson={lesson}
-                      tone="urban"
-                      className="mt-3"
-                    />
-                    <LearnerLessonActions lesson={lesson} />
-                  </div>
+                  </details>
                 ))}
               </div>
             ) : (
@@ -509,62 +556,19 @@ export default async function LeerlingBoekingenPage() {
               </p>
             )}
           </div>
+        </TabsContent>
 
-          <DataTableCard
+        <TabsContent value="agenda" className="mt-0">
+          <LessonCalendar
+            lessons={lessons}
+            requests={requests}
             tone="urban"
-            title="Lessenoverzicht"
-            description="Je bevestigde lessen en de afspraken die al voor je klaarstaan."
-            headers={["Les", "Datum", "Locatie", "Status"]}
-            rows={lessons.map((lesson) => [
-              lesson.titel,
-              `${lesson.datum} om ${lesson.tijd}`,
-              lesson.locatie,
-              lesson.status,
-            ])}
-            badgeColumns={[3]}
-            emptyTitle="Nog geen bevestigde lessen"
-            emptyDescription="Geaccepteerde boekingen en ingeplande ritten worden hier direct zichtbaar."
+            title="Agenda"
+            description="Je bevestigde lessen en open aanvragen staan samen in een kalenderbeeld."
+            emptyDescription="Zodra een les of aanvraag een concreet moment heeft, verschijnt die hier automatisch in je agenda."
           />
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-3">
-        {[
-          {
-            icon: CalendarDays,
-            title: "Volgende stap",
-            text: "Bevestig een aanvraag of plan een nieuwe les op een moment dat logisch aansluit op je week.",
-          },
-          {
-            icon: Clock3,
-            title: "Rust in je planning",
-            text: "Met een helder schema kun je beter inschatten waar nog ruimte of opvolging nodig is.",
-          },
-          {
-            icon: MapPin,
-            title: "Locatie helder",
-            text: "Je startlocatie blijft zichtbaar zodat je planning niet alleen datums, maar ook praktische context geeft.",
-          },
-        ].map((item) => (
-          <div key={item.title} className={urbanCardClassName}>
-            <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-slate-100">
-              <item.icon className="size-5" />
-            </div>
-            <h3 className="mt-4 text-lg font-semibold text-white">{item.title}</h3>
-            <p className="mt-2 text-sm leading-7 text-slate-300">{item.text}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className={urbanCardClassName}>
-        <Badge variant="info" className="mb-3">
-          Live planning
-        </Badge>
-        <p className="text-sm leading-7 text-slate-300">
-          Deze pagina leest live lesaanvragen en lessen uit Supabase en zet ze neer
-          in een veel netter, rustiger en professioneler overzicht.
-        </p>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
