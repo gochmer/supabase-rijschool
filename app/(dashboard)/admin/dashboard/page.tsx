@@ -8,6 +8,10 @@ import {
   type DashboardFocusItem,
 } from "@/components/dashboard/dashboard-focus-panel";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
+import {
+  OnboardingPanel,
+  type OnboardingStep,
+} from "@/components/dashboard/onboarding-panel";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { QuickActionGrid } from "@/components/dashboard/quick-action-grid";
 import { MetricCard } from "@/components/metric-card";
@@ -16,23 +20,59 @@ import {
   getAdminActivityFeed,
   getAdminApprovalQueue,
   getAdminDashboardMetrics,
+  getAdminInstructors,
   getAdminPayments,
   getAdminReviews,
   getAdminSupportTickets,
+  getAdminUsers,
 } from "@/lib/data/admin";
 
+function parsePercent(value: string) {
+  const parsed = Number(value.replace("%", ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatNames(names: string[]) {
+  const visibleNames = names.slice(0, 2).join(", ");
+  const remaining = names.length - 2;
+
+  if (!visibleNames) {
+    return "Geen namen";
+  }
+
+  return remaining > 0 ? `${visibleNames} +${remaining}` : visibleNames;
+}
+
 export default async function AdminDashboardPage() {
-  const [metrics, payments, tickets, activity, approvalQueue, reviews] = await Promise.all([
+  const [
+    metrics,
+    payments,
+    tickets,
+    activity,
+    approvalQueue,
+    reviews,
+    users,
+    instructors,
+  ] = await Promise.all([
     getAdminDashboardMetrics(),
     getAdminPayments(),
     getAdminSupportTickets(),
     getAdminActivityFeed(),
     getAdminApprovalQueue(),
     getAdminReviews(),
+    getAdminUsers(),
+    getAdminInstructors(),
   ]);
   const openTickets = tickets.filter((ticket) => ticket.status !== "afgesloten");
   const reviewAttention = reviews.filter(
     (review) => review.reportCount > 0 || review.moderatieStatus !== "zichtbaar"
+  );
+  const incompleteUsers = users.filter(
+    (user) => !user.naam?.trim() || !user.email?.trim() || !user.telefoon?.trim()
+  );
+  const incompleteInstructors = instructors.filter(
+    (instructor) =>
+      parsePercent(instructor.profiel) < 90 || instructor.status !== "goedgekeurd"
   );
   const attentionCount =
     openTickets.length + reviewAttention.length + approvalQueue.length;
@@ -145,6 +185,66 @@ export default async function AdminDashboardPage() {
       tone: approvalQueue.length ? "warning" : "success",
     },
   ];
+  const adminOnboardingSteps: OnboardingStep[] = [
+    {
+      label: "Gebruikers",
+      title: incompleteUsers.length
+        ? `${incompleteUsers.length} account${incompleteUsers.length === 1 ? "" : "s"} incompleet`
+        : "Gebruikersbasis compleet",
+      description: incompleteUsers.length
+        ? "Deze accounts missen naam, e-mail of telefoon en kunnen daardoor minder soepel doorstromen."
+        : "Alle recente gebruikers hebben de basisgegevens die nodig zijn voor opvolging.",
+      href: "/admin/gebruikers",
+      ctaLabel: "Open gebruikers",
+      complete: incompleteUsers.length === 0,
+      icon: UserCheck,
+      meta: incompleteUsers.length
+        ? formatNames(incompleteUsers.map((user) => user.naam || user.email || "Gebruiker"))
+        : "Geen incomplete accounts",
+    },
+    {
+      label: "Instructeurs",
+      title: incompleteInstructors.length
+        ? `${incompleteInstructors.length} profiel${incompleteInstructors.length === 1 ? "" : "en"} checken`
+        : "Instructeurs op orde",
+      description: incompleteInstructors.length
+        ? "Deze instructeurs missen profielvulling of goedkeuring voordat ze optimaal kunnen converteren."
+        : "Instructeurprofielen zijn compleet genoeg en verwerkt.",
+      href: "/admin/instructeurs",
+      ctaLabel: "Open instructeurs",
+      complete: incompleteInstructors.length === 0,
+      icon: ShieldCheck,
+      meta: incompleteInstructors.length
+        ? formatNames(incompleteInstructors.map((item) => `${item.naam} (${item.profiel})`))
+        : "Geen incomplete instructeurs",
+    },
+    {
+      label: "Support",
+      title: openTickets.length
+        ? `${openTickets.length} supportticket${openTickets.length === 1 ? "" : "s"} open`
+        : "Support rustig",
+      description:
+        "Nieuwe gebruikers haken sneller aan wanneer vragen en blokkades kort blijven liggen.",
+      href: "/admin/support",
+      ctaLabel: "Open support",
+      complete: openTickets.length === 0,
+      icon: LifeBuoy,
+      meta: openTickets[0]?.onderwerp ?? "Geen open tickets",
+    },
+    {
+      label: "Reviews",
+      title: reviewAttention.length
+        ? `${reviewAttention.length} review${reviewAttention.length === 1 ? "" : "s"} modereren`
+        : "Reviews schoon",
+      description:
+        "Reviewmoderatie houdt publieke profielen betrouwbaar voor nieuwe leerlingen.",
+      href: "/admin/reviews",
+      ctaLabel: "Open reviews",
+      complete: reviewAttention.length === 0,
+      icon: Star,
+      meta: reviewAttention[0]?.titel ?? "Geen reviewmeldingen",
+    },
+  ];
 
   return (
     <>
@@ -169,6 +269,14 @@ export default async function AdminDashboardPage() {
         description="Support, reviews en nieuwe instructeurs staan hier bovenaan, zodat beheer niet verdwijnt tussen tabellen."
         primary={adminPrimaryFocus}
         items={adminFocusItems}
+      />
+
+      <OnboardingPanel
+        eyebrow="Admin onboarding"
+        title="Zie wie nog niet klaar is voor productiegebruik"
+        description="Deze laag bundelt incomplete gebruikers, instructeurprofielen, support en reviewmoderatie zodat nieuwe accounts niet blijven hangen."
+        steps={adminOnboardingSteps}
+        accent="amber"
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

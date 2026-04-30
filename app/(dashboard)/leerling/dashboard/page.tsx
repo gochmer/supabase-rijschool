@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, CalendarClock, ClipboardList, Search, Target } from "lucide-react";
+import { Bell, CalendarClock, ClipboardList, Search, Target, UserRound } from "lucide-react";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import {
@@ -14,6 +14,10 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { QuickActionGrid } from "@/components/dashboard/quick-action-grid";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { SharedLessonCompass } from "@/components/dashboard/shared-lesson-compass";
+import {
+  OnboardingPanel,
+  type OnboardingStep,
+} from "@/components/dashboard/onboarding-panel";
 import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
 import { getCurrentLearnerLessonCheckinBoards } from "@/lib/data/lesson-checkins";
@@ -24,6 +28,7 @@ import {
   getLeerlingLessons,
 } from "@/lib/data/lesson-requests";
 import { getCurrentNotifications } from "@/lib/data/notifications";
+import { getCurrentProfile } from "@/lib/data/profiles";
 
 export default async function LeerlingDashboardPage() {
   const [
@@ -33,6 +38,7 @@ export default async function LeerlingDashboardPage() {
     notifications,
     lessonCompassBoards,
     lessonCheckinBoards,
+    profile,
   ] =
     await Promise.all([
       getLeerlingDashboardMetrics(),
@@ -41,6 +47,7 @@ export default async function LeerlingDashboardPage() {
       getCurrentNotifications(),
       getCurrentLearnerLessonCompassBoards(),
       getCurrentLearnerLessonCheckinBoards(),
+      getCurrentProfile(),
     ]);
 
   const upcomingLessons = lessons.slice(0, 4);
@@ -52,6 +59,14 @@ export default async function LeerlingDashboardPage() {
     ["geaccepteerd", "ingepland"].includes(item.status)
   );
   const unreadNotifications = notifications.filter((item) => item.ongelezen);
+  const profileComplete = Boolean(
+    profile?.volledige_naam?.trim() && profile.telefoon?.trim()
+  );
+  const hasChosenInstructor = Boolean(
+    requests.length || lessons.length || acceptedRequests.length
+  );
+  const hasStartedRequest = Boolean(requests.length);
+  const hasActiveLesson = Boolean(nextLesson);
   const latestPendingRequest = pendingRequests[0] ?? null;
   const learnerNextStep: DashboardFocusItem = nextLesson
     ? {
@@ -130,6 +145,54 @@ export default async function LeerlingDashboardPage() {
       tone: unreadNotifications.length ? "warning" : "success",
     },
   ];
+  const learnerOnboardingSteps: OnboardingStep[] = [
+    {
+      label: "Stap 1",
+      title: "Profiel compleet maken",
+      description:
+        "Vul naam en telefoon in zodat instructeurs je aanvraag sneller en persoonlijker kunnen opvolgen.",
+      href: "/leerling/profiel",
+      ctaLabel: profileComplete ? "Profiel bekijken" : "Profiel aanvullen",
+      complete: profileComplete,
+      icon: UserRound,
+      meta: profileComplete ? "Basisgegevens staan klaar" : "Naam en telefoon nodig",
+    },
+    {
+      label: "Stap 2",
+      title: "Instructeur kiezen",
+      description:
+        "Vergelijk instructeurs op regio, prijs, transmissie, reviews en lesstijl.",
+      href: "/instructeurs",
+      ctaLabel: hasChosenInstructor ? "Vergelijk verder" : "Kies instructeur",
+      complete: hasChosenInstructor,
+      icon: Search,
+      meta: hasChosenInstructor ? "Je hebt al een trajectsignaal" : "Nog geen keuze gemaakt",
+    },
+    {
+      label: "Stap 3",
+      title: "Proefles of pakket aanvragen",
+      description:
+        "Start je traject met een concrete aanvraag zodat de instructeur kan reageren of plannen.",
+      href: "/leerling/boekingen",
+      ctaLabel: hasStartedRequest ? "Aanvragen bekijken" : "Start aanvraag",
+      complete: hasStartedRequest,
+      icon: ClipboardList,
+      meta: hasStartedRequest
+        ? `${requests.length} aanvraag${requests.length === 1 ? "" : "en"} bekend`
+        : "Nog geen aanvraag",
+    },
+    {
+      label: "Stap 4",
+      title: "Eerste les volgen",
+      description:
+        "Zodra je les is ingepland, houd je hier locatie, tijd en voortgang bij.",
+      href: "/leerling/boekingen",
+      ctaLabel: hasActiveLesson ? "Open volgende les" : "Bekijk planning",
+      complete: hasActiveLesson,
+      icon: CalendarClock,
+      meta: nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland",
+    },
+  ];
 
   return (
     <>
@@ -155,6 +218,13 @@ export default async function LeerlingDashboardPage() {
         description="Bovenaan staat meteen wat nu telt: je volgende les, open aanvragen en de slimste vervolgstap."
         primary={learnerNextStep}
         items={learnerFocusItems}
+      />
+
+      <OnboardingPanel
+        eyebrow="Nieuwe leerling"
+        title="Van registratie naar je eerste rijles"
+        description="Deze checklist houdt de start simpel: eerst je profiel op orde, dan de juiste instructeur kiezen en je eerste aanvraag afronden."
+        steps={learnerOnboardingSteps}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

@@ -5,7 +5,10 @@ import {
   CheckCircle2,
   Flame,
   Inbox,
+  PackageCheck,
   Sparkles,
+  ToggleRight,
+  UserRound,
 } from "lucide-react";
 
 import {
@@ -13,8 +16,13 @@ import {
   type DashboardFocusItem,
 } from "@/components/dashboard/dashboard-focus-panel";
 import { InstructorDashboardTabs } from "@/components/dashboard/instructor-dashboard-tabs";
+import {
+  OnboardingPanel,
+  type OnboardingStep,
+} from "@/components/dashboard/onboarding-panel";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { Card, CardContent } from "@/components/ui/card";
+import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
 import { getCurrentInstructorLessonCheckinBoards } from "@/lib/data/lesson-checkins";
 import { getCurrentInstructorLessonCompassBoards } from "@/lib/data/lesson-compass";
 import { getLocationOptions } from "@/lib/data/locations";
@@ -24,6 +32,8 @@ import {
   getInstructeurLessons,
 } from "@/lib/data/lesson-requests";
 import { getCurrentNotifications } from "@/lib/data/notifications";
+import { getCurrentInstructorPackages } from "@/lib/data/packages";
+import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
 import { getInstructorGrowthInsights } from "@/lib/data/instructor-growth-insights";
 import { getInstructorDashboardRadarInsights } from "@/lib/data/instructor-dashboard-radar";
 
@@ -53,6 +63,9 @@ export default async function InstructeurDashboardPage() {
     lessonCheckinBoards,
     radarInsights,
     growthInsights,
+    instructor,
+    instructorPackages,
+    availabilitySlots,
   ] =
     await Promise.all([
       getInstructeurDashboardMetrics(),
@@ -64,6 +77,9 @@ export default async function InstructeurDashboardPage() {
       getCurrentInstructorLessonCheckinBoards(),
       getInstructorDashboardRadarInsights(),
       getInstructorGrowthInsights(),
+      getCurrentInstructeurRecord(),
+      getCurrentInstructorPackages(),
+      getCurrentInstructorAvailability(),
     ]);
 
   const openRequests = requests.filter((item) => item.status === "aangevraagd");
@@ -79,6 +95,20 @@ export default async function InstructeurDashboardPage() {
   const firstOpenRequest = openRequests[0] ?? null;
   const firstTodayLesson = todayLessons[0] ?? null;
   const agendaGapCount = growthInsights.fillGaps.length;
+  const profileScore = Number(instructor?.profiel_compleetheid ?? 0);
+  const profileReady = Boolean(
+    profileScore >= 70 &&
+      instructor?.bio?.trim() &&
+      instructor.werkgebied?.length &&
+      Number(instructor.prijs_per_les ?? 0) > 0
+  );
+  const activePackageCount = instructorPackages.filter(
+    (pkg) => pkg.actief !== false
+  ).length;
+  const activeSlotCount = availabilitySlots.filter((slot) => slot.beschikbaar).length;
+  const packagesReady = activePackageCount > 0;
+  const availabilityReady = activeSlotCount > 0;
+  const onlineBookingReady = Boolean(instructor?.online_boeken_actief);
   const focusScore = Math.min(
     100,
     55 +
@@ -200,6 +230,52 @@ export default async function InstructeurDashboardPage() {
       tone: agendaGapCount ? "warning" : "success",
     },
   ];
+  const instructorOnboardingSteps: OnboardingStep[] = [
+    {
+      label: "Stap 1",
+      title: "Profiel verkoopklaar maken",
+      description:
+        "Vul bio, werkgebied, prijs en specialisaties aan zodat je openbare profiel vertrouwen wekt.",
+      href: "/instructeur/profiel",
+      ctaLabel: profileReady ? "Profiel bekijken" : "Profiel afmaken",
+      complete: profileReady,
+      icon: UserRound,
+      meta: `${Math.min(100, Math.max(0, profileScore))}% profielscore`,
+    },
+    {
+      label: "Stap 2",
+      title: "Pakketten publiceren",
+      description:
+        "Zet minimaal een actief pakket klaar, zodat leerlingen niet hoeven te raden wat ze kunnen aanvragen.",
+      href: "/instructeur/pakketten",
+      ctaLabel: packagesReady ? "Pakketten beheren" : "Pakket maken",
+      complete: packagesReady,
+      icon: PackageCheck,
+      meta: `${activePackageCount} actief pakket${activePackageCount === 1 ? "" : "ten"}`,
+    },
+    {
+      label: "Stap 3",
+      title: "Beschikbaarheid invullen",
+      description:
+        "Open boekbare momenten in je agenda zodat leerlingen direct een passend tijdvak kunnen kiezen.",
+      href: "/instructeur/beschikbaarheid",
+      ctaLabel: availabilityReady ? "Agenda beheren" : "Agenda vullen",
+      complete: availabilityReady,
+      icon: CalendarPlus,
+      meta: `${activeSlotCount} open moment${activeSlotCount === 1 ? "" : "en"}`,
+    },
+    {
+      label: "Stap 4",
+      title: "Online boeken aanzetten",
+      description:
+        "Maak de stap van interesse naar ingeplande les korter door online boeken open te zetten.",
+      href: "/instructeur/beschikbaarheid",
+      ctaLabel: onlineBookingReady ? "Instelling bekijken" : "Online boeken aanzetten",
+      complete: onlineBookingReady,
+      icon: ToggleRight,
+      meta: onlineBookingReady ? "Online boeken actief" : "Nog uitgeschakeld",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -254,6 +330,14 @@ export default async function InstructeurDashboardPage() {
         description="Nieuwe aanvragen, lessen van vandaag en agenda-gaten staan vooraan, zodat je niet hoeft te zoeken naar de eerstvolgende stap."
         primary={instructorPrimaryFocus}
         items={instructorFocusItems}
+      />
+
+      <OnboardingPanel
+        eyebrow="Nieuwe instructeur"
+        title="Van account naar boekbaar profiel"
+        description="Deze checklist helpt je om snel verkoopklaar te zijn: profiel, pakketten, beschikbaarheid en online boeken op een rij."
+        steps={instructorOnboardingSteps}
+        accent="emerald"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

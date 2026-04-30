@@ -136,7 +136,7 @@ export async function getAdminUsers() {
   const supabase = await createServerClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, volledige_naam, email, rol, created_at, updated_at")
+    .select("id, volledige_naam, email, telefoon, rol, created_at, updated_at")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -145,6 +145,7 @@ export async function getAdminUsers() {
       id: row.id,
       naam: row.volledige_naam,
       email: row.email,
+      telefoon: row.telefoon ?? "",
       rol: row.rol,
       status: "actief",
       laatsteActiviteit: formatDate(row.updated_at || row.created_at),
