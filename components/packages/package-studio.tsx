@@ -9,9 +9,11 @@ import {
   BadgeEuro,
   Boxes,
   Check,
+  ClipboardCheck,
   Edit3,
   Eye,
   EyeOff,
+  Gauge,
   ImagePlus,
   Pin,
   PlusCircle,
@@ -207,6 +209,70 @@ export function PackageStudio({
   const editProgressMap = Object.fromEntries(
     editProgressItems.map((item) => [item.key, item.complete])
   ) as Record<StudioStepKey, boolean>;
+  const createCompletedCount = createProgressItems.filter(
+    (item) => item.complete
+  ).length;
+  const createPriceValue = Number.parseFloat(prijs.replace(",", "."));
+  const createLessonCount = Number.parseInt(aantalLessen, 10);
+  const createPriceLabel =
+    Number.isFinite(createPriceValue) && createPriceValue > 0
+      ? formatCurrency(createPriceValue)
+      : "Nog leeg";
+  const createLessonsLabel =
+    Number.isFinite(createLessonCount) && createLessonCount > 0
+      ? `${createLessonCount} lessen`
+      : "Nog leeg";
+  const createPricePerLessonLabel =
+    Number.isFinite(createPriceValue) &&
+    createPriceValue > 0 &&
+    Number.isFinite(createLessonCount) &&
+    createLessonCount > 0
+      ? formatCurrency(Math.round((createPriceValue / createLessonCount) * 100) / 100)
+      : "Nog leeg";
+  const parsedCreateWeeklyLimit = weeklyBookingLimitMinutes.trim()
+    ? Number.parseInt(weeklyBookingLimitMinutes, 10)
+    : null;
+  const createWeeklyLimitLabel = formatWeeklyLimitLabel(
+    parsedCreateWeeklyLimit !== null && Number.isFinite(parsedCreateWeeklyLimit)
+      ? parsedCreateWeeklyLimit
+      : null
+  );
+  const createPreviewStats = [
+    {
+      label: "Prijs",
+      value: createPriceLabel,
+      icon: BadgeEuro,
+    },
+    {
+      label: "Lessen",
+      value: createLessonsLabel,
+      icon: Boxes,
+    },
+    {
+      label: "Per les",
+      value: createPricePerLessonLabel,
+      icon: Gauge,
+    },
+  ];
+  const createReadinessItems = [
+    {
+      label: naam.trim() ? "Naam klaar" : "Naam mist",
+      complete: Boolean(naam.trim()),
+    },
+    {
+      label: prijs.trim() ? "Prijs klaar" : "Prijs mist",
+      complete: Boolean(prijs.trim()),
+    },
+    {
+      label: beschrijving.trim() ? "Tekst klaar" : "Tekst mist",
+      complete: Boolean(beschrijving.trim()),
+    },
+    {
+      label: coverPreviewUrl ? "Foto klaar" : "Foto optioneel",
+      complete: Boolean(coverPreviewUrl),
+      optional: true,
+    },
+  ];
 
   function scrollStepIntoView(element: HTMLDivElement | null) {
     element?.scrollIntoView({
@@ -712,8 +778,8 @@ export function PackageStudio({
       <div className="relative">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="inline-flex items-center rounded-full border border-white/18 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/82 uppercase">
-              Nieuwe pakketten
+            <p className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-slate-700 uppercase dark:border-white/10 dark:bg-white/10 dark:text-slate-200">
+              Nieuw pakket maken
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
               Voeg een nieuw pakket toe aan je aanbod
@@ -830,7 +896,7 @@ export function PackageStudio({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-2 xl:items-start">
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)] xl:items-start">
           <div className="space-y-4">
             <div
               ref={createBasisRef}
@@ -867,8 +933,8 @@ export function PackageStudio({
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+              <div className="mt-4 grid gap-4 md:grid-cols-6">
+                <div className="space-y-2 md:col-span-3">
                   <Label htmlFor="package_name">Pakketnaam</Label>
                   <Input
                     id="package_name"
@@ -878,7 +944,7 @@ export function PackageStudio({
                     className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-3">
                   <Label htmlFor="package_type">Rijlestype</Label>
                   <select
                     id="package_type"
@@ -896,7 +962,7 @@ export function PackageStudio({
                     ))}
                   </select>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="package_badge">Hoofdbadge</Label>
                   <Input
                     id="package_badge"
@@ -906,7 +972,7 @@ export function PackageStudio({
                     className="h-11 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="package_icon">Pakketicoon</Label>
                   <select
                     id="package_icon"
@@ -964,7 +1030,7 @@ export function PackageStudio({
                     Prijs
                   </h3>
                   <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                    Zet prijs, lessen en praktijk-examenlaag op één plek zodat je pakket direct goed leesbaar wordt.
+                    Zet prijs, lessen en praktijk-examenlaag op een plek zodat je pakket direct goed leesbaar wordt.
                   </p>
                 </div>
               </div>
@@ -1107,7 +1173,7 @@ export function PackageStudio({
                     Tekst
                   </h3>
                   <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                    Gebruik handmatige tekst of laat een nieuwe variant maken voor een andere commerciële invalshoek.
+                    Gebruik handmatige tekst of laat een nieuwe variant maken voor een andere commerciele invalshoek.
                   </p>
                 </div>
               </div>
@@ -1147,116 +1213,15 @@ export function PackageStudio({
             </div>
           </div>
 
-          <div
-            ref={createBeeldRef}
-            className={cn(
-              "relative scroll-mt-6 overflow-hidden rounded-[1.35rem] border bg-white/94 p-4 shadow-[0_20px_48px_-36px_rgba(15,23,42,0.18)] transition-all dark:bg-white/6",
-              activeStudioStep === "beeld"
-                ? getStudioStepMeta("beeld").borderClass
-                : "border-white/85 dark:border-white/10"
-            )}
-            onClick={() => setActiveStudioStep("beeld")}
-            onPointerEnter={() => setActiveStudioStep("beeld")}
-            onFocusCapture={() => setActiveStudioStep("beeld")}
-          >
-            <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-r from-slate-900/6 via-sky-500/8 to-transparent dark:from-white/6 dark:via-sky-400/10" />
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950/6 text-primary dark:bg-white/10 dark:text-sky-200">
-                <ImagePlus className="size-4" />
-              </div>
-              <div>
-                <p className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-700 uppercase dark:border-white/10 dark:bg-white/10 dark:text-slate-200">
-                  Stap 04
-                </p>
-                <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
-                  Beeld
-                </h3>
-                <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Voeg je pakketfoto toe en controleer meteen hoe je kaart eruitziet.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              <div className="space-y-2 rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/5">
-                <Label htmlFor="package_cover">Pakketfoto</Label>
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                      Geef je pakket een eigen foto
-                    </p>
-                    <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                      JPG, PNG, WebP of AVIF tot 5 MB. Deze foto komt terug in je pakketkaart en op je profiel.
-                    </p>
-                  </div>
-                  {coverPreviewUrl ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-                      onClick={clearCreateCover}
-                      disabled={isBusy}
-                    >
-                      <X className="size-4" />
-                      Verwijder foto
-                    </Button>
-                  ) : null}
-                </div>
-                <input
-                  id="package_cover"
-                  type="file"
-                  accept={packageCoverAccept}
-                  onChange={handleCreateCoverChange}
-                  disabled={isBusy}
-                  className="mt-2 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
-                />
-              </div>
-
-              <div className="space-y-2 rounded-[1.25rem] border border-white/75 bg-white/92 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]">
-                <Label htmlFor="package_cover_position">Coverpositie</Label>
-                <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Kies welk deel van de foto voorrang krijgt op de pakketkaart.
-                </p>
-                <select
-                  id="package_cover_position"
-                  value={coverPosition}
-                  onChange={(event) => setCoverPosition(event.target.value)}
-                  className="native-select h-11 w-full rounded-xl px-3 text-sm"
-                >
-                  {packageCoverPositionOptions.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label} - {option.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div
-                className={cn(
-                  "overflow-hidden rounded-[1.35rem] border text-slate-950 dark:text-slate-950",
-                  createVisual.softCardClass
-                )}
-              >
-                {coverPreviewUrl ? (
-                  <div className="relative h-44 overflow-hidden">
-                    <Image
-                      src={coverPreviewUrl}
-                      alt={naam ? `Coverpreview voor ${naam}` : "Coverpreview voor pakket"}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 768px) 100vw, 720px"
-                      className="object-cover"
-                      style={{ objectPosition: createCoverObjectPosition }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/10 to-transparent" />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3 text-xs font-medium tracking-[0.18em] text-slate-500 uppercase dark:border-white/10">
-                    <ImagePlus className="size-4" />
-                    Nog geen pakketfoto
-                  </div>
-                )}
-                <div className="p-4">
+          <div className="space-y-4 xl:sticky xl:top-4">
+            <div
+              className={cn(
+                "overflow-hidden rounded-[1.45rem] border text-slate-950 shadow-[0_22px_64px_-40px_rgba(15,23,42,0.32)] dark:text-slate-950",
+                createVisual.softCardClass
+              )}
+            >
+              <div className="border-b border-black/5 bg-white/60 p-4 backdrop-blur dark:border-white/10">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div
                       className={cn(
@@ -1266,70 +1231,227 @@ export function PackageStudio({
                     >
                       <createVisual.Icon className="size-5" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-950">
-                          {naam || "Live preview van je pakket"}
-                        </p>
-                        <Badge className="border border-slate-200 bg-white text-slate-700">
-                          {getRijlesTypeLabel(lesType)}
-                        </Badge>
-                        {badge ? (
-                          <Badge className="border border-slate-200 bg-white text-slate-700">
-                            {badge}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 text-sm leading-7 text-slate-600">
-                        {beschrijving ||
-                          "Zo ziet je gekozen icoon, kleurthema en eventuele pakketfoto er straks uit op je pakketkaart."}
+                    <div>
+                      <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                        Live pakketkaart
                       </p>
-                      {praktijkExamenPrijs.trim() ? (
-                        <p className="mt-2 text-sm font-medium text-slate-700">
-                          Praktijk-examen: {formatCurrency(Number(praktijkExamenPrijs))}
-                        </p>
-                      ) : null}
+                      <p className="mt-1 text-base font-semibold text-slate-950">
+                        {naam || "Nieuw pakket"}
+                      </p>
                     </div>
                   </div>
+                  <Badge className="border border-slate-200 bg-white text-slate-700">
+                    {createCompletedCount}/4 klaar
+                  </Badge>
                 </div>
               </div>
 
               {coverPreviewUrl ? (
-                <PackageCoverFocusEditor
-                  imageUrl={coverPreviewUrl}
-                  imageAlt={naam ? `Focuseditor voor ${naam}` : "Focuseditor voor pakketcover"}
-                  positionKey={coverPosition}
-                  focusX={coverFocusX}
-                  focusY={coverFocusY}
-                  onChange={(x, y) => {
-                    setCoverFocusX(x);
-                    setCoverFocusY(y);
-                  }}
-                  onReset={() => {
-                    setCoverFocusX(null);
-                    setCoverFocusY(null);
-                  }}
+                <div className="relative h-44 overflow-hidden">
+                  <Image
+                    src={coverPreviewUrl}
+                    alt={naam ? `Coverpreview voor ${naam}` : "Coverpreview voor pakket"}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 100vw, 520px"
+                    className="object-cover"
+                    style={{ objectPosition: createCoverObjectPosition }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/62 via-slate-950/12 to-transparent" />
+                </div>
+              ) : (
+                <div className="flex h-32 items-center justify-center border-b border-black/5 bg-white/45 dark:border-white/10">
+                  <div className="text-center text-slate-500">
+                    <ImagePlus className="mx-auto size-7" />
+                    <p className="mt-2 text-xs font-semibold tracking-[0.16em] uppercase">
+                      Foto optioneel
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="border border-slate-200 bg-white text-slate-700">
+                    {getRijlesTypeLabel(lesType)}
+                  </Badge>
+                  {badge ? (
+                    <Badge className="border border-slate-200 bg-white text-slate-700">
+                      {badge}
+                    </Badge>
+                  ) : null}
+                  {showPracticeExamPriceField ? (
+                    <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">
+                      Examenlaag
+                    </Badge>
+                  ) : null}
+                </div>
+
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  {beschrijving ||
+                    "Korte pakkettekst verschijnt hier terwijl je het aanbod opbouwt."}
+                </p>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {createPreviewStats.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-[1rem] border border-slate-200 bg-white/78 p-3"
+                    >
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <item.icon className="size-3.5" />
+                        <p className="text-[10px] font-semibold tracking-[0.16em] uppercase">
+                          {item.label}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-slate-950">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 rounded-[1.1rem] border border-slate-200 bg-white/78 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <ClipboardCheck className="size-4 text-slate-600" />
+                      <p className="text-sm font-semibold text-slate-950">
+                        Klaar om te plaatsen
+                      </p>
+                    </div>
+                    <Badge className="border border-slate-200 bg-white text-slate-700">
+                      {createWeeklyLimitLabel}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {createReadinessItems.map((item) => (
+                      <Badge
+                        key={item.label}
+                        variant={item.complete ? "success" : item.optional ? "info" : "default"}
+                      >
+                        {item.complete ? (
+                          <Check className="size-3" />
+                        ) : null}
+                        {item.label}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  className="mt-4 h-11 w-full rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white"
+                  onClick={handleCreatePackage}
                   disabled={isBusy}
-                />
-              ) : null}
+                >
+                  <PlusCircle className="size-4" />
+                  {isUploadingCover
+                    ? "Cover uploaden..."
+                    : isPending
+                      ? "Opslaan..."
+                      : "Pakket toevoegen"}
+                </Button>
+              </div>
+            </div>
+
+            <div
+              ref={createBeeldRef}
+              className={cn(
+                "relative scroll-mt-6 overflow-hidden rounded-[1.35rem] border bg-white/94 p-4 shadow-[0_20px_48px_-36px_rgba(15,23,42,0.18)] transition-all dark:bg-white/6",
+                activeStudioStep === "beeld"
+                  ? getStudioStepMeta("beeld").borderClass
+                  : "border-white/85 dark:border-white/10"
+              )}
+              onClick={() => setActiveStudioStep("beeld")}
+              onPointerEnter={() => setActiveStudioStep("beeld")}
+              onFocusCapture={() => setActiveStudioStep("beeld")}
+            >
+              <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-r from-slate-900/6 via-sky-500/8 to-transparent dark:from-white/6 dark:via-sky-400/10" />
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950/6 text-primary dark:bg-white/10 dark:text-sky-200">
+                  <ImagePlus className="size-4" />
+                </div>
+                <div>
+                  <p className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-700 uppercase dark:border-white/10 dark:bg-white/10 dark:text-slate-200">
+                    Stap 04
+                  </p>
+                  <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                    Beeld
+                  </h3>
+                  <p className="mt-1 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                    Voeg een pakketfoto toe en bepaal welk deel van de foto de kaart draagt.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2 rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/5">
+                  <Label htmlFor="package_cover">Pakketfoto</Label>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
+                      JPG, PNG, WebP of AVIF tot 5 MB.
+                    </p>
+                    {coverPreviewUrl ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                        onClick={clearCreateCover}
+                        disabled={isBusy}
+                      >
+                        <X className="size-4" />
+                        Verwijder foto
+                      </Button>
+                    ) : null}
+                  </div>
+                  <input
+                    id="package_cover"
+                    type="file"
+                    accept={packageCoverAccept}
+                    onChange={handleCreateCoverChange}
+                    disabled={isBusy}
+                    className="mt-2 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                  />
+                </div>
+
+                <div className="space-y-2 rounded-[1.25rem] border border-white/75 bg-white/92 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.76),rgba(15,23,42,0.84))]">
+                  <Label htmlFor="package_cover_position">Coverpositie</Label>
+                  <select
+                    id="package_cover_position"
+                    value={coverPosition}
+                    onChange={(event) => setCoverPosition(event.target.value)}
+                    className="native-select h-11 w-full rounded-xl px-3 text-sm"
+                  >
+                    {packageCoverPositionOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label} - {option.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {coverPreviewUrl ? (
+                  <PackageCoverFocusEditor
+                    imageUrl={coverPreviewUrl}
+                    imageAlt={naam ? `Focuseditor voor ${naam}` : "Focuseditor voor pakketcover"}
+                    positionKey={coverPosition}
+                    focusX={coverFocusX}
+                    focusY={coverFocusY}
+                    onChange={(x, y) => {
+                      setCoverFocusX(x);
+                      setCoverFocusY(y);
+                    }}
+                    onReset={() => {
+                      setCoverFocusX(null);
+                      setCoverFocusY(null);
+                    }}
+                    disabled={isBusy}
+                  />
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm leading-7 text-slate-500">
-            Tip: geef elk pakket een eigen foto, zodat leerlingen sneller vertrouwen voelen en je
-            aanbod direct professioneler oogt.
-          </p>
-          <Button
-            className="h-11 rounded-full bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white"
-            onClick={handleCreatePackage}
-            disabled={isBusy}
-          >
-            <PlusCircle className="size-4" />
-            {isUploadingCover ? "Cover uploaden..." : isPending ? "Opslaan..." : "Pakket toevoegen"}
-          </Button>
-        </div>
         </div>
       </div>
 

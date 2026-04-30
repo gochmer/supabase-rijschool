@@ -140,7 +140,8 @@ export function getStudioProgressItems({
   practiceExamPrice: string;
   hasCover: boolean;
 }) {
-  const basisComplete = Boolean(naam.trim() && badge.trim());
+  const hasBadge = Boolean(badge.trim());
+  const basisComplete = Boolean(naam.trim());
   const priceComplete = Boolean(
     prijs.trim() &&
       aantalLessen.trim() &&
@@ -153,7 +154,11 @@ export function getStudioProgressItems({
     {
       key: "basis" as const,
       title: "Basis",
-      detail: basisComplete ? "Naam en badge staan klaar." : "Voeg naam en badge toe.",
+      detail: basisComplete
+        ? hasBadge
+          ? "Naam en badge staan klaar."
+          : "Naam staat klaar; badge is optioneel."
+        : "Voeg een pakketnaam toe.",
       complete: basisComplete,
     },
     {
