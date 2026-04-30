@@ -49,6 +49,13 @@ export default async function InstructeurPakkettenPage() {
       pkg.praktijk_examen_prijs !== null &&
       pkg.praktijk_examen_prijs !== undefined
   ).length;
+  const completePackages = packages.filter(
+    (pkg) =>
+      Number(pkg.prijs ?? 0) > 0 &&
+      Number(pkg.lessen ?? 0) > 0 &&
+      pkg.beschrijving.trim().length >= 40
+  ).length;
+  const incompletePackageCount = packages.length - completePackages;
   const missingCoverCount = packages.filter(
     (pkg) => !pkg.cover_url && !pkg.cover_path
   ).length;
@@ -62,22 +69,31 @@ export default async function InstructeurPakkettenPage() {
   const activeTypes = Array.from(
     new Set(packages.map((pkg) => pkg.les_type).filter(Boolean))
   ) as RijlesType[];
-  const missingTypes = allLessonTypes.filter((type) => !activeTypes.includes(type));
+  const expansionTypes = allLessonTypes.filter((type) => !activeTypes.includes(type));
+  const focusPackageMissing = activePackages > 1 && featuredPackages === 0;
   const imageCoverage = packages.length
     ? Math.round(((packages.length - missingCoverCount) / packages.length) * 100)
     : 0;
-  const typeCoverage = Math.round(
-    (activeTypes.length / allLessonTypes.length) * 100
-  );
+  const activeCoverage = packages.length
+    ? Math.round((activePackages / packages.length) * 100)
+    : 0;
+  const offerCompleteness = packages.length
+    ? Math.round((completePackages / packages.length) * 100)
+    : 0;
+  const featuredCoverage = activePackages > 1 ? (featuredPackages > 0 ? 100 : 0) : 100;
   const packageHealthScore = packages.length
     ? Math.round(
-        (activePackages / Math.max(packages.length, 1)) * 45 +
-          (imageCoverage / 100) * 30 +
-          (typeCoverage / 100) * 25
+        (activeCoverage / 100) * 35 +
+          (offerCompleteness / 100) * 35 +
+          (imageCoverage / 100) * 15 +
+          (featuredCoverage / 100) * 15
       )
     : 0;
   const attentionCount =
-    missingCoverCount + pausedPackages + missingTypes.length;
+    missingCoverCount +
+    pausedPackages +
+    incompletePackageCount +
+    (focusPackageMissing ? 1 : 0);
 
   const heroSignals = [
     {
@@ -90,12 +106,12 @@ export default async function InstructeurPakkettenPage() {
         "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-400/20 dark:bg-emerald-500/10",
     },
     {
-      label: "Type dekking",
-      value: `${activeTypes.length}/${allLessonTypes.length}`,
+      label: "Aanbod compleet",
+      value: `${offerCompleteness}%`,
       hint:
-        activeTypes.length > 0
-          ? "Je aanbod spreidt zich over je lescategorieen."
-          : "Nog geen rijlestype ingevuld.",
+        completePackages > 0
+          ? "Prijs, lessen en tekst staan stevig."
+          : "Maak eerst de basis van je pakketten compleet.",
       tone:
         "border-sky-200/80 bg-sky-50/80 dark:border-sky-400/20 dark:bg-sky-500/10",
     },
@@ -176,9 +192,11 @@ export default async function InstructeurPakkettenPage() {
     {
       title:
         activeTypes.length > 0
-          ? `${activeTypes.length} type(s) zijn al afgedekt`
-          : "Typeverdeling is nog leeg",
-      text: "Een nette mix van lescategorieen maakt je aanbod sterker en geloofwaardiger.",
+          ? `Focus op ${activeTypes
+              .map((type) => getRijlesTypeLabel(type).toLowerCase())
+              .join(", ")}`
+          : "Nog geen rijlestype gekozen",
+      text: "Toon vooral de categorieen die je echt aanbiedt. Je hoeft niet ieder voertuigtype te vullen.",
       icon: LayoutTemplate,
       tone:
         "border-slate-200/80 bg-slate-50/90 dark:border-slate-400/20 dark:bg-slate-500/10",
@@ -202,31 +220,44 @@ export default async function InstructeurPakkettenPage() {
         : "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
     },
     {
+      title: incompletePackageCount
+        ? `${incompletePackageCount} pakket(en) missen basisinfo`
+        : "Basisinfo staat goed",
+      text: "Prijs, aantal lessen en een korte duidelijke beschrijving bepalen of leerlingen het aanbod snel begrijpen.",
+      icon: incompletePackageCount ? CircleAlert : CheckCircle2,
+      tone: incompletePackageCount
+        ? "border-amber-200/80 bg-amber-50/90 dark:border-amber-400/20 dark:bg-amber-500/10"
+        : "border-emerald-200/80 bg-emerald-50/90 dark:border-emerald-400/20 dark:bg-emerald-500/10",
+      iconTone: incompletePackageCount
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200"
+        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
+    },
+    {
       title: pausedPackages
         ? `${pausedPackages} pakket(en) staan gepauzeerd`
         : "Geen gepauzeerde pakketten",
       text: "Laat alleen gepauzeerd wat je nu bewust niet wilt tonen of verkopen.",
       icon: pausedPackages ? CircleAlert : CheckCircle2,
       tone: pausedPackages
-        ? "border-amber-200/80 bg-amber-50/90 dark:border-amber-400/20 dark:bg-amber-500/10"
+        ? "border-slate-200/80 bg-slate-50/90 dark:border-slate-400/20 dark:bg-slate-500/10"
         : "border-emerald-200/80 bg-emerald-50/90 dark:border-emerald-400/20 dark:bg-emerald-500/10",
       iconTone: pausedPackages
-        ? "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200"
+        ? "bg-slate-100 text-slate-700 dark:bg-slate-400/15 dark:text-slate-200"
         : "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
     },
     {
-      title: missingTypes.length
-        ? `Nog geen ${missingTypes
-            .map((type) => getRijlesTypeLabel(type).toLowerCase())
-            .join(", ")}`
-        : "Alle hoofdtypes zijn aanwezig",
-      text: "Typegaten zijn vaak de snelste manier waarop een aanbod incompleet kan aanvoelen.",
-      icon: missingTypes.length ? CircleAlert : CheckCircle2,
-      tone: missingTypes.length
-        ? "border-slate-200/80 bg-slate-50/90 dark:border-slate-400/20 dark:bg-slate-500/10"
+      title: focusPackageMissing
+        ? "Nog geen focuspakket gekozen"
+        : featuredPackages
+          ? `${featuredPackages} focuspakket ingesteld`
+          : "Focuspakket niet nodig",
+      text: "Kies een uitgelicht pakket zodra je meerdere pakketten hebt, zodat de keuze voor leerlingen rustiger wordt.",
+      icon: focusPackageMissing ? Pin : CheckCircle2,
+      tone: focusPackageMissing
+        ? "border-sky-200/80 bg-sky-50/90 dark:border-sky-400/20 dark:bg-sky-500/10"
         : "border-emerald-200/80 bg-emerald-50/90 dark:border-emerald-400/20 dark:bg-emerald-500/10",
-      iconTone: missingTypes.length
-        ? "bg-slate-100 text-slate-700 dark:bg-slate-400/15 dark:text-slate-200"
+      iconTone: focusPackageMissing
+        ? "bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200"
         : "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
     },
   ];
@@ -317,9 +348,9 @@ export default async function InstructeurPakkettenPage() {
                   hint: "Pakketfoto's",
                 },
                 {
-                  label: "Type dekking",
-                  value: `${typeCoverage}%`,
-                  hint: "Lesmix",
+                  label: "Basisinfo",
+                  value: `${offerCompleteness}%`,
+                  hint: "Prijs, lessen, tekst",
                 },
               ].map((item, index) => (
                 <div
@@ -375,19 +406,19 @@ export default async function InstructeurPakkettenPage() {
         ))}
       </div>
 
-      <Tabs defaultValue="overzicht" className="space-y-4">
+      <Tabs defaultValue="studio" className="space-y-4">
         <TabsList className="h-auto w-full rounded-[1.45rem] border border-white/60 bg-white/75 p-1 dark:border-white/10 dark:bg-white/5">
-          <TabsTrigger
-            value="overzicht"
-            className="min-h-10 rounded-[1rem] px-3 text-sm"
-          >
-            Overzicht
-          </TabsTrigger>
           <TabsTrigger
             value="studio"
             className="min-h-10 rounded-[1rem] px-3 text-sm"
           >
             Studio
+          </TabsTrigger>
+          <TabsTrigger
+            value="overzicht"
+            className="min-h-10 rounded-[1rem] px-3 text-sm"
+          >
+            Aanbodcheck
           </TabsTrigger>
         </TabsList>
 
@@ -496,13 +527,16 @@ export default async function InstructeurPakkettenPage() {
                 </div>
                 <div className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-400/20 dark:bg-slate-500/10">
                   <p className="font-semibold text-slate-950 dark:text-white">
-                    {missingTypes.length
-                      ? `${missingTypes.length} type(s) missen nog aanbod`
-                      : "Je hoofdtypes zijn compleet afgedekt"}
+                    {activeTypes.length
+                      ? `Je aanbod focust nu op ${activeTypes
+                          .map((type) => getRijlesTypeLabel(type).toLowerCase())
+                          .join(", ")}`
+                      : "Nog geen rijlestype gekozen"}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Een brede maar rustige typeverdeling helpt leerlingen sneller begrijpen
-                    waar jij sterk in bent.
+                    {expansionTypes.length
+                      ? "Voeg motor of vrachtwagen alleen toe als je die lessen echt aanbiedt; specialisatie is sterker dan een kunstmatig compleet aanbod."
+                      : "Alle hoofdtypes zijn aanwezig. Houd de tekst per pakket kort genoeg om scanbaar te blijven."}
                   </p>
                 </div>
               </CardContent>

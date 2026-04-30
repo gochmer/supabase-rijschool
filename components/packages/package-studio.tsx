@@ -139,6 +139,7 @@ export function PackageStudio({
   const [editCoverPath, setEditCoverPath] = useState<string | null>(null);
   const [editCoverPreviewUrl, setEditCoverPreviewUrl] = useState<string | null>(null);
   const [editCoverChanged, setEditCoverChanged] = useState(false);
+  const [packagePendingDelete, setPackagePendingDelete] = useState<Pakket | null>(null);
   const createBasisRef = useRef<HTMLDivElement | null>(null);
   const createPrijsRef = useRef<HTMLDivElement | null>(null);
   const createTekstRef = useRef<HTMLDivElement | null>(null);
@@ -482,6 +483,7 @@ export function PackageStudio({
       const result = await deletePackageAction(packageId);
 
       if (result.success) {
+        setPackagePendingDelete(null);
         toast.success(result.message);
       } else {
         toast.error(result.message);
@@ -1688,22 +1690,8 @@ export function PackageStudio({
                       onClick={() => openEditDialog(pkg)}
                       disabled={isBusy}
                     >
-                      <ImagePlus className="size-4" />
-                      Foto wijzigen
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "rounded-full",
-                        isLeadCard
-                          ? "border-white/20 bg-white/10 text-white hover:bg-white/16 hover:text-white"
-                          : "border-slate-200 bg-white"
-                      )}
-                      onClick={() => openEditDialog(pkg)}
-                      disabled={isBusy}
-                    >
                       <Edit3 className="size-4" />
-                      Inhoud wijzigen
+                      Bewerken
                     </Button>
                     <Button
                       variant="outline"
@@ -1731,7 +1719,7 @@ export function PackageStudio({
                     <Button
                       variant="destructive"
                       className={cn(isLeadCard ? "bg-white/12 text-white hover:bg-white/20" : "")}
-                      onClick={() => handleDeletePackage(pkg.id)}
+                      onClick={() => setPackagePendingDelete(pkg)}
                       disabled={isBusy}
                     >
                       <Trash2 className="size-4" />
@@ -1751,6 +1739,60 @@ export function PackageStudio({
         )}
         </div>
       </div>
+
+      <Dialog
+        open={packagePendingDelete !== null}
+        onOpenChange={(open) => !open && setPackagePendingDelete(null)}
+      >
+        <DialogContent className="max-w-md border border-slate-200 bg-white shadow-[0_32px_90px_-54px_rgba(15,23,42,0.36)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
+          <DialogHeader>
+            <DialogTitle className="text-slate-950 dark:text-white">
+              Pakket verwijderen?
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-300">
+              Dit haalt het pakket uit je aanbod. Pauzeren is veiliger als je
+              het later misschien opnieuw wilt gebruiken.
+            </DialogDescription>
+          </DialogHeader>
+
+          {packagePendingDelete ? (
+            <div className="rounded-[1.15rem] border border-rose-200 bg-rose-50/90 p-4 dark:border-rose-400/20 dark:bg-rose-500/10">
+              <p className="font-semibold text-rose-950 dark:text-rose-100">
+                {packagePendingDelete.naam}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-rose-800 dark:text-rose-100/80">
+                {formatCurrency(packagePendingDelete.prijs)} -{" "}
+                {packagePendingDelete.lessen || "Flexibel"} lessen -{" "}
+                {getRijlesTypeLabel(packagePendingDelete.les_type)}
+              </p>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+              onClick={() => setPackagePendingDelete(null)}
+              disabled={isBusy}
+            >
+              Annuleren
+            </Button>
+            <Button
+              variant="destructive"
+              className="rounded-full"
+              onClick={() =>
+                packagePendingDelete
+                  ? handleDeletePackage(packagePendingDelete.id)
+                  : undefined
+              }
+              disabled={isBusy || !packagePendingDelete}
+            >
+              <Trash2 className="size-4" />
+              {isPending ? "Verwijderen..." : "Definitief verwijderen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editingPackageId !== null} onOpenChange={(open) => !open && closeEditDialog()}>
         <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto border border-slate-200 bg-white p-0 shadow-[0_32px_90px_-54px_rgba(15,23,42,0.36)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white dark:shadow-[0_32px_90px_-54px_rgba(15,23,42,0.72)]">
