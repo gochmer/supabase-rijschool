@@ -37,8 +37,8 @@ export default async function AdminBetalingenPage() {
               value: `${payments.filter((payment) => payment.status === "betaald").length} betaling(en) afgerond`,
             },
             {
-              label: "Providers",
-              value: "Mock providerlaag klaar voor echte betaalintegratie.",
+              label: "Betaalkoppeling",
+              value: "Voorbereid op live betaalverwerking zodra de provider actief is.",
             },
           ]}
         />

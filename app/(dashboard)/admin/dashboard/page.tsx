@@ -1,19 +1,16 @@
 import Link from "next/link";
 import { AlertCircle, LifeBuoy, ShieldCheck, Star, UserCheck } from "lucide-react";
 
-import { CommandCenter } from "@/components/admin/command-center";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import {
   DashboardFocusPanel,
   type DashboardFocusItem,
 } from "@/components/dashboard/dashboard-focus-panel";
-import { InsightPanel } from "@/components/dashboard/insight-panel";
 import {
   OnboardingPanel,
   type OnboardingStep,
 } from "@/components/dashboard/onboarding-panel";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { QuickActionGrid } from "@/components/dashboard/quick-action-grid";
 import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -285,67 +282,20 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
-      <QuickActionGrid
-        items={[
-          {
-            href: "/admin/instructeurs",
-            label: "Moderatie",
-            title: "Beoordeel instructeurs",
-            description: "Werk openstaande goedkeuringen snel weg en houd kwaliteit zichtbaar onder controle.",
-          },
-          {
-            href: "/admin/reviews",
-            label: "Reputatie",
-            title: "Modereren van reviews",
-            description: "Beheer zichtbaarheid, markeringen en kwaliteit van publieke feedback.",
-          },
-          {
-            href: "/admin/leerlingen",
-            label: "Pakketten",
-            title: "Wijs pakketten toe",
-            description: "Koppel leerlingen sneller aan de juiste trajecten en betalingen.",
-          },
-        ]}
+      <DataTableCard
+        title="Recente betalingen"
+        description="Laatste transacties op het platform met duidelijke statusweergave."
+        headers={["Gebruiker", "Bedrag", "Datum", "Status"]}
+        rows={payments.slice(0, 6).map((payment) => [
+          payment.gebruiker,
+          payment.bedrag,
+          payment.datum,
+          payment.status,
+        ])}
+        badgeColumns={[3]}
+        emptyTitle="Nog geen recente betalingen"
+        emptyDescription="Nieuwe platformbetalingen verschijnen hier automatisch."
       />
-
-      <CommandCenter />
-
-      <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-        <InsightPanel
-          title="Controlekamer"
-          description="Operationele aandachtspunten die het platform vandaag direct beinvloeden."
-          items={[
-            {
-              label: "Goedkeuringsqueue",
-              value: `${approvalQueue.length} instructeur(en) wachten op een besluit`,
-              status: approvalQueue.length ? "Actie nodig" : "Bij"
-            },
-            {
-              label: "Open support",
-              value: `${tickets.filter((ticket) => ticket.status !== "afgesloten").length} ticket(s) vragen opvolging`,
-            },
-            {
-              label: "Recente activiteit",
-              value: `${activity.length} relevante platformupdates in de feed`,
-            },
-          ]}
-        />
-
-        <DataTableCard
-          title="Recente betalingen"
-          description="Laatste transacties op het platform met duidelijke statusweergave."
-          headers={["Gebruiker", "Bedrag", "Datum", "Status"]}
-          rows={payments.slice(0, 6).map((payment) => [
-            payment.gebruiker,
-            payment.bedrag,
-            payment.datum,
-            payment.status,
-          ])}
-          badgeColumns={[3]}
-          emptyTitle="Nog geen recente betalingen"
-          emptyDescription="Nieuwe platformbetalingen verschijnen hier automatisch."
-        />
-      </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <DataTableCard

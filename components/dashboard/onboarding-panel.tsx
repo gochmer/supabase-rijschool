@@ -20,12 +20,14 @@ export function OnboardingPanel({
   description,
   steps,
   accent = "sky",
+  hideWhenComplete = false,
 }: {
   eyebrow: string;
   title: string;
   description: string;
   steps: OnboardingStep[];
   accent?: "sky" | "emerald" | "amber";
+  hideWhenComplete?: boolean;
 }) {
   const completedCount = steps.filter((step) => step.complete).length;
   const progress = steps.length ? Math.round((completedCount / steps.length) * 100) : 0;
@@ -35,6 +37,10 @@ export function OnboardingPanel({
       : accent === "amber"
         ? "from-amber-300 via-sky-400 to-slate-950"
         : "from-sky-300 via-blue-500 to-slate-950";
+
+  if (hideWhenComplete && steps.length > 0 && completedCount === steps.length) {
+    return null;
+  }
 
   return (
     <section className="overflow-hidden rounded-[1.55rem] border border-white/70 bg-white/86 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.36)] backdrop-blur dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">

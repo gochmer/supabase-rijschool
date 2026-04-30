@@ -53,7 +53,7 @@ export default async function LeerlingInstellingenPage() {
           <CardHeader>
             <CardTitle>Notificatiecentrum</CardTitle>
             <CardDescription>
-              Live meldingen uit Supabase, met fallback op demo-updates zolang je project nog wordt gevuld.
+              Meldingen over aanvragen, lessen en accountupdates verschijnen hier zodra ze beschikbaar zijn.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
