@@ -1,5 +1,17 @@
-import { Bell, CalendarClock, CheckCircle2, Flame, Sparkles } from "lucide-react";
+import {
+  Bell,
+  CalendarClock,
+  CalendarPlus,
+  CheckCircle2,
+  Flame,
+  Inbox,
+  Sparkles,
+} from "lucide-react";
 
+import {
+  DashboardFocusPanel,
+  type DashboardFocusItem,
+} from "@/components/dashboard/dashboard-focus-panel";
 import { InstructorDashboardTabs } from "@/components/dashboard/instructor-dashboard-tabs";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +26,21 @@ import {
 import { getCurrentNotifications } from "@/lib/data/notifications";
 import { getInstructorGrowthInsights } from "@/lib/data/instructor-growth-insights";
 import { getInstructorDashboardRadarInsights } from "@/lib/data/instructor-dashboard-radar";
+
+const amsterdamDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Amsterdam",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function getAmsterdamDateKey(dateValue: string | null | undefined) {
+  if (!dateValue) {
+    return "";
+  }
+
+  return amsterdamDateFormatter.format(new Date(dateValue));
+}
 
 export default async function InstructeurDashboardPage() {
   const [
@@ -43,8 +70,15 @@ export default async function InstructeurDashboardPage() {
   const plannedLessons = lessons.filter((item) =>
     ["ingepland", "geaccepteerd"].includes(item.status)
   );
+  const todayKey = amsterdamDateFormatter.format(new Date());
+  const todayLessons = plannedLessons.filter(
+    (lesson) => getAmsterdamDateKey(lesson.start_at) === todayKey
+  );
   const nextLessons = plannedLessons.slice(0, 5);
   const unreadNotifications = notifications.filter((item) => item.ongelezen);
+  const firstOpenRequest = openRequests[0] ?? null;
+  const firstTodayLesson = todayLessons[0] ?? null;
+  const agendaGapCount = growthInsights.fillGaps.length;
   const focusScore = Math.min(
     100,
     55 +
@@ -86,6 +120,84 @@ export default async function InstructeurDashboardPage() {
           ? "Voorstel, nudge of upgrade wacht"
           : "Geen directe groeiactie open",
       icon: Sparkles,
+    },
+  ];
+  const instructorPrimaryFocus: DashboardFocusItem = firstOpenRequest
+    ? {
+        label: "Eerst opvolgen",
+        title: "Nieuwe aanvraag klaarzetten",
+        value: "Actie nodig",
+        description: `${firstOpenRequest.leerling_naam} wacht op een besluit voor ${firstOpenRequest.voorkeursdatum}, ${firstOpenRequest.tijdvak}.`,
+        href: "/instructeur/aanvragen",
+        ctaLabel: "Open aanvragen",
+        icon: Inbox,
+        tone: "warning",
+      }
+    : firstTodayLesson
+      ? {
+          label: "Eerst opvolgen",
+          title: "Vandaag lesgeven",
+          value: firstTodayLesson.tijd,
+          description: `${firstTodayLesson.titel} met ${firstTodayLesson.leerling_naam}. Locatie: ${firstTodayLesson.locatie}.`,
+          href: "/instructeur/lessen",
+          ctaLabel: "Open lessen",
+          icon: CalendarClock,
+          tone: "success",
+        }
+      : {
+          label: "Eerst opvolgen",
+          title: "Agenda vullen",
+          value: agendaGapCount ? `${agendaGapCount} kans${agendaGapCount === 1 ? "" : "en"}` : "Rustig",
+          description: agendaGapCount
+            ? "Er zijn open momenten die je kunt omzetten naar nieuwe lesblokken."
+            : "Je hebt geen urgente aanvraag of les vandaag; check je beschikbaarheid voor de komende week.",
+          href: "/instructeur/beschikbaarheid",
+          ctaLabel: "Open agenda",
+          icon: CalendarPlus,
+          tone: agendaGapCount ? "warning" : "default",
+        };
+  const instructorFocusItems: DashboardFocusItem[] = [
+    {
+      label: "Nieuwe aanvragen",
+      title: openRequests.length
+        ? `${openRequests.length} aanvraag${openRequests.length === 1 ? "" : "en"} wacht${openRequests.length === 1 ? "" : "en"}`
+        : "Geen open aanvragen",
+      value: `${openRequests.length}`,
+      description: firstOpenRequest
+        ? `${firstOpenRequest.leerling_naam} - ${firstOpenRequest.voorkeursdatum}, ${firstOpenRequest.tijdvak}`
+        : "Je inbox is bijgewerkt; nieuwe aanvragen verschijnen hier meteen.",
+      href: "/instructeur/aanvragen",
+      ctaLabel: "Beheer aanvragen",
+      icon: Inbox,
+      tone: openRequests.length ? "warning" : "success",
+    },
+    {
+      label: "Vandaag lessen",
+      title: todayLessons.length
+        ? `${todayLessons.length} les${todayLessons.length === 1 ? "" : "sen"} vandaag`
+        : "Geen lessen vandaag",
+      value: `${todayLessons.length}`,
+      description: firstTodayLesson
+        ? `${firstTodayLesson.tijd} met ${firstTodayLesson.leerling_naam}`
+        : "Gebruik de ruimte om administratie, profiel of beschikbaarheid bij te werken.",
+      href: "/instructeur/lessen",
+      ctaLabel: "Open lessen",
+      icon: CalendarClock,
+      tone: todayLessons.length ? "success" : "default",
+    },
+    {
+      label: "Agenda invullen",
+      title: agendaGapCount
+        ? `${agendaGapCount} open moment${agendaGapCount === 1 ? "" : "en"}`
+        : "Agenda staat rustig",
+      value: `${agendaGapCount}`,
+      description: agendaGapCount
+        ? "Vul open blokken of stuur een nudge om stille agenda-ruimte te benutten."
+        : "Controleer of je komende week voldoende open boekbare momenten heeft.",
+      href: "/instructeur/beschikbaarheid",
+      ctaLabel: "Open agenda",
+      icon: CalendarPlus,
+      tone: agendaGapCount ? "warning" : "success",
     },
   ];
 
@@ -135,6 +247,14 @@ export default async function InstructeurDashboardPage() {
           </div>
         </div>
       </section>
+
+      <DashboardFocusPanel
+        eyebrow="Vandaag eerst"
+        title="Je cockpit begint met de acties die geld en rust opleveren"
+        description="Nieuwe aanvragen, lessen van vandaag en agenda-gaten staan vooraan, zodat je niet hoeft te zoeken naar de eerstvolgende stap."
+        primary={instructorPrimaryFocus}
+        items={instructorFocusItems}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {dashboardSummary.map((item) => (

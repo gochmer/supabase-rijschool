@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { Bell, CalendarClock, ClipboardList, Search, Target } from "lucide-react";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import {
+  DashboardFocusPanel,
+  type DashboardFocusItem,
+} from "@/components/dashboard/dashboard-focus-panel";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
 import { LessonCheckinPanel } from "@/components/dashboard/lesson-checkin-board";
 import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
@@ -47,6 +52,84 @@ export default async function LeerlingDashboardPage() {
     ["geaccepteerd", "ingepland"].includes(item.status)
   );
   const unreadNotifications = notifications.filter((item) => item.ongelezen);
+  const latestPendingRequest = pendingRequests[0] ?? null;
+  const learnerNextStep: DashboardFocusItem = nextLesson
+    ? {
+        label: "Wat moet ik nu doen?",
+        title: "Bereid je volgende les voor",
+        value: "Nu handig",
+        description:
+          "Bekijk je lesmoment, locatie en voortgang zodat je precies weet waar je aan toe bent.",
+        href: "/leerling/boekingen",
+        ctaLabel: "Open boekingen",
+        icon: Target,
+        tone: "success",
+      }
+    : latestPendingRequest
+      ? {
+          label: "Wat moet ik nu doen?",
+          title: "Houd je aanvraag in beeld",
+          value: "Wacht op reactie",
+          description: `Je aanvraag bij ${latestPendingRequest.instructeur_naam} staat open. Check meldingen of vergelijk alvast een alternatief.`,
+          href: "/leerling/boekingen",
+          ctaLabel: "Open aanvragen",
+          icon: ClipboardList,
+          tone: "warning",
+        }
+      : {
+          label: "Wat moet ik nu doen?",
+          title: "Start met een proefles",
+          value: "Begin hier",
+          description:
+            "Vergelijk instructeurs en vraag direct een proefles of passend pakket aan.",
+          href: "/instructeurs",
+          ctaLabel: "Zoek instructeur",
+          icon: Search,
+          tone: "default",
+        };
+
+  const learnerFocusItems: DashboardFocusItem[] = [
+    {
+      label: "Volgende les",
+      title: nextLesson ? nextLesson.titel : "Nog geen les ingepland",
+      value: nextLesson ? nextLesson.datum : "Geen les",
+      description: nextLesson
+        ? `${nextLesson.tijd} met ${nextLesson.instructeur_naam}. Locatie: ${nextLesson.locatie}.`
+        : "Zodra een instructeur accepteert of een les plant, verschijnt je eerstvolgende moment hier.",
+      href: "/leerling/boekingen",
+      ctaLabel: "Bekijk lessen",
+      icon: CalendarClock,
+      tone: nextLesson ? "success" : "default",
+    },
+    {
+      label: "Open aanvraag",
+      title: pendingRequests.length
+        ? `${pendingRequests.length} aanvraag${pendingRequests.length === 1 ? "" : "en"} wacht op reactie`
+        : "Geen open aanvragen",
+      value: `${pendingRequests.length}`,
+      description: latestPendingRequest
+        ? `${latestPendingRequest.instructeur_naam} - ${latestPendingRequest.voorkeursdatum}, ${latestPendingRequest.tijdvak}`
+        : "Je kunt rustig een nieuwe proefles of pakket aanvragen wanneer je klaar bent.",
+      href: "/leerling/boekingen",
+      ctaLabel: "Open aanvragen",
+      icon: ClipboardList,
+      tone: pendingRequests.length ? "warning" : "success",
+    },
+    {
+      label: "Meldingen",
+      title: unreadNotifications.length
+        ? `${unreadNotifications.length} nieuwe melding${unreadNotifications.length === 1 ? "" : "en"}`
+        : "Geen nieuwe meldingen",
+      value: `${unreadNotifications.length}`,
+      description: unreadNotifications.length
+        ? "Lees reacties van instructeurs en updates over je traject op tijd."
+        : "Je hoeft nu niets op te volgen vanuit meldingen.",
+      href: "/leerling/berichten",
+      ctaLabel: "Open berichten",
+      icon: Bell,
+      tone: unreadNotifications.length ? "warning" : "success",
+    },
+  ];
 
   return (
     <>
@@ -64,6 +147,14 @@ export default async function LeerlingDashboardPage() {
             </Button>
           </>
         }
+      />
+
+      <DashboardFocusPanel
+        eyebrow="Vandaag belangrijk"
+        title="Je rijlestraject in een oogopslag"
+        description="Bovenaan staat meteen wat nu telt: je volgende les, open aanvragen en de slimste vervolgstap."
+        primary={learnerNextStep}
+        items={learnerFocusItems}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
