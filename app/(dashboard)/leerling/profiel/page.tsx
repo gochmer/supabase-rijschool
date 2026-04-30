@@ -70,6 +70,9 @@ export default async function LeerlingProfielPage() {
       icon: User,
       label: "Accountkwaliteit",
       value: `${accountQuality}%`,
+      accentClassName: "from-sky-400/20 via-cyan-300/12 to-white/5",
+      iconClassName: "bg-sky-400/14 text-sky-100",
+      barClassName: "bg-sky-300",
       detail:
         accountQuality === 100
           ? "Je basisgegevens en planning staan professioneel en compleet."
@@ -79,6 +82,9 @@ export default async function LeerlingProfielPage() {
       icon: CalendarDays,
       label: "Volgende les",
       value: nextLesson ? `${nextLesson.datum}` : "Nog niet ingepland",
+      accentClassName: "from-emerald-400/20 via-teal-300/12 to-white/5",
+      iconClassName: "bg-emerald-400/14 text-emerald-100",
+      barClassName: "bg-emerald-300",
       detail: nextLesson
         ? `${nextLesson.tijd} met ${nextLesson.instructeur_naam}`
         : "Zodra je een les bevestigt zie je hem hier direct terug.",
@@ -87,6 +93,9 @@ export default async function LeerlingProfielPage() {
       icon: Heart,
       label: "Favorieten",
       value: `${favoriteCount}`,
+      accentClassName: "from-rose-400/20 via-pink-300/12 to-white/5",
+      iconClassName: "bg-rose-400/14 text-rose-100",
+      barClassName: "bg-rose-300",
       detail:
         favoriteCount > 0
           ? "Je bewaarde instructeurs blijven hier snel inzichtelijk."
@@ -96,6 +105,9 @@ export default async function LeerlingProfielPage() {
       icon: Package,
       label: "Pakket",
       value: packageLabel,
+      accentClassName: "from-amber-400/22 via-orange-300/12 to-white/5",
+      iconClassName: "bg-amber-400/14 text-amber-100",
+      barClassName: "bg-amber-300",
       detail: packageOverview.assignedPackage
         ? `${packageOverview.assignedPackage.lessen || "Flexibel"} lessen - ${packageOverview.assignedPackage.prijsLabel}`
         : `${packageOverview.availablePackages.length} pakketopties staan klaar.`,
@@ -156,18 +168,32 @@ export default async function LeerlingProfielPage() {
                 action: "Boekingen bekijken",
               };
   const NextProfileStepIcon = nextProfileStep.icon;
+  const heroChips = [
+    {
+      label: `${progressValue}% voortgang`,
+      className: "border-sky-300/18 bg-sky-400/12 text-sky-100",
+    },
+    {
+      label: `${favoriteCount} favorieten`,
+      className: "border-rose-300/18 bg-rose-400/12 text-rose-100",
+    },
+    {
+      label: packageLabel,
+      className: "border-amber-300/18 bg-amber-400/12 text-amber-100",
+    },
+  ];
 
   return (
     <div className="space-y-6 text-white">
       <section
-        className={`relative overflow-hidden p-6 sm:p-7 xl:p-8 print:hidden ${shellCardClassName}`}
+        className={`relative overflow-hidden p-5 sm:p-6 xl:p-7 print:hidden ${shellCardClassName}`}
       >
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.18),transparent_26%),radial-gradient(circle_at_84%_18%,rgba(56,189,248,0.1),transparent_22%),radial-gradient(circle_at_54%_72%,rgba(245,158,11,0.08),transparent_24%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.18),transparent_27%),radial-gradient(circle_at_84%_18%,rgba(16,185,129,0.13),transparent_24%),radial-gradient(circle_at_62%_76%,rgba(245,158,11,0.13),transparent_26%),radial-gradient(circle_at_18%_88%,rgba(244,63,94,0.1),transparent_22%)]" />
         </div>
 
-        <div className="relative grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-5">
+        <div className="relative grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-slate-200 uppercase">
                 Profile suite
@@ -178,7 +204,7 @@ export default async function LeerlingProfielPage() {
             </div>
 
             <div className="space-y-3">
-              <h1 className="max-w-[12ch] text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+              <h1 className="max-w-[13ch] text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Een strakke, professionele basis voor je leerlingaccount.
               </h1>
               <p className="max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
@@ -189,16 +215,12 @@ export default async function LeerlingProfielPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {[
-                `${progressValue}% voortgang`,
-                `${favoriteCount} favorieten`,
-                packageLabel,
-              ].map((item) => (
+              {heroChips.map((item) => (
                 <div
-                  key={item}
-                  className="rounded-full border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.07),rgba(148,163,184,0.08),rgba(15,23,42,0.3))] px-3.5 py-2 text-[12px] font-semibold text-slate-100 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.42)]"
+                  key={item.label}
+                  className={`rounded-full border px-3.5 py-2 text-[12px] font-semibold shadow-[0_18px_36px_-28px_rgba(15,23,42,0.42)] ${item.className}`}
                 >
-                  {item}
+                  {item.label}
                 </div>
               ))}
             </div>
@@ -289,26 +311,8 @@ export default async function LeerlingProfielPage() {
         </div>
       </section>
 
-      <div className="grid gap-4 print:hidden md:grid-cols-2 xl:grid-cols-4">
-        {overviewCards.map((card) => (
-          <div
-            key={card.label}
-            className={`p-5 ${shellCardClassName}`}
-          >
-            <div className="flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-slate-100">
-              <card.icon className="size-5" />
-            </div>
-            <p className="mt-4 text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
-              {card.label}
-            </p>
-            <p className="mt-2 text-xl font-semibold text-white">{card.value}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{card.detail}</p>
-          </div>
-        ))}
-      </div>
-
       <Tabs defaultValue="profiel" className="space-y-4 print:hidden">
-        <TabsList className="w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-white/6 p-1 text-slate-300">
+        <TabsList className="sticky top-28 z-10 w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] backdrop-blur-xl">
           <TabsTrigger value="profiel" className="h-10 rounded-full px-4 data-active:bg-white data-active:text-slate-950">
             Profiel
           </TabsTrigger>
@@ -316,6 +320,26 @@ export default async function LeerlingProfielPage() {
             Voortgang
           </TabsTrigger>
         </TabsList>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {overviewCards.map((card) => (
+            <div
+              key={card.label}
+              className={`relative overflow-hidden p-5 ${shellCardClassName}`}
+            >
+              <div className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${card.accentClassName}`} />
+              <div className={`relative flex size-11 items-center justify-center rounded-2xl border border-white/10 ${card.iconClassName}`}>
+                <card.icon className="size-5" />
+              </div>
+              <div className={`relative mt-4 h-1 w-10 rounded-full ${card.barClassName}`} />
+              <p className="relative mt-3 text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
+                {card.label}
+              </p>
+              <p className="relative mt-2 text-xl font-semibold text-white">{card.value}</p>
+              <p className="relative mt-2 text-sm leading-6 text-slate-300">{card.detail}</p>
+            </div>
+          ))}
+        </div>
 
         <TabsContent value="profiel" className="mt-0">
           <section
@@ -331,8 +355,8 @@ export default async function LeerlingProfielPage() {
                   Je leerlinggegevens professioneel op orde
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
-                  Vul je gegevens in en zie meteen hoe compleet je profielkaart is.
-                  De voortgang staat in een aparte tab, zodat deze pagina korter blijft.
+                  Vul je gegevens in en houd profiel, planning en voortgang rustig
+                  bij elkaar zonder dat het overzicht zwaar wordt.
                 </p>
               </div>
               <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-slate-200 uppercase">

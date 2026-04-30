@@ -44,6 +44,19 @@ export default async function LeerlingInstellingenPage() {
         description="Je instellingen zijn compacter gegroepeerd: voorkeuren, notificaties en privacy staan ieder in hun eigen tab."
       />
 
+      <Tabs defaultValue="voorkeuren" className="space-y-4">
+        <TabsList className="sticky top-28 z-10 w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] backdrop-blur-xl">
+          <TabsTrigger value="voorkeuren" className={tabTriggerClassName}>
+            Voorkeuren
+          </TabsTrigger>
+          <TabsTrigger value="meldingen" className={tabTriggerClassName}>
+            Meldingen
+          </TabsTrigger>
+          <TabsTrigger value="privacy" className={tabTriggerClassName}>
+            Privacy
+          </TabsTrigger>
+        </TabsList>
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {preferenceCards.map((item) => (
           <div
@@ -69,19 +82,6 @@ export default async function LeerlingInstellingenPage() {
           </div>
         ))}
       </div>
-
-      <Tabs defaultValue="voorkeuren" className="space-y-4">
-        <TabsList className="w-full justify-start overflow-x-auto rounded-[1.35rem] border border-white/10 bg-white/6 p-1 text-slate-300">
-          <TabsTrigger value="voorkeuren" className={tabTriggerClassName}>
-            Voorkeuren
-          </TabsTrigger>
-          <TabsTrigger value="meldingen" className={tabTriggerClassName}>
-            Meldingen
-          </TabsTrigger>
-          <TabsTrigger value="privacy" className={tabTriggerClassName}>
-            Privacy
-          </TabsTrigger>
-        </TabsList>
 
         <TabsContent value="voorkeuren" className="mt-0">
           <section className={urbanCardClassName}>

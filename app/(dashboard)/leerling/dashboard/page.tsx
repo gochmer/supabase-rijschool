@@ -210,6 +210,19 @@ export default async function LeerlingDashboardPage() {
         }
       />
 
+      <Tabs defaultValue="vandaag" className="space-y-4">
+        <TabsList className="sticky top-28 z-10 w-full justify-start overflow-x-auto rounded-2xl border border-border/70 bg-background/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl">
+          <TabsTrigger value="vandaag" className="h-10 rounded-full px-4">
+            Vandaag
+          </TabsTrigger>
+          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4">
+            Voortgang
+          </TabsTrigger>
+          <TabsTrigger value="planning" className="h-10 rounded-full px-4">
+            Planning
+          </TabsTrigger>
+        </TabsList>
+
       <DashboardFocusPanel
         eyebrow="Vandaag belangrijk"
         title="Je rijlestraject in een oogopslag"
@@ -225,19 +238,6 @@ export default async function LeerlingDashboardPage() {
         steps={learnerOnboardingSteps}
         hideWhenComplete
       />
-
-      <Tabs defaultValue="vandaag" className="space-y-4">
-        <TabsList className="w-full justify-start overflow-x-auto rounded-2xl border border-border/70 bg-background/70 p-1">
-          <TabsTrigger value="vandaag" className="h-10 rounded-full px-4">
-            Vandaag
-          </TabsTrigger>
-          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4">
-            Voortgang
-          </TabsTrigger>
-          <TabsTrigger value="planning" className="h-10 rounded-full px-4">
-            Planning
-          </TabsTrigger>
-        </TabsList>
 
         <TabsContent value="vandaag" className="mt-0">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
