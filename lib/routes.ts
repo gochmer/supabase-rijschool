@@ -2,7 +2,7 @@ import type { GebruikersRol } from "@/lib/types";
 
 export const dashboardRoutes: Record<GebruikersRol, string> = {
   leerling: "/leerling/dashboard",
-  instructeur: "/instructeur",
+  instructeur: "/instructeur/dashboard",
   admin: "/admin/dashboard",
 };
 

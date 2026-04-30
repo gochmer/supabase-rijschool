@@ -93,7 +93,6 @@ export default async function InstructeurBerichtenPage() {
       <PageHeader
         title="Berichten"
         description="Werk sneller en rustiger met een duidelijke inbox, direct bruikbare templates en een net overzicht van je laatste opvolging."
-        tone="urban"
       />
 
       <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(135deg,#0f172a,#172554,#1e293b)] p-5 text-white shadow-[0_34px_120px_-62px_rgba(15,23,42,0.75)] dark:border-white/10 sm:p-6">

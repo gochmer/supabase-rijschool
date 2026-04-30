@@ -253,7 +253,6 @@ export default async function AanvragenPage() {
       <PageHeader
         title="Lesaanvragen"
         description="Werk open aanvragen eerst af en houd daarna rustig zicht op wat al verwerkt is."
-        tone="urban"
         actions={
           <>
             <Button asChild variant="outline" className="rounded-full">

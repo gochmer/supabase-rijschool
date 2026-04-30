@@ -161,7 +161,6 @@ export default async function InstructeurProfielPage() {
       <PageHeader
         title="Instructeur profiel"
         description="Maak je profiel scherper, betrouwbaarder en beter verkoopbaar voor nieuwe leerlingen."
-        tone="urban"
         actions={
           <Button asChild variant="outline" className="h-9 rounded-full text-[13px]">
             <Link href={publicProfilePath}>
