@@ -85,7 +85,7 @@ export function InstructorOnlineBookingControl({
           disabled={isPending || isEnabled}
           onClick={() => handleToggle(true)}
         >
-          Zet aan
+          Zet online boeking aan
         </Button>
         <Button
           variant="outline"
@@ -93,7 +93,7 @@ export function InstructorOnlineBookingControl({
           disabled={isPending || !isEnabled}
           onClick={() => handleToggle(false)}
         >
-          Zet uit
+          Zet online boeking uit
         </Button>
       </div>
     </div>

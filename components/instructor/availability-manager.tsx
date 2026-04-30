@@ -749,7 +749,7 @@ export function AvailabilityManager({
                   Uitzondering
                 </p>
                 <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-                  Moment dichtzetten
+                  Los moment dichtzetten
                 </h3>
               </div>
 

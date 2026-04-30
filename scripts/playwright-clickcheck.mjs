@@ -346,8 +346,6 @@ async function inspectDialog(page, buttonNames) {
     throw new Error(`Geen knop gevonden voor: ${names.join(", ")}`);
   }
 
-  const dialog = page.locator('[role="dialog"]').last();
-
   async function openDialog() {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
@@ -366,7 +364,23 @@ async function inspectDialog(page, buttonNames) {
     }
   }
 
+  async function closeDialog() {
+    const activeDialog = page.locator('[role="dialog"]').last();
+    const closeButton = activeDialog.getByRole("button", { name: "Close" });
+
+    if ((await closeButton.count()) > 0) {
+      await closeButton.click({ force: true });
+    } else {
+      await page.keyboard.press("Escape");
+    }
+
+    await activeDialog.waitFor({ state: "hidden", timeout: 8_000 }).catch(() => {});
+    await page.waitForTimeout(350);
+  }
+
   await openDialog();
+
+  let dialog = page.locator('[role="dialog"]').last();
 
   try {
     await dialog.waitFor({ state: "visible", timeout: 8_000 });
@@ -374,6 +388,7 @@ async function inspectDialog(page, buttonNames) {
     await page.keyboard.press("Escape").catch(() => null);
     await page.waitForTimeout(250);
     await openDialog();
+    dialog = page.locator('[role="dialog"]').last();
     await dialog.waitFor({ state: "visible", timeout: 8_000 });
   }
   await page.waitForTimeout(500);
@@ -390,14 +405,14 @@ async function inspectDialog(page, buttonNames) {
     await page.waitForTimeout(350);
   }
 
-  const dialogText = await dialog.innerText();
+  dialog = page.locator('[role="dialog"]').last();
+  const dialogText = await dialog.innerText({ timeout: 8_000 });
   const normalizedStepOneText = stepOneText.toLowerCase();
   const normalizedDialogText = dialogText.toLowerCase();
   const hasLiveSlotPicker = (await dialog.locator('[role="combobox"]').count()) > 0;
   const hasManualTimeInput = (await dialog.locator("input#tijdvak").count()) > 0;
 
-  await page.keyboard.press("Escape");
-  await page.waitForTimeout(350);
+  await closeDialog();
 
   return {
     buttonName: resolvedButtonName,
@@ -460,7 +475,18 @@ async function checkLearnerDialogs(page, failures) {
     failures
   );
 
-  await page.getByRole("link", { name: /Bekijk profiel/i }).first().click();
+  const detailLink = page
+    .locator('a[href^="/instructeurs/"]')
+    .filter({ hasText: /Bekijk profiel/i })
+    .first();
+  const detailHref = await detailLink.getAttribute("href");
+
+  if (!detailHref) {
+    throw new Error("Geen instructeur-detail link gevonden.");
+  }
+
+  await detailLink.click();
+  await page.waitForURL(`**${detailHref}`, { timeout: 30_000 });
   await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(2_000);
 
