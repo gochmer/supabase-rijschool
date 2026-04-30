@@ -1,7 +1,20 @@
 import Link from "next/link";
-import { AlertCircle, LifeBuoy, ShieldCheck, Star, UserCheck } from "lucide-react";
+import {
+  AlertCircle,
+  CreditCard,
+  LifeBuoy,
+  PackageCheck,
+  ShieldCheck,
+  Star,
+  UserCheck,
+  UsersRound,
+} from "lucide-react";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import {
+  DashboardActionHub,
+  type DashboardActionHubItem,
+} from "@/components/dashboard/dashboard-action-hub";
 import {
   DashboardFocusPanel,
   type DashboardFocusItem,
@@ -242,6 +255,56 @@ export default async function AdminDashboardPage() {
       meta: reviewAttention[0]?.titel ?? "Geen reviewmeldingen",
     },
   ];
+  const adminActionItems: DashboardActionHubItem[] = [
+    {
+      title: "Gebruikers",
+      description: "Leerlingen, instructeurs en accountstatussen.",
+      href: "/admin/gebruikers",
+      icon: UsersRound,
+      tone: incompleteUsers.length ? "amber" : "emerald",
+      meta: incompleteUsers.length ? `${incompleteUsers.length} incompleet` : "Op orde",
+    },
+    {
+      title: "Instructeurs",
+      description: "Goedkeuring, profielkwaliteit en aanbod.",
+      href: "/admin/instructeurs",
+      icon: UserCheck,
+      tone: approvalQueue.length ? "amber" : "sky",
+      meta: approvalQueue.length ? `${approvalQueue.length} wachten` : "Beheer",
+    },
+    {
+      title: "Support",
+      description: "Tickets en blokkades snel opvolgen.",
+      href: "/admin/support",
+      icon: LifeBuoy,
+      tone: openTickets.length ? "rose" : "emerald",
+      meta: openTickets.length ? `${openTickets.length} open` : "Rustig",
+    },
+    {
+      title: "Reviews",
+      description: "Moderatie, meldingen en kwaliteit.",
+      href: "/admin/reviews",
+      icon: Star,
+      tone: reviewAttention.length ? "amber" : "emerald",
+      meta: reviewAttention.length ? `${reviewAttention.length} checken` : "Schoon",
+    },
+    {
+      title: "Betalingen",
+      description: "Transacties en betaaloverzicht.",
+      href: "/admin/betalingen",
+      icon: CreditCard,
+      tone: "sky",
+      meta: "Financieel",
+    },
+    {
+      title: "Pakketten",
+      description: "Aanbod en pakketstructuur beheren.",
+      href: "/admin/pakketten",
+      icon: PackageCheck,
+      tone: "slate",
+      meta: "Catalogus",
+    },
+  ];
 
   return (
     <>
@@ -258,6 +321,15 @@ export default async function AdminDashboardPage() {
             </Button>
           </>
         }
+      />
+
+      <DashboardActionHub
+        eyebrow="Beheerhub"
+        title="Direct naar het juiste beheergebied"
+        description="De belangrijkste platformonderdelen staan als eenvoudige accounttegels bovenaan, met aandachtssignalen waar opvolging nodig is."
+        primaryHref={primaryAdminHref}
+        primaryLabel={attentionCount ? "Open prioriteit" : "Bekijk beheer"}
+        items={adminActionItems}
       />
 
       <DashboardFocusPanel

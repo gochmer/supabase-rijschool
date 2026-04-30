@@ -1,7 +1,21 @@
 import Link from "next/link";
-import { Bell, CalendarClock, ClipboardList, Search, Target, UserRound } from "lucide-react";
+import {
+  Bell,
+  CalendarClock,
+  ClipboardList,
+  CreditCard,
+  MessageSquare,
+  Search,
+  Star,
+  Target,
+  UserRound,
+} from "lucide-react";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import {
+  DashboardActionHub,
+  type DashboardActionHubItem,
+} from "@/components/dashboard/dashboard-action-hub";
 import {
   DashboardFocusPanel,
   type DashboardFocusItem,
@@ -229,6 +243,56 @@ export default async function LeerlingDashboardPage() {
       meta: nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland",
     },
   ];
+  const learnerActionItems: DashboardActionHubItem[] = [
+    {
+      title: "Boekingen",
+      description: "Lessen, aanvragen en status op een plek.",
+      href: "/leerling/boekingen",
+      icon: CalendarClock,
+      tone: nextLesson ? "emerald" : "sky",
+      meta: nextLesson ? "Volgende les klaar" : "Planning",
+    },
+    {
+      title: "Instructeur zoeken",
+      description: "Vergelijk profielen en start direct een aanvraag.",
+      href: "/instructeurs",
+      icon: Search,
+      tone: "sky",
+      meta: "Startpunt",
+    },
+    {
+      title: "Berichten",
+      description: "Reacties en afspraken met instructeurs.",
+      href: "/leerling/berichten",
+      icon: MessageSquare,
+      tone: unreadNotifications.length ? "amber" : "slate",
+      meta: unreadNotifications.length ? `${unreadNotifications.length} nieuw` : "Inbox",
+    },
+    {
+      title: "Profiel",
+      description: "Gegevens die instructeurs nodig hebben.",
+      href: "/leerling/profiel",
+      icon: UserRound,
+      tone: profileComplete ? "emerald" : "amber",
+      meta: profileComplete ? "Compleet" : "Aanvullen",
+    },
+    {
+      title: "Betalingen",
+      description: "Pakketten, opties en betaalstatus.",
+      href: "/leerling/betalingen",
+      icon: CreditCard,
+      tone: "slate",
+      meta: "Financieel",
+    },
+    {
+      title: "Reviews",
+      description: "Ervaringen bekijken of feedback plaatsen.",
+      href: "/leerling/reviews",
+      icon: Star,
+      tone: "amber",
+      meta: "Vertrouwen",
+    },
+  ];
 
   return (
     <>
@@ -246,6 +310,14 @@ export default async function LeerlingDashboardPage() {
             </Button>
           </>
         }
+      />
+
+      <DashboardActionHub
+        title="Waar wil je meteen naartoe?"
+        description="Je belangrijkste leerlingzaken staan als simpele tegels bovenaan, zodat je niet door het dashboard hoeft te zoeken."
+        primaryHref={nextLesson ? "/leerling/boekingen" : "/instructeurs"}
+        primaryLabel={nextLesson ? "Open volgende les" : "Zoek instructeur"}
+        items={learnerActionItems}
       />
 
       <Tabs defaultValue="vandaag" className="space-y-4">

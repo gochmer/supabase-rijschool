@@ -3,11 +3,18 @@ import {
   CalendarPlus,
   Flame,
   Inbox,
+  MessageSquare,
   PackageCheck,
+  Settings,
   ToggleRight,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 
+import {
+  DashboardActionHub,
+  type DashboardActionHubItem,
+} from "@/components/dashboard/dashboard-action-hub";
 import {
   DashboardFocusPanel,
   type DashboardFocusItem,
@@ -228,6 +235,64 @@ export default async function InstructeurDashboardPage() {
       meta: onlineBookingReady ? "Online boeken actief" : "Nog uitgeschakeld",
     },
   ];
+  const instructorActionItems: DashboardActionHubItem[] = [
+    {
+      title: "Aanvragen",
+      description: "Nieuwe leerlingen beoordelen en inplannen.",
+      href: "/instructeur/aanvragen",
+      icon: Inbox,
+      tone: openRequests.length ? "amber" : "emerald",
+      meta: openRequests.length ? `${openRequests.length} open` : "Bij",
+    },
+    {
+      title: "Lessen",
+      description: "Vandaag, planning en lesadministratie.",
+      href: "/instructeur/lessen",
+      icon: CalendarClock,
+      tone: todayLessons.length ? "emerald" : "sky",
+      meta: todayLessons.length ? `${todayLessons.length} vandaag` : "Agenda",
+    },
+    {
+      title: "Beschikbaarheid",
+      description: "Open momenten en online boeken beheren.",
+      href: "/instructeur/beschikbaarheid",
+      icon: CalendarPlus,
+      tone: availabilityReady ? "emerald" : "amber",
+      meta: availabilityReady ? `${activeSlotCount} open` : "Invullen",
+    },
+    {
+      title: "Leerlingen",
+      description: "Trajecten, voortgang en afspraken volgen.",
+      href: "/instructeur/leerlingen",
+      icon: UsersRound,
+      tone: "sky",
+      meta: "CRM",
+    },
+    {
+      title: "Pakketten",
+      description: "Aanbod, prijzen en actieve pakketten.",
+      href: "/instructeur/pakketten",
+      icon: PackageCheck,
+      tone: packagesReady ? "emerald" : "amber",
+      meta: packagesReady ? `${activePackageCount} actief` : "Maken",
+    },
+    {
+      title: "Berichten",
+      description: "Afstemming met leerlingen op een plek.",
+      href: "/instructeur/berichten",
+      icon: MessageSquare,
+      tone: notifications.some((item) => item.ongelezen) ? "amber" : "slate",
+      meta: notifications.some((item) => item.ongelezen) ? "Nieuw" : "Inbox",
+    },
+    {
+      title: "Instellingen",
+      description: "Voertuigen, documenten en bedrijfsgegevens.",
+      href: "/instructeur/instellingen",
+      icon: Settings,
+      tone: "slate",
+      meta: "Account",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -253,6 +318,14 @@ export default async function InstructeurDashboardPage() {
           </div>
         </div>
       </section>
+
+      <DashboardActionHub
+        title="Alles wat je vaak nodig hebt"
+        description="Zoals een accountoverzicht: aanvragen, lessen, agenda en aanbod staan direct klaar als duidelijke tegels."
+        primaryHref={firstOpenRequest ? "/instructeur/aanvragen" : "/instructeur/beschikbaarheid"}
+        primaryLabel={firstOpenRequest ? "Open aanvragen" : "Open agenda"}
+        items={instructorActionItems}
+      />
 
       <DashboardFocusPanel
         eyebrow="Vandaag eerst"
