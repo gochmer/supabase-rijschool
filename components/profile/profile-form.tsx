@@ -1,6 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import {
+  Check,
+  CheckCircle2,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { updateCurrentProfileAction } from "@/lib/actions/profile";
@@ -14,6 +22,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+function getInitials(value: string) {
+  const parts = value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (!parts.length) {
+    return "L";
+  }
+
+  return parts.map((part) => part[0]?.toUpperCase()).join("");
+}
 
 export function ProfileForm({
   initialValues,
@@ -105,6 +127,221 @@ export function ProfileForm({
     isResident &&
       "h-12 rounded-[1.15rem] border-red-300/14 bg-[linear-gradient(145deg,rgba(255,255,255,0.05),rgba(120,22,22,0.12))] px-4 text-white focus-visible:border-red-300/32 focus-visible:ring-red-400/16"
   );
+  const learnerReadinessItems = [
+    {
+      label: volledigeNaam.trim() ? "Naam klaar" : "Naam mist",
+      detail: volledigeNaam.trim() || "Vul je volledige naam in.",
+      complete: Boolean(volledigeNaam.trim()),
+      icon: User,
+    },
+    {
+      label: telefoon.trim() ? "Telefoon klaar" : "Telefoon optioneel",
+      detail: telefoon.trim() || "Handig voor snelle afstemming.",
+      complete: Boolean(telefoon.trim()),
+      icon: Phone,
+    },
+  ];
+  const learnerCompletion = Math.round(
+    (learnerReadinessItems.filter((item) => item.complete).length /
+      learnerReadinessItems.length) *
+      100
+  );
+
+  if (role === "leerling" && isUrban) {
+    return (
+      <form
+        action={handleSubmit}
+        className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.78fr)] xl:items-start"
+      >
+        <div className="space-y-4">
+          <div className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(148,163,184,0.08),rgba(15,23,42,0.28))] p-4 shadow-[0_20px_54px_-40px_rgba(15,23,42,0.55)] sm:p-5">
+            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-r from-sky-400/10 via-white/5 to-emerald-400/10" />
+            <div className="relative">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[10px] font-semibold tracking-[0.2em] text-slate-200 uppercase">
+                    Profielstudio
+                  </p>
+                  <h3 className="mt-3 text-xl font-semibold text-white">
+                    Maak je leerlingprofiel helder en betrouwbaar.
+                  </h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
+                    Houd je naam en contactgegevens strak op orde, zodat boekingen,
+                    berichten en planning soepel blijven lopen.
+                  </p>
+                </div>
+                <div className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-slate-100">
+                  {learnerCompletion}% klaar
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div className={fieldWrapperClassName}>
+                  <Label htmlFor="volledige_naam" className={labelClassName}>
+                    Volledige naam
+                  </Label>
+                  <Input
+                    id="volledige_naam"
+                    name="volledige_naam"
+                    value={volledigeNaam}
+                    onChange={(event) => setVolledigeNaam(event.target.value)}
+                    placeholder="Bijv. Samira Jansen"
+                    className={controlClassName}
+                    required
+                  />
+                </div>
+                <div className={fieldWrapperClassName}>
+                  <Label htmlFor="telefoon" className={labelClassName}>
+                    Telefoon
+                  </Label>
+                  <Input
+                    id="telefoon"
+                    name="telefoon"
+                    value={telefoon}
+                    onChange={(event) => setTelefoon(event.target.value)}
+                    placeholder="06 12345678"
+                    className={controlClassName}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {learnerReadinessItems.map((item) => (
+                  <div
+                    key={item.label}
+                    className={cn(
+                      "rounded-[1.15rem] border p-3",
+                      item.complete
+                        ? "border-emerald-300/18 bg-emerald-500/10"
+                        : "border-white/10 bg-white/6"
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={cn(
+                          "flex size-9 shrink-0 items-center justify-center rounded-xl",
+                          item.complete
+                            ? "bg-emerald-400/14 text-emerald-100"
+                            : "bg-white/8 text-slate-200"
+                        )}
+                      >
+                        <item.icon className="size-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{item.label}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-300">
+                          {item.detail}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <input type="hidden" name="bio" value="" />
+          <input type="hidden" name="werkgebied" value="" />
+          <input type="hidden" name="prijs_per_les" value="0" />
+          <input type="hidden" name="ervaring_jaren" value="0" />
+          <input type="hidden" name="transmissie" value="beide" />
+          <input type="hidden" name="profielfoto_kleur" value="" />
+          <input type="hidden" name="specialisaties" value="" />
+        </div>
+
+        <div className="space-y-4 xl:sticky xl:top-4">
+          <div className="overflow-hidden rounded-[1.65rem] border border-white/10 bg-[linear-gradient(145deg,rgba(248,250,252,0.96),rgba(226,232,240,0.94),rgba(203,213,225,0.92))] text-slate-950 shadow-[0_26px_70px_-44px_rgba(15,23,42,0.62)]">
+            <div className="border-b border-slate-900/6 p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-14 items-center justify-center rounded-2xl bg-slate-950 text-lg font-semibold text-white">
+                    {getInitials(volledigeNaam)}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                      Live profielkaart
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold">
+                      {volledigeNaam.trim() || "Jouw naam"}
+                    </h3>
+                  </div>
+                </div>
+                <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                  {learnerCompletion}%
+                </div>
+              </div>
+
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#2563eb,#14b8a6)]"
+                  style={{ width: `${Math.max(learnerCompletion, 8)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="p-5">
+              <div className="grid gap-3">
+                <div className="rounded-[1.1rem] border border-slate-200 bg-white/78 p-3">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Phone className="size-4" />
+                    <p className="text-[10px] font-semibold tracking-[0.16em] uppercase">
+                      Contact
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold">
+                    {telefoon.trim() || "Nog geen telefoonnummer"}
+                  </p>
+                </div>
+
+                <div className="rounded-[1.1rem] border border-slate-200 bg-white/78 p-3">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <ShieldCheck className="size-4" />
+                    <p className="text-[10px] font-semibold tracking-[0.16em] uppercase">
+                      Status
+                    </p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {learnerReadinessItems.map((item) => (
+                      <span
+                        key={item.label}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                          item.complete
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-slate-50 text-slate-600"
+                        )}
+                      >
+                        {item.complete ? <Check className="size-3" /> : null}
+                        {item.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.1rem] border border-sky-200 bg-sky-50/90 p-3">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="mt-0.5 size-4 text-sky-700" />
+                    <p className="text-sm leading-6 text-sky-900">
+                      Een compleet profiel maakt aanvragen, berichten en
+                      lesplanning duidelijker voor jou en je instructeur.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                disabled={isPending}
+                className="mt-4 h-12 w-full rounded-[1.25rem] border border-slate-950 bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#38bdf8)] text-white shadow-[0_22px_46px_-28px_rgba(37,99,235,0.58)] hover:brightness-105"
+              >
+                <CheckCircle2 className="size-4" />
+                {isPending ? "Opslaan..." : "Profiel opslaan"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <form action={handleSubmit} className="grid gap-4 md:grid-cols-2">

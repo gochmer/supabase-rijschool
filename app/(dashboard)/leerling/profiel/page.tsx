@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarDays,
-  CheckCircle2,
   Heart,
   Package,
   Phone,
@@ -53,9 +52,11 @@ export default async function LeerlingProfielPage() {
   const favoriteCount = leerling?.favoriete_instructeurs?.length ?? 0;
   const packageLabel =
     packageOverview.assignedPackage?.naam ?? "Nog geen pakket gekoppeld";
+  const hasProfileName = Boolean(profile?.volledige_naam.trim());
+  const hasProfilePhone = Boolean(profile?.telefoon.trim());
   const profileIntegrity = [
-    Boolean(profile?.volledige_naam.trim()),
-    Boolean(profile?.telefoon.trim()),
+    hasProfileName,
+    hasProfilePhone,
     Boolean(nextLesson),
     Boolean(packageOverview.assignedPackage),
   ];
@@ -95,10 +96,65 @@ export default async function LeerlingProfielPage() {
       label: "Pakket",
       value: packageLabel,
       detail: packageOverview.assignedPackage
-        ? `${packageOverview.assignedPackage.lessen || "Flexibel"} lessen • ${packageOverview.assignedPackage.prijsLabel}`
+        ? `${packageOverview.assignedPackage.lessen || "Flexibel"} lessen - ${packageOverview.assignedPackage.prijsLabel}`
         : `${packageOverview.availablePackages.length} pakketopties staan klaar.`,
     },
   ];
+
+  const nextProfileStep = !hasProfileName
+    ? {
+        icon: User,
+        label: "Profiel",
+        title: "Vul eerst je volledige naam aan.",
+        text: "Dan staan boekingen, berichten en voortgang direct netjes op jouw naam.",
+        href: "#profielstudio",
+        action: "Naam invullen",
+      }
+    : !hasProfilePhone
+      ? {
+          icon: Phone,
+          label: "Contact",
+          title: "Voeg je telefoonnummer toe.",
+          text: "Handig voor snelle afstemming wanneer een les of aanvraag verandert.",
+          href: "#profielstudio",
+          action: "Telefoon toevoegen",
+        }
+      : pendingRequests > 0
+        ? {
+            icon: CalendarDays,
+            label: "Aanvraag",
+            title: "Er loopt nog een aanvraag.",
+            text: "Bekijk de status en houd je boekingen rustig op orde.",
+            href: "/leerling/boekingen",
+            action: "Aanvraag bekijken",
+          }
+        : !nextLesson
+          ? {
+              icon: CalendarDays,
+              label: "Planning",
+              title: "Plan je volgende rijles.",
+              text: "Zo blijft je traject zichtbaar in beweging en weet je wat de eerstvolgende stap is.",
+              href: "/leerling/instructeurs",
+              action: "Instructeur kiezen",
+            }
+          : !packageOverview.assignedPackage
+            ? {
+                icon: Package,
+                label: "Pakket",
+                title: "Vergelijk een passend pakket.",
+                text: "Een gekoppeld pakket maakt je lessen en betalingen duidelijker.",
+                href: "/leerling/instructeurs",
+                action: "Pakketten bekijken",
+              }
+            : {
+                icon: CalendarDays,
+                label: "Rustig op orde",
+                title: "Je profiel staat netjes klaar.",
+                text: "Houd vooral je boekingen bij en werk je gegevens bij als er iets verandert.",
+                href: "/leerling/boekingen",
+                action: "Boekingen bekijken",
+              };
+  const NextProfileStepIcon = nextProfileStep.icon;
 
   return (
     <div className="space-y-6 text-white">
@@ -210,7 +266,7 @@ export default async function LeerlingProfielPage() {
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-300">
                     {nextLesson
-                      ? `${nextLesson.instructeur_naam} • ${nextLesson.locatie}`
+                      ? `${nextLesson.instructeur_naam} - ${nextLesson.locatie}`
                       : "Bevestigde lessen verschijnen hier automatisch."}
                   </p>
                 </div>
@@ -250,28 +306,21 @@ export default async function LeerlingProfielPage() {
         ))}
       </div>
 
-      <StudentProgressReadOnlyCard
-        assessments={progressWorkspace.assessments}
-        notes={progressWorkspace.notes}
-        progressValue={progressValue}
-        volgendeLes={
-          nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland"
-        }
-        laatsteInstructeurNaam={progressWorkspace.laatsteInstructeurNaam}
-      />
-
-      <div className="grid gap-6 print:hidden xl:grid-cols-[1.15fr_0.85fr]">
-        <section className={`p-6 sm:p-7 ${shellCardClassName}`}>
+      <section
+        id="profielstudio"
+        className={`p-6 sm:p-7 print:hidden ${shellCardClassName}`}
+      >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
-                Personal details
+                Profielstudio
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-white">
-                Persoonlijke gegevens
+                Je leerlinggegevens professioneel op orde
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
-                Werk je naam en contactgegevens bij in een rustige, premium formulierenlaag die beter past bij de rest van het platform.
+                Vul je gegevens in en zie meteen hoe compleet je profielkaart is.
+                Zo blijven boekingen, contact en voortgang overzichtelijk bij elkaar.
               </p>
             </div>
             <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-slate-200 uppercase">
@@ -279,7 +328,7 @@ export default async function LeerlingProfielPage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-[1.8rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))] p-5 sm:p-6">
+          <div className="mt-6">
             <ProfileForm
               role="leerling"
               tone="urban"
@@ -289,121 +338,48 @@ export default async function LeerlingProfielPage() {
               }}
             />
           </div>
-        </section>
 
-        <div className="grid gap-6">
-          <section className={`p-5 ${shellCardClassName}`}>
-            <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
-              Account status
-            </p>
-            <h3 className="mt-2 text-xl font-semibold text-white">
-              Wat al goed staat
-            </h3>
-
-            <div className="mt-5 grid gap-3">
-              {[
-                {
-                  label: "Naam ingevuld",
-                  ok: Boolean(profile?.volledige_naam.trim()),
-                  detail: profile?.volledige_naam || "Voeg je volledige naam toe.",
-                },
-                {
-                  label: "Telefoon beschikbaar",
-                  ok: Boolean(profile?.telefoon.trim()),
-                  detail: profile?.telefoon || "Voeg een telefoonnummer toe voor snelle afstemming.",
-                },
-                {
-                  label: "Pakket gekoppeld",
-                  ok: Boolean(packageOverview.assignedPackage),
-                  detail: packageLabel,
-                },
-                {
-                  label: "Planning actief",
-                  ok: Boolean(nextLesson),
-                  detail: nextLesson
-                    ? `${nextLesson.datum} om ${nextLesson.tijd}`
-                    : "Nog geen eerstvolgende les gevonden.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-[1.3rem] border border-white/10 bg-white/5 p-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={
-                        item.ok
-                          ? "mt-0.5 flex size-9 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-200"
-                          : "mt-0.5 flex size-9 items-center justify-center rounded-xl bg-amber-500/12 text-amber-200"
-                      }
-                    >
-                      <CheckCircle2 className="size-4.5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white">{item.label}</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-300">
-                        {item.detail}
-                      </p>
-                    </div>
-                  </div>
+          <div className="mt-5 rounded-[1.45rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(148,163,184,0.08),rgba(15,23,42,0.26))] p-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-slate-100">
+                  <NextProfileStepIcon className="size-5" />
                 </div>
-              ))}
-            </div>
-          </section>
-
-          <section className={`p-5 ${shellCardClassName}`}>
-            <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
-              Aanbevolen acties
-            </p>
-            <h3 className="mt-2 text-xl font-semibold text-white">
-              Slimme vervolgstappen
-            </h3>
-
-            <div className="mt-5 grid gap-3">
-              {[
-                {
-                  icon: CalendarDays,
-                  title: "Plan je volgende les",
-                  text: nextLesson
-                    ? "Je eerstvolgende les staat al gepland. Houd je boekingen actueel."
-                    : "Zet een nieuwe les vast zodat je traject zichtbaar in beweging komt.",
-                },
-                {
-                  icon: Phone,
-                  title: "Houd contact eenvoudig",
-                  text: profile?.telefoon
-                    ? "Je telefoonnummer staat klaar voor snelle afstemming."
-                    : "Met een telefoonnummer verloopt plannen meestal merkbaar soepeler.",
-                },
-                {
-                  icon: Package,
-                  title: "Bekijk je pakket",
-                  text: packageOverview.assignedPackage
-                    ? "Je huidige pakket is gekoppeld en netjes zichtbaar in je account."
-                    : "Zonder pakket mis je nu een deel van je overzicht en betaalflow.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.title}
-                  className="rounded-[1.3rem] border border-white/10 bg-white/5 p-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-white/8 text-slate-100">
-                      <item.icon className="size-4.5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">{item.title}</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-300">
-                        {item.text}
-                      </p>
-                    </div>
-                  </div>
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
+                    {nextProfileStep.label}
+                  </p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">
+                    {nextProfileStep.title}
+                  </h3>
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
+                    {nextProfileStep.text}
+                  </p>
                 </div>
-              ))}
+              </div>
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 rounded-full border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 md:shrink-0"
+              >
+                <Link href={nextProfileStep.href}>
+                  {nextProfileStep.action}
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
             </div>
-          </section>
-        </div>
-      </div>
+          </div>
+      </section>
+
+      <StudentProgressReadOnlyCard
+        assessments={progressWorkspace.assessments}
+        notes={progressWorkspace.notes}
+        progressValue={progressValue}
+        volgendeLes={
+          nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland"
+        }
+        laatsteInstructeurNaam={progressWorkspace.laatsteInstructeurNaam}
+      />
     </div>
   );
 }
