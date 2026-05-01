@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { Clock3, ShieldCheck } from "lucide-react";
 
 import { InstructorRegistrationFlow } from "@/components/auth/instructor-registration-flow";
 import { ensureCurrentUserContext, getCurrentInstructeurRecord } from "@/lib/data/profiles";
@@ -22,36 +21,23 @@ export default async function InstructeurVerificatiePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-[1.5rem] border border-amber-300/20 bg-amber-400/10 p-5 text-amber-50">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-amber-300/15">
-            <Clock3 className="size-6" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold">Verificatie verplicht</h1>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
-                {instructor?.profiel_status ?? "in_beoordeling"}
-              </span>
-            </div>
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-amber-50/78">
-              Alleen geverifieerde instructeurs krijgen volledige dashboardtoegang. Vul je gegevens volledig in en upload je WRM-documenten om je account te activeren.
-            </p>
-          </div>
-        </div>
+    <main className="fixed inset-0 z-50 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_26%),#050814] text-white">
+      <div className="min-h-screen px-4 py-5 sm:px-6 lg:px-8">
+        <InstructorRegistrationFlow
+          mode="verification"
+          initialValues={{
+            fullName:
+              context.profile?.volledige_naam ??
+              context.user.email?.split("@")[0] ??
+              "",
+            email: context.profile?.email ?? context.user.email ?? "",
+            phone: context.profile?.telefoon ?? "",
+            bio: instructor?.bio ?? "",
+            specializations: instructor?.specialisaties ?? undefined,
+            profileStatus: instructor?.profiel_status ?? "in_beoordeling",
+          }}
+        />
       </div>
-
-      <div className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-400/10 p-5 text-emerald-50">
-        <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-1 size-5 shrink-0" />
-          <p className="text-sm leading-7">
-            Na verzending ontvang je een bevestiging per e-mail. Ons team controleert je aanvraag binnen 1-2 werkdagen.
-          </p>
-        </div>
-      </div>
-
-      <InstructorRegistrationFlow mode="verification" />
-    </div>
+    </main>
   );
 }
