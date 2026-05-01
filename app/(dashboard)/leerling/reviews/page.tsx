@@ -36,7 +36,7 @@ export default async function LeerlingReviewsPage() {
   ] as const;
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-4 text-white">
       <PageHeader
         tone="urban"
         eyebrow="Reviews"

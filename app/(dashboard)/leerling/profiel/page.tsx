@@ -28,7 +28,7 @@ import {
 import { getCurrentLeerlingProgressWorkspace } from "@/lib/data/student-progress";
 
 const shellCardClassName =
-  "rounded-[2rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] shadow-[0_28px_88px_-46px_rgba(15,23,42,0.78)]";
+  "rounded-xl border border-white/10 bg-white/[0.055] shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]";
 
 export default async function LeerlingProfielPage() {
   const [profile, leerling, lessons, requests, packageOverview, progressWorkspace] =
@@ -227,9 +227,9 @@ export default async function LeerlingProfielPage() {
   ];
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-4 text-white">
       <section
-        className={`relative overflow-hidden p-5 sm:p-6 xl:p-7 print:hidden ${shellCardClassName}`}
+        className={`relative overflow-hidden p-4 print:hidden ${shellCardClassName}`}
       >
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.18),transparent_27%),radial-gradient(circle_at_84%_18%,rgba(16,185,129,0.13),transparent_24%),radial-gradient(circle_at_62%_76%,rgba(245,158,11,0.13),transparent_26%),radial-gradient(circle_at_18%_88%,rgba(244,63,94,0.1),transparent_22%)]" />
@@ -247,13 +247,11 @@ export default async function LeerlingProfielPage() {
             </div>
 
             <div className="space-y-3">
-              <h1 className="max-w-[13ch] text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Een strakke, professionele basis voor je leerlingaccount.
+              <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Profiel
               </h1>
               <p className="max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-                Je profielomgeving is nu rustiger, luxer en veel meer in lijn met een
-                premium platform. Alles draait hier om overzicht, vertrouwen en een
-                nette presentatie van je voortgang en gegevens.
+                Beheer je leerlinggegevens, trajectafspraken en voortgang vanuit een compact overzicht.
               </p>
             </div>
 
@@ -288,7 +286,7 @@ export default async function LeerlingProfielPage() {
             </div>
           </div>
 
-          <div className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.05),rgba(148,163,184,0.08),rgba(15,23,42,0.28))] p-5 shadow-[0_20px_48px_-32px_rgba(15,23,42,0.54)]">
+          <div className="rounded-xl border border-white/10 bg-white/6 p-4 shadow-[0_20px_48px_-32px_rgba(15,23,42,0.54)]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
@@ -304,7 +302,7 @@ export default async function LeerlingProfielPage() {
             </div>
 
             <div className="mt-5 space-y-4">
-              <div className="rounded-[1.4rem] border border-white/8 bg-black/12 p-4">
+              <div className="rounded-lg border border-white/8 bg-black/12 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-slate-200">
                     Profielcompleetheid
@@ -323,7 +321,7 @@ export default async function LeerlingProfielPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-[1.4rem] border border-white/8 bg-white/5 p-4">
+                <div className="rounded-lg border border-white/8 bg-white/5 p-4">
                   <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-300 uppercase">
                     Volgende les
                   </p>
@@ -337,7 +335,7 @@ export default async function LeerlingProfielPage() {
                   </p>
                 </div>
 
-                <div className="rounded-[1.4rem] border border-white/8 bg-white/5 p-4">
+                <div className="rounded-lg border border-white/8 bg-white/5 p-4">
                   <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-300 uppercase">
                     Open aanvragen
                   </p>
@@ -355,7 +353,7 @@ export default async function LeerlingProfielPage() {
       </section>
 
       <Tabs defaultValue="profiel" className="space-y-4 print:hidden">
-        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="profiel" className="h-10 rounded-full px-4 data-active:bg-sky-200 data-active:text-slate-950">
             Profiel
           </TabsTrigger>
@@ -414,7 +412,7 @@ export default async function LeerlingProfielPage() {
         <TabsContent value="profiel" className="mt-0">
           <section
             id="profielstudio"
-            className={`p-6 sm:p-7 ${shellCardClassName}`}
+            className={`p-4 ${shellCardClassName}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>

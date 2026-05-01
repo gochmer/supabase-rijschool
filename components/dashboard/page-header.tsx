@@ -24,12 +24,12 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[1.35rem] p-4 xl:p-5",
+        "overflow-hidden p-4 xl:p-5",
         isUrban
-          ? "border border-white/10 bg-slate-950/84 shadow-[0_24px_72px_-44px_rgba(15,23,42,0.78)]"
+          ? "rounded-xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035))] text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]"
           : isHazard
-          ? "re-frame-flash re-scanlines border border-red-300/14 bg-[linear-gradient(145deg,rgba(8,10,14,0.98),rgba(18,9,12,0.98),rgba(52,14,18,0.9),rgba(31,22,25,0.9))] shadow-[0_28px_90px_-45px_rgba(0,0,0,0.82)]"
-          : "surface-panel"
+            ? "re-frame-flash re-scanlines rounded-[1.35rem] border border-red-300/14 bg-[linear-gradient(145deg,rgba(8,10,14,0.98),rgba(18,9,12,0.98),rgba(52,14,18,0.9),rgba(31,22,25,0.9))] shadow-[0_28px_90px_-45px_rgba(0,0,0,0.82)]"
+            : "surface-panel rounded-[1.35rem]"
       )}
     >
       <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">

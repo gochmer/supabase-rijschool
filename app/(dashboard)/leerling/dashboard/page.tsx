@@ -323,14 +323,14 @@ export default async function LeerlingDashboardPage() {
       />
 
       <Tabs defaultValue="vandaag" className="space-y-4">
-        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-2xl border border-border/70 bg-background/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.25)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
-          <TabsTrigger value="vandaag" className="h-10 rounded-full px-4 data-active:bg-sky-600 data-active:text-white dark:data-active:bg-sky-300 dark:data-active:text-slate-950">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="vandaag" className="h-10 rounded-full px-4 data-active:bg-sky-200 data-active:text-slate-950">
             Vandaag
           </TabsTrigger>
-          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4 data-active:bg-emerald-600 data-active:text-white dark:data-active:bg-emerald-300 dark:data-active:text-slate-950">
+          <TabsTrigger value="voortgang" className="h-10 rounded-full px-4 data-active:bg-emerald-200 data-active:text-slate-950">
             Voortgang
           </TabsTrigger>
-          <TabsTrigger value="planning" className="h-10 rounded-full px-4 data-active:bg-amber-500 data-active:text-slate-950 dark:data-active:bg-amber-300">
+          <TabsTrigger value="planning" className="h-10 rounded-full px-4 data-active:bg-amber-200 data-active:text-slate-950">
             Planning
           </TabsTrigger>
         </TabsList>

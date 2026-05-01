@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentStudentPackageOverview } from "@/lib/data/packages";
 
 const urbanCardClassName =
-  "rounded-[2rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(17,24,39,0.96))] p-5 shadow-[0_28px_88px_-46px_rgba(15,23,42,0.78)]";
+  "rounded-xl border border-white/10 bg-white/[0.055] p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]";
 
 const tabTriggerClassName =
   "h-10 rounded-full px-4 text-slate-300 data-active:text-slate-950";
@@ -74,7 +74,7 @@ export default async function LeerlingBetalingenPage() {
   ] as const;
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-4 text-white">
       <PageHeader
         tone="urban"
         eyebrow="Betalingen"
@@ -100,7 +100,7 @@ export default async function LeerlingBetalingenPage() {
       />
 
       <Tabs defaultValue="pakket" className="space-y-4">
-        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.35rem] border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="pakket" className={`${tabTriggerClassName} data-active:bg-emerald-200`}>
             Pakket
           </TabsTrigger>

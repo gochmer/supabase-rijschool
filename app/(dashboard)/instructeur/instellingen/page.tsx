@@ -282,14 +282,14 @@ export default async function InstructeurInstellingenPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         tone="urban"
         title="Instellingen"
         description="Maak je instructeurwerkplek rustiger en betrouwbaarder met een helder overzicht van voertuigen, bevoegdheden en profielbestanden."
       />
 
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(135deg,#0f172a,#172554,#1e293b)] p-5 text-white shadow-[0_34px_120px_-62px_rgba(15,23,42,0.75)] dark:border-white/10 sm:p-6">
+      <section className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] p-4 text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_84%_18%,rgba(59,130,246,0.18),transparent_26%),radial-gradient(circle_at_70%_86%,rgba(148,163,184,0.16),transparent_24%)]" />
         <div className="relative grid gap-5 xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
           <div className="max-w-3xl">
@@ -297,10 +297,10 @@ export default async function InstructeurInstellingenPage() {
               <Sparkles className="size-3.5" />
               Instellingen cockpit
             </div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
               Houd voertuigen, bevoegdheden en profielbestanden strak op orde.
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/74 sm:text-[15px]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">
               Dit is je rustige controlelaag: wat staat al goed, wat mist nog
               op je profiel en welke onderdelen verdienen nu het eerst
               aandacht.
@@ -311,7 +311,7 @@ export default async function InstructeurInstellingenPage() {
                 <div
                   key={item.label}
                   className={cn(
-                    "rounded-[1.2rem] border px-3.5 py-3 backdrop-blur",
+                    "rounded-lg border px-3.5 py-3 backdrop-blur",
                     item.tone
                   )}
                 >
@@ -328,7 +328,7 @@ export default async function InstructeurInstellingenPage() {
             </div>
           </div>
 
-          <div className="rounded-[1.55rem] border border-white/14 bg-white/10 p-4 backdrop-blur">
+          <div className="rounded-lg border border-white/10 bg-white/7 p-4 backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.2em] text-white/62 uppercase">
@@ -371,7 +371,7 @@ export default async function InstructeurInstellingenPage() {
                   hint: "Documentdekking",
                 },
               ].map((item) => (
-                <div key={item.label} className="rounded-[1rem] bg-white/10 px-3 py-3">
+                <div key={item.label} className="rounded-lg bg-white/10 px-3 py-3">
                   <p className="text-[10px] font-semibold tracking-[0.16em] text-white/62 uppercase">
                     {item.label}
                   </p>
@@ -453,7 +453,7 @@ export default async function InstructeurInstellingenPage() {
       </div>
 
       <Tabs defaultValue="overzicht" className="space-y-4">
-        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.45rem] border border-white/60 bg-white/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.32)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 [&::-webkit-scrollbar]:hidden">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="overzicht" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-sky-200 data-active:text-slate-950">
             Overzicht
           </TabsTrigger>

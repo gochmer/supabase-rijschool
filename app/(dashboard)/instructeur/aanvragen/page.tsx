@@ -249,7 +249,7 @@ export default async function AanvragenPage() {
   ] as const;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         tone="urban"
         title="Lesaanvragen"
@@ -266,7 +266,7 @@ export default async function AanvragenPage() {
         }
       />
 
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(135deg,#0f172a,#172554,#1e293b)] p-5 text-white shadow-[0_34px_120px_-62px_rgba(15,23,42,0.75)] dark:border-white/10 sm:p-6">
+      <section className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] p-4 text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_84%_18%,rgba(59,130,246,0.18),transparent_26%),radial-gradient(circle_at_70%_86%,rgba(148,163,184,0.16),transparent_24%)]" />
         <div className="relative grid gap-5 xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
           <div className="max-w-3xl">
@@ -274,10 +274,10 @@ export default async function AanvragenPage() {
               <Sparkles className="size-3.5" />
               Aanvragen cockpit
             </div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
               Houd beslissen, plannen en opvolgen strak in één rustige flow.
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/74 sm:text-[15px]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">
               Werk eerst de open aanvragen af, lees daarna de verwerkte flow terug
               en houd zicht op waar nieuwe proeflessen of pakketkansen binnenkomen.
             </p>
@@ -287,7 +287,7 @@ export default async function AanvragenPage() {
                 <div
                   key={item.label}
                   className={cn(
-                    "rounded-[1.2rem] border px-3.5 py-3 backdrop-blur",
+                    "rounded-lg border px-3.5 py-3 backdrop-blur",
                     item.tone
                   )}
                 >
@@ -301,7 +301,7 @@ export default async function AanvragenPage() {
             </div>
           </div>
 
-          <div className="rounded-[1.55rem] border border-white/14 bg-white/10 p-4 backdrop-blur">
+          <div className="rounded-lg border border-white/10 bg-white/7 p-4 backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.2em] text-white/62 uppercase">
@@ -339,7 +339,7 @@ export default async function AanvragenPage() {
       </div>
 
       <Tabs defaultValue="nu" className="space-y-4">
-        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.45rem] border border-white/60 bg-white/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.32)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 [&::-webkit-scrollbar]:hidden">
+        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="nu" className="min-h-10 gap-2 rounded-[1rem] px-3 text-sm data-active:bg-amber-200 data-active:text-slate-950">
             Nu beslissen
             <span className="rounded-full bg-slate-950/8 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-200">

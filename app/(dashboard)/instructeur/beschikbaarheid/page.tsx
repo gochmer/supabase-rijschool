@@ -111,7 +111,7 @@ export default async function BeschikbaarheidPage() {
   ];
 
   return (
-    <div className="min-h-screen space-y-5 bg-[#080d14] text-slate-100">
+    <div className="space-y-4 text-slate-100">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">

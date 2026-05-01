@@ -60,7 +60,7 @@ export default async function InkomstenPage() {
   const topStatTones = ["emerald", "sky", "cyan", "amber"] as const;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         tone="urban"
         title="Inkomsten"
@@ -88,7 +88,7 @@ export default async function InkomstenPage() {
         }
       />
 
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(135deg,#0f172a,#172554,#1e293b)] p-5 text-white shadow-[0_34px_120px_-62px_rgba(15,23,42,0.75)] dark:border-white/10 sm:p-6">
+      <section className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] p-4 text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.18),transparent_26%),radial-gradient(circle_at_82%_16%,rgba(59,130,246,0.18),transparent_24%),radial-gradient(circle_at_72%_86%,rgba(148,163,184,0.16),transparent_24%)]" />
         <div className="relative grid gap-6 xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
           <div className="max-w-3xl">
@@ -96,10 +96,10 @@ export default async function InkomstenPage() {
               <Flame className="size-3.5" />
               Inkomsten cockpit
             </div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
               Zie direct waar leswaarde, pakketten en open gaten je omzet sturen.
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/74 sm:text-[15px]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">
               Minder zoeken in losse cijfers, meer regie op geplande omzet,
               vervolgvoorstellen en kansen die nog open in je agenda liggen.
             </p>
@@ -109,7 +109,7 @@ export default async function InkomstenPage() {
                 <div
                   key={item.label}
                   className={cn(
-                    "rounded-[1.2rem] border px-3.5 py-3 backdrop-blur",
+                    "rounded-lg border px-3.5 py-3 backdrop-blur",
                     heroSignalTones[index] ??
                       "border-white/14 bg-white/10"
                   )}
@@ -124,7 +124,7 @@ export default async function InkomstenPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 rounded-[1.6rem] border border-white/14 bg-white/10 p-4 backdrop-blur">
+          <div className="grid gap-3 rounded-lg border border-white/10 bg-white/7 p-4 backdrop-blur">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.2em] text-white/62 uppercase">
@@ -161,7 +161,7 @@ export default async function InkomstenPage() {
                 <div
                   key={item.label}
                   className={cn(
-                    "rounded-[1rem] border px-3 py-3",
+                    "rounded-lg border px-3 py-3",
                     heroSignalTones[index] ??
                       "border-white/14 bg-white/10"
                   )}
