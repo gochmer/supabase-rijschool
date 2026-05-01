@@ -18,17 +18,22 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export function InstructorReviewReplyDialog({
   reviewId,
   reviewerName,
   reviewTitle,
   initialReply,
+  triggerClassName,
+  triggerLabel,
 }: {
   reviewId: string;
   reviewerName: string;
   reviewTitle: string;
   initialReply?: string | null;
+  triggerClassName?: string;
+  triggerLabel?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -63,9 +68,13 @@ export function InstructorReviewReplyDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="rounded-full">
+        <Button
+          size="sm"
+          variant="outline"
+          className={cn("rounded-full", triggerClassName)}
+        >
           <Reply className="size-3.5" />
-          {initialReply ? "Reactie bijwerken" : "Reageer op review"}
+          {triggerLabel ?? (initialReply ? "Reactie bijwerken" : "Reageer op review")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">

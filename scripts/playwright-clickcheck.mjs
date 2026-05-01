@@ -415,9 +415,10 @@ async function createAdminUser() {
 
 async function loginUser(page, email, redirectPath) {
   await gotoStable(page, `/inloggen?redirect=${encodeURIComponent(redirectPath)}`);
-  await page.getByLabel("E-mailadres").fill(email);
-  await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Inloggen" }).click();
+  const loginForm = page.locator("form").first();
+  await loginForm.getByLabel("E-mailadres").fill(email);
+  await loginForm.locator('input[name="password"]').fill(TEST_PASSWORD);
+  await loginForm.getByRole("button", { name: "Inloggen" }).click();
 
   await page
     .waitForURL(`**${redirectPath}`, { timeout: 45_000 })
@@ -826,6 +827,7 @@ async function main() {
       "/instructeur/inkomsten",
       "/instructeur/pakketten",
       "/instructeur/profiel",
+      "/instructeur/reviews",
       "/instructeur/instellingen",
     ]) {
       summary.instructorRoutes.push(

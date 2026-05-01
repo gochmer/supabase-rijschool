@@ -6,34 +6,27 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  BadgeCheck,
   CalendarDays,
   Camera,
   Check,
-  CheckCircle2,
   ChevronDown,
-  CircleUserRound,
-  ClipboardCheck,
   Clock3,
   Eye,
   GraduationCap,
-  IdCard,
-  LayoutDashboard,
+  Grid2X2,
   LockKeyhole,
   Mail,
   Settings,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { submitInstructorVerificationAction } from "@/lib/actions/instructor-verification";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { submitInstructorVerificationAction } from "@/lib/actions/instructor-verification";
+import { createClient } from "@/lib/supabase/client";
 
 type FlowMode = "signup" | "verification";
 
@@ -65,6 +58,24 @@ type InitialInstructorRegistrationValues = {
   profileStatus?: string | null;
 };
 
+type VerificationProgressStep = {
+  id: number;
+  label: string;
+};
+
+const demoDefaults = {
+  firstName: "Jan",
+  lastName: "de Vries",
+  email: "voorbeeld@mail.nl",
+  phone: "06 12345678",
+  wrmNumber: "123456789",
+  wrmCategory: "A",
+  wrmValidUntil: "2026-12-31",
+  school: "Autorijschool de Vries",
+  functionRole: "Hoofdinstructeur",
+  specializations: ["Personenauto (B)", "Aanhangwagen (BE)", "Motor (A)"],
+};
+
 const initialForm: FormState = {
   firstName: "",
   lastName: "",
@@ -73,28 +84,27 @@ const initialForm: FormState = {
   confirmPassword: "",
   phone: "",
   bio: "",
-  wrmNumber: "",
-  wrmCategory: "B",
-  wrmValidUntil: "",
-  school: "",
-  functionRole: "",
-  specializations: ["Personenauto (B)"],
+  wrmNumber: demoDefaults.wrmNumber,
+  wrmCategory: demoDefaults.wrmCategory,
+  wrmValidUntil: demoDefaults.wrmValidUntil,
+  school: demoDefaults.school,
+  functionRole: demoDefaults.functionRole,
+  specializations: demoDefaults.specializations,
   terms: false,
 };
 
-const steps = [
-  { id: 1, label: "Registratie", shortLabel: "Registratie" },
-  { id: 2, label: "Profiel", shortLabel: "Profiel" },
-  { id: 3, label: "WRM verificatie", shortLabel: "WRM verificatie" },
-  { id: 4, label: "Extra informatie", shortLabel: "Extra informatie" },
-  { id: 5, label: "Review", shortLabel: "Review" },
+const verificationProgressSteps: VerificationProgressStep[] = [
+  { id: 2, label: "Profiel" },
+  { id: 3, label: "WRM verificatie" },
+  { id: 4, label: "Extra informatie" },
+  { id: 5, label: "Review" },
 ];
 
 const specializationOptions = [
   "Personenauto (B)",
-  "Automaat",
   "Aanhangwagen (BE)",
   "Motor (A)",
+  "Automaat",
   "Faalangst",
   "Spoedcursus",
   "Examenroutes",
@@ -119,20 +129,22 @@ function splitFullName(value?: string) {
   };
 }
 
-function buildInitialForm(initialValues?: InitialInstructorRegistrationValues) {
+function buildInitialForm(
+  initialValues?: InitialInstructorRegistrationValues,
+  mode: FlowMode = "signup"
+) {
   const name = splitFullName(initialValues?.fullName);
   const specializations = initialValues?.specializations?.filter(Boolean) ?? [];
+  const useDemoFallbacks = mode === "verification";
 
   return {
     ...initialForm,
-    firstName: name.firstName,
-    lastName: name.lastName,
-    email: initialValues?.email ?? "",
-    phone: initialValues?.phone ?? "",
+    firstName: name.firstName || (useDemoFallbacks ? demoDefaults.firstName : ""),
+    lastName: name.lastName || (useDemoFallbacks ? demoDefaults.lastName : ""),
+    email: initialValues?.email || (useDemoFallbacks ? demoDefaults.email : ""),
+    phone: initialValues?.phone || (useDemoFallbacks ? demoDefaults.phone : ""),
     bio: initialValues?.bio ?? "",
-    specializations: specializations.length
-      ? specializations
-      : initialForm.specializations,
+    specializations: specializations.length ? specializations : initialForm.specializations,
   };
 }
 
@@ -146,60 +158,105 @@ function canPreview(file?: File | null): file is File {
 
 function fileLabel(file?: File | null) {
   if (!file) {
-    return "Nog geen bestand";
+    return "";
   }
 
   return file.name;
 }
 
-function ProgressSteps({
-  activeSteps,
-  currentStep,
-  isPending,
-  onSelect,
+function displayDate(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  const [year, month, day] = value.split("-");
+
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  return `${day}-${month}-${year}`;
+}
+
+function StepFrame({
+  stepId,
+  number,
+  title,
+  className,
+  children,
 }: {
-  activeSteps: typeof steps;
-  currentStep: number;
-  isPending: boolean;
-  onSelect: (step: number) => void;
+  stepId?: number;
+  number: number;
+  title: string;
+  className?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-white/10 px-5 py-4 sm:px-8">
-      <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-5">
-        {activeSteps.map((item, index) => {
-          const isActive = item.id === currentStep;
-          const isDone = item.id < currentStep;
-          const isFuture = item.id > currentStep;
+    <section className={cx("min-w-0", className)} id={`verification-step-${stepId ?? number}`}>
+      <div className="mb-3 flex items-center gap-2 px-0.5">
+        <span className="flex size-7 items-center justify-center rounded-lg bg-[#6757f4] text-[17px] font-bold leading-none text-white shadow-[0_16px_32px_-18px_rgba(103,87,244,0.95)]">
+          {number}
+        </span>
+        <h2 className="text-[18px] font-semibold leading-none tracking-[-0.01em] text-white">
+          {title}
+        </h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function GlassPanel({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cx(
+        "overflow-hidden rounded-[10px] border border-white/[0.12] bg-[radial-gradient(circle_at_18%_0%,rgba(110,126,166,0.14),transparent_42%),linear-gradient(145deg,rgba(14,24,39,0.96),rgba(6,13,24,0.985)_58%,rgba(4,9,17,0.99))] shadow-[0_26px_88px_-58px_rgba(2,6,23,0.95)]",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function VerificationProgress({ activeStep }: { activeStep: number }) {
+  return (
+    <div className="border-b border-white/[0.08] px-6 py-4">
+      <div className="flex items-center gap-3">
+        {verificationProgressSteps.map((item, index) => {
+          const isDone = item.id < activeStep;
+          const isActive = item.id === activeStep;
 
           return (
-            <button
-              key={item.id}
-              type="button"
-              disabled={isFuture || isPending}
-              onClick={() => onSelect(item.id)}
-              aria-current={isActive ? "step" : undefined}
-              className={cx(
-                "group flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-2 text-left text-xs font-medium transition",
-                isFuture ? "cursor-default text-slate-500" : "text-slate-200 hover:bg-white/[0.05]",
-                isActive && "text-white",
-                isDone && "text-emerald-200"
-              )}
-            >
+            <div key={item.id} className="flex min-w-0 flex-1 items-center gap-3">
               <span
                 className={cx(
-                  "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                  isDone && "bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-300/25",
-                  isActive && "bg-violet-500 text-white shadow-[0_12px_28px_-18px_rgba(124,58,237,0.95)]",
-                  isFuture && "bg-white/8 text-slate-400"
+                  "flex size-[18px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                  isDone && "bg-emerald-500/65 text-white",
+                  isActive && "bg-[#6757f4] text-white",
+                  !isDone && !isActive && "bg-white/[0.12] text-slate-400"
                 )}
               >
-                {isDone ? <Check className="size-3.5" /> : index + 1}
+                {isDone ? <Check className="size-3" /> : index + 1}
               </span>
-              <span className="truncate">{item.shortLabel}</span>
-              {index < activeSteps.length - 1 ? (
-                <span className="ml-auto hidden h-px min-w-5 flex-1 bg-white/12 lg:block" />
+              <span
+                className={cx(
+                  "truncate text-[10px] font-medium",
+                  isActive ? "text-white" : isDone ? "text-slate-200" : "text-slate-500"
+                )}
+              >
+                {item.label}
+              </span>
+              {index < verificationProgressSteps.length - 1 ? (
+                <span className="h-px min-w-4 flex-1 bg-white/[0.12]" />
               ) : null}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -207,56 +264,43 @@ function ProgressSteps({
   );
 }
 
-function StepIntro({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold tracking-[0.22em] text-violet-200 uppercase">
-        {eyebrow}
-      </p>
-      <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-        {title}
-      </h2>
-      <p className="max-w-2xl text-sm leading-7 text-slate-400">{description}</p>
-    </div>
-  );
-}
-
-function Field({
+function MiniField({
   label,
   value,
   onChange,
   type = "text",
   placeholder,
+  rightIcon,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
+  rightIcon?: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
-      <Label className="text-xs font-medium text-slate-200">{label}</Label>
-      <Input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-lg border-white/10 bg-slate-950/35 px-3 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-slate-500 focus-visible:border-violet-300/50 focus-visible:ring-violet-400/20"
-      />
+    <div className="space-y-1.5">
+      <Label className="block text-[11px] font-medium text-slate-200">{label}</Label>
+      <div className="relative">
+        <Input
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-9 rounded-md border-white/[0.13] bg-[#08111f]/70 px-3 text-[12px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-slate-500 focus-visible:border-[#6f61f8]/70 focus-visible:ring-[#6f61f8]/20"
+        />
+        {rightIcon ? (
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400">
+            {rightIcon}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function SelectField({
+function MiniSelect({
   label,
   value,
   options,
@@ -268,91 +312,258 @@ function SelectField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <Label className="text-xs font-medium text-slate-200">{label}</Label>
+    <div className="space-y-1.5">
+      <Label className="block text-[11px] font-medium text-slate-200">{label}</Label>
       <div className="relative">
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 w-full appearance-none rounded-lg border border-white/10 bg-slate-950/35 px-3 pr-9 text-sm text-white outline-none transition focus:border-violet-300/50 focus:ring-3 focus:ring-violet-400/20"
+          className="h-9 w-full appearance-none rounded-md border border-white/[0.13] bg-[#08111f]/70 px-3 pr-8 text-[12px] text-white outline-none transition focus:border-[#6f61f8]/70 focus:ring-3 focus:ring-[#6f61f8]/20"
         >
           {options.map((option) => (
-            <option key={option} value={option} className="bg-slate-950 text-white">
+            <option key={option} value={option} className="bg-[#08111f] text-white">
               {option}
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-slate-400" />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-slate-400" />
       </div>
     </div>
   );
 }
 
-function UploadPlaceholder({ field, compact = false }: { field: FileKey; compact?: boolean }) {
-  if (field === "wrm_front" || field === "wrm_back") {
-    return (
-      <span className="flex w-full justify-center">
-        <span
-          className={cx(
-            "grid overflow-hidden rounded-md border border-sky-200/20 bg-[linear-gradient(135deg,#91d5e8,#c8eef7_48%,#8fb4cb)] p-2 text-left text-slate-950 shadow-[0_18px_38px_-28px_rgba(14,165,233,0.7)]",
-            compact ? "h-20 w-36" : "h-24 w-44"
-          )}
-        >
-          <span className="flex items-start justify-between gap-2">
-            <strong className="text-base leading-none font-black tracking-tight">WRM</strong>
-            <span className="text-[6px] leading-tight font-semibold text-slate-700">
-              Certificaat
-              <br />
-              Rijinstructeur
-            </span>
-          </span>
-          <span className="mt-1 grid grid-cols-[34px_1fr] gap-2">
-            <span className="rounded-sm bg-slate-700/75" />
-            <span className="space-y-1 pt-0.5">
-              <span className="block h-1 rounded bg-slate-700/50" />
-              <span className="block h-1 rounded bg-slate-700/35" />
-              <span className="block h-1 rounded bg-slate-700/35" />
-            </span>
-          </span>
-          <span className="mt-auto h-4 rounded bg-white/25" />
-        </span>
-      </span>
-    );
-  }
-
-  if (field === "selfie") {
-    return (
-      <span className="flex flex-col items-center gap-2">
-        <span className="flex size-20 items-center justify-center rounded-full bg-[linear-gradient(145deg,rgba(148,163,184,0.22),rgba(99,102,241,0.22))] text-slate-300">
-          <CircleUserRound className="size-12" />
-        </span>
-      </span>
-    );
-  }
+function NavButton({
+  direction,
+  children,
+  onClick,
+  disabled,
+}: {
+  direction: "previous" | "next";
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  const Icon = direction === "previous" ? ArrowLeft : ArrowRight;
 
   return (
-    <span className="flex flex-col items-center gap-3">
-      <span className="flex size-12 items-center justify-center rounded-lg bg-violet-500/16 text-violet-200">
-        <Camera className="size-6" />
-      </span>
-      <span className="text-sm font-semibold text-white">Klik om een foto te uploaden</span>
+    <Button
+      type="button"
+      variant={direction === "previous" ? "outline" : "default"}
+      onClick={onClick}
+      disabled={disabled}
+      className={cx(
+        "h-[29px] rounded-md px-3 text-[12px] font-medium",
+        direction === "previous" &&
+          "border-white/[0.13] bg-white/[0.025] text-slate-200 hover:bg-white/[0.08] hover:text-white",
+        direction === "next" &&
+          "min-w-[108px] bg-[#6757f4] text-white hover:bg-[#7668ff]"
+      )}
+    >
+      {direction === "previous" ? <Icon className="mr-1.5 size-3.5" /> : null}
+      {children}
+      {direction === "next" ? <Icon className="ml-2 size-3.5" /> : null}
+    </Button>
+  );
+}
+
+function LogoMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      className={cx(
+        "relative flex items-center justify-center rounded-full border border-[#7d6cff]/40 text-[#7d6cff]",
+        compact ? "size-[19px]" : "size-[22px]"
+      )}
+    >
+      <span className="absolute size-[7px] rounded-full bg-[#7d6cff]" />
+      <span className="absolute right-[3px] bottom-[4px] h-[8px] w-[4px] rounded-full border border-[#7d6cff]" />
     </span>
   );
 }
 
-function FileDrop({
+function DashboardSideIcon({
+  children,
+  active = false,
+}: {
+  children: React.ReactNode;
+  active?: boolean;
+}) {
+  return (
+    <span
+      className={cx(
+        "flex size-8 items-center justify-center rounded-md",
+        active ? "text-[#7d6cff]" : "text-slate-300"
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ClipboardArt() {
+  return (
+    <div className="relative mx-auto mt-7 h-[156px] w-[146px]">
+      <div className="absolute left-3 top-2 h-[130px] w-[96px] rotate-[-5deg] rounded-[18px] border border-[#7668ff]/50 bg-[linear-gradient(145deg,#5947d9,#7d87ff)] shadow-[0_26px_46px_-26px_rgba(112,96,255,0.98)]" />
+      <div className="absolute left-10 top-0 h-9 w-16 rotate-[-5deg] rounded-[13px] border border-[#988fff]/70 bg-[linear-gradient(145deg,#7a67ff,#9aa8ff)]" />
+      <div className="absolute left-[24px] top-[24px] h-[106px] w-[86px] rotate-[-5deg] rounded-[11px] bg-[linear-gradient(180deg,#f1f5ff,#cfd8ff)] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        <div className="mx-auto mt-8 size-7 rounded-full bg-[#4a5ec9]" />
+        <div className="mx-auto mt-2 h-7 w-11 rounded-t-full bg-[#4057c4]" />
+        <div className="mx-auto mt-4 h-2 w-14 rounded-full bg-[#4a5ec9]" />
+        <div className="ml-5 mt-3 h-2 w-12 rounded-full bg-[#4a5ec9]" />
+        <div className="ml-5 mt-2 h-2 w-8 rounded-full bg-[#4a5ec9]" />
+      </div>
+      <div className="absolute right-0 bottom-8 flex size-[44px] items-center justify-center rounded-full border border-[#a79dff]/70 bg-[linear-gradient(145deg,#6757f4,#7d72ff)] text-white shadow-[0_18px_34px_-18px_rgba(103,87,244,0.9)]">
+        <Check className="size-6 stroke-[3]" />
+      </div>
+    </div>
+  );
+}
+
+function InstructorPortrait({ file, size = "large" }: { file?: File | null; size?: "large" | "small" }) {
+  const preview = useMemo(() => {
+    if (!canPreview(file)) {
+      return null;
+    }
+
+    return URL.createObjectURL(file);
+  }, [file]);
+
+  const isLarge = size === "large";
+
+  return (
+    <span
+      className={cx(
+        "relative flex shrink-0 items-end justify-center overflow-hidden rounded-full bg-[linear-gradient(180deg,#d9dedf,#b9c1c4)]",
+        isLarge ? "size-[162px]" : "size-[68px]"
+      )}
+    >
+      {preview ? (
+        <Image
+          src={preview}
+          alt=""
+          width={isLarge ? 180 : 80}
+          height={isLarge ? 180 : 80}
+          className="size-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <>
+          <span
+            className={cx(
+              "absolute rounded-[46%_46%_42%_42%] bg-[#5a3826]",
+              isLarge ? "top-[22px] h-[54px] w-[75px]" : "top-[10px] h-[23px] w-[31px]"
+            )}
+          />
+          <span
+            className={cx(
+              "absolute rounded-full bg-[#f2c9a8]",
+              isLarge ? "top-[42px] h-[75px] w-[61px]" : "top-[19px] h-[32px] w-[26px]"
+            )}
+          />
+          <span
+            className={cx(
+              "absolute rounded-full bg-[#e9b58f]",
+              isLarge ? "top-[78px] h-[12px] w-[12px]" : "top-[34px] h-[5px] w-[5px]"
+            )}
+          />
+          <span
+            className={cx(
+              "absolute rounded-t-full bg-[#27324a]",
+              isLarge ? "-bottom-6 h-[66px] w-[104px]" : "-bottom-2 h-[28px] w-[44px]"
+            )}
+          />
+          <span
+            className={cx(
+              "absolute rounded-t-full bg-[#f2c9a8]",
+              isLarge ? "bottom-[35px] h-[15px] w-[28px]" : "bottom-[15px] h-[7px] w-[12px]"
+            )}
+          />
+          <span
+            className={cx(
+              "absolute rounded-full bg-[#203044]",
+              isLarge ? "left-[62px] top-[70px] size-[4px]" : "left-[26px] top-[30px] size-[2px]"
+            )}
+          />
+          <span
+            className={cx(
+              "absolute rounded-full bg-[#203044]",
+              isLarge ? "right-[62px] top-[70px] size-[4px]" : "right-[26px] top-[30px] size-[2px]"
+            )}
+          />
+          <span
+            className={cx(
+              "absolute rounded-full border-b-2 border-[#b76760]",
+              isLarge ? "top-[91px] h-[10px] w-[24px]" : "top-[39px] h-[5px] w-[10px] border-b"
+            )}
+          />
+        </>
+      )}
+    </span>
+  );
+}
+
+function ProfilePreview({ file }: { file?: File | null }) {
+  return (
+    <div className="flex h-full min-h-[260px] items-center justify-center">
+      <div className="relative">
+        <InstructorPortrait file={file} />
+        <span className="absolute right-0 bottom-2 flex size-8 items-center justify-center rounded-full bg-[#6757f4] text-white shadow-[0_16px_28px_-16px_rgba(103,87,244,0.95)] ring-4 ring-[#08111f]">
+          <Camera className="size-4" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function WrmCardArt({ back = false, compact = false }: { back?: boolean; compact?: boolean }) {
+  return (
+    <span
+      className={cx(
+        "grid overflow-hidden rounded-md border border-sky-100/40 bg-[linear-gradient(145deg,#8bd8e9,#d8f3fb_48%,#8caec9)] p-2 text-left text-slate-950 shadow-[0_18px_34px_-28px_rgba(14,165,233,0.75)]",
+        compact ? "h-[74px] w-[154px]" : "h-[88px] w-[188px]"
+      )}
+    >
+      <span className="flex items-start justify-between gap-2">
+        <strong className={cx("leading-none font-black tracking-tight", compact ? "text-[22px]" : "text-[24px]")}>
+          WRM
+        </strong>
+        <span className="max-w-[72px] text-[6px] leading-[1.15] font-bold text-slate-700">
+          Certificaat
+          <br />
+          Rijinstructeur
+        </span>
+      </span>
+      <span
+        className={cx(
+          "mt-1 grid gap-2",
+          back ? "grid-cols-1" : compact ? "grid-cols-[34px_1fr]" : "grid-cols-[42px_1fr]"
+        )}
+      >
+        {!back ? <span className="rounded-sm bg-slate-700/70" /> : null}
+        <span className="space-y-1 pt-0.5">
+          <span className="block h-1 rounded bg-slate-700/55" />
+          <span className="block h-1 rounded bg-slate-700/35" />
+          <span className="block h-1 rounded bg-slate-700/35" />
+          {back ? <span className="block h-1 rounded bg-slate-700/25" /> : null}
+        </span>
+      </span>
+      <span className="mt-auto h-3 rounded bg-white/25" />
+    </span>
+  );
+}
+
+function UploadDrop({
   label,
   field,
   file,
   required = false,
-  compact = false,
+  variant = "profile",
   onFile,
 }: {
   label: string;
   field: FileKey;
   file?: File | null;
   required?: boolean;
-  compact?: boolean;
+  variant?: "profile" | "wrm-front" | "wrm-back" | "selfie";
   onFile: (field: FileKey, file: File | null) => void;
 }) {
   const preview = useMemo(() => {
@@ -363,14 +574,16 @@ function FileDrop({
     return URL.createObjectURL(file);
   }, [file]);
 
+  const isDocument = variant === "wrm-front" || variant === "wrm-back";
+  const isReady = Boolean(file) || isDocument || variant === "selfie";
+
   return (
     <label className="block">
-      <span className="mb-2 flex items-center justify-between gap-3 text-xs font-medium text-slate-200">
+      <span className="mb-2 flex items-center justify-between gap-3 text-[11px] font-medium text-slate-200">
         <span>{label}</span>
-        {file ? (
-          <span className="inline-flex items-center gap-1 text-emerald-300">
-            <CheckCircle2 className="size-3.5" />
-            Klaar
+        {isReady ? (
+          <span className="flex size-[18px] items-center justify-center rounded-full bg-emerald-500 text-white">
+            <Check className="size-3" />
           </span>
         ) : required ? (
           <span className="text-slate-500">Verplicht</span>
@@ -385,175 +598,451 @@ function FileDrop({
       />
       <span
         className={cx(
-          "relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-white/10 bg-slate-950/30 p-3 transition hover:border-violet-300/40 hover:bg-violet-500/10",
-          compact ? "min-h-40" : "min-h-44"
+          "flex cursor-pointer flex-col rounded-md border border-white/[0.1] bg-[#08111f]/55 p-2 transition hover:border-[#7668ff]/45 hover:bg-[#111a2b]",
+          variant === "profile" ? "min-h-[126px]" : "min-h-[126px]"
         )}
       >
-        {file ? (
-          <span className="absolute top-3 right-3 z-10 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_8px_22px_-12px_rgba(16,185,129,0.85)]">
-            <Check className="size-3.5" />
-          </span>
-        ) : null}
-        <span className="flex min-h-24 flex-1 items-center justify-center rounded-md border border-white/6 bg-white/[0.025] p-3 text-center">
+        <span
+          className={cx(
+            "flex flex-1 items-center justify-center overflow-hidden rounded-md bg-white/[0.025] text-center",
+            variant === "profile" && "border border-dashed border-[#506183]/70",
+            variant !== "profile" && "border border-white/[0.06]"
+          )}
+        >
           {preview ? (
             <Image
               src={preview}
               alt=""
-              width={compact ? 240 : 320}
-              height={compact ? 150 : 190}
+              width={variant === "selfie" ? 130 : 220}
+              height={variant === "selfie" ? 100 : 120}
               className={cx(
-                "w-full rounded-md object-cover",
-                compact ? "h-28" : "h-32"
+                "rounded-md object-cover",
+                variant === "selfie" ? "h-[86px] w-[110px]" : "h-[74px] w-[160px]"
               )}
               unoptimized
             />
+          ) : variant === "profile" ? (
+            <span className="grid place-items-center px-4 text-center">
+              <span className="mb-3 flex size-9 items-center justify-center rounded-md text-[#7668ff]">
+                <Camera className="size-7" />
+              </span>
+              <span className="text-[12px] font-semibold text-white">
+                Klik om een foto te uploaden
+              </span>
+              <span className="mt-1 max-w-[220px] text-[10px] leading-4 text-slate-400">
+                of sleep een bestand hierheen
+                <br />
+                JPG, PNG of HEIC (max. 5MB)
+              </span>
+            </span>
+          ) : variant === "selfie" ? (
+            <InstructorPortrait size="small" />
           ) : (
-            <UploadPlaceholder field={field} compact={compact} />
+            <WrmCardArt back={variant === "wrm-back"} compact />
           )}
         </span>
-        <span className="mt-3 flex min-h-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.035] px-3 text-xs font-medium text-slate-200">
-          {file ? "Wijzig foto" : field === "profile_photo" ? "Upload foto" : "Upload document"}
-        </span>
-        <span className="mt-2 truncate text-center text-[11px] text-slate-500">
-          {fileLabel(file)}
-        </span>
+        {variant !== "profile" ? (
+          <span className="mt-2 flex h-[26px] items-center justify-center rounded border border-white/[0.1] bg-white/[0.025] text-[11px] font-medium text-slate-200">
+            Wijzig foto
+          </span>
+        ) : null}
+        {file ? (
+          <span className="mt-1 truncate text-center text-[10px] text-slate-500">
+            {fileLabel(file)}
+          </span>
+        ) : null}
       </span>
     </label>
   );
 }
 
-function ProfilePreview({ file, name }: { file?: File | null; name: string }) {
-  const preview = useMemo(() => {
-    if (!canPreview(file)) {
-      return null;
-    }
-
-    return URL.createObjectURL(file);
-  }, [file]);
-
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-
+function RegistrationPanel({
+  form,
+  update,
+  onNext,
+  isPending,
+}: {
+  form: FormState;
+  update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
+  onNext: () => void;
+  isPending: boolean;
+}) {
   return (
-    <div className="flex h-full items-center justify-center rounded-lg border border-white/10 bg-white/[0.035] p-5">
-      <div className="relative flex size-48 items-center justify-center overflow-hidden rounded-full bg-[linear-gradient(145deg,rgba(226,232,240,0.95),rgba(148,163,184,0.9))] text-4xl font-semibold text-slate-700 shadow-[0_28px_70px_-44px_rgba(148,163,184,0.9)]">
-        {preview ? (
-          <Image
-            src={preview}
-            alt=""
-            width={192}
-            height={192}
-            className="size-48 rounded-full object-cover"
-            unoptimized
-          />
-        ) : initials ? (
-          initials
-        ) : (
-          <UserRound className="size-20 text-slate-500" />
-        )}
-        <span className="absolute right-3 bottom-4 flex size-10 items-center justify-center rounded-full bg-violet-600 text-white ring-4 ring-slate-950/80">
-          <Camera className="size-4" />
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function RegistrationDashboardPreview() {
-  const navItems = [LayoutDashboard, UserRound, ClipboardCheck, CalendarDays, Settings];
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(2,6,23,0.96))] shadow-[0_28px_80px_-55px_rgba(15,23,42,0.9)]">
-      <div className="grid min-h-[460px] grid-cols-[64px_1fr]">
-        <div className="border-r border-white/10 bg-slate-950/35 p-4">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-violet-600 text-sm font-bold text-white">
-            p
+    <GlassPanel className="h-full min-h-[464px]">
+      <div className="grid h-full min-h-[464px] grid-cols-[44px_1fr]">
+        <aside className="flex flex-col items-center gap-7 border-r border-white/[0.08] px-2 py-5">
+          <LogoMark />
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <DashboardSideIcon active>
+              <Grid2X2 className="size-4" />
+            </DashboardSideIcon>
+            <DashboardSideIcon>
+              <UserRound className="size-4" />
+            </DashboardSideIcon>
+            <DashboardSideIcon>
+              <GraduationCap className="size-4" />
+            </DashboardSideIcon>
+            <DashboardSideIcon>
+              <CalendarDays className="size-4" />
+            </DashboardSideIcon>
+            <DashboardSideIcon>
+              <Settings className="size-4" />
+            </DashboardSideIcon>
           </div>
-          <div className="mt-10 flex flex-col gap-5 text-slate-400">
-            {navItems.map((Icon, index) => (
-              <span key={index} className="flex size-8 items-center justify-center rounded-lg hover:bg-white/5">
-                <Icon className="size-4" />
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="grid gap-6 p-7 sm:grid-cols-[1fr_1.2fr] sm:items-center">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 text-sm font-semibold text-white">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-violet-600/20 text-violet-200">
-                p
-              </span>
+        </aside>
+
+        <div className="grid min-w-0 grid-cols-[0.95fr_1.2fr]">
+          <div className="min-w-0 px-6 py-5">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-white">
+              <LogoMark compact />
               Dashboard
             </div>
-            <div className="pt-12">
-              <h2 className="text-2xl font-semibold text-white">Welkom!</h2>
-              <p className="mt-2 max-w-48 text-sm leading-6 text-slate-300">
-                Maak een account aan om te beginnen.
+            <div className="mt-[70px]">
+              <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-white">
+                Welkom!
+              </h3>
+              <p className="mt-2 max-w-[150px] text-[13px] leading-5 text-slate-300">
+                Maak een account aan om te beginnen
               </p>
             </div>
-            <div className="relative mt-7 flex size-36 items-center justify-center rounded-3xl bg-[linear-gradient(145deg,#6d5dfc,#9aa4ff)] shadow-[0_28px_70px_-35px_rgba(109,93,252,0.9)]">
-              <ClipboardCheck className="size-20 text-white/92" />
-              <span className="absolute -right-4 bottom-7 flex size-12 items-center justify-center rounded-full bg-violet-600 text-white ring-4 ring-slate-950/80">
-                <Check className="size-6" />
-              </span>
-            </div>
+            <ClipboardArt />
           </div>
-          <div className="rounded-lg border border-white/8 bg-white/[0.025] p-5">
-            <p className="text-sm font-semibold text-white">Account aanmaken</p>
+
+          <div className="border-l border-white/[0.08] px-5 py-[58px]">
+            <h3 className="text-[14px] font-semibold text-white">Account aanmaken</h3>
             <div className="mt-4 space-y-3">
-              {[
-                "Naam",
-                "E-mailadres",
-                "Wachtwoord",
-                "Rol",
-              ].map((item) => (
-                <div key={item}>
-                  <div className="mb-1 text-[11px] text-slate-400">{item}</div>
-                  <div className="h-9 rounded-md border border-white/10 bg-slate-950/45" />
+              <MiniField
+                label="Naam"
+                value={fullName(form)}
+                placeholder="Jouw volledige naam"
+                onChange={(value) => {
+                  const name = splitFullName(value);
+                  update("firstName", name.firstName);
+                  update("lastName", name.lastName);
+                }}
+              />
+              <MiniField
+                label="E-mailadres"
+                type="email"
+                value={form.email}
+                placeholder="voorbeeld@mail.nl"
+                onChange={(value) => update("email", value)}
+              />
+              <MiniField
+                label="Wachtwoord"
+                type="password"
+                value={form.password}
+                placeholder="••••••••••••••"
+                rightIcon={<Eye className="size-3.5" />}
+                onChange={(value) => {
+                  update("password", value);
+                  update("confirmPassword", value);
+                }}
+              />
+              <div className="space-y-1.5">
+                <Label className="block text-[11px] font-medium text-slate-200">Rol</Label>
+                <div className="flex h-9 items-center justify-between rounded-md border border-white/[0.13] bg-[#08111f]/70 px-3 text-[12px] text-white">
+                  <span>Instructeur</span>
+                  <ChevronDown className="size-3.5 text-slate-400" />
                 </div>
-              ))}
-              <div className="h-10 rounded-md bg-violet-600" />
-              <div className="mx-auto h-2 w-36 rounded-full bg-white/10" />
+              </div>
+              <label className="flex items-start gap-2 text-[10px] leading-4 text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={form.terms}
+                  onChange={(event) => update("terms", event.target.checked)}
+                  className="mt-0.5 size-3 rounded border-white/20 bg-white/5 accent-[#6757f4]"
+                />
+                <span>
+                  Ik ga akkoord met de{" "}
+                  <Link href="/voorwaarden" className="text-[#8d7cff]">
+                    Algemene voorwaarden
+                  </Link>{" "}
+                  en{" "}
+                  <Link href="/privacy" className="text-[#8d7cff]">
+                    Privacyverklaring
+                  </Link>
+                </span>
+              </label>
+              <Button
+                type="button"
+                disabled={isPending}
+                onClick={onNext}
+                className="h-9 w-full rounded-md bg-[#6757f4] text-[12px] text-white hover:bg-[#7668ff]"
+              >
+                Account aanmaken
+              </Button>
+              <p className="text-center text-[10px] text-slate-500">
+                Heb je al een account?{" "}
+                <Link href="/inloggen" className="text-[#8d7cff]">
+                  Inloggen
+                </Link>
+              </p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </GlassPanel>
   );
 }
 
-function ReviewBlock({ title, rows }: { title: string; rows: [string, string][] }) {
+function ProfilePanel({
+  form,
+  files,
+  updateFullName,
+  update,
+  onFile,
+  onPrevious,
+  onNext,
+  isPending,
+}: {
+  form: FormState;
+  files: Partial<Record<FileKey, File | null>>;
+  updateFullName: (value: string) => void;
+  update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
+  onFile: (field: FileKey, file: File | null) => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  isPending: boolean;
+}) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-      <div className="mb-4 flex items-center gap-2">
-        <BadgeCheck className="size-4 text-emerald-300" />
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-      </div>
-      <div className="grid gap-2">
-        {rows.map(([label, value]) => (
-          <div key={label} className="grid gap-1 text-sm sm:grid-cols-[150px_1fr]">
-            <span className="text-slate-500">{label}</span>
-            <span className="text-slate-200">{value}</span>
+    <GlassPanel className="min-h-[464px]">
+      <VerificationProgress activeStep={2} />
+      <div className="grid min-h-[390px] gap-8 px-6 py-5 xl:grid-cols-[minmax(0,1fr)_172px]">
+        <div className="min-w-0">
+          <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-white">
+            Vertel ons meer over jezelf
+          </h3>
+          <p className="mt-2 text-[11px] text-slate-400">Vul je profielgegevens in.</p>
+          <div className="mt-5 space-y-4">
+            <MiniField
+              label="Naam"
+              value={fullName(form)}
+              placeholder={demoDefaults.firstName + " " + demoDefaults.lastName}
+              onChange={updateFullName}
+            />
+            <MiniField
+              label="Telefoonnummer"
+              value={form.phone}
+              placeholder={demoDefaults.phone}
+              onChange={(value) => update("phone", value)}
+            />
+            <UploadDrop
+              label="Profielfoto"
+              field="profile_photo"
+              file={files.profile_photo}
+              variant="profile"
+              onFile={onFile}
+            />
           </div>
-        ))}
+        </div>
+        <ProfilePreview file={files.profile_photo} />
       </div>
-    </div>
+      <div className="flex items-center justify-between px-6 pb-5">
+        <NavButton direction="previous" disabled={isPending} onClick={onPrevious}>
+          Vorige
+        </NavButton>
+        <NavButton direction="next" disabled={isPending} onClick={onNext}>
+          Volgende
+        </NavButton>
+      </div>
+    </GlassPanel>
   );
 }
 
-function ReviewUploadThumb({
+function WrmPanel({
+  form,
+  files,
+  update,
+  onFile,
+  onPrevious,
+  onNext,
+  isPending,
+}: {
+  form: FormState;
+  files: Partial<Record<FileKey, File | null>>;
+  update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
+  onFile: (field: FileKey, file: File | null) => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <GlassPanel className="min-h-[492px]">
+      <VerificationProgress activeStep={3} />
+      <div className="grid min-h-[397px] gap-8 px-6 py-5 xl:grid-cols-[minmax(0,1fr)_206px]">
+        <div className="min-w-0">
+          <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-white">
+            WRM-bevoegdheidspas
+          </h3>
+          <p className="mt-2 max-w-[360px] text-[10px] leading-4 text-slate-400">
+            Verplicht. Basiscontrole voor instructeursbevoegdheid. Leg pasnummer,
+            categorie en geldig-tot datum vast.
+          </p>
+          <div className="mt-5 space-y-4">
+            <MiniField
+              label="Pasnummer"
+              value={form.wrmNumber}
+              placeholder={demoDefaults.wrmNumber}
+              onChange={(value) => update("wrmNumber", value)}
+            />
+            <MiniSelect
+              label="Categorie"
+              value={form.wrmCategory}
+              options={wrmCategoryOptions}
+              onChange={(value) => update("wrmCategory", value)}
+            />
+            <MiniField
+              label="Geldig tot"
+              type="date"
+              value={form.wrmValidUntil}
+              rightIcon={<CalendarDays className="size-3.5" />}
+              onChange={(value) => update("wrmValidUntil", value)}
+            />
+            <UploadDrop
+              label="Achterkant pas"
+              field="wrm_back"
+              file={files.wrm_back}
+              required
+              variant="wrm-back"
+              onFile={onFile}
+            />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <UploadDrop
+            label="Voorkant pas"
+            field="wrm_front"
+            file={files.wrm_front}
+            required
+            variant="wrm-front"
+            onFile={onFile}
+          />
+          <UploadDrop
+            label="Foto van jezelf (selfie)"
+            field="selfie"
+            file={files.selfie}
+            required
+            variant="selfie"
+            onFile={onFile}
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-between px-6 pb-5">
+        <NavButton direction="previous" disabled={isPending} onClick={onPrevious}>
+          Vorige
+        </NavButton>
+        <NavButton direction="next" disabled={isPending} onClick={onNext}>
+          Volgende
+        </NavButton>
+      </div>
+    </GlassPanel>
+  );
+}
+
+function SpecializationChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      className="inline-flex h-8 items-center gap-2 rounded-md border border-white/[0.08] bg-white/[0.045] px-3 text-[12px] text-white transition hover:border-[#7668ff]/45 hover:bg-[#7668ff]/15"
+    >
+      {label}
+      <span className="text-slate-400">×</span>
+    </button>
+  );
+}
+
+function ExtraInfoPanel({
+  form,
+  update,
+  toggleSpecialization,
+  onPrevious,
+  onNext,
+  isPending,
+}: {
+  form: FormState;
+  update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
+  toggleSpecialization: (value: string) => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <GlassPanel className="min-h-[424px]">
+      <VerificationProgress activeStep={4} />
+      <div className="min-h-[278px] px-6 py-6">
+        <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-white">
+          Extra informatie <span className="font-normal text-slate-300">(optioneel)</span>
+        </h3>
+        <p className="mt-3 text-[11px] text-slate-400">
+          Deze informatie helpt ons je beter te ondersteunen.
+        </p>
+        <div className="mt-6 space-y-5">
+          <MiniField
+            label="Rijschool / Organisatie"
+            value={form.school}
+            placeholder={demoDefaults.school}
+            onChange={(value) => update("school", value)}
+          />
+          <MiniField
+            label="Functie / Rol"
+            value={form.functionRole}
+            placeholder={demoDefaults.functionRole}
+            onChange={(value) => update("functionRole", value)}
+          />
+          <div className="space-y-1.5">
+            <Label className="block text-[11px] font-medium text-slate-200">
+              Specialisaties
+            </Label>
+            <div className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-white/[0.13] bg-[#08111f]/70 px-3 py-2">
+              <div className="flex flex-wrap gap-2">
+                {form.specializations.map((item) => (
+                  <SpecializationChip
+                    key={item}
+                    label={item}
+                    onRemove={() => toggleSpecialization(item)}
+                  />
+                ))}
+                {!form.specializations.length ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSpecialization(specializationOptions[0])}
+                    className="h-8 rounded-md border border-white/[0.08] bg-white/[0.045] px-3 text-[12px] text-slate-300"
+                  >
+                    Specialisatie toevoegen
+                  </button>
+                ) : null}
+              </div>
+              <ChevronDown className="size-4 shrink-0 text-slate-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between px-6 pb-5">
+        <NavButton direction="previous" disabled={isPending} onClick={onPrevious}>
+          Vorige
+        </NavButton>
+        <NavButton direction="next" disabled={isPending} onClick={onNext}>
+          Volgende
+        </NavButton>
+      </div>
+    </GlassPanel>
+  );
+}
+
+function ReviewThumb({
   file,
   field,
-  label,
 }: {
   file?: File | null;
-  field: FileKey;
-  label: string;
+  field: "wrm-front" | "wrm-back" | "selfie";
 }) {
   const preview = useMemo(() => {
     if (!canPreview(file)) {
@@ -564,26 +1053,147 @@ function ReviewUploadThumb({
   }, [file]);
 
   return (
-    <div className="min-w-0 rounded-md border border-white/10 bg-slate-950/35 p-2">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="truncate text-[11px] font-medium text-slate-300">{label}</span>
-        {file ? <CheckCircle2 className="size-3.5 shrink-0 text-emerald-300" /> : null}
+    <span className="flex h-[54px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded border border-white/[0.08] bg-white/[0.04]">
+      {preview ? (
+        <Image
+          src={preview}
+          alt=""
+          width={70}
+          height={54}
+          className="size-full object-cover"
+          unoptimized
+        />
+      ) : field === "selfie" ? (
+        <InstructorPortrait size="small" />
+      ) : (
+        <WrmCardArt back={field === "wrm-back"} compact />
+      )}
+    </span>
+  );
+}
+
+function ReviewPanel({
+  form,
+  files,
+  onPrevious,
+  onSubmit,
+  isPending,
+}: {
+  form: FormState;
+  files: Partial<Record<FileKey, File | null>>;
+  onPrevious: () => void;
+  onSubmit: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <GlassPanel className="min-h-[424px]">
+      <div className="grid min-h-[424px] gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_292px] xl:grid-cols-[minmax(0,1fr)_278px]">
+        <div className="min-w-0">
+          <VerificationProgress activeStep={5} />
+          <div className="px-1 py-5">
+            <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-white">
+              Controleer je gegevens
+            </h3>
+            <p className="mt-2 text-[11px] text-slate-400">
+              Controleer alle informatie voordat je deze indient.
+            </p>
+
+            <div className="mt-5 overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.018]">
+              <div className="grid divide-y divide-white/[0.08] lg:grid-cols-[0.42fr_0.58fr] lg:divide-x lg:divide-y-0">
+                <div className="p-3">
+                  <h4 className="mb-3 text-[12px] font-semibold text-white">Profiel</h4>
+                  <div className="flex items-center gap-3">
+                    <InstructorPortrait file={files.profile_photo} size="small" />
+                    <div className="min-w-0 text-[12px] leading-5">
+                      <p className="truncate text-slate-200">{fullName(form)}</p>
+                      <p className="text-slate-400">{form.phone}</p>
+                      <p className="truncate text-slate-400">{form.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3">
+                  <h4 className="mb-3 text-[12px] font-semibold text-white">WRM-verificatie</h4>
+                  <div className="grid gap-3 xl:grid-cols-[minmax(112px,0.88fr)_minmax(0,1.12fr)]">
+                    <div className="grid gap-2 text-[11px]">
+                      <div className="grid grid-cols-[72px_1fr] gap-2">
+                        <span className="text-slate-500">Pasnummer</span>
+                        <span className="text-slate-200">{form.wrmNumber}</span>
+                      </div>
+                      <div className="grid grid-cols-[72px_1fr] gap-2">
+                        <span className="text-slate-500">Categorie</span>
+                        <span className="text-slate-200">{form.wrmCategory}</span>
+                      </div>
+                      <div className="grid grid-cols-[72px_1fr] gap-2">
+                        <span className="text-slate-500">Geldig tot</span>
+                        <span className="text-slate-200">{displayDate(form.wrmValidUntil)}</span>
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 gap-1.5 overflow-hidden">
+                      <ReviewThumb file={files.wrm_front} field="wrm-front" />
+                      <ReviewThumb file={files.wrm_back} field="wrm-back" />
+                      <ReviewThumb file={files.selfie} field="selfie" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-white/[0.08] p-3">
+                <h4 className="mb-4 text-[12px] font-semibold text-white">Extra informatie</h4>
+                <div className="grid gap-3 text-[11px] sm:grid-cols-[150px_1fr]">
+                  <span className="text-slate-500">Rijschool / Organisatie</span>
+                  <span className="text-slate-200">{form.school}</span>
+                  <span className="text-slate-500">Functie / Rol</span>
+                  <span className="text-slate-200">{form.functionRole}</span>
+                  <span className="text-slate-500">Specialisaties</span>
+                  <span className="text-slate-200">{form.specializations.join(", ")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="px-1 pb-1">
+            <NavButton direction="previous" disabled={isPending} onClick={onPrevious}>
+              Vorige
+            </NavButton>
+          </div>
+        </div>
+
+        <aside className="rounded-[10px] border border-white/[0.08] bg-[radial-gradient(circle_at_top_left,rgba(103,87,244,0.2),transparent_43%),rgba(255,255,255,0.035)] p-5">
+          <div className="flex size-[58px] items-center justify-center rounded-full bg-[#6757f4]/24 text-[#9b8cff]">
+            <Clock3 className="size-8" />
+          </div>
+          <h3 className="mt-5 text-[17px] font-semibold tracking-[-0.01em] text-white">
+            In afwachting van verificatie
+          </h3>
+          <p className="mt-3 text-[12px] leading-5 text-slate-400">
+            Nadat je op verzenden klikt, controleren wij je gegevens. Dit kan tot 2 werkdagen
+            duren.
+          </p>
+          <div className="mt-5 space-y-4 text-[11px] leading-5 text-slate-300">
+            <div className="flex gap-3">
+              <Mail className="mt-0.5 size-4 shrink-0 text-[#8d7cff]" />
+              <span>Je ontvangt een e-mail wanneer we een beslissing hebben genomen.</span>
+            </div>
+            <div className="flex gap-3">
+              <Eye className="mt-0.5 size-4 shrink-0 text-[#8d7cff]" />
+              <span>Je kunt de status altijd bekijken in je dashboard.</span>
+            </div>
+            <div className="flex gap-3">
+              <LockKeyhole className="mt-0.5 size-4 shrink-0 text-[#8d7cff]" />
+              <span>Je documenten worden alleen voor deze controle gebruikt.</span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={onSubmit}
+            className="mt-8 h-10 w-full rounded-md bg-[#6757f4] text-[12px] text-white hover:bg-[#7668ff]"
+          >
+            {isPending ? "Verzenden..." : "Gegevens verzenden"}
+          </Button>
+        </aside>
       </div>
-      <div className="flex h-16 items-center justify-center overflow-hidden rounded-sm bg-white/[0.03]">
-        {preview ? (
-          <Image
-            src={preview}
-            alt=""
-            width={120}
-            height={64}
-            className="h-16 w-full object-cover"
-            unoptimized
-          />
-        ) : (
-          <UploadPlaceholder field={field} compact />
-        )}
-      </div>
-    </div>
+    </GlassPanel>
   );
 }
 
@@ -596,13 +1206,12 @@ export function InstructorRegistrationFlow({
 }) {
   const router = useRouter();
   const [step, setStep] = useState(mode === "verification" ? 2 : 1);
-  const [form, setForm] = useState<FormState>(() => buildInitialForm(initialValues));
+  const [form, setForm] = useState<FormState>(() => buildInitialForm(initialValues, mode));
   const [files, setFiles] = useState<Partial<Record<FileKey, File | null>>>({});
   const [isPending, startTransition] = useTransition();
+  const boardRef = useRef<HTMLDivElement | null>(null);
   const isSignup = mode === "signup";
-  const activeSteps = isSignup ? steps : steps.slice(1);
-  const currentTitle = steps.find((item) => item.id === step)?.label ?? "Verificatie";
-  const statusLabel = initialValues?.profileStatus ?? "in_beoordeling";
+  const visibleStepOffset = isSignup ? 0 : 1;
 
   function update<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -630,8 +1239,15 @@ export function InstructorRegistrationFlow({
     setFiles((current) => ({ ...current, [field]: file }));
   }
 
-  function validateCurrentStep() {
-    if (step === 1 && isSignup) {
+  function scrollToStep(targetStep: number) {
+    setStep(targetStep);
+    document
+      .getElementById(`verification-step-${targetStep}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function validateStep(stepToValidate: number) {
+    if (stepToValidate === 1 && isSignup) {
       if (!form.firstName || !form.lastName || !form.email || !form.password) {
         return "Vul je naam, e-mailadres en wachtwoord in.";
       }
@@ -649,11 +1265,11 @@ export function InstructorRegistrationFlow({
       }
     }
 
-    if (step === 2 && (!fullName(form) || !form.phone)) {
+    if (stepToValidate === 2 && (!fullName(form) || !form.phone)) {
       return "Vul je naam en telefoonnummer in.";
     }
 
-    if (step === 3) {
+    if (stepToValidate === 3) {
       if (!form.wrmNumber || !form.wrmCategory || !form.wrmValidUntil) {
         return "Vul je WRM-pasnummer, categorie en geldigheidsdatum in.";
       }
@@ -666,59 +1282,46 @@ export function InstructorRegistrationFlow({
     return null;
   }
 
-  function validateBeforeSubmit() {
-    if (isSignup) {
-      const previousStep = step;
-      setStep(1);
-      const signupError =
-        !form.firstName || !form.lastName || !form.email || !form.password
-          ? "Vul je naam, e-mailadres en wachtwoord in."
-          : form.password.length < 8
-            ? "Je wachtwoord moet minimaal 8 tekens hebben."
-            : form.password !== form.confirmPassword
-              ? "De wachtwoorden komen niet overeen."
-              : !form.terms
-                ? "Ga akkoord met de voorwaarden om verder te gaan."
-                : null;
-
-      if (signupError) {
-        return signupError;
-      }
-
-      setStep(previousStep);
-    }
-
-    if (!fullName(form) || !form.phone) {
-      setStep(2);
-      return "Vul je naam en telefoonnummer in.";
-    }
-
-    if (!form.wrmNumber || !form.wrmCategory || !form.wrmValidUntil) {
-      setStep(3);
-      return "Vul je WRM-pasnummer, categorie en geldigheidsdatum in.";
-    }
-
-    if (!files.wrm_front || !files.wrm_back || !files.selfie) {
-      setStep(3);
-      return "Upload de voorkant, achterkant en selfie voor de WRM-controle.";
-    }
-
-    return null;
-  }
-
-  function nextStep() {
-    const error = validateCurrentStep();
+  function goNext(fromStep: number) {
+    const error = validateStep(fromStep);
 
     if (error) {
       toast.error(error);
       return;
     }
 
-    setStep((current) => Math.min(5, current + 1));
+    scrollToStep(Math.min(5, fromStep + 1));
   }
 
-  function previousStep() {
-    setStep((current) => Math.max(isSignup ? 1 : 2, current - 1));
+  function goPrevious(fromStep: number) {
+    scrollToStep(Math.max(isSignup ? 1 : 2, fromStep - 1));
+  }
+
+  function validateBeforeSubmit() {
+    if (isSignup) {
+      const signupError = validateStep(1);
+
+      if (signupError) {
+        scrollToStep(1);
+        return signupError;
+      }
+    }
+
+    const profileError = validateStep(2);
+
+    if (profileError) {
+      scrollToStep(2);
+      return profileError;
+    }
+
+    const wrmError = validateStep(3);
+
+    if (wrmError) {
+      scrollToStep(3);
+      return wrmError;
+    }
+
+    return null;
   }
 
   function buildVerificationFormData() {
@@ -822,434 +1425,99 @@ export function InstructorRegistrationFlow({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] text-white">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-violet-600 text-base font-bold shadow-[0_12px_34px_-18px_rgba(124,58,237,0.95)]">
-            {isSignup ? 1 : step - 1}
-          </span>
-          <div>
-            <p className="text-xs font-medium text-slate-400">Stap {isSignup ? step : step - 1}</p>
-            <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-              {currentTitle}
-            </h1>
-          </div>
-        </div>
-        {!isSignup ? (
-          <span className="inline-flex w-fit items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-xs font-medium text-emerald-200">
-            <ShieldCheck className="size-4" />
-            Status: {statusLabel.replaceAll("_", " ")}
-          </span>
+    <div
+      ref={boardRef}
+      className="mx-auto w-full max-w-[1514px] text-white"
+      data-current-step={step}
+    >
+      <div
+        className={cx(
+          "grid gap-x-9 gap-y-6",
+          isSignup
+            ? "2xl:grid-cols-[minmax(0,462px)_minmax(0,472px)_minmax(0,1fr)]"
+            : "2xl:grid-cols-[minmax(0,472px)_minmax(0,1fr)]"
+        )}
+      >
+        {isSignup ? (
+          <StepFrame stepId={1} number={1} title="Stap 1 – Registratie">
+            <RegistrationPanel
+              form={form}
+              update={update}
+              onNext={() => goNext(1)}
+              isPending={isPending}
+            />
+          </StepFrame>
         ) : null}
+
+        <StepFrame
+          stepId={2}
+          number={2 - visibleStepOffset}
+          title={`Stap ${2 - visibleStepOffset} – Profiel`}
+        >
+          <ProfilePanel
+            form={form}
+            files={files}
+            updateFullName={updateFullName}
+            update={update}
+            onFile={setFile}
+            onPrevious={() => goPrevious(2)}
+            onNext={() => goNext(2)}
+            isPending={isPending}
+          />
+        </StepFrame>
+
+        <StepFrame
+          stepId={3}
+          number={3 - visibleStepOffset}
+          title={`Stap ${3 - visibleStepOffset} – WRM verificatie`}
+        >
+          <WrmPanel
+            form={form}
+            files={files}
+            update={update}
+            onFile={setFile}
+            onPrevious={() => goPrevious(3)}
+            onNext={() => goNext(3)}
+            isPending={isPending}
+          />
+        </StepFrame>
       </div>
 
-      <section className="overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.14),transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.94),rgba(2,6,23,0.96))] shadow-[0_32px_110px_-70px_rgba(15,23,42,0.95)]">
-        <ProgressSteps
-          activeSteps={activeSteps}
-          currentStep={step}
-          isPending={isPending}
-          onSelect={setStep}
-        />
+      <div
+        className={cx(
+          "mt-5 grid gap-x-11 gap-y-6",
+          !isSignup && "2xl:grid-cols-[minmax(0,552px)_minmax(0,0.92fr)]"
+        )}
+      >
+        <StepFrame
+          stepId={4}
+          number={4 - visibleStepOffset}
+          title={`Stap ${4 - visibleStepOffset} – Extra informatie`}
+        >
+          <ExtraInfoPanel
+            form={form}
+            update={update}
+            toggleSpecialization={toggleSpecialization}
+            onPrevious={() => goPrevious(4)}
+            onNext={() => goNext(4)}
+            isPending={isPending}
+          />
+        </StepFrame>
 
-        <div className="min-h-[560px] p-5 sm:p-8">
-          {step === 1 ? (
-            <div className="grid gap-7 xl:grid-cols-[1fr_0.9fr] xl:items-stretch">
-              <RegistrationDashboardPreview />
-              <div className="rounded-lg border border-white/10 bg-white/[0.035] p-5 sm:p-6">
-                <StepIntro
-                  eyebrow="Stap 1"
-                  title="Account aanmaken"
-                  description="Maak je instructeursaccount aan. Daarna vul je je profiel en WRM-controle in."
-                />
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <Field
-                    label="Voornaam"
-                    value={form.firstName}
-                    placeholder="Jan"
-                    onChange={(value) => update("firstName", value)}
-                  />
-                  <Field
-                    label="Achternaam"
-                    value={form.lastName}
-                    placeholder="de Vries"
-                    onChange={(value) => update("lastName", value)}
-                  />
-                </div>
-                <div className="mt-4 grid gap-4">
-                  <Field
-                    label="E-mailadres"
-                    type="email"
-                    value={form.email}
-                    placeholder="voorbeeld@mail.nl"
-                    onChange={(value) => update("email", value)}
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field
-                      label="Wachtwoord"
-                      type="password"
-                      value={form.password}
-                      placeholder="Minimaal 8 tekens"
-                      onChange={(value) => update("password", value)}
-                    />
-                    <Field
-                      label="Bevestig wachtwoord"
-                      type="password"
-                      value={form.confirmPassword}
-                      placeholder="Herhaal wachtwoord"
-                      onChange={(value) => update("confirmPassword", value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-slate-200">Rol</Label>
-                    <div className="flex h-11 items-center justify-between rounded-lg border border-white/10 bg-slate-950/35 px-3 text-sm text-white">
-                      <span>Instructeur</span>
-                      <GraduationCap className="size-4 text-violet-200" />
-                    </div>
-                  </div>
-                  <label className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.025] p-3 text-sm text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={form.terms}
-                      onChange={(event) => update("terms", event.target.checked)}
-                      className="mt-1 size-4 rounded border-white/20 bg-white/5 accent-violet-500"
-                    />
-                    <span>
-                      Ik ga akkoord met de{" "}
-                      <Link href="/voorwaarden" className="text-violet-200 hover:text-white">
-                        algemene voorwaarden
-                      </Link>{" "}
-                      en{" "}
-                      <Link href="/privacy" className="text-violet-200 hover:text-white">
-                        privacyverklaring
-                      </Link>
-                      .
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {step === 2 ? (
-            <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
-              <div className="space-y-5">
-                <StepIntro
-                  eyebrow="Stap 2"
-                  title="Vertel ons meer over jezelf"
-                  description="Vul je profielgegevens in. Deze gegevens helpen bij herkenning en vertrouwen."
-                />
-                {!isSignup ? (
-                  <Field
-                    label="Naam"
-                    value={fullName(form)}
-                    placeholder="Jan de Vries"
-                    onChange={updateFullName}
-                  />
-                ) : null}
-                <Field
-                  label="Telefoonnummer"
-                  value={form.phone}
-                  placeholder="06 12345678"
-                  onChange={(value) => update("phone", value)}
-                />
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-slate-200">Korte introductie</Label>
-                  <Textarea
-                    value={form.bio}
-                    onChange={(event) => update("bio", event.target.value)}
-                    placeholder="Vertel kort iets over je rijstijl, ervaring en werkgebied."
-                    className="min-h-28 rounded-lg border-white/10 bg-slate-950/35 px-3 py-3 text-sm text-white placeholder:text-slate-500 focus-visible:border-violet-300/50 focus-visible:ring-violet-400/20"
-                  />
-                </div>
-                <FileDrop
-                  label="Profielfoto"
-                  field="profile_photo"
-                  file={files.profile_photo}
-                  onFile={setFile}
-                />
-              </div>
-              <ProfilePreview file={files.profile_photo} name={fullName(form)} />
-            </div>
-          ) : null}
-
-          {step === 3 ? (
-            <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="space-y-5">
-                <StepIntro
-                  eyebrow="Stap 3"
-                  title="WRM-bevoegdheidspas"
-                  description="Verplicht. We controleren je instructeursbevoegdheid. Leg pasnummer, categorie en geldig-tot datum vast."
-                />
-                <Field
-                  label="Pasnummer"
-                  value={form.wrmNumber}
-                  placeholder="123456789"
-                  onChange={(value) => update("wrmNumber", value)}
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <SelectField
-                    label="Categorie"
-                    value={form.wrmCategory}
-                    options={wrmCategoryOptions}
-                    onChange={(value) => update("wrmCategory", value)}
-                  />
-                  <Field
-                    label="Geldig tot"
-                    type="date"
-                    value={form.wrmValidUntil}
-                    onChange={(value) => update("wrmValidUntil", value)}
-                  />
-                </div>
-                <FileDrop
-                  label="Achterkant pas"
-                  field="wrm_back"
-                  file={files.wrm_back}
-                  required
-                  onFile={setFile}
-                />
-              </div>
-              <div className="space-y-4">
-                <FileDrop
-                  label="Voorkant pas"
-                  field="wrm_front"
-                  file={files.wrm_front}
-                  required
-                  compact
-                  onFile={setFile}
-                />
-                <FileDrop
-                  label="Foto van jezelf (selfie)"
-                  field="selfie"
-                  file={files.selfie}
-                  required
-                  compact
-                  onFile={setFile}
-                />
-              </div>
-            </div>
-          ) : null}
-
-          {step === 4 ? (
-            <div className="mx-auto max-w-4xl space-y-6">
-              <StepIntro
-                eyebrow="Stap 4"
-                title="Extra informatie"
-                description="Optioneel. Deze informatie helpt ons je beter te ondersteunen."
-              />
-              <Field
-                label="Rijschool / organisatie"
-                value={form.school}
-                placeholder="Autorijschool de Vries"
-                onChange={(value) => update("school", value)}
-              />
-              <Field
-                label="Functie / rol"
-                value={form.functionRole}
-                placeholder="Hoofdinstructeur"
-                onChange={(value) => update("functionRole", value)}
-              />
-              <div className="space-y-3">
-                <Label className="text-xs font-medium text-slate-200">Specialisaties</Label>
-                <div className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
-                  <div className="flex flex-wrap gap-2">
-                    {specializationOptions.map((item) => {
-                      const selected = form.specializations.includes(item);
-                      return (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => toggleSpecialization(item)}
-                          className={cx(
-                            "inline-flex min-h-8 items-center gap-2 rounded-md border px-3 text-xs font-medium transition",
-                            selected
-                              ? "border-violet-300/40 bg-violet-500/24 text-white"
-                              : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/20 hover:text-slate-200"
-                          )}
-                        >
-                          {selected ? <Check className="size-3.5" /> : null}
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {step === 5 ? (
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
-              <div className="space-y-5">
-                <StepIntro
-                  eyebrow="Stap 5"
-                  title="Controleer je gegevens"
-                  description="Controleer alle informatie voordat je deze indient."
-                />
-                <div className="rounded-lg border border-white/10 bg-white/[0.03]">
-                  <div className="grid divide-y divide-white/10 lg:grid-cols-[0.7fr_1fr] lg:divide-x lg:divide-y-0">
-                    <div className="p-4">
-                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                        <UserRound className="size-4 text-violet-200" />
-                        Profiel
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <ProfileMini file={files.profile_photo} name={fullName(form)} />
-                        <div className="min-w-0 text-sm">
-                          <p className="truncate font-medium text-white">{fullName(form) || "Nog leeg"}</p>
-                          <p className="mt-1 text-slate-400">{form.phone || "Nog leeg"}</p>
-                          <p className="truncate text-slate-400">{form.email || "Via je account"}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                        <IdCard className="size-4 text-violet-200" />
-                        WRM-verificatie
-                      </div>
-                      <div className="grid gap-4 lg:grid-cols-[1fr_220px]">
-                        <div className="grid gap-2 text-sm">
-                          <div className="grid grid-cols-[110px_1fr] gap-2">
-                            <span className="text-slate-500">Pasnummer</span>
-                            <span className="text-slate-200">{form.wrmNumber || "Nog leeg"}</span>
-                          </div>
-                          <div className="grid grid-cols-[110px_1fr] gap-2">
-                            <span className="text-slate-500">Categorie</span>
-                            <span className="text-slate-200">{form.wrmCategory || "Nog leeg"}</span>
-                          </div>
-                          <div className="grid grid-cols-[110px_1fr] gap-2">
-                            <span className="text-slate-500">Geldig tot</span>
-                            <span className="text-slate-200">{form.wrmValidUntil || "Nog leeg"}</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <ReviewUploadThumb file={files.wrm_front} field="wrm_front" label="Voor" />
-                          <ReviewUploadThumb file={files.wrm_back} field="wrm_back" label="Achter" />
-                          <ReviewUploadThumb file={files.selfie} field="selfie" label="Selfie" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t border-white/10 p-4">
-                    <ReviewBlock
-                      title="Extra informatie"
-                      rows={[
-                        ["Rijschool / organisatie", form.school || "Niet ingevuld"],
-                        ["Functie / rol", form.functionRole || "Niet ingevuld"],
-                        ["Specialisaties", form.specializations.join(", ") || "Niet ingevuld"],
-                      ]}
-                    />
-                  </div>
-                </div>
-              </div>
-              <aside className="rounded-xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.2),transparent_42%),rgba(255,255,255,0.04)] p-6 shadow-[0_28px_80px_-58px_rgba(15,23,42,0.95)]">
-                <div className="flex size-16 items-center justify-center rounded-2xl bg-violet-500/18 text-violet-200">
-                  <Clock3 className="size-8" />
-                </div>
-                <h3 className="mt-6 text-xl font-semibold text-white">In afwachting van verificatie</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-400">
-                  Nadat je op verzenden klikt, controleren wij je gegevens. Dit kan tot 2 werkdagen duren.
-                </p>
-                <div className="mt-6 space-y-4 text-sm text-slate-300">
-                  <div className="flex gap-3">
-                    <Mail className="mt-0.5 size-4 shrink-0 text-violet-200" />
-                    Je ontvangt een e-mail wanneer we een beslissing hebben genomen.
-                  </div>
-                  <div className="flex gap-3">
-                    <Eye className="mt-0.5 size-4 shrink-0 text-violet-200" />
-                    Je kunt de status altijd bekijken in je dashboard.
-                  </div>
-                  <div className="flex gap-3">
-                    <LockKeyhole className="mt-0.5 size-4 shrink-0 text-violet-200" />
-                    Je documenten worden alleen voor deze controle gebruikt.
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  disabled={isPending}
-                  onClick={isSignup ? submitSignup : submitVerificationOnly}
-                  className="mt-8 min-h-12 w-full rounded-lg bg-violet-600 text-white hover:bg-violet-500"
-                >
-                  {isPending ? "Verzenden..." : "Gegevens verzenden"}
-                </Button>
-              </aside>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={previousStep}
-            disabled={step === (isSignup ? 1 : 2) || isPending}
-            className="min-h-10 rounded-lg border-white/10 bg-white/[0.03] text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="mr-2 size-4" />
-            Vorige
-          </Button>
-          {step < 5 ? (
-            <Button
-              type="button"
-              onClick={nextStep}
-              disabled={isPending}
-              className="min-h-10 rounded-lg bg-violet-600 px-6 text-white hover:bg-violet-500"
-            >
-              Volgende
-              <ArrowRight className="ml-2 size-4" />
-            </Button>
-          ) : null}
-        </div>
-      </section>
-
-      {isSignup ? (
-        <p className="mt-6 text-center text-sm text-slate-400">
-          Leerling?{" "}
-          <Link href="/registreren?type=leerling" className="font-medium text-violet-200 hover:text-white">
-            Maak een leerlingaccount aan
-          </Link>{" "}
-          of al een account?{" "}
-          <Link href="/inloggen" className="font-medium text-violet-200 hover:text-white">
-            Inloggen
-          </Link>
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function ProfileMini({ file, name }: { file?: File | null; name: string }) {
-  const preview = useMemo(() => {
-    if (!canPreview(file)) {
-      return null;
-    }
-
-    return URL.createObjectURL(file);
-  }, [file]);
-
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-
-  return (
-    <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-700 text-sm font-semibold text-white">
-      {preview ? (
-        <Image
-          src={preview}
-          alt=""
-          width={56}
-          height={56}
-          className="size-14 object-cover"
-          unoptimized
-        />
-      ) : initials ? (
-        initials
-      ) : (
-        <UserRound className="size-7 text-slate-300" />
-      )}
+        <StepFrame
+          stepId={5}
+          number={5 - visibleStepOffset}
+          title={`Stap ${5 - visibleStepOffset} – Review & submit`}
+        >
+          <ReviewPanel
+            form={form}
+            files={files}
+            onPrevious={() => goPrevious(5)}
+            onSubmit={isSignup ? submitSignup : submitVerificationOnly}
+            isPending={isPending}
+          />
+        </StepFrame>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,9 @@
-import { CalendarCheck2, CalendarClock, CircleAlert, ClipboardList } from "lucide-react";
+import {
+  CalendarCheck2,
+  CalendarClock,
+  CircleAlert,
+  ClipboardList,
+} from "lucide-react";
 
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -9,23 +14,28 @@ import {
   getInstructeurLessons,
 } from "@/lib/data/lesson-requests";
 
-export default async function InstructeurLessenPage() {
+export default async function InstructeurLessenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ zoek?: string }>;
+}) {
+  const params = await searchParams;
   const [lessons, requests, locationOptions] = await Promise.all([
     getInstructeurLessons(),
     getInstructeurLessonRequests(),
     getLocationOptions(),
   ]);
   const plannedLessons = lessons.filter((lesson) =>
-    ["ingepland", "geaccepteerd"].includes(lesson.status)
+    ["ingepland", "geaccepteerd"].includes(lesson.status),
   ).length;
   const completedLessons = lessons.filter(
-    (lesson) => lesson.status === "afgerond"
+    (lesson) => lesson.status === "afgerond",
   ).length;
   const openRequests = requests.filter(
-    (request) => request.status === "aangevraagd"
+    (request) => request.status === "aangevraagd",
   ).length;
   const cancelledLessons = lessons.filter(
-    (lesson) => lesson.status === "geannuleerd"
+    (lesson) => lesson.status === "geannuleerd",
   ).length;
   const lessonStats = [
     {
@@ -74,6 +84,7 @@ export default async function InstructeurLessenPage() {
         lessons={lessons}
         requests={requests}
         locationOptions={locationOptions}
+        initialQuery={params.zoek ?? ""}
       />
     </>
   );

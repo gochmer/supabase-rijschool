@@ -77,12 +77,14 @@ export function LessonsBoard({
   lessons,
   requests = [],
   locationOptions = [],
+  initialQuery = "",
 }: {
   lessons: Les[];
   requests?: LesAanvraag[];
   locationOptions?: LocationOption[];
+  initialQuery?: string;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState("alles");
 
   const filteredLessons = useMemo(() => {
@@ -112,17 +114,17 @@ export function LessonsBoard({
   const sortedLessons = useMemo(
     () =>
       [...filteredLessons].sort(
-        (left, right) => getLessonSortValue(left) - getLessonSortValue(right)
+        (left, right) => getLessonSortValue(left) - getLessonSortValue(right),
       ),
-    [filteredLessons]
+    [filteredLessons],
   );
 
   const nextPlannedLesson = useMemo(
     () =>
       sortedLessons.find((lesson) =>
-        ["geaccepteerd", "ingepland"].includes(lesson.status)
+        ["geaccepteerd", "ingepland"].includes(lesson.status),
       ) ?? null,
-    [sortedLessons]
+    [sortedLessons],
   );
 
   const todayLessons = useMemo(() => {
@@ -144,21 +146,21 @@ export function LessonsBoard({
   const upcomingLessons = useMemo(
     () =>
       sortedLessons.filter((lesson) =>
-        ["geaccepteerd", "ingepland"].includes(lesson.status)
+        ["geaccepteerd", "ingepland"].includes(lesson.status),
       ),
-    [sortedLessons]
+    [sortedLessons],
   );
 
   const dayLessons = useMemo(
     () => (todayLessons.length ? todayLessons : upcomingLessons).slice(0, 6),
-    [todayLessons, upcomingLessons]
+    [todayLessons, upcomingLessons],
   );
 
   const wrapUpLessons = useMemo(() => {
     const needingFollowUp = sortedLessons.filter((lesson) => {
       if (
         !["ingepland", "geaccepteerd", "afgerond", "geannuleerd"].includes(
-          lesson.status
+          lesson.status,
         )
       ) {
         return false;
@@ -178,13 +180,13 @@ export function LessonsBoard({
     () =>
       filteredRequests.filter((request) => request.status === "aangevraagd")
         .length,
-    [filteredRequests]
+    [filteredRequests],
   );
 
   const completedThisSelectionCount = useMemo(
     () =>
       filteredLessons.filter((lesson) => lesson.status === "afgerond").length,
-    [filteredLessons]
+    [filteredLessons],
   );
 
   return (
@@ -212,7 +214,10 @@ export function LessonsBoard({
           </select>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Badge variant="info" className="rounded-full px-2.5 py-1 text-[11px]">
+          <Badge
+            variant="info"
+            className="rounded-full px-2.5 py-1 text-[11px]"
+          >
             Vandaag {todayLessons.length} lessen
           </Badge>
           <Badge

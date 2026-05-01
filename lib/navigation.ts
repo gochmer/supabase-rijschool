@@ -25,6 +25,7 @@ export const dashboardNavigation: Record<
   instructeur: [
     { href: "/instructeur/dashboard", label: "Dashboard" },
     { href: "/instructeur/profiel", label: "Profiel" },
+    { href: "/instructeur/reviews", label: "Reviews" },
     { href: "/instructeur/pakketten", label: "Pakketten" },
     { href: "/instructeurs", label: "Openbare gids" },
     { href: "/instructeur/beschikbaarheid", label: "Beschikbaarheid" },

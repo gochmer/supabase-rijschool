@@ -21,8 +21,8 @@ export default async function InstructeurVerificatiePage() {
   }
 
   return (
-    <main className="fixed inset-0 z-50 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_26%),#050814] text-white">
-      <div className="min-h-screen px-4 py-5 sm:px-6 lg:px-8">
+    <main className="fixed inset-0 z-50 overflow-y-auto bg-[#050914] text-white">
+      <div className="min-h-screen px-3 py-3 sm:px-4">
         <InstructorVerificationBoard
           initialValues={{
             fullName:

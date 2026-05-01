@@ -117,6 +117,11 @@ export async function submitInstructorVerificationAction(formData: FormData) {
   }
 
   const volledigeNaam = cleanText(formData.get("full_name"));
+  const email =
+    cleanText(formData.get("email")) ||
+    context.profile?.email ||
+    context.user.email ||
+    "";
   const telefoon = cleanText(formData.get("phone"));
   const wrmPasnummer = cleanText(formData.get("wrm_number"));
   const wrmCategorie = cleanText(formData.get("wrm_category"));
@@ -126,10 +131,17 @@ export async function submitInstructorVerificationAction(formData: FormData) {
   const bio = cleanText(formData.get("bio"));
   const specialisaties = parseCommaSeparatedList(cleanText(formData.get("specializations")));
 
-  if (!volledigeNaam || !telefoon || !wrmPasnummer || !wrmCategorie || !wrmGeldigTot) {
+  if (!volledigeNaam || !email || !telefoon || !wrmPasnummer || !wrmCategorie || !wrmGeldigTot) {
     return {
       success: false,
-      message: "Vul je naam, telefoonnummer en alle WRM-gegevens in.",
+      message: "Vul je naam, e-mailadres, telefoonnummer en alle WRM-gegevens in.",
+    };
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return {
+      success: false,
+      message: "Vul een geldig e-mailadres in.",
     };
   }
 
@@ -191,6 +203,7 @@ export async function submitInstructorVerificationAction(formData: FormData) {
         .from("profiles")
         .update({
           volledige_naam: volledigeNaam,
+          email,
           telefoon,
           updated_at: new Date().toISOString(),
         })

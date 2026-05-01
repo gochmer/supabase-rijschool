@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 import { ensureCurrentUserContext } from "@/lib/data/profiles";
 import {
@@ -14,6 +15,7 @@ import type { TransmissieType } from "@/lib/types";
 
 type UpdateProfileInput = {
   volledigeNaam: string;
+  email?: string;
   telefoon: string;
   bio?: string;
   ervaringJaren?: string;
@@ -23,6 +25,31 @@ type UpdateProfileInput = {
   specialisaties?: string;
   profielfotoKleur?: string;
 };
+
+async function getSiteUrl() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+
+  const requestHeaders = await headers();
+  const host =
+    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? "http";
+
+  return host ? `${protocol}://${host}` : "http://localhost:3000";
+}
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 export async function updateProfileAvatarAction(formData: FormData) {
   const context = await ensureCurrentUserContext();
@@ -92,7 +119,15 @@ export async function updateCurrentProfileAction(input: UpdateProfileInput) {
 
   const supabase = await createServerClient();
   const volledigeNaam = input.volledigeNaam.trim();
+  const emailInput =
+    typeof input.email === "string" ? normalizeEmail(input.email) : null;
   const telefoon = input.telefoon.trim();
+  const currentEmail = normalizeEmail(
+    context.user.email || context.profile?.email || ""
+  );
+  let profileEmail = context.profile?.email || context.user.email || "";
+  let emailChangePending = false;
+  let emailChangedImmediately = false;
 
   if (!volledigeNaam) {
     return {
@@ -101,10 +136,48 @@ export async function updateCurrentProfileAction(input: UpdateProfileInput) {
     };
   }
 
+  if (emailInput !== null) {
+    if (!emailInput || !isValidEmail(emailInput)) {
+      return {
+        success: false,
+        message: "Vul een geldig e-mailadres in.",
+      };
+    }
+
+    if (emailInput !== currentEmail) {
+      const callbackUrl = new URL("/auth/callback", await getSiteUrl());
+      callbackUrl.searchParams.set("next", "/instructeur/profiel");
+
+      const { data: authData, error: authError } =
+        await supabase.auth.updateUser(
+          { email: emailInput },
+          { emailRedirectTo: callbackUrl.toString() }
+        );
+
+      if (authError) {
+        return {
+          success: false,
+          message:
+            "Je e-mailadres kon niet worden gewijzigd. Controleer het adres en probeer opnieuw.",
+        };
+      }
+
+      const updatedEmail = normalizeEmail(authData.user?.email ?? "");
+
+      if (updatedEmail === emailInput) {
+        profileEmail = emailInput;
+        emailChangedImmediately = true;
+      } else {
+        emailChangePending = true;
+      }
+    }
+  }
+
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
       volledige_naam: volledigeNaam,
+      email: profileEmail,
       telefoon,
       updated_at: new Date().toISOString(),
     })
@@ -198,6 +271,10 @@ export async function updateCurrentProfileAction(input: UpdateProfileInput) {
 
   return {
     success: true,
-    message: "Je profiel is opgeslagen.",
+    message: emailChangePending
+      ? "Je profiel is opgeslagen. Bevestig je nieuwe e-mailadres via de bevestigingsmail."
+      : emailChangedImmediately
+        ? "Je profiel en e-mailadres zijn opgeslagen."
+        : "Je profiel is opgeslagen.",
   };
 }

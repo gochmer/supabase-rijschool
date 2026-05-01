@@ -230,15 +230,25 @@ async function createInstructorRecord(profileId) {
     const existingResponse = await adminFetch(
       `/rest/v1/instructeurs?profile_id=eq.${profileId}&select=id,profile_id,slug`,
       {
+        method: "PATCH",
         headers: {
+          "Content-Type": "application/json",
           Prefer: "return=representation",
         },
+        body: JSON.stringify({
+          bio: "Test instructeur voor notificatieflow check",
+          werkgebied: ["Amsterdam"],
+          profiel_status: "goedgekeurd",
+          prijs_per_les: 69,
+          transmissie: "beide",
+          specialisaties: ["Examentraining", "Stadsverkeer"],
+        }),
       }
     );
 
     if (!existingResponse.ok) {
       throw new Error(
-        `Kon bestaand instructeurrecord niet ophalen (${existingResponse.status})`
+        `Kon bestaand instructeurrecord niet bijwerken (${existingResponse.status})`
       );
     }
 

@@ -116,7 +116,10 @@ function formatPercent(value: number) {
   return `${value > 0 ? "+" : ""}${value}%`;
 }
 
-function formatDate(value: string | null | undefined, fallback = "Nog niet gepland") {
+function formatDate(
+  value: string | null | undefined,
+  fallback = "Nog niet gepland",
+) {
   const date = getSafeDate(value);
 
   return date ? dateFormatter.format(date) : fallback;
@@ -136,7 +139,7 @@ function formatTime(value: string | null | undefined, fallback = "") {
 
 function getAverageLessonPrice(
   instructor: DashboardInstructorRecord | null,
-  packages: Pakket[]
+  packages: Pakket[],
 ) {
   const profilePrice = Number(instructor?.prijs_per_les ?? 0);
 
@@ -159,16 +162,20 @@ function getAverageLessonPrice(
 
   return Math.round(
     packageLessonPrices.reduce((total, value) => total + value, 0) /
-      packageLessonPrices.length
+      packageLessonPrices.length,
   );
 }
 
-function buildIncomeSeries(lessons: Les[], lessonPrice: number, reference: Date) {
+function buildIncomeSeries(
+  lessons: Les[],
+  lessonPrice: number,
+  reference: Date,
+) {
   const buckets = Array.from({ length: 8 }, () => 0);
   const daysInMonth = new Date(
     reference.getFullYear(),
     reference.getMonth() + 1,
-    0
+    0,
   ).getDate();
   const bucketSize = Math.max(1, Math.ceil(daysInMonth / buckets.length));
 
@@ -181,7 +188,7 @@ function buildIncomeSeries(lessons: Les[], lessonPrice: number, reference: Date)
 
     const bucketIndex = Math.min(
       buckets.length - 1,
-      Math.floor((date.getDate() - 1) / bucketSize)
+      Math.floor((date.getDate() - 1) / bucketSize),
     );
     buckets[bucketIndex] += lessonPrice;
   });
@@ -202,7 +209,7 @@ function buildLessonBuckets(lessons: Les[], reference: Date) {
   const daysInMonth = new Date(
     reference.getFullYear(),
     reference.getMonth() + 1,
-    0
+    0,
   ).getDate();
   const bucketSize = Math.max(1, Math.ceil(daysInMonth / buckets.length));
 
@@ -215,7 +222,7 @@ function buildLessonBuckets(lessons: Les[], reference: Date) {
 
     const bucketIndex = Math.min(
       buckets.length - 1,
-      Math.floor((date.getDate() - 1) / bucketSize)
+      Math.floor((date.getDate() - 1) / bucketSize),
     );
 
     buckets[bucketIndex].value += 1;
@@ -258,6 +265,20 @@ function getStatusBadgeClass(status: string) {
   }
 }
 
+function getRequestDashboardHref(request: LesAanvraag) {
+  const tab = request.status === "aangevraagd" ? "nu" : "verwerkt";
+  return `/instructeur/aanvragen?focus=${encodeURIComponent(request.id)}&tab=${tab}#aanvraag-${request.id}`;
+}
+
+function getStudentDashboardHref(student: InstructorStudentProgressRow) {
+  return `/instructeur/leerlingen?student=${encodeURIComponent(student.id)}`;
+}
+
+function getLessonDashboardHref(lesson: Les) {
+  const zoekwaarde = lesson.leerling_naam || lesson.titel;
+  return `/instructeur/lessen?zoek=${encodeURIComponent(zoekwaarde)}`;
+}
+
 function getTipText({
   openRequestCount,
   openSlotCount,
@@ -293,7 +314,7 @@ function CommandPanel({
     <section
       className={cn(
         "rounded-xl border border-white/10 bg-white/[0.055] p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]",
-        className
+        className,
       )}
     >
       {children}
@@ -366,7 +387,7 @@ function StatTile({
         <span
           className={cn(
             "flex size-10 items-center justify-center rounded-lg ring-1",
-            toneClass
+            toneClass,
           )}
         >
           <Icon className="size-5" />
@@ -410,7 +431,11 @@ function MiniLineChart({ values }: { values: number[] }) {
         <defs>
           <linearGradient id="income-area" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="rgb(249 115 22)" stopOpacity="0.38" />
-            <stop offset="100%" stopColor="rgb(249 115 22)" stopOpacity="0.02" />
+            <stop
+              offset="100%"
+              stopColor="rgb(249 115 22)"
+              stopOpacity="0.02"
+            />
           </linearGradient>
         </defs>
         {[20, 44, 68, 92].map((y) => (
@@ -451,7 +476,10 @@ function MiniBarChart({
         const height = Math.max(10, Math.round((bucket.value / max) * 124));
 
         return (
-          <div key={`${bucket.label}-${index}`} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+          <div
+            key={`${bucket.label}-${index}`}
+            className="flex min-w-0 flex-1 flex-col items-center gap-2"
+          >
             <div
               className="w-full rounded-t-sm bg-gradient-to-t from-blue-600 to-sky-400"
               style={{ height }}
@@ -491,41 +519,43 @@ export function InstructorCommandCenter({
   const availableSlots = availabilitySlots.filter((slot) => slot.beschikbaar);
   const unreadNotifications = notifications.filter((item) => item.ongelezen);
   const lessonPrice = getAverageLessonPrice(instructor, packages);
-  const completedLessons = lessons.filter((lesson) => lesson.status === "afgerond");
+  const completedLessons = lessons.filter(
+    (lesson) => lesson.status === "afgerond",
+  );
   const completedThisMonth = completedLessons.filter((lesson) =>
-    isSameMonth(getLessonDate(lesson), now)
+    isSameMonth(getLessonDate(lesson), now),
   );
   const completedPreviousMonth = completedLessons.filter((lesson) =>
-    isSameMonth(getLessonDate(lesson), previousMonth)
+    isSameMonth(getLessonDate(lesson), previousMonth),
   );
   const lessonsThisMonth = lessons.filter((lesson) =>
-    isSameMonth(getLessonDate(lesson), now)
+    isSameMonth(getLessonDate(lesson), now),
   );
   const lessonsPreviousMonth = lessons.filter((lesson) =>
-    isSameMonth(getLessonDate(lesson), previousMonth)
+    isSameMonth(getLessonDate(lesson), previousMonth),
   );
   const yearlyCompletedLessons = completedLessons.filter((lesson) =>
-    isSameYear(getLessonDate(lesson), now)
+    isSameYear(getLessonDate(lesson), now),
   );
   const incomeThisMonth = completedThisMonth.length * lessonPrice;
   const incomePreviousMonth = completedPreviousMonth.length * lessonPrice;
   const incomeTrend = getPercentChange(incomeThisMonth, incomePreviousMonth);
   const lessonsTrend = getPercentChange(
     lessonsThisMonth.length,
-    lessonsPreviousMonth.length
+    lessonsPreviousMonth.length,
   );
   const sortedRequests = [...requests].sort((left, right) =>
     (right.start_at ?? right.voorkeursdatum).localeCompare(
-      left.start_at ?? left.voorkeursdatum
-    )
+      left.start_at ?? left.voorkeursdatum,
+    ),
   );
   const upcomingSlots = [...availabilitySlots]
     .sort((left, right) =>
-      (left.start_at ?? left.dag).localeCompare(right.start_at ?? right.dag)
+      (left.start_at ?? left.dag).localeCompare(right.start_at ?? right.dag),
     )
     .slice(0, 7);
   const sortedStudents = [...students].sort(
-    (left, right) => right.voortgang - left.voortgang
+    (left, right) => right.voortgang - left.voortgang,
   );
   const recentLessons = [...lessons]
     .sort((left, right) => {
@@ -558,7 +588,8 @@ export function InstructorCommandCenter({
             Dashboard
           </h1>
           <p className="mt-1 text-sm text-slate-300">
-            Welkom terug, {displayName}. Alles wat vandaag telt staat hier compact bij elkaar.
+            Welkom terug, {displayName}. Alles wat vandaag telt staat hier
+            compact bij elkaar.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -617,7 +648,10 @@ export function InstructorCommandCenter({
 
       <div className="grid gap-4 xl:grid-cols-2">
         <CommandPanel>
-          <SectionHeader title="Inkomen overzicht" href="/instructeur/inkomsten" />
+          <SectionHeader
+            title="Inkomen overzicht"
+            href="/instructeur/inkomsten"
+          />
           <div className="mb-4">
             <p className="text-3xl font-semibold tracking-tight text-white">
               {formatCurrency(incomeThisMonth)}
@@ -639,7 +673,9 @@ export function InstructorCommandCenter({
             <p className="text-3xl font-semibold tracking-tight text-white">
               {lessonsThisMonth.length}
             </p>
-            <p className="mt-1 text-sm text-slate-400">Alle lessen in deze maand</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Alle lessen in deze maand
+            </p>
             <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-300">
               <TrendingUp className="size-3.5" />
               {formatPercent(lessonsTrend)} vs vorige maand
@@ -651,13 +687,16 @@ export function InstructorCommandCenter({
 
       <div className="grid gap-4 xl:grid-cols-2">
         <CommandPanel>
-          <SectionHeader title="Recente aanvragen" href="/instructeur/aanvragen" />
+          <SectionHeader
+            title="Recente aanvragen"
+            href="/instructeur/aanvragen"
+          />
           <div className="space-y-3">
             {sortedRequests.slice(0, 5).length ? (
               sortedRequests.slice(0, 5).map((request) => (
                 <Link
                   key={request.id}
-                  href="/instructeur/aanvragen"
+                  href={getRequestDashboardHref(request)}
                   className="flex items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-white/7"
                 >
                   <InitialAvatar name={request.leerling_naam} />
@@ -668,14 +707,14 @@ export function InstructorCommandCenter({
                     <p className="truncate text-[12px] text-slate-400">
                       {request.aanvraag_type === "proefles"
                         ? "Proefles"
-                        : request.pakket_naam ?? "Lesaanvraag"}{" "}
+                        : (request.pakket_naam ?? "Lesaanvraag")}{" "}
                       - {formatDate(request.start_at ?? request.voorkeursdatum)}
                     </p>
                   </div>
                   <Badge
                     className={cn(
                       "border px-2 py-1 text-[11px]",
-                      getStatusBadgeClass(request.status)
+                      getStatusBadgeClass(request.status),
                     )}
                   >
                     {getRequestStatusLabel(request.status)}
@@ -713,7 +752,7 @@ export function InstructorCommandCenter({
                       "border px-2 py-1 text-[11px]",
                       slot.beschikbaar
                         ? "border-emerald-400/25 bg-emerald-500/15 text-emerald-100"
-                        : "border-rose-400/25 bg-rose-500/15 text-rose-100"
+                        : "border-rose-400/25 bg-rose-500/15 text-rose-100",
                     )}
                   >
                     {slot.beschikbaar ? "Beschikbaar" : "Bezet"}
@@ -729,13 +768,16 @@ export function InstructorCommandCenter({
 
       <div className="grid gap-4 xl:grid-cols-2">
         <CommandPanel>
-          <SectionHeader title="Leerlingen overzicht" href="/instructeur/leerlingen" />
+          <SectionHeader
+            title="Leerlingen overzicht"
+            href="/instructeur/leerlingen"
+          />
           <div className="space-y-3">
             {sortedStudents.slice(0, 5).length ? (
               sortedStudents.slice(0, 5).map((student) => (
                 <Link
                   key={student.id}
-                  href="/instructeur/leerlingen"
+                  href={getStudentDashboardHref(student)}
                   className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-white/7"
                 >
                   <InitialAvatar name={student.naam} />
@@ -767,7 +809,10 @@ export function InstructorCommandCenter({
         </CommandPanel>
 
         <CommandPanel>
-          <SectionHeader title="Pakketten overzicht" href="/instructeur/pakketten" />
+          <SectionHeader
+            title="Pakketten overzicht"
+            href="/instructeur/pakketten"
+          />
           <div className="space-y-3">
             {packages.slice(0, 5).length ? (
               packages.slice(0, 5).map((pkg, index) => {
@@ -788,7 +833,7 @@ export function InstructorCommandCenter({
                     <span
                       className={cn(
                         "flex size-9 items-center justify-center rounded-lg ring-1",
-                        colors[index % colors.length]
+                        colors[index % colors.length],
                       )}
                     >
                       <PackageCheck className="size-4" />
@@ -798,7 +843,8 @@ export function InstructorCommandCenter({
                         {pkg.naam}
                       </p>
                       <p className="text-[12px] text-slate-400">
-                        {formatCurrency(Number(pkg.prijs ?? 0))} - {pkg.lessen} lessen
+                        {formatCurrency(Number(pkg.prijs ?? 0))} - {pkg.lessen}{" "}
+                        lessen
                       </p>
                     </div>
                     <Badge
@@ -806,7 +852,7 @@ export function InstructorCommandCenter({
                         "border px-2 py-1 text-[11px]",
                         pkg.actief === false
                           ? "border-white/10 bg-white/10 text-slate-300"
-                          : "border-emerald-400/25 bg-emerald-500/15 text-emerald-100"
+                          : "border-emerald-400/25 bg-emerald-500/15 text-emerald-100",
                       )}
                     >
                       {pkg.actief === false ? "Concept" : "Actief"}
@@ -833,12 +879,16 @@ export function InstructorCommandCenter({
                 <th className="px-2 py-1">Duur</th>
                 <th className="px-2 py-1">Status</th>
                 <th className="px-2 py-1">Type</th>
+                <th className="px-2 py-1">Actie</th>
               </tr>
             </thead>
             <tbody>
               {recentLessons.length ? (
                 recentLessons.map((lesson) => (
-                  <tr key={lesson.id} className="rounded-lg bg-white/[0.035] text-slate-200">
+                  <tr
+                    key={lesson.id}
+                    className="rounded-lg bg-white/[0.035] text-slate-200"
+                  >
                     <td className="rounded-l-lg px-2 py-2">
                       <div className="flex items-center gap-2">
                         <InitialAvatar name={lesson.leerling_naam} />
@@ -847,7 +897,9 @@ export function InstructorCommandCenter({
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 py-2">{formatDate(lesson.start_at ?? lesson.datum)}</td>
+                    <td className="px-2 py-2">
+                      {formatDate(lesson.start_at ?? lesson.datum)}
+                    </td>
                     <td className="px-2 py-2">
                       {formatTime(lesson.start_at, lesson.tijd)}
                     </td>
@@ -856,20 +908,28 @@ export function InstructorCommandCenter({
                       <Badge
                         className={cn(
                           "border px-2 py-1 text-[11px]",
-                          getStatusBadgeClass(lesson.status)
+                          getStatusBadgeClass(lesson.status),
                         )}
                       >
                         {getRequestStatusLabel(lesson.status)}
                       </Badge>
                     </td>
-                    <td className="rounded-r-lg px-2 py-2 text-slate-300">
-                      {lesson.titel}
+                    <td className="px-2 py-2 text-slate-300">{lesson.titel}</td>
+                    <td className="rounded-r-lg px-2 py-2">
+                      <Button
+                        asChild
+                        size="xs"
+                        variant="ghost"
+                        className="border border-white/10 bg-white/7 text-slate-100 hover:bg-white/12 hover:text-white"
+                      >
+                        <Link href={getLessonDashboardHref(lesson)}>Open</Link>
+                      </Button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <EmptyState text="Nog geen lessen gevonden. Zodra je lessen plant of afrondt, komt deze tabel tot leven." />
                   </td>
                 </tr>
@@ -885,16 +945,22 @@ export function InstructorCommandCenter({
           <p className="mt-3 text-2xl font-semibold text-white">
             {formatCurrency(yearlyIncome)}
           </p>
-          <p className="mt-1 text-[12px] text-slate-400">Totaal inkomen dit jaar</p>
+          <p className="mt-1 text-[12px] text-slate-400">
+            Totaal inkomen dit jaar
+          </p>
         </CommandPanel>
         <CommandPanel className="text-center">
           <Clock3 className="mx-auto size-9 rounded-lg bg-blue-500/16 p-2 text-blue-200" />
-          <p className="mt-3 text-2xl font-semibold text-white">{lessons.length}</p>
+          <p className="mt-3 text-2xl font-semibold text-white">
+            {lessons.length}
+          </p>
           <p className="mt-1 text-[12px] text-slate-400">Totaal lessen</p>
         </CommandPanel>
         <CommandPanel className="text-center">
           <GraduationCap className="mx-auto size-9 rounded-lg bg-violet-500/16 p-2 text-violet-200" />
-          <p className="mt-3 text-2xl font-semibold text-white">{students.length}</p>
+          <p className="mt-3 text-2xl font-semibold text-white">
+            {students.length}
+          </p>
           <p className="mt-1 text-[12px] text-slate-400">Totaal leerlingen</p>
         </CommandPanel>
         <CommandPanel className="text-center">
@@ -927,19 +993,31 @@ export function InstructorCommandCenter({
       </CommandPanel>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Button asChild variant="outline" className="border-white/10 bg-white/7 text-white hover:bg-white/12">
+        <Button
+          asChild
+          variant="outline"
+          className="border-white/10 bg-white/7 text-white hover:bg-white/12"
+        >
           <Link href="/instructeur/aanvragen">
             <FileText className="size-4" />
             Aanvragen beheren
           </Link>
         </Button>
-        <Button asChild variant="outline" className="border-white/10 bg-white/7 text-white hover:bg-white/12">
+        <Button
+          asChild
+          variant="outline"
+          className="border-white/10 bg-white/7 text-white hover:bg-white/12"
+        >
           <Link href="/instructeur/berichten">
             <MessageSquare className="size-4" />
             Berichten openen
           </Link>
         </Button>
-        <Button asChild variant="outline" className="border-white/10 bg-white/7 text-white hover:bg-white/12">
+        <Button
+          asChild
+          variant="outline"
+          className="border-white/10 bg-white/7 text-white hover:bg-white/12"
+        >
           <Link href="/instructeur/pakketten">
             <PackageCheck className="size-4" />
             Pakketten verbeteren

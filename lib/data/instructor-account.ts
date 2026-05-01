@@ -46,6 +46,29 @@ type DocumentRow = {
   created_at: string;
 };
 
+type VerificationRow = {
+  id: string;
+  wrm_pasnummer: string;
+  wrm_categorie: string;
+  wrm_geldig_tot: string;
+  rijschool_organisatie: string | null;
+  functie_rol: string | null;
+  status: string;
+  submitted_at: string;
+  updated_at: string;
+};
+
+type InstructorSettingsDocument = {
+  id: string;
+  naam: string;
+  status: string;
+  datum: string;
+  hasUrl: boolean;
+  description?: string;
+  sourceLabel?: string;
+  details?: string[];
+};
+
 export type InstructorIncomeCockpitStat = {
   label: string;
   value: string;
@@ -114,6 +137,110 @@ function toTransmission(value: string): Voertuig["transmissie"] {
   }
 
   return "beide";
+}
+
+function normalizeDocumentName(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isVerificationUpload(row: DocumentRow) {
+  const name = normalizeDocumentName(row.naam);
+
+  return (
+    name.includes("wrm") ||
+    name.includes("selfie") ||
+    name.includes("profiel")
+  );
+}
+
+function isRejectedStatus(status: string | null | undefined) {
+  return status === "afgewezen" || status === "afgekeurd";
+}
+
+function isApprovedStatus(status: string | null | undefined) {
+  return status === "goedgekeurd";
+}
+
+function getLatestDocuments(rows: DocumentRow[]) {
+  const byName = new Map<string, DocumentRow>();
+
+  for (const row of rows) {
+    const key = normalizeDocumentName(row.naam);
+
+    if (!byName.has(key)) {
+      byName.set(key, row);
+    }
+  }
+
+  return Array.from(byName.values());
+}
+
+function formatDocumentRow(row: DocumentRow): InstructorSettingsDocument {
+  return {
+    id: row.id,
+    naam: row.naam,
+    status: row.status,
+    datum: formatDate(row.created_at),
+    hasUrl: Boolean(row.url),
+    sourceLabel: "Documentkluis",
+  };
+}
+
+function buildVerificationDocument(
+  verification: VerificationRow | null,
+  verificationUploads: DocumentRow[]
+): InstructorSettingsDocument | null {
+  if (!verification && !verificationUploads.length) {
+    return null;
+  }
+
+  const allUploadsApproved =
+    verificationUploads.length > 0 &&
+    verificationUploads.every((document) => isApprovedStatus(document.status));
+  const hasRejectedUpload = verificationUploads.some((document) =>
+    isRejectedStatus(document.status)
+  );
+  const status =
+    isApprovedStatus(verification?.status) || allUploadsApproved
+      ? "goedgekeurd"
+      : isRejectedStatus(verification?.status) || hasRejectedUpload
+        ? "afgewezen"
+        : verification?.status ?? "ingediend";
+  const dates = [
+    verification?.updated_at,
+    verification?.submitted_at,
+    ...verificationUploads.map((document) => document.created_at),
+  ].filter((value): value is string => Boolean(value));
+  const latestDate = dates.sort(
+    (a, b) => new Date(b).getTime() - new Date(a).getTime()
+  )[0];
+  const details = [
+    verification?.wrm_categorie ? `Categorie ${verification.wrm_categorie}` : null,
+    verification?.wrm_geldig_tot
+      ? `Geldig tot ${formatDate(verification.wrm_geldig_tot)}`
+      : null,
+    verification?.rijschool_organisatie ?? null,
+    verificationUploads.length
+      ? `${verificationUploads.length} bestand(en) gekoppeld`
+      : null,
+  ].filter((value): value is string => Boolean(value));
+
+  return {
+    id: verification?.id ?? "wrm-verificatiepakket",
+    naam: "WRM-bevoegdheidspas",
+    status,
+    datum: latestDate ? formatDate(latestDate) : "Nog niet aangeleverd",
+    hasUrl: verificationUploads.some((document) => Boolean(document.url)),
+    sourceLabel: "Instructeur-verificatie",
+    description:
+      "Samengevoegd uit de verificatiepagina: WRM-gegevens, voorkant/achterkant pas en identiteitscontrole.",
+    details,
+  };
 }
 
 function toAmount(value: number | string | null | undefined) {
@@ -660,18 +787,16 @@ export async function getCurrentInstructorSettingsOverview() {
   if (!instructeur) {
     return {
       vehicles: [] as Voertuig[],
-      documents: [] as {
-        id: string;
-        naam: string;
-        status: string;
-        datum: string;
-        hasUrl: boolean;
-      }[],
+      documents: [] as InstructorSettingsDocument[],
     };
   }
 
   const supabase = await createServerClient();
-  const [{ data: vehicleRows }, { data: documentRows }] = await Promise.all([
+  const [
+    { data: vehicleRows },
+    { data: documentRows },
+    { data: verificationRow },
+  ] = await Promise.all([
     supabase
       .from("voertuigen")
       .select("id, model, kenteken, transmissie, status")
@@ -682,7 +807,26 @@ export async function getCurrentInstructorSettingsOverview() {
       .select("id, naam, status, url, created_at")
       .eq("instructeur_id", instructeur.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("instructeur_verificatie_aanvragen" as never)
+      .select(
+        "id, wrm_pasnummer, wrm_categorie, wrm_geldig_tot, rijschool_organisatie, functie_rol, status, submitted_at, updated_at"
+      )
+      .eq("instructeur_id" as never, instructeur.id as never)
+      .maybeSingle(),
   ]);
+  const latestDocuments = getLatestDocuments((documentRows ?? []) as DocumentRow[]);
+  const verificationUploads = latestDocuments.filter(isVerificationUpload);
+  const verificationDocument = buildVerificationDocument(
+    verificationRow as VerificationRow | null,
+    verificationUploads
+  );
+  const extraDocuments = latestDocuments
+    .filter((row) => !isVerificationUpload(row))
+    .map(formatDocumentRow);
+  const documents = verificationDocument
+    ? [verificationDocument, ...extraDocuments]
+    : extraDocuments;
 
   return {
     vehicles: ((vehicleRows ?? []) as VehicleRow[]).map((row) => ({
@@ -692,12 +836,6 @@ export async function getCurrentInstructorSettingsOverview() {
       transmissie: toTransmission(row.transmissie),
       status: toVehicleStatus(row.status),
     })),
-    documents: ((documentRows ?? []) as DocumentRow[]).map((row) => ({
-      id: row.id,
-      naam: row.naam,
-      status: row.status,
-      datum: formatDate(row.created_at),
-      hasUrl: Boolean(row.url),
-    })),
+    documents,
   };
 }

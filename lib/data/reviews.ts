@@ -310,6 +310,31 @@ export async function getCurrentInstructorReviewSummary(): Promise<InstructorRev
   };
 }
 
+export async function getCurrentInstructorReviews(): Promise<Review[]> {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return [];
+  }
+
+  const supabase = await createServerClient();
+  const { data: reviewRows } = await supabase
+    .from("reviews")
+    .select(
+      "id, score, titel, tekst, created_at, leerling_naam_snapshot, antwoord_tekst, antwoord_datum"
+    )
+    .eq("instructeur_id", instructeur.id)
+    .eq("verborgen", false)
+    .order("created_at", { ascending: false });
+
+  const reviews = (reviewRows ?? []) as PublicReviewRow[];
+  const reportMetaMap = await getReviewReportMetaByReviewIds(
+    reviews.map((review) => review.id)
+  );
+
+  return reviews.map((review) => mapReview(review, reportMetaMap.get(review.id)));
+}
+
 export async function getLatestVisibleReviewsByInstructorIds(
   instructorIds: string[]
 ) {

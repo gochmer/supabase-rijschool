@@ -78,8 +78,26 @@ export async function ensureCurrentUserContext() {
     .eq("id", user.id)
     .maybeSingle();
 
-  const profile =
+  let profile =
     (existingProfile as Profiel | null) ?? (await ensureProfileExists(supabase, user));
+
+  if (profile && user.email && profile.email !== user.email) {
+    const { data: syncedProfile } = await supabase
+      .from("profiles")
+      .update({
+        email: user.email,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id)
+      .select("*")
+      .maybeSingle();
+
+    profile =
+      (syncedProfile as Profiel | null) ?? {
+        ...profile,
+        email: user.email,
+      };
+  }
   const role =
     (profile?.rol as GebruikersRol | undefined) ??
     normalizeSelfSignupRole(user.user_metadata?.rol);

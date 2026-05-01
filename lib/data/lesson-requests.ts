@@ -224,14 +224,20 @@ export async function getInstructeurLessonRequests(): Promise<LesAanvraag[]> {
   const profileIds = (leerlingen ?? []).map((row) => row.profile_id);
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, volledige_naam")
+    .select("id, volledige_naam, email")
     .in("id", profileIds);
 
   const leerlingMap = new Map(
     (leerlingen ?? []).map((row) => [row.id, row.profile_id])
   );
   const profileMap = new Map(
-    (profiles ?? []).map((row) => [row.id, row.volledige_naam])
+    (profiles ?? []).map((row) => [
+      row.id,
+      {
+        email: row.email,
+        name: row.volledige_naam,
+      },
+    ])
   );
 
   return rows.map((row) => {
@@ -245,8 +251,11 @@ export async function getInstructeurLessonRequests(): Promise<LesAanvraag[]> {
       end_at: requestDateTime.endAt,
       id: row.id,
       leerling_naam:
-        (studentProfileId ? profileMap.get(studentProfileId) : null) ??
+        (studentProfileId ? profileMap.get(studentProfileId)?.name : null) ??
         "Leerling",
+      leerling_email:
+        (studentProfileId ? profileMap.get(studentProfileId)?.email : null) ??
+        null,
       instructeur_naam: "",
       voorkeursdatum: row.voorkeursdatum
         ? formatDate(row.voorkeursdatum)

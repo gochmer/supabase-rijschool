@@ -112,7 +112,7 @@ function StepTitle({
       </span>
       <div className="min-w-0">
         <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-          Step {number} - {title}
+          Stap {number} - {title}
         </h2>
         <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
       </div>
@@ -159,33 +159,41 @@ function InnerPanel({
 }
 
 function Field({
+  id,
   label,
   value,
   onChange,
   type = "text",
   placeholder,
   trailingIcon,
+  autoComplete,
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
   trailingIcon?: React.ReactNode;
+  autoComplete?: string;
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold text-white">{label}</Label>
+      <Label htmlFor={id} className="text-xs font-semibold text-white">
+        {label}
+      </Label>
       <div className="relative">
         <Input
+          id={id}
           type={type}
           value={value}
           placeholder={placeholder}
+          autoComplete={autoComplete}
           onChange={(event) => onChange(event.target.value)}
           className="h-11 rounded-md border-slate-700/80 bg-slate-900/70 px-4 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-slate-500 focus-visible:border-violet-400/60 focus-visible:ring-violet-400/20"
         />
         {trailingIcon ? (
-          <span className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400">
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400">
             {trailingIcon}
           </span>
         ) : null}
@@ -195,11 +203,13 @@ function Field({
 }
 
 function SelectField({
+  id,
   label,
   value,
   options,
   onChange,
 }: {
+  id: string;
   label: string;
   value: string;
   options: string[];
@@ -207,9 +217,12 @@ function SelectField({
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold text-white">{label}</Label>
+      <Label htmlFor={id} className="text-xs font-semibold text-white">
+        {label}
+      </Label>
       <div className="relative">
         <select
+          id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className="h-11 w-full appearance-none rounded-md border border-slate-700/80 bg-slate-900/70 px-4 pr-10 text-sm font-medium text-white outline-none transition focus:border-violet-400/60 focus:ring-3 focus:ring-violet-400/20"
@@ -222,6 +235,35 @@ function SelectField({
         </select>
         <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-slate-400" />
       </div>
+    </div>
+  );
+}
+
+function TextAreaField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-xs font-semibold text-white">
+        {label}
+      </Label>
+      <textarea
+        id={id}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-28 w-full resize-y rounded-md border border-slate-700/80 bg-slate-900/70 px-4 py-3 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-3 focus:ring-violet-400/20"
+      />
     </div>
   );
 }
@@ -413,6 +455,15 @@ export function InstructorVerificationBoard({
     }));
   }
 
+  function addSpecialization(value: string) {
+    setForm((current) => ({
+      ...current,
+      specializations: current.specializations.includes(value)
+        ? current.specializations
+        : [...current.specializations, value],
+    }));
+  }
+
   function validateForm() {
     if (!form.fullName || !form.phone) {
       return "Vul je naam en telefoonnummer in.";
@@ -437,6 +488,7 @@ export function InstructorVerificationBoard({
     const formData = new FormData();
 
     formData.set("full_name", form.fullName);
+    formData.set("email", form.email);
     formData.set("phone", form.phone);
     formData.set("bio", form.extraInfo);
     formData.set("wrm_number", form.wrmNumber);
@@ -495,15 +547,28 @@ export function InstructorVerificationBoard({
             <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_180px] lg:items-center">
               <div className="space-y-6">
                 <Field
+                  id="instructor-verification-full-name"
                   label="Naam"
                   value={form.fullName}
                   placeholder="Patrick de Vries"
+                  autoComplete="name"
                   onChange={(value) => update("fullName", value)}
                 />
                 <Field
+                  id="instructor-verification-email"
+                  label="E-mailadres"
+                  type="email"
+                  value={form.email}
+                  placeholder="patrick@voorbeeld.nl"
+                  autoComplete="email"
+                  onChange={(value) => update("email", value)}
+                />
+                <Field
+                  id="instructor-verification-phone"
                   label="Telefoonnummer"
                   value={form.phone}
                   placeholder="0622470715"
+                  autoComplete="tel"
                   onChange={(value) => update("phone", value)}
                 />
                 <div className="space-y-3">
@@ -540,18 +605,21 @@ export function InstructorVerificationBoard({
               </p>
               <div className="mt-6 space-y-5">
                 <Field
+                  id="instructor-verification-wrm-number"
                   label="Pasnummer"
                   value={form.wrmNumber}
                   placeholder="123456789"
                   onChange={(value) => update("wrmNumber", value)}
                 />
                 <SelectField
+                  id="instructor-verification-wrm-category"
                   label="Categorie"
                   value={form.wrmCategory}
                   options={wrmCategoryOptions}
                   onChange={(value) => update("wrmCategory", value)}
                 />
                 <Field
+                  id="instructor-verification-valid-until"
                   label="Geldig tot"
                   type="date"
                   value={form.wrmValidUntil}
@@ -595,13 +663,15 @@ export function InstructorVerificationBoard({
         <div className="mt-8 grid gap-7 lg:grid-cols-2">
           <InnerPanel>
             <div className="space-y-6">
-              <Field
+              <TextAreaField
+                id="instructor-verification-extra-info"
                 label="Extra informatie (optioneel)"
                 value={form.extraInfo}
                 placeholder="Geef hier extra informatie op indien van toepassing."
                 onChange={(value) => update("extraInfo", value)}
               />
               <Field
+                id="instructor-verification-function-role"
                 label="Functie / Rol"
                 value={form.functionRole}
                 placeholder="Hoofd instructeur"
@@ -612,7 +682,8 @@ export function InstructorVerificationBoard({
           <InnerPanel>
             <div className="space-y-6">
               <Field
-                label="Rijbewijs / Registratienr."
+                id="instructor-verification-school"
+                label="Rijschool / Organisatie"
                 value={form.school}
                 placeholder="Autorijschool de Vries"
                 onChange={(value) => update("school", value)}
@@ -635,14 +706,15 @@ export function InstructorVerificationBoard({
                   </div>
                   <div className="relative shrink-0">
                     <select
+                      id="instructor-verification-specialization-add"
                       value=""
                       aria-label="Specialisatie toevoegen"
                       onChange={(event) => {
                         if (event.target.value) {
-                          toggleSpecialization(event.target.value);
+                          addSpecialization(event.target.value);
                         }
                       }}
-                      className="absolute inset-0 opacity-0"
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                     >
                       <option value="">Toevoegen</option>
                       {specializationOptions.map((option) => (
@@ -702,7 +774,7 @@ export function InstructorVerificationBoard({
           <InnerPanel className="mt-4">
             <h3 className="text-base font-semibold text-white">Extra informatie</h3>
             <div className="mt-6 grid gap-4">
-              <InfoRow label="Rijbewijs / Registratienr." value={form.school || "-"} />
+              <InfoRow label="Rijschool / Organisatie" value={form.school || "-"} />
               <InfoRow label="Functie / Rol" value={form.functionRole || "-"} />
               <InfoRow
                 label="Specialisaties"

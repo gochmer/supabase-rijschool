@@ -12,11 +12,27 @@ export function getDocumentVariant(status: string) {
     return "success" as const;
   }
 
-  if (status === "afgekeurd") {
+  if (status === "afgekeurd" || status === "afgewezen") {
     return "danger" as const;
   }
 
   return "warning" as const;
+}
+
+export function getDocumentStatusLabel(status: string) {
+  if (status === "goedgekeurd") {
+    return "Akkoord";
+  }
+
+  if (status === "afgekeurd" || status === "afgewezen") {
+    return "Afgewezen";
+  }
+
+  if (status === "ingediend" || status === "in_beoordeling") {
+    return "In controle";
+  }
+
+  return status || "Onbekend";
 }
 
 export function getDocumentTone(status: string, hasUrl: boolean) {
@@ -38,7 +54,7 @@ export function getDocumentTone(status: string, hasUrl: boolean) {
     };
   }
 
-  if (status === "afgekeurd") {
+  if (status === "afgekeurd" || status === "afgewezen") {
     return {
       shell:
         "border-rose-200/80 bg-rose-50/90 dark:border-rose-400/20 dark:bg-rose-500/10",
@@ -104,7 +120,7 @@ export function getAuthorityStatusLabel(
     return "Akkoord";
   }
 
-  if (document.status === "afgekeurd") {
+  if (document.status === "afgekeurd" || document.status === "afgewezen") {
     return "Actie nodig";
   }
 
@@ -124,7 +140,7 @@ export function getAuthorityTone(
     };
   }
 
-  if (document?.status === "afgekeurd") {
+  if (document?.status === "afgekeurd" || document?.status === "afgewezen") {
     return {
       shell:
         "border-rose-200/80 bg-rose-50/90 dark:border-rose-400/20 dark:bg-rose-500/10",

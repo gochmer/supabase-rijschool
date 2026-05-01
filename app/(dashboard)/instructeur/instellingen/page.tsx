@@ -26,6 +26,7 @@ import {
   findDocumentByKeywords,
   getAuthorityStatusLabel,
   getAuthorityTone,
+  getDocumentStatusLabel,
   getDocumentTone,
   getDocumentVariant,
   getVehicleTone,
@@ -707,6 +708,9 @@ export default async function InstructeurInstellingenPage() {
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Badge variant="info">{item.privacy}</Badge>
+                        {item.document?.sourceLabel ? (
+                          <Badge variant="info">{item.document.sourceLabel}</Badge>
+                        ) : null}
                         <Badge variant="default">
                           {item.document?.datum ?? "Nog niet aangeleverd"}
                         </Badge>
@@ -716,6 +720,15 @@ export default async function InstructeurInstellingenPage() {
                             : "Bestand nodig"}
                         </Badge>
                       </div>
+                      {item.document?.details?.length ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {item.document.details.map((detail) => (
+                            <Badge key={detail} variant="default">
+                              {detail}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -836,8 +849,20 @@ export default async function InstructeurInstellingenPage() {
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Badge variant="info">{item.privacy}</Badge>
+                        {item.document?.sourceLabel ? (
+                          <Badge variant="info">{item.document.sourceLabel}</Badge>
+                        ) : null}
                         <Badge variant="default">{item.meta}</Badge>
                       </div>
+                      {item.document?.details?.length ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {item.document.details.map((detail) => (
+                            <Badge key={detail} variant="default">
+                              {detail}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -1090,15 +1115,29 @@ export default async function InstructeurInstellingenPage() {
                             </div>
                           </div>
                           <Badge variant={getDocumentVariant(document.status)}>
-                            {document.status}
+                            {getDocumentStatusLabel(document.status)}
                           </Badge>
                         </div>
 
+                        {document.description ? (
+                          <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            {document.description}
+                          </p>
+                        ) : null}
+
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Badge variant="info">{tone.label}</Badge>
+                          {document.sourceLabel ? (
+                            <Badge variant="info">{document.sourceLabel}</Badge>
+                          ) : null}
                           <Badge variant="default">
                             {document.hasUrl ? "Bestand gekoppeld" : "Nog geen bestand"}
                           </Badge>
+                          {document.details?.map((detail) => (
+                            <Badge key={detail} variant="default">
+                              {detail}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
                     );

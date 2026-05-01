@@ -37,28 +37,32 @@ export function InstructorOnlineBookingControl({
   }
 
   return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+    <div className="min-h-[20rem] rounded-xl border border-sky-300/16 bg-[radial-gradient(circle_at_15%_0%,rgba(14,165,233,0.14),transparent_34%),linear-gradient(145deg,rgba(9,20,35,0.98),rgba(5,13,24,0.99))] p-5 shadow-[0_22px_70px_-55px_rgba(14,165,233,0.8)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-400 uppercase">
             Online boeken
           </p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
+          <h3 className="mt-4 text-lg font-semibold text-white">
             Publieke agenda
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <p className="mt-3 max-w-64 text-sm leading-6 text-slate-300">
             Leerlingen zien alleen vrije boekbare momenten.
           </p>
         </div>
         <div
           className={cn(
-            "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium",
+            "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold leading-tight",
             isEnabled
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-100"
-              : "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200"
+              ? "border-emerald-300/25 bg-emerald-400/12 text-emerald-100"
+              : "border-white/10 bg-white/8 text-slate-200",
           )}
         >
-          {isEnabled ? <Globe className="size-4" /> : <LockKeyhole className="size-4" />}
+          {isEnabled ? (
+            <Globe className="size-4" />
+          ) : (
+            <LockKeyhole className="size-4" />
+          )}
           {isEnabled ? "Open voor boeking" : "Alleen op vrijgave"}
         </div>
       </div>
@@ -66,31 +70,31 @@ export function InstructorOnlineBookingControl({
       <div className="mt-4 flex flex-wrap gap-2">
         <Badge
           className={cn(
-            "border",
+            "border text-[11px]",
             isEnabled
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-100"
-              : "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200"
+              ? "border-emerald-300/25 bg-emerald-400/12 text-emerald-100"
+              : "border-white/10 bg-white/8 text-slate-200",
           )}
         >
           {isEnabled ? "Online inschrijven aan" : "Online inschrijven uit"}
         </Badge>
-        <Badge className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
+        <Badge className="border border-white/10 bg-white/8 text-[11px] text-slate-100">
           {activeSlotCount} open slot{activeSlotCount === 1 ? "" : "s"}
         </Badge>
       </div>
 
-      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+      <div className="mt-4 flex flex-wrap gap-2.5">
         <Button
-          className="h-10 rounded-full"
-          disabled={isPending || isEnabled}
+          className="h-11 rounded-xl bg-sky-500 px-5 text-slate-950 hover:bg-sky-400"
+          disabled={isPending}
           onClick={() => handleToggle(true)}
         >
           Zet online boeking aan
         </Button>
         <Button
           variant="outline"
-          className="h-10 rounded-full"
-          disabled={isPending || !isEnabled}
+          className="h-11 rounded-xl border-white/10 bg-white/5 px-5 text-white hover:bg-white/10 hover:text-white"
+          disabled={isPending}
           onClick={() => handleToggle(false)}
         >
           Zet online boeking uit

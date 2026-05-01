@@ -11,6 +11,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentProfile,
 } from "@/lib/data/profiles";
+import { getReviewStatsByInstructorIds } from "@/lib/data/reviews";
 import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
 
 export default async function InstructeurDashboardPage() {
@@ -34,12 +35,25 @@ export default async function InstructeurDashboardPage() {
     getInstructeurStudentsWorkspace(),
   ]);
 
+  const reviewStats = instructor
+    ? (await getReviewStatsByInstructorIds([instructor.id])).get(instructor.id)
+    : null;
+  const instructorWithReviewStats = instructor
+    ? {
+        ...instructor,
+        beoordeling: reviewStats?.reviewCount
+          ? reviewStats.averageScore
+          : instructor.beoordeling,
+        aantal_reviews: reviewStats?.reviewCount ?? 0,
+      }
+    : null;
+
   return (
     <InstructorCommandCenter
       lessons={lessons}
       requests={requests}
       notifications={notifications}
-      instructor={instructor}
+      instructor={instructorWithReviewStats}
       profileName={profile?.volledige_naam}
       packages={instructorPackages}
       availabilitySlots={availabilitySlots}

@@ -346,8 +346,8 @@ async function gotoStable(page, pathname) {
 async function loginUser(page, email, redirectPath) {
   await gotoStable(page, `/inloggen?redirect=${encodeURIComponent(redirectPath)}`);
   await page.getByLabel("E-mailadres").fill(email);
-  await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Inloggen" }).click();
+  await page.locator('input[name="password"]').fill(TEST_PASSWORD);
+  await page.getByRole("button", { name: "Inloggen", exact: true }).click();
   await page.waitForURL(`**${redirectPath}`, { timeout: 30_000 });
   await page.waitForTimeout(1_500);
 }

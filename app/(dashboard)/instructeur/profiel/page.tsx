@@ -10,7 +10,6 @@ import {
   Mail,
   MapPin,
   MessageSquare,
-  MoreHorizontal,
   Phone,
   ShieldCheck,
   Star,
@@ -536,7 +535,6 @@ export default async function InstructeurProfielPage() {
                     <p className="text-xs text-slate-400">{item.detail}</p>
                   </div>
                 </div>
-                <MoreHorizontal className="size-4 text-slate-500" />
               </div>
             ))}
           </div>
@@ -548,7 +546,7 @@ export default async function InstructeurProfielPage() {
           title="Recente reviews"
           action={
             <Button asChild size="sm" variant="outline" className="rounded-lg border-white/10 bg-white/8 text-white">
-              <a href="#reviews">Bekijk alle reviews</a>
+              <Link href="/instructeur/reviews">Bekijk alle reviews</Link>
             </Button>
           }
         />
@@ -576,7 +574,12 @@ export default async function InstructeurProfielPage() {
                   </div>
                   <p className="mt-1 text-sm leading-6 text-slate-300">{review.tekst}</p>
                 </div>
-                <MoreHorizontal className="size-4 text-slate-500" />
+                <InstructorReviewReplyDialog
+                  reviewId={review.id}
+                  reviewerName={review.leerling_naam}
+                  reviewTitle={review.titel}
+                  initialReply={review.antwoord_tekst}
+                />
               </div>
             ))
           ) : (
@@ -602,7 +605,7 @@ export default async function InstructeurProfielPage() {
               icon: Mail,
               title: "E-mail adres wijzigen",
               detail: "Wijzig je e-mailadres",
-              href: "#profiel-bewerken",
+              href: "#profiel-email",
               label: "Wijzigen",
             },
             {
@@ -615,7 +618,7 @@ export default async function InstructeurProfielPage() {
           ].map((item) => (
             <div
               key={item.title}
-              className="grid gap-3 border-b border-white/8 py-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center"
+              className="grid gap-3 border-b border-white/8 py-3 last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center"
             >
               <div className="flex items-center gap-3">
                 <div className="flex size-9 items-center justify-center rounded-lg bg-white/8 text-slate-300">
@@ -629,7 +632,6 @@ export default async function InstructeurProfielPage() {
               <Button asChild size="sm" variant="outline" className="w-fit rounded-lg border-white/10 bg-white/8 text-white">
                 <Link href={item.href}>{item.label}</Link>
               </Button>
-              <MoreHorizontal className="hidden size-4 text-slate-500 sm:block" />
             </div>
           ))}
         </div>
@@ -649,6 +651,7 @@ export default async function InstructeurProfielPage() {
             tone="urban"
             initialValues={{
               volledigeNaam: profile?.volledige_naam ?? "",
+              email: profile?.email ?? "",
               telefoon: profile?.telefoon ?? "",
               bio: instructor?.bio ?? "",
               ervaringJaren: instructor?.ervaring_jaren ?? 0,

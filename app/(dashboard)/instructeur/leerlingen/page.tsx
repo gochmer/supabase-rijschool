@@ -19,7 +19,12 @@ import {
 import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
 import { resolveInstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 
-export default async function LeerlingenPage() {
+export default async function LeerlingenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ student?: string }>;
+}) {
+  const params = await searchParams;
   const [workspace, locationOptions, packages, instructeur, profile] =
     await Promise.all([
       getInstructeurStudentsWorkspace(),
@@ -28,19 +33,20 @@ export default async function LeerlingenPage() {
       getCurrentInstructeurRecord(),
       getCurrentProfile(),
     ]);
-  const lessonDurationDefaults = resolveInstructorLessonDurationDefaults(instructeur);
+  const lessonDurationDefaults =
+    resolveInstructorLessonDurationDefaults(instructeur);
   const totalStudents = workspace.students.length;
   const manualStudents = workspace.students.filter(
-    (student) => student.isHandmatigGekoppeld
+    (student) => student.isHandmatigGekoppeld,
   ).length;
   const selfSchedulingStudents = workspace.students.filter(
-    (student) => student.zelfInplannenToegestaan
+    (student) => student.zelfInplannenToegestaan,
   ).length;
   const actionStudents = workspace.students.filter(
     (student) =>
       student.voortgang < 40 ||
       !student.volgendeLesAt ||
-      student.accountStatus === "uitgenodigd"
+      student.accountStatus === "uitgenodigd",
   ).length;
   const studentStats = [
     {
@@ -83,7 +89,8 @@ export default async function LeerlingenPage() {
     ? focusStudent.isHandmatigGekoppeld
       ? "Handmatig gekoppeld"
       : focusStudent.laatsteBeoordelingAt
-        ? formatTrajectoryDate(focusStudent.laatsteBeoordelingAt) ?? "Traject actief"
+        ? (formatTrajectoryDate(focusStudent.laatsteBeoordelingAt) ??
+          "Traject actief")
         : "Traject actief"
     : "Eerste koppeling volgt";
   const trajectoryGoalLabel =
@@ -107,7 +114,9 @@ export default async function LeerlingenPage() {
       ? "Zelf inplannen actief"
       : "Planning via instructeur",
     focusStudent?.telefoon ? "Contact bekend" : "Contact aanvullen",
-    focusStudent?.onboardingNotitie ? "Intake notitie aanwezig" : "Intake aanvullen",
+    focusStudent?.onboardingNotitie
+      ? "Intake notitie aanwezig"
+      : "Intake aanvullen",
   ];
 
   return (
@@ -119,7 +128,11 @@ export default async function LeerlingenPage() {
         actions={
           <>
             <StudentOnboardDialog packages={packages} />
-            <Button asChild variant="outline" className="h-9 rounded-full text-[13px]">
+            <Button
+              asChild
+              variant="outline"
+              className="h-9 rounded-full text-[13px]"
+            >
               <Link href="/instructeur/lessen">Lessen bekijken</Link>
             </Button>
             <Button asChild className="h-9 rounded-full text-[13px]">
@@ -172,6 +185,7 @@ export default async function LeerlingenPage() {
         locationOptions={locationOptions}
         packages={packages}
         lessonDurationDefaults={lessonDurationDefaults}
+        initialStudentId={params.student ?? null}
       />
     </>
   );

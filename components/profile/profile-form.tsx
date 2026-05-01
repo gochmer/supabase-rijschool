@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   Check,
   CheckCircle2,
+  Mail,
   Phone,
   ShieldCheck,
   Sparkles,
@@ -44,6 +45,7 @@ export function ProfileForm({
 }: {
   initialValues: {
     volledigeNaam: string;
+    email?: string;
     telefoon: string;
     bio?: string;
     ervaringJaren?: number;
@@ -60,6 +62,7 @@ export function ProfileForm({
   const isUrban = tone === "urban";
   const isResident = tone === "resident";
   const [volledigeNaam, setVolledigeNaam] = useState(initialValues.volledigeNaam);
+  const [email, setEmail] = useState(initialValues.email ?? "");
   const [telefoon, setTelefoon] = useState(initialValues.telefoon);
   const [bio, setBio] = useState(initialValues.bio ?? "");
   const [ervaringJaren, setErvaringJaren] = useState(
@@ -78,11 +81,15 @@ export function ProfileForm({
   const [profielfotoKleur, setProfielfotoKleur] = useState(
     initialValues.profielfotoKleur ?? instructorColorOptions[0].value
   );
+  const showEmailField = typeof initialValues.email === "string";
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
       const result = await updateCurrentProfileAction({
         volledigeNaam: String(formData.get("volledige_naam") ?? ""),
+        email: formData.has("email")
+          ? String(formData.get("email") ?? "")
+          : undefined,
         telefoon: String(formData.get("telefoon") ?? ""),
         bio: String(formData.get("bio") ?? ""),
         ervaringJaren: String(formData.get("ervaring_jaren") ?? ""),
@@ -135,12 +142,18 @@ export function ProfileForm({
       icon: User,
     },
     {
+      label: email.trim() ? "E-mail klaar" : "E-mail mist",
+      detail: email.trim() || "Nodig voor accountberichten.",
+      complete: Boolean(email.trim()),
+      icon: Mail,
+    },
+    {
       label: telefoon.trim() ? "Telefoon klaar" : "Telefoon optioneel",
       detail: telefoon.trim() || "Handig voor snelle afstemming.",
       complete: Boolean(telefoon.trim()),
       icon: Phone,
     },
-  ];
+  ].filter((item) => showEmailField || item.icon !== Mail);
   const learnerCompletion = Math.round(
     (learnerReadinessItems.filter((item) => item.complete).length /
       learnerReadinessItems.length) *
@@ -203,6 +216,23 @@ export function ProfileForm({
                     className={controlClassName}
                   />
                 </div>
+                {showEmailField ? (
+                  <div className={cn(fieldWrapperClassName, "md:col-span-2")}>
+                    <Label htmlFor="email" className={labelClassName}>
+                      E-mailadres
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="naam@voorbeeld.nl"
+                      className={controlClassName}
+                      required
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -241,6 +271,7 @@ export function ProfileForm({
           </div>
 
           <input type="hidden" name="bio" value="" />
+          {showEmailField ? <input type="hidden" name="email" value={email} /> : null}
           <input type="hidden" name="werkgebied" value="" />
           <input type="hidden" name="prijs_per_les" value="0" />
           <input type="hidden" name="ervaring_jaren" value="0" />
@@ -370,6 +401,27 @@ export function ProfileForm({
           className={controlClassName}
         />
       </div>
+      {showEmailField ? (
+        <div id="profiel-email" className={cn(fieldWrapperClassName, "scroll-mt-28 md:col-span-2")}>
+          <Label htmlFor="email" className={labelClassName}>
+            E-mailadres
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="naam@voorbeeld.nl"
+            autoComplete="email"
+            className={controlClassName}
+            required
+          />
+          <p className="text-xs leading-5 text-slate-400">
+            Bij een nieuw adres sturen we een bevestigingsmail voordat de wijziging actief wordt.
+          </p>
+        </div>
+      ) : null}
       {role === "instructeur" ? (
         <>
           <div className={cn(fieldWrapperClassName, "md:col-span-2")}>

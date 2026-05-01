@@ -105,6 +105,7 @@ export interface Les {
 export interface LesAanvraag {
   id: string;
   leerling_naam: string;
+  leerling_email?: string | null;
   instructeur_naam: string;
   voorkeursdatum: string;
   start_at?: string | null;

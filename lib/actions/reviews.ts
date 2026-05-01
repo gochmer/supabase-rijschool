@@ -102,6 +102,7 @@ async function revalidateReviewPaths(instructorSlug?: string | null) {
   revalidatePath("/leerling/profiel");
   revalidatePath("/instructeur/dashboard");
   revalidatePath("/instructeur/profiel");
+  revalidatePath("/instructeur/reviews");
   revalidatePath("/instructeurs");
   revalidatePath("/motor");
   revalidatePath("/vrachtwagen");

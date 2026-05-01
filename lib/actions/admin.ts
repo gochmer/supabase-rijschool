@@ -19,31 +19,55 @@ export async function updateInstructorApprovalAction(
   }
 
   const supabase = await createServerClient();
+  const updatedAt = new Date().toISOString();
 
-  const { error } = await supabase
-    .from("instructeurs")
-    .update({
-      profiel_status: nextStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", instructorId);
+  const [
+    { error: instructorError },
+    { error: verificationError },
+    { error: documentsError },
+  ] = await Promise.all([
+    supabase
+      .from("instructeurs")
+      .update({
+        profiel_status: nextStatus,
+        updated_at: updatedAt,
+      })
+      .eq("id", instructorId),
+    supabase
+      .from("instructeur_verificatie_aanvragen" as never)
+      .update({
+        status: nextStatus,
+        updated_at: updatedAt,
+      } as never)
+      .eq("instructeur_id" as never, instructorId as never),
+    supabase
+      .from("instructeur_documenten")
+      .update({
+        status: nextStatus,
+      })
+      .eq("instructeur_id", instructorId)
+      .in("status", ["ingediend", "in_beoordeling"]),
+  ]);
 
-  if (error) {
+  if (instructorError || verificationError || documentsError) {
     return {
       success: false,
-      message: "De status van de instructeur kon niet worden bijgewerkt.",
+      message: "De verificatiestatus kon niet volledig worden bijgewerkt.",
     };
   }
 
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/instructeurs");
+  revalidatePath("/instructeur-verificatie");
+  revalidatePath("/instructeur/instellingen");
+  revalidatePath("/instructeur/profiel");
 
   return {
     success: true,
     message:
       nextStatus === "goedgekeurd"
-        ? "De instructeur is goedgekeurd."
-        : "De instructeur is afgewezen.",
+        ? "De instructeur, aanvraag en documenten zijn goedgekeurd."
+        : "De instructeur, aanvraag en documenten zijn afgewezen.",
   };
 }
 

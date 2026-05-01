@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { updateLessonRequestStatusAction } from "@/lib/actions/request-status";
@@ -33,10 +34,12 @@ export function RequestStatusActions({
   requestId,
   status,
   locationOptions = [],
+  display = "buttons",
 }: {
   requestId: string;
   status: LesStatus;
   locationOptions?: LocationOption[];
+  display?: "buttons" | "icons";
 }) {
   const [isPending, startTransition] = useTransition();
   const [acceptOpen, setAcceptOpen] = useState(false);
@@ -103,10 +106,22 @@ export function RequestStatusActions({
   }
 
   return (
-    <div className="grid gap-2 sm:flex [&>*]:w-full sm:[&>*]:w-auto">
+    <div className={display === "icons" ? "flex items-center gap-2" : "grid gap-2 sm:flex [&>*]:w-full sm:[&>*]:w-auto"}>
       <Dialog open={acceptOpen} onOpenChange={setAcceptOpen}>
         <DialogTrigger asChild>
-          <Button size="sm">Accepteren</Button>
+          {display === "icons" ? (
+            <Button
+              aria-label="Accepteren"
+              title="Accepteren"
+              size="icon-sm"
+              variant="outline"
+              className="size-9 rounded-lg border-emerald-400/25 bg-emerald-400/10 text-emerald-300 hover:border-emerald-300/45 hover:bg-emerald-400/18 hover:text-emerald-100"
+            >
+              <CheckCircle2 className="size-4" />
+            </Button>
+          ) : (
+            <Button size="sm">Accepteren</Button>
+          )}
         </DialogTrigger>
         <DialogContent className="sm:max-w-lg dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
           <DialogHeader>
@@ -191,9 +206,21 @@ export function RequestStatusActions({
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogTrigger asChild>
-          <Button size="sm" variant="outline">
-            Weigeren
-          </Button>
+          {display === "icons" ? (
+            <Button
+              aria-label="Weigeren"
+              title="Weigeren"
+              size="icon-sm"
+              variant="outline"
+              className="size-9 rounded-lg border-rose-400/25 bg-rose-400/10 text-rose-300 hover:border-rose-300/45 hover:bg-rose-400/18 hover:text-rose-100"
+            >
+              <XCircle className="size-4" />
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline">
+              Weigeren
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent className="sm:max-w-lg dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
           <DialogHeader>

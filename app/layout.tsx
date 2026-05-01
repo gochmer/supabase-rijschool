@@ -34,7 +34,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="nl" className="h-full scroll-smooth antialiased" suppressHydrationWarning>
+    <html
+      lang="nl"
+      className="h-full scroll-smooth antialiased"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body className="min-h-full bg-background text-foreground transition-[background-color,color] duration-300">
         <Providers>{children}</Providers>
       </body>

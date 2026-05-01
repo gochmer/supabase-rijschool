@@ -17,9 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  toggleInstructorLearnerChecklistAction,
-} from "@/lib/actions/instructor-learners";
+import { toggleInstructorLearnerChecklistAction } from "@/lib/actions/instructor-learners";
 import {
   clearStudentProgressAssessmentAction,
   saveStudentProgressAssessmentAction,
@@ -100,6 +98,7 @@ export function StudentsBoard({
   locationOptions = [],
   packages = [],
   lessonDurationDefaults,
+  initialStudentId = null,
 }: {
   students: InstructorStudentProgressRow[];
   assessments: StudentProgressAssessment[];
@@ -107,24 +106,33 @@ export function StudentsBoard({
   locationOptions?: LocationOption[];
   packages?: Pakket[];
   lessonDurationDefaults: InstructorLessonDurationDefaults;
+  initialStudentId?: string | null;
 }) {
+  const initialStudent =
+    students.find((student) => student.id === initialStudentId) ??
+    students[0] ??
+    null;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("alles");
-  const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id ?? "");
+  const [selectedStudentId, setSelectedStudentId] = useState(
+    initialStudent?.id ?? "",
+  );
   const [selectedDate, setSelectedDate] = useState(getTodayInputValue());
   const [activeMarkMode, setActiveMarkMode] =
     useState<ActiveMarkMode>("zelfstandig");
   const [localStudents, setLocalStudents] = useState(students);
   const [localAssessments, setLocalAssessments] = useState(assessments);
   const [localNotes, setLocalNotes] = useState(notes);
-  const [weeklyBookingLimitDraft, setWeeklyBookingLimitDraft] = useState(() => ({
-    studentId: students[0]?.id ?? "",
-    value:
-      students[0]?.zelfInplannenHandmatigeOverrideActief &&
-      students[0]?.zelfInplannenHandmatigeLimietMinutenPerWeek != null
-        ? String(students[0].zelfInplannenHandmatigeLimietMinutenPerWeek)
-        : "",
-  }));
+  const [weeklyBookingLimitDraft, setWeeklyBookingLimitDraft] = useState(
+    () => ({
+      studentId: initialStudent?.id ?? "",
+      value:
+        initialStudent?.zelfInplannenHandmatigeOverrideActief &&
+        initialStudent?.zelfInplannenHandmatigeLimietMinutenPerWeek != null
+          ? String(initialStudent.zelfInplannenHandmatigeLimietMinutenPerWeek)
+          : "",
+    }),
+  );
   const [isPending, startTransition] = useTransition();
 
   const filteredStudents = useMemo(() => {
@@ -148,17 +156,17 @@ export function StudentsBoard({
     }
 
     return localAssessments.filter(
-      (assessment) => assessment.leerling_id === selectedStudent.id
+      (assessment) => assessment.leerling_id === selectedStudent.id,
     );
   }, [localAssessments, selectedStudent]);
 
   const summary = useMemo(
     () => getStudentProgressSummary(selectedStudentAssessments),
-    [selectedStudentAssessments]
+    [selectedStudentAssessments],
   );
   const sectionSummaries = useMemo(
     () => getStudentProgressSectionSummaries(selectedStudentAssessments),
-    [selectedStudentAssessments]
+    [selectedStudentAssessments],
   );
   const selectedStudentNotes = useMemo(() => {
     if (!selectedStudent) {
@@ -191,48 +199,61 @@ export function StudentsBoard({
   }, [selectedPackage, shouldUseFirstLessonTemplate]);
   const focusItems = useMemo(
     () => getStudentProgressFocusItems(selectedStudentAssessments),
-    [selectedStudentAssessments]
+    [selectedStudentAssessments],
   );
   const strongestItems = useMemo(
     () => getStudentProgressStrongestItems(selectedStudentAssessments),
-    [selectedStudentAssessments]
+    [selectedStudentAssessments],
   );
   const momentum = useMemo(
     () =>
-      getStudentProgressMomentum(selectedStudentAssessments, selectedStudentNotes),
-    [selectedStudentAssessments, selectedStudentNotes]
+      getStudentProgressMomentum(
+        selectedStudentAssessments,
+        selectedStudentNotes,
+      ),
+    [selectedStudentAssessments, selectedStudentNotes],
   );
   const examReadiness = useMemo(
-    () => getStudentExamReadiness(selectedStudentAssessments, selectedStudentNotes),
-    [selectedStudentAssessments, selectedStudentNotes]
+    () =>
+      getStudentExamReadiness(selectedStudentAssessments, selectedStudentNotes),
+    [selectedStudentAssessments, selectedStudentNotes],
   );
   const automaticNotifications = useMemo(
     () =>
       getStudentAutomaticNotifications(
         selectedStudentAssessments,
-        selectedStudentNotes
+        selectedStudentNotes,
       ),
-    [selectedStudentAssessments, selectedStudentNotes]
+    [selectedStudentAssessments, selectedStudentNotes],
   );
   const weeklyGoals = useMemo(
-    () => getStudentWeeklyGoals(selectedStudentAssessments, selectedStudentNotes),
-    [selectedStudentAssessments, selectedStudentNotes]
+    () =>
+      getStudentWeeklyGoals(selectedStudentAssessments, selectedStudentNotes),
+    [selectedStudentAssessments, selectedStudentNotes],
   );
   const progressStreak = useMemo(
-    () => getStudentProgressStreak(selectedStudentAssessments, selectedStudentNotes),
-    [selectedStudentAssessments, selectedStudentNotes]
+    () =>
+      getStudentProgressStreak(
+        selectedStudentAssessments,
+        selectedStudentNotes,
+      ),
+    [selectedStudentAssessments, selectedStudentNotes],
   );
   const milestoneOverview = useMemo(
     () =>
       getStudentMilestoneOverview(
         selectedStudentAssessments,
-        selectedStudentNotes
+        selectedStudentNotes,
       ),
-    [selectedStudentAssessments, selectedStudentNotes]
+    [selectedStudentAssessments, selectedStudentNotes],
   );
   const threeLessonTrack = useMemo(
-    () => getStudentThreeLessonTrack(selectedStudentAssessments, selectedStudentNotes),
-    [selectedStudentAssessments, selectedStudentNotes]
+    () =>
+      getStudentThreeLessonTrack(
+        selectedStudentAssessments,
+        selectedStudentNotes,
+      ),
+    [selectedStudentAssessments, selectedStudentNotes],
   );
 
   const visibleDates = useMemo(
@@ -240,19 +261,19 @@ export function StudentsBoard({
       getAssessmentDatesForStudent(
         selectedStudent?.id,
         localAssessments,
-        selectedDate
+        selectedDate,
       ),
-    [localAssessments, selectedDate, selectedStudent?.id]
+    [localAssessments, selectedDate, selectedStudent?.id],
   );
 
   const averageProgress = useMemo(
     () => getAverageStudentProgress(localStudents),
-    [localStudents]
+    [localStudents],
   );
 
   const attentionStudents = useMemo(
     () => getStudentAttentionCount(localStudents),
-    [localStudents]
+    [localStudents],
   );
   const selectedLessonNote = useMemo(() => {
     return getSelectedLessonNote({
@@ -271,7 +292,8 @@ export function StudentsBoard({
   const selectedStudentLastSignInLabel = selectedStudent?.lastSignInAt
     ? formatDateTimeLabel(selectedStudent.lastSignInAt)
     : null;
-  const weeklyPlanningSummary = getStudentWeeklyPlanningSummary(selectedStudent);
+  const weeklyPlanningSummary =
+    getStudentWeeklyPlanningSummary(selectedStudent);
   const selectedStudentWeeklyLimitLabel = weeklyPlanningSummary.limitLabel;
   const selectedStudentWeeklyLimitSource = weeklyPlanningSummary.limitSource;
   const selectedStudentWeeklyLimitSourceLabel =
@@ -295,7 +317,9 @@ export function StudentsBoard({
     }
 
     const nextSummary = getStudentProgressSummary(
-      nextAssessments.filter((assessment) => assessment.leerling_id === selectedStudent.id)
+      nextAssessments.filter(
+        (assessment) => assessment.leerling_id === selectedStudent.id,
+      ),
     );
 
     setLocalStudents((current) =>
@@ -309,14 +333,14 @@ export function StudentsBoard({
                 : "Nog geen beoordeling",
               laatsteBeoordelingAt: nextSummary.lastReviewedAt,
             }
-          : student
-      )
+          : student,
+      ),
     );
   }
 
   function handleAssessmentUpdate(
     vaardigheidKey: string,
-    section: StudentProgressSection
+    section: StudentProgressSection,
   ) {
     if (!selectedStudent) {
       return;
@@ -373,7 +397,7 @@ export function StudentsBoard({
           !(
             note.leerling_id === selectedStudent.id &&
             note.lesdatum === selectedDate
-          )
+          ),
       );
 
       if (!nextNote) {
@@ -395,14 +419,14 @@ export function StudentsBoard({
       current.map((student) =>
         student.id === selectedStudent.id
           ? { ...student, zelfInplannenToegestaan: nextAllowed }
-          : student
-      )
+          : student,
+      ),
     );
 
     startTransition(async () => {
       const result = await updateStudentSelfSchedulingAccessAction(
         selectedStudent.id,
-        nextAllowed
+        nextAllowed,
       );
 
       if (!result.success) {
@@ -410,8 +434,8 @@ export function StudentsBoard({
           current.map((student) =>
             student.id === selectedStudent.id
               ? { ...student, zelfInplannenToegestaan: previousAllowed }
-              : student
-          )
+              : student,
+          ),
         );
         toast.error(result.message);
         return;
@@ -423,23 +447,25 @@ export function StudentsBoard({
 
   function handleWeeklyBookingLimitSave(
     nextLimit: number | null,
-    mode: "manual" | "package" = "manual"
+    mode: "manual" | "package" = "manual",
   ) {
     if (!selectedStudent?.planningVrijTeGeven) {
       return;
     }
 
-    const previousLimit = selectedStudent.zelfInplannenLimietMinutenPerWeek ?? null;
+    const previousLimit =
+      selectedStudent.zelfInplannenLimietMinutenPerWeek ?? null;
     const previousManualLimit =
       selectedStudent.zelfInplannenHandmatigeLimietMinutenPerWeek ?? null;
     const previousManualOverrideActive = Boolean(
-      selectedStudent.zelfInplannenHandmatigeOverrideActief
+      selectedStudent.zelfInplannenHandmatigeOverrideActief,
     );
     const previousRemaining =
       selectedStudent.zelfInplannenResterendMinutenDezeWeek ?? null;
     const packageLimit =
       selectedStudent.zelfInplannenPakketLimietMinutenPerWeek ?? null;
-    const usedMinutes = selectedStudent.zelfInplannenGebruiktMinutenDezeWeek ?? 0;
+    const usedMinutes =
+      selectedStudent.zelfInplannenGebruiktMinutenDezeWeek ?? 0;
     const nextEffectiveLimit = mode === "package" ? packageLimit : nextLimit;
     const nextRemaining =
       nextEffectiveLimit == null
@@ -462,15 +488,15 @@ export function StudentsBoard({
               zelfInplannenHandmatigeOverrideActief: mode === "manual",
               zelfInplannenResterendMinutenDezeWeek: nextRemaining,
             }
-          : student
-      )
+          : student,
+      ),
     );
 
     startTransition(async () => {
       const result = await updateStudentWeeklyBookingLimitAction(
         selectedStudent.id,
         nextLimit,
-        mode
+        mode,
       );
 
       if (!result.success) {
@@ -493,8 +519,8 @@ export function StudentsBoard({
                     previousManualOverrideActive,
                   zelfInplannenResterendMinutenDezeWeek: previousRemaining,
                 }
-              : student
-          )
+              : student,
+          ),
         );
         toast.error(result.message);
         return;
@@ -518,8 +544,8 @@ export function StudentsBoard({
       current.map((student) =>
         student.id === selectedStudent.id
           ? { ...student, intakeChecklistKeys: nextKeys }
-          : student
-      )
+          : student,
+      ),
     );
 
     startTransition(async () => {
@@ -534,8 +560,8 @@ export function StudentsBoard({
           current.map((student) =>
             student.id === selectedStudent.id
               ? { ...student, intakeChecklistKeys: previousKeys }
-              : student
-          )
+              : student,
+          ),
         );
         toast.error(result.message);
         return;
@@ -640,9 +666,10 @@ export function StudentsBoard({
                           studentId: student.id,
                           value:
                             student.zelfInplannenHandmatigeOverrideActief &&
-                            student.zelfInplannenHandmatigeLimietMinutenPerWeek != null
+                            student.zelfInplannenHandmatigeLimietMinutenPerWeek !=
+                              null
                               ? String(
-                                  student.zelfInplannenHandmatigeLimietMinutenPerWeek
+                                  student.zelfInplannenHandmatigeLimietMinutenPerWeek,
                                 )
                               : "",
                         });
@@ -651,7 +678,7 @@ export function StudentsBoard({
                         "w-full rounded-[1.05rem] border p-2.5 text-left transition-all",
                         isSelected
                           ? "border-sky-300/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(59,130,246,0.14),rgba(15,23,42,0.04))] shadow-[0_18px_44px_-28px_rgba(14,165,233,0.34)] dark:border-sky-400/30 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(59,130,246,0.14),rgba(15,23,42,0.32))]"
-                          : "border-slate-200/80 bg-slate-50/88 hover:border-slate-300/80 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/8"
+                          : "border-slate-200/80 bg-slate-50/88 hover:border-slate-300/80 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/8",
                       )}
                     >
                       <div className="flex items-start justify-between gap-2.5">
@@ -665,7 +692,9 @@ export function StudentsBoard({
                                 {student.pakket}
                               </p>
                             </div>
-                            <Badge variant={band.badge}>{student.voortgang}%</Badge>
+                            <Badge variant={band.badge}>
+                              {student.voortgang}%
+                            </Badge>
                           </div>
                         </div>
                       </div>
@@ -705,8 +734,8 @@ export function StudentsBoard({
                     Geen leerlingen in dit filter
                   </p>
                   <p className="mt-1.5 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                    Pas je zoekterm aan of wacht tot er nieuwe trajecten aan deze instructeur gekoppeld
-                    zijn.
+                    Pas je zoekterm aan of wacht tot er nieuwe trajecten aan
+                    deze instructeur gekoppeld zijn.
                   </p>
                 </div>
               )}
@@ -728,7 +757,11 @@ export function StudentsBoard({
                         <p className="text-[11px] font-semibold tracking-[0.18em] text-primary uppercase dark:text-sky-300">
                           Digitale instructiekaart
                         </p>
-                        <Badge variant={getProgressBand(selectedStudent.voortgang).badge}>
+                        <Badge
+                          variant={
+                            getProgressBand(selectedStudent.voortgang).badge
+                          }
+                        >
                           {getProgressBand(selectedStudent.voortgang).label}
                         </Badge>
                       </div>
@@ -737,7 +770,8 @@ export function StudentsBoard({
                           {selectedStudent.naam}
                         </h2>
                         <p className="mt-1 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                          {selectedStudent.pakket} - {selectedStudent.email || "Geen e-mail"} •{" "}
+                          {selectedStudent.pakket} -{" "}
+                          {selectedStudent.email || "Geen e-mail"} •{" "}
                           {selectedStudent.telefoon || "Geen telefoon"}
                         </p>
                         {selectedStudent.isHandmatigGekoppeld ? (
@@ -815,12 +849,15 @@ export function StudentsBoard({
                               Intake-checklist
                             </p>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
-                              {intakeChecklistCompletedCount}/{MANUAL_LEARNER_INTAKE_ITEMS.length} onderdelen klaar
+                              {intakeChecklistCompletedCount}/
+                              {MANUAL_LEARNER_INTAKE_ITEMS.length} onderdelen
+                              klaar
                             </p>
                           </div>
                           <Badge
                             variant={
-                              intakeChecklistCompletedCount === MANUAL_LEARNER_INTAKE_ITEMS.length
+                              intakeChecklistCompletedCount ===
+                              MANUAL_LEARNER_INTAKE_ITEMS.length
                                 ? "success"
                                 : intakeChecklistCompletedCount >= 3
                                   ? "warning"
@@ -830,7 +867,7 @@ export function StudentsBoard({
                             {Math.round(
                               (intakeChecklistCompletedCount /
                                 MANUAL_LEARNER_INTAKE_ITEMS.length) *
-                                100
+                                100,
                             )}
                             %
                           </Badge>
@@ -838,7 +875,9 @@ export function StudentsBoard({
 
                         <div className="mt-3 space-y-2">
                           {MANUAL_LEARNER_INTAKE_ITEMS.map((item) => {
-                            const completed = intakeChecklistKeys.includes(item.key);
+                            const completed = intakeChecklistKeys.includes(
+                              item.key,
+                            );
 
                             return (
                               <button
@@ -851,7 +890,7 @@ export function StudentsBoard({
                                   "flex w-full items-start gap-3 rounded-[1rem] border px-3 py-2.5 text-left transition-all",
                                   completed
                                     ? "border-emerald-200/80 bg-emerald-50/90 dark:border-emerald-400/18 dark:bg-emerald-500/10"
-                                    : "border-slate-200/80 bg-white/80 hover:border-slate-300/80 dark:border-white/10 dark:bg-white/4 dark:hover:bg-white/7"
+                                    : "border-slate-200/80 bg-white/80 hover:border-slate-300/80 dark:border-white/10 dark:bg-white/4 dark:hover:bg-white/7",
                                 )}
                               >
                                 <div
@@ -859,7 +898,7 @@ export function StudentsBoard({
                                     "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
                                     completed
                                       ? "border-emerald-500 bg-emerald-500 text-white"
-                                      : "border-slate-300 bg-white text-transparent dark:border-slate-500 dark:bg-slate-900"
+                                      : "border-slate-300 bg-white text-transparent dark:border-slate-500 dark:bg-slate-900",
                                   )}
                                 >
                                   <CheckCircle2 className="size-3.5" />
@@ -903,7 +942,12 @@ export function StudentsBoard({
                           ))}
                         </ul>
                         <p className="mt-3 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
-                          Als je nu op <span className="font-medium text-slate-700 dark:text-slate-200">Les inplannen</span> klikt, nemen titel en duur deze opzet automatisch over.
+                          Als je nu op{" "}
+                          <span className="font-medium text-slate-700 dark:text-slate-200">
+                            Les inplannen
+                          </span>{" "}
+                          klikt, nemen titel en duur deze opzet automatisch
+                          over.
                         </p>
                       </div>
                     ) : null}
@@ -951,51 +995,51 @@ export function StudentsBoard({
                       </div>
                     </div>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {[
-                      {
-                        icon: Target,
-                        label: "Voortgang",
-                        value: `${selectedStudent.voortgang}%`,
-                        context:
-                          summary.beoordeeldCount > 0
-                            ? `${summary.beoordeeldCount} onderdelen beoordeeld`
-                            : "Nog geen onderdelen gemarkeerd",
-                      },
-                      {
-                        icon: CheckCircle2,
-                        label: "Zelfstandig",
-                        value: `${summary.zelfstandigCount}`,
-                        context: "Onderdelen die zelfstandig lukken",
-                      },
-                      {
-                        icon: CircleAlert,
-                        label: "Aandacht",
-                        value: `${summary.aandachtCount}`,
-                        context: "Onderdelen met uitleg of herhaling",
-                      },
-                      {
-                        icon: CalendarDays,
-                        label: "Volgende les",
-                        value: selectedStudent.volgendeLes,
-                        context: `${selectedStudent.gekoppeldeLessen} gekoppelde lesmomenten`,
-                      },
-                    ].map((item) => (
-                      <div
-                        key={item.label}
-                        className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
-                      >
-                        <item.icon className="size-4 text-slate-500 dark:text-slate-300" />
-                        <p className="mt-2 text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
-                          {item.label}
-                        </p>
-                        <p className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
-                          {item.value}
-                        </p>
-                        <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
-                          {item.context}
-                        </p>
-                      </div>
-                    ))}
+                      {[
+                        {
+                          icon: Target,
+                          label: "Voortgang",
+                          value: `${selectedStudent.voortgang}%`,
+                          context:
+                            summary.beoordeeldCount > 0
+                              ? `${summary.beoordeeldCount} onderdelen beoordeeld`
+                              : "Nog geen onderdelen gemarkeerd",
+                        },
+                        {
+                          icon: CheckCircle2,
+                          label: "Zelfstandig",
+                          value: `${summary.zelfstandigCount}`,
+                          context: "Onderdelen die zelfstandig lukken",
+                        },
+                        {
+                          icon: CircleAlert,
+                          label: "Aandacht",
+                          value: `${summary.aandachtCount}`,
+                          context: "Onderdelen met uitleg of herhaling",
+                        },
+                        {
+                          icon: CalendarDays,
+                          label: "Volgende les",
+                          value: selectedStudent.volgendeLes,
+                          context: `${selectedStudent.gekoppeldeLessen} gekoppelde lesmomenten`,
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.label}
+                          className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5"
+                        >
+                          <item.icon className="size-4 text-slate-500 dark:text-slate-300" />
+                          <p className="mt-2 text-[11px] font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400">
+                            {item.label}
+                          </p>
+                          <p className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
+                            {item.value}
+                          </p>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+                            {item.context}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                     <div className="rounded-[1.15rem] border border-slate-200/80 bg-slate-50/90 p-3 dark:border-white/10 dark:bg-white/5">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1039,7 +1083,7 @@ export function StudentsBoard({
                               className="h-9 rounded-full text-[12px]"
                               onClick={() =>
                                 handleSelfSchedulingToggle(
-                                  !selectedStudent.zelfInplannenToegestaan
+                                  !selectedStudent.zelfInplannenToegestaan,
                                 )
                               }
                               disabled={isPending}
@@ -1059,7 +1103,8 @@ export function StudentsBoard({
                               {
                                 label: "Actieve limiet",
                                 value: selectedStudentWeeklyLimitLabel,
-                                context: "Dit is de ruimte die nu echt geldt voor zelfstandig boeken",
+                                context:
+                                  "Dit is de ruimte die nu echt geldt voor zelfstandig boeken",
                               },
                               {
                                 label: "Bron",
@@ -1067,7 +1112,8 @@ export function StudentsBoard({
                                 context:
                                   selectedStudentWeeklyLimitSource === "manual"
                                     ? "Jij hebt deze leerling handmatig anders ingesteld dan het pakket"
-                                    : selectedStudentWeeklyLimitSource === "package"
+                                    : selectedStudentWeeklyLimitSource ===
+                                        "package"
                                       ? "Deze leerling volgt nu automatisch de pakketstandaard"
                                       : "Er staat nu geen weeklimiet actief op deze leerling",
                               },
@@ -1075,20 +1121,23 @@ export function StudentsBoard({
                                 label: "Pakketstandaard",
                                 value: selectedStudentPackageWeeklyLimitLabel,
                                 context:
-                                  selectedStudent.zelfInplannenPakketLimietMinutenPerWeek == null
+                                  selectedStudent.zelfInplannenPakketLimietMinutenPerWeek ==
+                                  null
                                     ? "Dit pakket heeft geen eigen weeklimiet en laat plannen onbeperkt open"
                                     : "Zodra je geen override gebruikt, volgt de leerling weer deze pakketruimte",
                               },
                               {
                                 label: "Deze week gebruikt",
                                 value: selectedStudentWeeklyUsedLabel,
-                                context: "Lessen en actieve boekingen in deze week",
+                                context:
+                                  "Lessen en actieve boekingen in deze week",
                               },
                               {
                                 label: "Nog over",
                                 value: selectedStudentWeeklyRemainingLabel,
                                 context:
-                                  selectedStudent.zelfInplannenLimietMinutenPerWeek == null
+                                  selectedStudent.zelfInplannenLimietMinutenPerWeek ==
+                                  null
                                     ? "Geen limiet ingesteld"
                                     : "Ruimte die de leerling nog zelf mag boeken",
                               },
@@ -1117,7 +1166,9 @@ export function StudentsBoard({
                                   Zelf plannen per week
                                 </p>
                                 <p className="mt-1 text-[12px] leading-5 text-slate-500 dark:text-slate-400">
-                                  Laat deze leerling het pakket volgen of zet bewust een handmatige override voor meer of minder weekruimte.
+                                  Laat deze leerling het pakket volgen of zet
+                                  bewust een handmatige override voor meer of
+                                  minder weekruimte.
                                 </p>
                               </div>
                               <div className="flex flex-wrap gap-2">
@@ -1128,9 +1179,11 @@ export function StudentsBoard({
                                 </Badge>
                                 <Badge
                                   variant={
-                                    selectedStudentWeeklyLimitSource === "manual"
+                                    selectedStudentWeeklyLimitSource ===
+                                    "manual"
                                       ? "warning"
-                                      : selectedStudentWeeklyLimitSource === "package"
+                                      : selectedStudentWeeklyLimitSource ===
+                                          "package"
                                         ? "success"
                                         : "default"
                                   }
@@ -1149,7 +1202,8 @@ export function StudentsBoard({
                                   {selectedStudentPackageWeeklyLimitLabel}
                                 </p>
                                 <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
-                                  Dit volgt de leerling automatisch zodra je geen losse override actief hebt.
+                                  Dit volgt de leerling automatisch zodra je
+                                  geen losse override actief hebt.
                                 </p>
                               </div>
                               <div className="rounded-[0.9rem] border border-slate-200/80 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/5">
@@ -1160,31 +1214,39 @@ export function StudentsBoard({
                                   {selectedStudentManualWeeklyLimitLabel}
                                 </p>
                                 <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
-                                  Gebruik dit alleen als deze leerling bewust meer, minder of onbeperkt weekruimte nodig heeft.
+                                  Gebruik dit alleen als deze leerling bewust
+                                  meer, minder of onbeperkt weekruimte nodig
+                                  heeft.
                                 </p>
                               </div>
                             </div>
 
                             <div className="mt-3 flex flex-wrap gap-2">
-                              {SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS.map((minutes) => (
-                                <Button
-                                  key={minutes}
-                                  type="button"
-                                  variant={
-                                    selectedStudent.zelfInplannenHandmatigeOverrideActief &&
-                                    Number(weeklyBookingLimitInput) === minutes
-                                      ? "default"
-                                      : "outline"
-                                  }
-                                  className="h-8 rounded-full px-3 text-[11px]"
-                                  onClick={() =>
-                                    handleWeeklyBookingLimitSave(minutes, "manual")
-                                  }
-                                  disabled={isPending}
-                                >
-                                  {formatMinutesAsHoursLabel(minutes)}
-                                </Button>
-                              ))}
+                              {SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS.map(
+                                (minutes) => (
+                                  <Button
+                                    key={minutes}
+                                    type="button"
+                                    variant={
+                                      selectedStudent.zelfInplannenHandmatigeOverrideActief &&
+                                      Number(weeklyBookingLimitInput) ===
+                                        minutes
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className="h-8 rounded-full px-3 text-[11px]"
+                                    onClick={() =>
+                                      handleWeeklyBookingLimitSave(
+                                        minutes,
+                                        "manual",
+                                      )
+                                    }
+                                    disabled={isPending}
+                                  >
+                                    {formatMinutesAsHoursLabel(minutes)}
+                                  </Button>
+                                ),
+                              )}
                               <Button
                                 type="button"
                                 variant={
@@ -1245,11 +1307,11 @@ export function StudentsBoard({
                                 onClick={() => {
                                   const parsed = Number.parseInt(
                                     weeklyBookingLimitInput,
-                                    10
+                                    10,
                                   );
                                   handleWeeklyBookingLimitSave(
                                     Number.isFinite(parsed) ? parsed : null,
-                                    "manual"
+                                    "manual",
                                   );
                                 }}
                                 disabled={isPending}
@@ -1294,8 +1356,8 @@ export function StudentsBoard({
                           section.percentage >= 75
                             ? "success"
                             : section.percentage >= 40
-                            ? "warning"
-                            : "danger"
+                              ? "warning"
+                              : "danger"
                         }
                       >
                         {section.masteredCount}/{section.totalCount}
@@ -1319,7 +1381,9 @@ export function StudentsBoard({
                         Richting proefexamen
                       </h3>
                     </div>
-                    <Badge variant={examReadiness.badge}>{examReadiness.label}</Badge>
+                    <Badge variant={examReadiness.badge}>
+                      {examReadiness.label}
+                    </Badge>
                   </div>
                   <div className="mt-3 flex items-end justify-between gap-3">
                     <div>
@@ -1408,7 +1472,11 @@ export function StudentsBoard({
                                   {item.label}
                                 </p>
                               </div>
-                              {meta ? <Badge variant="success">{meta.shortLabel}</Badge> : null}
+                              {meta ? (
+                                <Badge variant="success">
+                                  {meta.shortLabel}
+                                </Badge>
+                              ) : null}
                             </div>
                           </div>
                         );
@@ -1416,8 +1484,8 @@ export function StudentsBoard({
                     ) : (
                       <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5">
                         <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                          Zodra onderdelen echt zelfstandig staan, verschijnen hier automatisch de
-                          sterkste punten van deze leerling.
+                          Zodra onderdelen echt zelfstandig staan, verschijnen
+                          hier automatisch de sterkste punten van deze leerling.
                         </p>
                       </div>
                     )}
@@ -1446,15 +1514,18 @@ export function StudentsBoard({
                             "rounded-full px-3 py-1.5",
                             badge.newlyUnlocked
                               ? "milestone-badge-fresh ring-2 ring-emerald-300/70 dark:ring-emerald-400/30"
-                              : ""
+                              : "",
                           )}
                         >
-                          {badge.newlyUnlocked ? `Nieuw: ${badge.title}` : badge.title}
+                          {badge.newlyUnlocked
+                            ? `Nieuw: ${badge.title}`
+                            : badge.title}
                         </Badge>
                       ))
                     ) : (
                       <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 px-3 py-2 text-[12px] leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                        De eerste badges verschijnen automatisch zodra de kaart sterker gevuld raakt.
+                        De eerste badges verschijnen automatisch zodra de kaart
+                        sterker gevuld raakt.
                       </div>
                     )}
                   </div>
@@ -1495,8 +1566,8 @@ export function StudentsBoard({
                     </>
                   ) : (
                     <p className="mt-3 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                      Alle huidige badges zijn vrijgespeeld. De kaart staat sterk en laat een volwassen
-                      groeibeeld zien.
+                      Alle huidige badges zijn vrijgespeeld. De kaart staat
+                      sterk en laat een volwassen groeibeeld zien.
                     </p>
                   )}
                 </div>
@@ -1531,10 +1602,15 @@ export function StudentsBoard({
                         Nieuw behaald
                       </p>
                       <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
-                        {milestoneOverview.recentUnlocked.length} nieuwe {milestoneOverview.recentUnlocked.length === 1 ? "badge" : "badges"} na de laatste les
+                        {milestoneOverview.recentUnlocked.length} nieuwe{" "}
+                        {milestoneOverview.recentUnlocked.length === 1
+                          ? "badge"
+                          : "badges"}{" "}
+                        na de laatste les
                       </h3>
                       <p className="mt-1.5 text-[13px] leading-6 text-slate-700 dark:text-slate-200">
-                        Mooie stap. De meest recente les heeft direct een nieuwe mijlpaal opgeleverd.
+                        Mooie stap. De meest recente les heeft direct een nieuwe
+                        mijlpaal opgeleverd.
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {milestoneOverview.recentUnlocked.map((badge) => (
@@ -1564,8 +1640,9 @@ export function StudentsBoard({
                           Instructiekaart per lesmoment
                         </h3>
                         <p className="mt-1.5 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                          Kies eerst een lesdatum en klik daarna in de geselecteerde kolom om onderdelen
-                          te markeren. Zo houd je voortgang en examenklaarheid veel strakker bij.
+                          Kies eerst een lesdatum en klik daarna in de
+                          geselecteerde kolom om onderdelen te markeren. Zo houd
+                          je voortgang en examenklaarheid veel strakker bij.
                         </p>
                       </div>
 
@@ -1576,7 +1653,9 @@ export function StudentsBoard({
                         <Input
                           type="date"
                           value={selectedDate}
-                          onChange={(event) => setSelectedDate(event.target.value)}
+                          onChange={(event) =>
+                            setSelectedDate(event.target.value)
+                          }
                           className="h-10 rounded-xl border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 dark:text-white"
                         />
                       </div>
@@ -1597,7 +1676,7 @@ export function StudentsBoard({
                               styles.card,
                               active
                                 ? "ring-2 ring-slate-900/12 dark:ring-white/18"
-                                : "opacity-80 hover:opacity-100"
+                                : "opacity-80 hover:opacity-100",
                             )}
                           >
                             {option.shortLabel} - {option.label}
@@ -1612,7 +1691,7 @@ export function StudentsBoard({
                           "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all",
                           activeMarkMode === "clear"
                             ? "border-slate-400 bg-slate-900 text-white dark:border-white/30 dark:bg-white dark:text-slate-950"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
                         )}
                       >
                         Wis markering
@@ -1635,7 +1714,9 @@ export function StudentsBoard({
                                 key={dateValue}
                                 className={cn(
                                   "min-w-[5.2rem] px-1.5 py-2 text-center",
-                                  isSelectedColumn ? "text-slate-950 dark:text-white" : "text-slate-500 dark:text-slate-400"
+                                  isSelectedColumn
+                                    ? "text-slate-950 dark:text-white"
+                                    : "text-slate-500 dark:text-slate-400",
                                 )}
                               >
                                 <button
@@ -1645,7 +1726,7 @@ export function StudentsBoard({
                                     "w-full rounded-[0.95rem] border px-2 py-2 text-[11px] font-semibold tracking-[0.12em] uppercase transition-all",
                                     isSelectedColumn
                                       ? "border-sky-300/70 bg-sky-100 text-sky-800 dark:border-sky-400/28 dark:bg-sky-500/18 dark:text-sky-100"
-                                      : "border-slate-200/80 bg-slate-50/90 text-slate-600 hover:border-slate-300/80 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                                      : "border-slate-200/80 bg-slate-50/90 text-slate-600 hover:border-slate-300/80 dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
                                   )}
                                 >
                                   {formatStudentProgressDate(dateValue)}
@@ -1683,8 +1764,8 @@ export function StudentsBoard({
                       </h3>
                     </div>
                     <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                      Automatische waarschuwingen en kansen die direct uit de kaart komen, zodat je
-                      sneller weet waar nu actie nodig is.
+                      Automatische waarschuwingen en kansen die direct uit de
+                      kaart komen, zodat je sneller weet waar nu actie nodig is.
                     </p>
                     <div className="mt-3 space-y-2">
                       {automaticNotifications.map((signal) => (
@@ -1701,7 +1782,9 @@ export function StudentsBoard({
                                 {signal.detail}
                               </p>
                             </div>
-                            <Badge variant={signal.badge}>{signal.badgeLabel}</Badge>
+                            <Badge variant={signal.badge}>
+                              {signal.badgeLabel}
+                            </Badge>
                           </div>
                         </div>
                       ))}
@@ -1716,8 +1799,8 @@ export function StudentsBoard({
                       </h3>
                     </div>
                     <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                      Concrete doelen voor deze week, zodat je de groei van de leerling gericht en
-                      meetbaar kunt sturen.
+                      Concrete doelen voor deze week, zodat je de groei van de
+                      leerling gericht en meetbaar kunt sturen.
                     </p>
                     <div className="mt-3 space-y-2">
                       {weeklyGoals.map((goal) => (
@@ -1734,7 +1817,9 @@ export function StudentsBoard({
                                 {goal.detail}
                               </p>
                             </div>
-                            <Badge variant={goal.badge}>{goal.badgeLabel}</Badge>
+                            <Badge variant={goal.badge}>
+                              {goal.badgeLabel}
+                            </Badge>
                           </div>
                         </div>
                       ))}
@@ -1749,8 +1834,9 @@ export function StudentsBoard({
                       </h3>
                     </div>
                     <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                      Een slimme route per lesmoment, zodat je niet alleen losse aandachtspunten
-                      ziet maar ook meteen een logische opbouw kunt aanhouden.
+                      Een slimme route per lesmoment, zodat je niet alleen losse
+                      aandachtspunten ziet maar ook meteen een logische opbouw
+                      kunt aanhouden.
                     </p>
                     <div className="mt-3 space-y-2">
                       {threeLessonTrack.map((item) => (
@@ -1770,7 +1856,9 @@ export function StudentsBoard({
                                 {item.detail}
                               </p>
                             </div>
-                            <Badge variant={item.badge}>{item.badgeLabel}</Badge>
+                            <Badge variant={item.badge}>
+                              {item.badgeLabel}
+                            </Badge>
                           </div>
                         </div>
                       ))}
@@ -1810,7 +1898,7 @@ export function StudentsBoard({
                                   <span
                                     className={cn(
                                       "rounded-full border px-2 py-1 text-[11px] font-semibold",
-                                      styles.card
+                                      styles.card,
                                     )}
                                   >
                                     {meta.shortLabel}
@@ -1823,8 +1911,9 @@ export function StudentsBoard({
                       ) : (
                         <div className="rounded-[1.05rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5">
                           <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                            Nog geen focusonderdelen. Zet de eerste markeringen in de kaart en deze
-                            sidebar toont automatisch waar extra aandacht nodig is.
+                            Nog geen focusonderdelen. Zet de eerste markeringen
+                            in de kaart en deze sidebar toont automatisch waar
+                            extra aandacht nodig is.
                           </p>
                         </div>
                       )}
@@ -1849,8 +1938,9 @@ export function StudentsBoard({
                       </h3>
                     </div>
                     <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                      De geselecteerde kolom is nu actief. Kies bovenaan de juiste markering en klik in
-                      de rij van het onderdeel dat je wilt vastleggen.
+                      De geselecteerde kolom is nu actief. Kies bovenaan de
+                      juiste markering en klik in de rij van het onderdeel dat
+                      je wilt vastleggen.
                     </p>
 
                     <div className="mt-3 space-y-2">
@@ -1865,7 +1955,7 @@ export function StudentsBoard({
                             <span
                               className={cn(
                                 "inline-flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold",
-                                styles.card
+                                styles.card,
                               )}
                             >
                               {option.shortLabel}
@@ -1878,10 +1968,10 @@ export function StudentsBoard({
                                 {option.value === "zelfstandig"
                                   ? "Gebruik dit als de leerling het zelfstandig beheerst."
                                   : option.value === "begeleid"
-                                  ? "Gebruik dit als sturing nog nodig is."
-                                  : option.value === "uitleg"
-                                  ? "Gebruik dit bij eerste uitleg of demonstratie."
-                                  : "Gebruik dit als het onderdeel opnieuw moet worden opgepakt."}
+                                    ? "Gebruik dit als sturing nog nodig is."
+                                    : option.value === "uitleg"
+                                      ? "Gebruik dit bij eerste uitleg of demonstratie."
+                                      : "Gebruik dit als het onderdeel opnieuw moet worden opgepakt."}
                               </p>
                             </div>
                           </div>
@@ -1890,8 +1980,9 @@ export function StudentsBoard({
                     </div>
 
                     <div className="mt-3 rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 text-[12px] leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                      Wissel naar een oudere datum boven de kaart als je een eerder lesmoment wilt
-                      corrigeren. De geselecteerde datum blijft altijd de enige bewerkbare kolom.
+                      Wissel naar een oudere datum boven de kaart als je een
+                      eerder lesmoment wilt corrigeren. De geselecteerde datum
+                      blijft altijd de enige bewerkbare kolom.
                     </div>
 
                     {selectedLessonNote ? (
@@ -1901,7 +1992,8 @@ export function StudentsBoard({
                             Lesreflectie
                           </p>
                           <p className="mt-1 text-[12px] leading-6 text-slate-700 dark:text-slate-200">
-                            {selectedLessonNote.samenvatting || "Nog geen samenvatting ingevuld."}
+                            {selectedLessonNote.samenvatting ||
+                              "Nog geen samenvatting ingevuld."}
                           </p>
                         </div>
                         {selectedLessonNote.sterk_punt ? (
@@ -1948,15 +2040,16 @@ export function StudentsBoard({
                               ) : null}
                             </div>
                             <p className="mt-2 text-[13px] leading-6 text-slate-700 dark:text-slate-200">
-                              {note.samenvatting || "Nog geen samenvatting ingevuld."}
+                              {note.samenvatting ||
+                                "Nog geen samenvatting ingevuld."}
                             </p>
                           </div>
                         ))
                       ) : (
                         <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/5">
                           <p className="text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                            Zodra je coachnotities opslaat, verschijnen de laatste lesreflecties hier
-                            automatisch.
+                            Zodra je coachnotities opslaat, verschijnen de
+                            laatste lesreflecties hier automatisch.
                           </p>
                         </div>
                       )}
@@ -1971,8 +2064,9 @@ export function StudentsBoard({
                 Nog geen leerling geselecteerd
               </h3>
               <p className="mt-2 text-[13px] leading-6 text-slate-600 dark:text-slate-300">
-                Zodra hier leerlingen staan, open ik voor de geselecteerde leerling direct een digitale
-                instructiekaart om prestaties per lesmoment bij te houden.
+                Zodra hier leerlingen staan, open ik voor de geselecteerde
+                leerling direct een digitale instructiekaart om prestaties per
+                lesmoment bij te houden.
               </p>
             </div>
           )}

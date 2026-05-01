@@ -242,15 +242,25 @@ async function createInstructorRecord(profileId) {
     const existingResponse = await adminFetch(
       `/rest/v1/instructeurs?profile_id=eq.${profileId}&select=id,profile_id,slug`,
       {
+        method: "PATCH",
         headers: {
+          "Content-Type": "application/json",
           Prefer: "return=representation",
         },
+        body: JSON.stringify({
+          bio: "Test instructeur voor review flow check",
+          werkgebied: ["Amsterdam", "Amstelveen"],
+          profiel_status: "goedgekeurd",
+          prijs_per_les: 69,
+          transmissie: "beide",
+          specialisaties: ["Examentraining", "Stadsverkeer"],
+        }),
       }
     );
 
     if (!existingResponse.ok) {
       throw new Error(
-        `Kon bestaand instructeurrecord niet ophalen (${existingResponse.status})`
+        `Kon bestaand instructeurrecord niet bijwerken (${existingResponse.status})`
       );
     }
 
@@ -585,9 +595,11 @@ async function run() {
       "/instructeur/dashboard"
     );
     await gotoStable(instructorPage, "/instructeur/dashboard");
-    await instructorPage.getByText("Reviewscore").waitFor({ timeout: 15_000 });
-    await instructorPage.getByText("5.0 / 5").waitFor({ timeout: 15_000 });
-    await instructorPage.getByText("1 zichtbare review").waitFor({
+    await instructorPage
+      .getByText("Gemiddelde beoordeling")
+      .waitFor({ timeout: 15_000 });
+    await instructorPage.getByText("5.0").waitFor({ timeout: 15_000 });
+    await instructorPage.getByText(/1 reviews?/).waitFor({
       timeout: 15_000,
     });
     await instructorContext.close();
