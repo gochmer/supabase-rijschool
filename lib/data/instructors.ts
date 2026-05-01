@@ -85,6 +85,21 @@ const gradientPalette = [
   "from-indigo-300 via-violet-400 to-purple-600",
 ];
 
+async function getOptionalServerClient() {
+  try {
+    return await createServerClient();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("Missing env.NEXT_PUBLIC_SUPABASE")
+    ) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 function toNumber(value: number | string | null | undefined, fallback = 0) {
   if (typeof value === "number") {
     return value;
@@ -171,7 +186,12 @@ function appendBookingWindow(
 }
 
 export async function getPublicInstructors() {
-  const supabase = await createServerClient();
+  const supabase = await getOptionalServerClient();
+
+  if (!supabase) {
+    return instructeurs;
+  }
+
   const { data: rows, error } = await supabase
     .from("instructeurs")
     .select(
@@ -200,7 +220,18 @@ export async function getPublicInstructors() {
 
 export async function getPublicInstructorsByLessonType(lesType: RijlesType) {
   const allInstructors = await getPublicInstructors();
-  const supabase = await createServerClient();
+  const supabase = await getOptionalServerClient();
+
+  if (!supabase) {
+    const fallbackSlugs = new Set(
+      Object.entries(pakkettenPerInstructeur)
+        .filter(([, packages]) => packages.some((pkg) => pkg.les_type === lesType))
+        .map(([slug]) => slug)
+    );
+
+    return allInstructors.filter((instructor) => fallbackSlugs.has(instructor.slug));
+  }
+
   const { data: packageRows, error } = (await supabase
     .from("pakketten")
     .select("instructeur_id")
@@ -275,7 +306,12 @@ export async function getInstructorReviews(slug: string): Promise<Review[]> {
     return [];
   }
 
-  const supabase = await createServerClient();
+  const supabase = await getOptionalServerClient();
+
+  if (!supabase) {
+    return reviewsPerInstructeur[slug] ?? [];
+  }
+
   const { data: reviewRows, error } = await supabase
     .from("reviews")
     .select(
@@ -320,7 +356,12 @@ export async function getInstructorAvailability(
     return [];
   }
 
-  const supabase = await createServerClient();
+  const supabase = await getOptionalServerClient();
+
+  if (!supabase) {
+    return [];
+  }
+
   const todayIso = new Date().toISOString();
   const todayDateValue = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Amsterdam",
@@ -425,7 +466,12 @@ export async function getPublicInstructorAvailabilityMap(
     return {};
   }
 
-  const supabase = await createServerClient();
+  const supabase = await getOptionalServerClient();
+
+  if (!supabase) {
+    return {};
+  }
+
   const todayIso = new Date().toISOString();
   const todayDateValue = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Amsterdam",

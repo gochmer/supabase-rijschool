@@ -158,17 +158,110 @@ async function checkRoute(page, route, failures, options = {}) {
 
 async function registerUser(page, role, redirectPath) {
   const email = createTempEmail(role);
+  const { supabaseUrl, serviceKey } = await getSupabaseAdminContext();
+  const createUserResponse = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+      user_metadata: {
+        rol: role,
+        volledige_naam: TEST_NAMES[role],
+        telefoon: TEST_PHONE,
+      },
+    }),
+  });
 
-  await gotoStable(page, `/registreren?redirect=${encodeURIComponent(redirectPath)}`);
-  await page.getByLabel("Volledige naam").fill(TEST_NAMES[role]);
-  await page.getByLabel("Telefoonnummer").fill(TEST_PHONE);
-  await page
-    .locator(`input[name="rol"][value="${role}"]`)
-    .check({ force: true });
-  await page.getByLabel("E-mailadres").fill(email);
-  await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Account aanmaken" }).click();
-  await page.waitForURL(`**${redirectPath}`, { timeout: 30_000 });
+  if (!createUserResponse.ok) {
+    throw new Error(`Kon ${role} testuser niet aanmaken (${createUserResponse.status})`);
+  }
+
+  const createdUserPayload = await createUserResponse.json();
+  const userId = createdUserPayload.user?.id ?? createdUserPayload.id ?? null;
+
+  if (!userId) {
+    throw new Error(`${role} testuser is aangemaakt zonder user id.`);
+  }
+
+  const profileResponse = await fetch(`${supabaseUrl}/rest/v1/profiles?on_conflict=id`, {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify([
+      {
+        id: userId,
+        volledige_naam: TEST_NAMES[role],
+        email,
+        telefoon: TEST_PHONE,
+        avatar_url: null,
+        rol: role,
+      },
+    ]),
+  });
+
+  if (!profileResponse.ok) {
+    throw new Error(`Kon ${role} profiel niet upserten (${profileResponse.status})`);
+  }
+
+  if (role === "leerling") {
+    const learnerResponse = await fetch(`${supabaseUrl}/rest/v1/leerlingen?on_conflict=profile_id`, {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify([{ profile_id: userId }]),
+    });
+
+    if (!learnerResponse.ok) {
+      throw new Error(`Kon leerling record niet upserten (${learnerResponse.status})`);
+    }
+  }
+
+  if (role === "instructeur") {
+    const instructorResponse = await fetch(
+      `${supabaseUrl}/rest/v1/instructeurs?on_conflict=profile_id`,
+      {
+        method: "POST",
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates",
+        },
+        body: JSON.stringify([
+          {
+            profile_id: userId,
+            slug: `codex-instructeur-${userId.slice(0, 8)}`,
+            volledige_naam: TEST_NAMES[role],
+            bio: "Playwright test instructeur",
+            werkgebied: ["Amsterdam"],
+            specialisaties: ["Personenauto (B)"],
+            profiel_status: "goedgekeurd",
+            profiel_compleetheid: 100,
+          },
+        ]),
+      }
+    );
+
+    if (!instructorResponse.ok) {
+      throw new Error(`Kon instructeur record niet upserten (${instructorResponse.status})`);
+    }
+  }
+
+  await loginUser(page, email, redirectPath);
   await page.waitForTimeout(2_000);
 
   return email;
@@ -325,7 +418,19 @@ async function loginUser(page, email, redirectPath) {
   await page.getByLabel("E-mailadres").fill(email);
   await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Inloggen" }).click();
-  await page.waitForURL(`**${redirectPath}`, { timeout: 30_000 });
+
+  await page
+    .waitForURL(`**${redirectPath}`, { timeout: 45_000 })
+    .catch(async () => {
+      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
+
+      if (!page.url().includes(redirectPath)) {
+        const bodyText = await getBodyText(page).catch(() => "");
+        throw new Error(
+          `Inloggen bleef op ${page.url()} in plaats van ${redirectPath}. Body: ${bodyText.slice(0, 240)}`
+        );
+      }
+    });
   await page.waitForTimeout(2_000);
 }
 

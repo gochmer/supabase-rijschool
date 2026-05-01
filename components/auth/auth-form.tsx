@@ -356,7 +356,13 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         </div>
       ) : null}
 
-      <form action={handleSubmit} className="space-y-5">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit(new FormData(event.currentTarget));
+        }}
+        className="space-y-5"
+      >
         {mode === "register" ? (
           <div className="grid gap-5">
             <div className="grid gap-5 sm:grid-cols-2">

@@ -86,7 +86,7 @@ export default function AuthLayout({
         </div>
 
         <div className="surface-panel min-w-0 rounded-[1.75rem] p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-xl">{children}</div>
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
         </div>
       </div>
     </div>
