@@ -3,7 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ChangeEvent, useMemo, useRef, useState, useTransition } from "react";
+import {
+  type ChangeEvent,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   BadgeEuro,
   Boxes,
@@ -35,10 +41,7 @@ import {
   updatePackageStatusAction,
 } from "@/lib/actions/packages";
 import { formatCurrency } from "@/lib/format";
-import {
-  getRijlesTypeLabel,
-  rijlesTypeOptions,
-} from "@/lib/lesson-types";
+import { getRijlesTypeLabel, rijlesTypeOptions } from "@/lib/lesson-types";
 import {
   buildPackageCoverPath,
   getPackageCoverUrl,
@@ -185,7 +188,7 @@ function PackageIcon({ pkg }: { pkg: Pakket }) {
     <span
       className={cn(
         "flex size-7 shrink-0 items-center justify-center rounded-lg ring-1",
-        themeIconClasses[visual.themeKey]
+        themeIconClasses[visual.themeKey],
       )}
     >
       <Icon className="size-4" />
@@ -217,7 +220,9 @@ function StepCard({
             {step}
           </Badge>
           <h2 className="mt-2 text-lg font-semibold text-white">{title}</h2>
-          <p className="mt-1 max-w-xl text-sm leading-6 text-slate-400">{subtitle}</p>
+          <p className="mt-1 max-w-xl text-sm leading-6 text-slate-400">
+            {subtitle}
+          </p>
         </div>
       </div>
       {children}
@@ -301,7 +306,7 @@ export function InstructorPackagesWorkspace({
   const [isPending, startTransition] = useTransition();
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [draft, setDraft] = useState<PackageDraft>(() =>
-    packages[0] ? createDraftFromPackage(packages[0]) : createEmptyDraft()
+    packages[0] ? createDraftFromPackage(packages[0]) : createEmptyDraft(),
   );
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [typeFilter, setTypeFilter] = useState<RijlesType | "alles">("alles");
@@ -315,10 +320,10 @@ export function InstructorPackagesWorkspace({
   const inactivePackages = packages.filter((pkg) => pkg.actief === false);
   const packageValue = activePackages.reduce(
     (sum, pkg) => sum + getPackageValue(pkg),
-    0
+    0,
   );
   const rankedPackages = [...packages].sort(
-    (a, b) => getReadinessScore(b) - getReadinessScore(a)
+    (a, b) => getReadinessScore(b) - getReadinessScore(a),
   );
   const visiblePackages = packages.filter((pkg) => {
     const matchesType = typeFilter === "alles" || pkg.les_type === typeFilter;
@@ -405,7 +410,8 @@ export function InstructorPackagesWorkspace({
     if (userError || !user) {
       return {
         success: false as const,
-        message: "Je sessie is verlopen. Log opnieuw in en upload daarna opnieuw.",
+        message:
+          "Je sessie is verlopen. Log opnieuw in en upload daarna opnieuw.",
       };
     }
 
@@ -534,7 +540,10 @@ export function InstructorPackagesWorkspace({
       }
 
       if (draft.id) {
-        const statusResult = await updatePackageStatusAction(draft.id, draft.actief);
+        const statusResult = await updatePackageStatusAction(
+          draft.id,
+          draft.actief,
+        );
 
         if (!statusResult.success) {
           toast.error(statusResult.message);
@@ -545,7 +554,9 @@ export function InstructorPackagesWorkspace({
       setCoverFile(null);
       updateDraft({
         coverPath: nextCoverPath,
-        coverPreviewUrl: nextCoverPath ? getPackageCoverUrl(nextCoverPath) : draft.coverPreviewUrl,
+        coverPreviewUrl: nextCoverPath
+          ? getPackageCoverUrl(nextCoverPath)
+          : draft.coverPreviewUrl,
         coverChanged: false,
       });
       router.refresh();
@@ -555,7 +566,10 @@ export function InstructorPackagesWorkspace({
 
   function handleTogglePackageStatus(pkg: Pakket) {
     startTransition(async () => {
-      const result = await updatePackageStatusAction(pkg.id, pkg.actief === false);
+      const result = await updatePackageStatusAction(
+        pkg.id,
+        pkg.actief === false,
+      );
 
       if (result.success) {
         router.refresh();
@@ -567,7 +581,9 @@ export function InstructorPackagesWorkspace({
   }
 
   function handleDeletePackage(pkg: Pakket) {
-    const confirmed = window.confirm(`Weet je zeker dat je "${pkg.naam}" wilt verwijderen?`);
+    const confirmed = window.confirm(
+      `Weet je zeker dat je "${pkg.naam}" wilt verwijderen?`,
+    );
 
     if (!confirmed) {
       return;
@@ -590,18 +606,18 @@ export function InstructorPackagesWorkspace({
 
   const previewVisual = useMemo(
     () => getPackageVisualConfig(draft.iconKey, draft.visualTheme),
-    [draft.iconKey, draft.visualTheme]
+    [draft.iconKey, draft.visualTheme],
   );
   const PreviewIcon = previewVisual.Icon;
 
   return (
     <div className="space-y-4 text-slate-100">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Pakketten
           </h1>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-2 text-base leading-7 text-slate-400">
             Beheer je lespakketten en prijzen.
           </p>
         </div>
@@ -619,23 +635,25 @@ export function InstructorPackagesWorkspace({
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(18,27,39,0.98),rgba(13,20,30,0.96))] p-5 shadow-[0_24px_70px_-52px_rgba(0,0,0,0.9)]"
+            className="rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.07),rgba(15,23,42,0.36))] p-5 shadow-[0_24px_70px_-52px_rgba(0,0,0,0.9)]"
           >
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-5">
               <span
                 className={cn(
-                  "flex size-11 shrink-0 items-center justify-center rounded-lg ring-1",
-                  card.tone
+                  "flex size-16 shrink-0 items-center justify-center rounded-xl ring-1",
+                  card.tone,
                 )}
               >
-                <card.icon className="size-5" />
+                <card.icon className="size-8" />
               </span>
               <div className="min-w-0">
-                <p className="text-xs text-slate-400">{card.label}</p>
-                <p className="mt-1 truncate text-2xl font-semibold text-white">
+                <p className="truncate text-base text-slate-200">
+                  {card.label}
+                </p>
+                <p className="mt-2 truncate text-3xl font-semibold text-white">
                   {card.value}
                 </p>
-                <p className="mt-4 flex items-center gap-3 text-sm text-slate-400">
+                <p className="mt-3 flex items-center gap-3 text-sm text-slate-400">
                   {card.hint}
                   {"trend" in card && card.trend ? (
                     <span className="text-emerald-300">{card.trend}</span>
@@ -647,7 +665,10 @@ export function InstructorPackagesWorkspace({
         ))}
       </section>
 
-      <section ref={editorRef} className="grid scroll-mt-28 gap-4 xl:grid-cols-[0.92fr_1.42fr]">
+      <section
+        ref={editorRef}
+        className="grid scroll-mt-28 gap-4 xl:grid-cols-[0.92fr_1.42fr]"
+      >
         <StepCard
           step="STAP 01"
           title="Basis"
@@ -663,7 +684,9 @@ export function InstructorPackagesWorkspace({
             <SelectField
               label="Pakkettype"
               value={draft.lesType}
-              onChange={(value) => updateDraft({ lesType: value as RijlesType })}
+              onChange={(value) =>
+                updateDraft({ lesType: value as RijlesType })
+              }
               options={rijlesTypeOptions.map((option) => ({
                 value: option.value,
                 label: `${option.label} - B-Rijbewijs`,
@@ -731,14 +754,23 @@ export function InstructorPackagesWorkspace({
                     <PreviewIcon className="size-5" />
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-semibold text-white">{draft.naam}</h3>
+                    <h3 className="text-lg font-semibold text-white">
+                      {draft.naam}
+                    </h3>
                     <Badge className="border-0 bg-white/12 text-white">
                       {getRijlesTypeLabel(draft.lesType)}
                     </Badge>
-                    <Badge className="border-0 bg-white/12 text-white">B-Rijbewijs</Badge>
+                    <Badge className="border-0 bg-white/12 text-white">
+                      B-Rijbewijs
+                    </Badge>
                   </div>
                 </div>
-                <Badge className={cn("border-0 px-3 py-1 ring-1", getStatusBadge(draft.actief))}>
+                <Badge
+                  className={cn(
+                    "border-0 px-3 py-1 ring-1",
+                    getStatusBadge(draft.actief),
+                  )}
+                >
                   {draft.actief ? "Actief" : "Inactief"}
                 </Badge>
               </div>
@@ -751,14 +783,21 @@ export function InstructorPackagesWorkspace({
                   ["INGREDIENTEN LESSEN", draft.aantalLessen || "0"],
                   [
                     "ZELF PLANNEN PER WEEK",
-                    draft.weeklyBookingLimitMinutes ? `${draft.weeklyBookingLimitMinutes} min` : "Onbeperkt",
+                    draft.weeklyBookingLimitMinutes
+                      ? `${draft.weeklyBookingLimitMinutes} min`
+                      : "Onbeperkt",
                   ],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-lg border border-white/10 bg-white/10 p-4">
+                  <div
+                    key={label}
+                    className="rounded-lg border border-white/10 bg-white/10 p-4"
+                  >
                     <p className="text-[10px] font-semibold tracking-[0.16em] text-violet-100 uppercase">
                       {label}
                     </p>
-                    <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">
+                      {value}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -767,7 +806,11 @@ export function InstructorPackagesWorkspace({
                 <Token icon={Zap} label="Ervaring" />
                 <Token icon={Shield} label="Ontzorgd" />
                 {draft.labels.map((label) => (
-                  <button key={label} type="button" onClick={() => removeLabel(label)}>
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => removeLabel(label)}
+                  >
                     <Token icon={CircleDot} label={label} />
                   </button>
                 ))}
@@ -822,12 +865,14 @@ export function InstructorPackagesWorkspace({
                   <button
                     key={label}
                     type="button"
-                    onClick={() => updateDraft({ weeklyBookingLimitMinutes: value })}
+                    onClick={() =>
+                      updateDraft({ weeklyBookingLimitMinutes: value })
+                    }
                     className={cn(
                       "rounded-md border px-3 py-2 text-xs",
                       draft.weeklyBookingLimitMinutes === value
                         ? "border-blue-400/40 bg-blue-600 text-white"
-                        : "border-white/10 bg-white/[0.03] text-slate-300"
+                        : "border-white/10 bg-white/[0.03] text-slate-300",
                     )}
                   >
                     {label}
@@ -839,7 +884,9 @@ export function InstructorPackagesWorkspace({
               <span className="text-xs text-slate-300">Inbegrepen</span>
               <textarea
                 value={draft.beschrijving}
-                onChange={(event) => updateDraft({ beschrijving: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ beschrijving: event.target.value })
+                }
                 className="min-h-24 w-full rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm leading-6 text-slate-100 outline-none transition focus:border-blue-400/50"
               />
             </label>
@@ -889,7 +936,10 @@ export function InstructorPackagesWorkspace({
                   Bestand kiezen
                 </button>
                 <span className="text-sm text-slate-500">
-                  {coverFile?.name ?? (draft.coverPreviewUrl ? "Foto ingesteld" : "Geen bestand gekozen")}
+                  {coverFile?.name ??
+                    (draft.coverPreviewUrl
+                      ? "Foto ingesteld"
+                      : "Geen bestand gekozen")}
                 </span>
               </div>
             </div>
@@ -928,7 +978,9 @@ export function InstructorPackagesWorkspace({
               onClick={() => updateDraft({ actief: !draft.actief })}
             >
               <div>
-                <p className="text-sm font-medium text-white">Zichtbaar voor leerlingen</p>
+                <p className="text-sm font-medium text-white">
+                  Zichtbaar voor leerlingen
+                </p>
                 <p className="mt-1 text-sm text-slate-400">
                   Dit pakket is zichtbaar in jouw openbare gids.
                 </p>
@@ -936,13 +988,13 @@ export function InstructorPackagesWorkspace({
               <span
                 className={cn(
                   "h-6 w-11 rounded-full p-0.5",
-                  draft.actief ? "bg-emerald-500" : "bg-slate-600"
+                  draft.actief ? "bg-emerald-500" : "bg-slate-600",
                 )}
               >
                 <span
                   className={cn(
                     "block size-5 rounded-full bg-white transition",
-                    draft.actief && "ml-auto"
+                    draft.actief && "ml-auto",
                   )}
                 />
               </span>
@@ -962,7 +1014,11 @@ export function InstructorPackagesWorkspace({
               disabled={isBusy}
               onClick={handleSavePackage}
             >
-              {isBusy ? "Opslaan..." : draft.id ? "Wijzigingen opslaan" : "Pakket opslaan"}
+              {isBusy
+                ? "Opslaan..."
+                : draft.id
+                  ? "Wijzigingen opslaan"
+                  : "Pakket opslaan"}
             </Button>
           </div>
         </StepCard>
@@ -981,7 +1037,9 @@ export function InstructorPackagesWorkspace({
               onChange={handleExtraFileChange}
             />
             <div>
-              <p className="mb-2 text-xs text-slate-300">Inbegrepen bestanden</p>
+              <p className="mb-2 text-xs text-slate-300">
+                Inbegrepen bestanden
+              </p>
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <div className="flex flex-wrap gap-2 rounded-md border border-white/10 bg-white/[0.03] p-2">
                   <Token icon={FileText} label="Lesplan.pdf" />
@@ -1002,7 +1060,9 @@ export function InstructorPackagesWorkspace({
               className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-3 text-left text-sm text-slate-100"
               onClick={() =>
                 updateDraft({
-                  aantalLessen: String(Math.max(1, Number(draft.aantalLessen || 0) + 1)),
+                  aantalLessen: String(
+                    Math.max(1, Number(draft.aantalLessen || 0) + 1),
+                  ),
                 })
               }
             >
@@ -1014,13 +1074,21 @@ export function InstructorPackagesWorkspace({
               </span>
             </button>
             <div>
-              <p className="mb-2 text-xs text-slate-300">Extra diensten (optioneel)</p>
+              <p className="mb-2 text-xs text-slate-300">
+                Extra diensten (optioneel)
+              </p>
               <div className="flex flex-wrap gap-2">
-                {["Tussentijdse toets", "Praktijkexamen", "Examenroutes"].map((label) => (
-                  <button key={label} type="button" onClick={() => addLabel(label)}>
-                    <Token icon={CheckCircle2} label={label} />
-                  </button>
-                ))}
+                {["Tussentijdse toets", "Praktijkexamen", "Examenroutes"].map(
+                  (label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => addLabel(label)}
+                    >
+                      <Token icon={CheckCircle2} label={label} />
+                    </button>
+                  ),
+                )}
               </div>
             </div>
           </div>
@@ -1034,7 +1102,8 @@ export function InstructorPackagesWorkspace({
               Beheer je pakketten vanuit een duidelijk overzicht
             </h2>
             <p className="mt-1 text-sm text-slate-400">
-              Activeer, pas aan of verwijder pakketten zodra je methode verandert.
+              Activeer, pas aan of verwijder pakketten zodra je methode
+              verandert.
             </p>
           </div>
           {publicProfilePath ? (
@@ -1052,10 +1121,21 @@ export function InstructorPackagesWorkspace({
           {[
             ["TOTAAL", String(packages.length || 5), "Alle pakketten"],
             ["ACTIEF", String(activePackages.length || 4), "Actieve pakketten"],
-            ["INACTIEF", String(inactivePackages.length || 1), "Inactieve pakketten"],
-            ["TOTAAL OMZET", formatCurrency(packageValue || 2450), "Deze maand"],
+            [
+              "INACTIEF",
+              String(inactivePackages.length || 1),
+              "Inactieve pakketten",
+            ],
+            [
+              "TOTAAL OMZET",
+              formatCurrency(packageValue || 2450),
+              "Deze maand",
+            ],
           ].map(([label, value, hint]) => (
-            <div key={label} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <div
+              key={label}
+              className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
+            >
               <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400">
                 {label}
               </p>
@@ -1091,7 +1171,7 @@ export function InstructorPackagesWorkspace({
                     "rounded-md border px-2.5 py-1 text-xs",
                     typeFilter === value
                       ? "border-blue-400/40 bg-blue-600 text-white"
-                      : "border-white/10 bg-white/[0.03] text-slate-300"
+                      : "border-white/10 bg-white/[0.03] text-slate-300",
                   )}
                 >
                   {label}
@@ -1125,7 +1205,9 @@ export function InstructorPackagesWorkspace({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <PackageIcon pkg={pkg} />
-                        <span className="font-medium text-white">{pkg.naam}</span>
+                        <span className="font-medium text-white">
+                          {pkg.naam}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -1136,7 +1218,9 @@ export function InstructorPackagesWorkspace({
                       {formatCurrency(getPackageValue(pkg))}
                     </td>
                     <td className="px-4 py-3">{sold}</td>
-                    <td className="px-4 py-3">{Math.max(10, Math.round(score / 3))}%</td>
+                    <td className="px-4 py-3">
+                      {Math.max(10, Math.round(score / 3))}%
+                    </td>
                     <td className="px-4 py-3">
                       <button
                         type="button"
@@ -1146,7 +1230,7 @@ export function InstructorPackagesWorkspace({
                         <Badge
                           className={cn(
                             "rounded-md border-0 px-2.5 py-1 text-xs ring-1",
-                            getStatusBadge(pkg.actief !== false)
+                            getStatusBadge(pkg.actief !== false),
                           )}
                         >
                           {pkg.actief === false ? "Inactief" : "Actief"}
@@ -1162,7 +1246,10 @@ export function InstructorPackagesWorkspace({
                             variant="outline"
                             className="size-8 rounded-lg border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/10"
                           >
-                            <Link href={publicProfilePath} aria-label={`${pkg.naam} bekijken`}>
+                            <Link
+                              href={publicProfilePath}
+                              aria-label={`${pkg.naam} bekijken`}
+                            >
                               <Eye className="size-4" />
                             </Link>
                           </Button>
@@ -1201,7 +1288,10 @@ export function InstructorPackagesWorkspace({
               })}
               {visiblePackages.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-10 text-center text-slate-400" colSpan={8}>
+                  <td
+                    className="px-4 py-10 text-center text-slate-400"
+                    colSpan={8}
+                  >
                     Geen pakketten gevonden voor deze filter.
                   </td>
                 </tr>
@@ -1211,10 +1301,12 @@ export function InstructorPackagesWorkspace({
         </div>
         <div className="flex items-center justify-between border-t border-white/10 px-4 py-4 text-sm text-slate-400">
           <span>
-            Toon {visiblePackages.length ? 1 : 0} tot {visiblePackages.length} van{" "}
-            {packages.length} pakketten
+            Toon {visiblePackages.length ? 1 : 0} tot {visiblePackages.length}{" "}
+            van {packages.length} pakketten
           </span>
-          <span className="rounded-lg border border-white/10 px-3 py-2 text-white">1</span>
+          <span className="rounded-lg border border-white/10 px-3 py-2 text-white">
+            1
+          </span>
         </div>
       </section>
     </div>

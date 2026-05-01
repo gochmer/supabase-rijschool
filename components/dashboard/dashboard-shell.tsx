@@ -2,6 +2,8 @@ import { BellRing, Sparkles, Zap } from "lucide-react";
 
 import { getAdminActivityFeed } from "@/lib/data/admin";
 import { getCurrentNotifications } from "@/lib/data/notifications";
+import { getCurrentProfile } from "@/lib/data/profiles";
+import { getInitials } from "@/lib/format";
 import { dashboardNavigation } from "@/lib/navigation";
 import type { GebruikersRol } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -39,9 +41,10 @@ export async function DashboardShell({
     month: "long",
   }).format(new Date());
 
-  const [notifications, adminActivity] = await Promise.all([
+  const [notifications, adminActivity, profile] = await Promise.all([
     getCurrentNotifications(),
     role === "admin" ? getAdminActivityFeed() : Promise.resolve([]),
+    isAppDashboard ? getCurrentProfile() : Promise.resolve(null),
   ]);
 
   const drawerItems =
@@ -68,33 +71,19 @@ export async function DashboardShell({
 
   if (isAppDashboard) {
     const unreadCount = notifications.filter((item) => item.ongelezen).length;
+    const profileName = profile?.volledige_naam ?? roleLabel;
+    const profileEmail = profile?.email ?? "";
 
     return (
-      <div className="app-dashboard relative min-h-screen overflow-hidden bg-[#0f0f0f] text-slate-100">
-        <div className="mx-auto flex min-h-screen w-full max-w-[1680px]">
-          <aside className="hidden w-[244px] shrink-0 border-r border-white/10 bg-[#0f0f0f] px-3 py-4 xl:flex xl:flex-col">
-            <div className="mb-4 flex items-center gap-3 px-2">
-              <DashboardMenuButton
-                role={role}
-                roleLabel={roleLabel}
-                today={today}
-              />
+      <div className="dark app-dashboard relative min-h-screen overflow-hidden bg-[#080d14] text-slate-100">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(37,99,235,0.1),transparent_28%),radial-gradient(circle_at_92%_12%,rgba(14,165,233,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.018),transparent_34%)]" />
+        <div className="relative mx-auto flex min-h-screen w-full max-w-[1720px]">
+          <aside className="hidden w-[286px] shrink-0 border-r border-white/10 bg-[#070b10]/96 px-3 py-5 xl:flex xl:flex-col">
+            <div className="mb-5 flex items-center px-3">
               <Logo inverse compact />
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="size-4 text-slate-200" />
-                <p className="text-xs font-semibold tracking-[0.22em] text-white uppercase">
-                  {roleLabel}
-                </p>
-              </div>
-              <p className="mt-1 text-[12px] leading-5 text-slate-400">
-                {today}
-              </p>
-            </div>
-
-            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
               <DashboardNav
                 items={dashboardNavigation[role]}
                 tone="urban"
@@ -102,7 +91,22 @@ export async function DashboardShell({
               />
             </div>
 
-            <div className="mt-4 grid gap-3 border-t border-white/10 pt-4">
+            <div className="mt-5 grid gap-3 border-t border-white/10 pt-4">
+              <div className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+                    {getInitials(profileName || roleLabel)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {profileName}
+                    </p>
+                    <p className="truncate text-[12px] text-slate-400">
+                      {profileEmail || roleLabel}
+                    </p>
+                  </div>
+                </div>
+              </div>
               <ActivityDrawer
                 title="Notificaties"
                 description="Nieuwe meldingen en statusupdates."
@@ -110,12 +114,15 @@ export async function DashboardShell({
                 tone="urban"
                 compact
               />
-              <SignOutButton className="h-9 rounded-lg border border-white/10 bg-white/10 px-4 text-white hover:bg-white/14" />
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
+                <ThemeToggle surface="dark" compact />
+                <SignOutButton className="h-10 rounded-lg border border-white/10 bg-white/10 px-4 text-white hover:bg-white/14" />
+              </div>
             </div>
           </aside>
 
           <div className="min-w-0 flex-1">
-            <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0f0f0f]/96 backdrop-blur">
+            <header className="sticky top-0 z-30 border-b border-white/10 bg-[#080d14]/96 backdrop-blur xl:hidden">
               <div className="flex h-16 items-center gap-3 px-3 sm:px-5">
                 <div className="flex items-center gap-3 xl:hidden">
                   <DashboardMenuButton
@@ -156,23 +163,25 @@ export async function DashboardShell({
               />
             </header>
 
-            <main className="dashboard-fade min-w-0 space-y-4 px-3 py-4 sm:px-5 lg:px-6">
-              <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
-                    <BellRing className="size-3.5" />
-                    Dashboardstatus
+            <main className="dashboard-fade min-w-0 space-y-6 px-4 py-6 sm:px-6 lg:px-8 xl:px-10 xl:py-10 2xl:px-12">
+              {isInstructor ? null : (
+                <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
+                      <BellRing className="size-3.5" />
+                      Dashboardstatus
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-slate-200">
+                      {unreadCount
+                        ? `${unreadCount} ongelezen melding${unreadCount === 1 ? "" : "en"} vragen aandacht.`
+                        : "Geen open meldingen. Je dashboard is bijgewerkt en rustig."}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-200">
-                    {unreadCount
-                      ? `${unreadCount} ongelezen melding${unreadCount === 1 ? "" : "en"} vragen aandacht.`
-                      : "Geen open meldingen. Je dashboard is bijgewerkt en rustig."}
-                  </p>
+                  <div className="inline-flex w-fit items-center rounded-lg bg-white/10 px-3 py-1 text-[12px] font-semibold text-slate-200">
+                    {today}
+                  </div>
                 </div>
-                <div className="inline-flex w-fit items-center rounded-lg bg-white/10 px-3 py-1 text-[12px] font-semibold text-slate-200">
-                  {today}
-                </div>
-              </div>
+              )}
 
               <RoleRedirectNotice role={role} />
               {children}

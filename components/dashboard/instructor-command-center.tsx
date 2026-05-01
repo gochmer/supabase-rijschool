@@ -375,30 +375,32 @@ function StatTile({
   return (
     <Link
       href={href}
-      className="group rounded-xl border border-white/10 bg-white/[0.055] p-4 transition hover:border-white/18 hover:bg-white/[0.08]"
+      className="group rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.07),rgba(15,23,42,0.36))] p-5 transition hover:border-white/18 hover:bg-white/[0.08]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-medium text-slate-300">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-white">
-            {value}
-          </p>
-        </div>
+      <div className="flex items-center gap-5">
         <span
           className={cn(
-            "flex size-10 items-center justify-center rounded-lg ring-1",
+            "flex size-16 shrink-0 items-center justify-center rounded-xl ring-1",
             toneClass,
           )}
         >
-          <Icon className="size-5" />
+          <Icon className="size-8" />
         </span>
-      </div>
-      <div className="mt-5 flex items-center justify-between gap-2 text-[12px]">
-        <span className="text-slate-400">{helper}</span>
-        <span className="inline-flex items-center gap-1 font-semibold text-emerald-300">
-          <TrendingUp className="size-3.5" />
-          {trend}
-        </span>
+        <div className="min-w-0">
+          <p className="truncate text-base font-medium text-slate-200">
+            {label}
+          </p>
+          <p className="mt-2 truncate text-3xl font-semibold tracking-tight text-white">
+            {value}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-slate-400">{helper}</span>
+            <span className="inline-flex items-center gap-1 font-semibold text-emerald-300">
+              <TrendingUp className="size-3.5" />
+              {trend}
+            </span>
+          </div>
+        </div>
       </div>
     </Link>
   );
@@ -579,15 +581,15 @@ export function InstructorCommandCenter({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035))] p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold tracking-[0.22em] text-slate-400 uppercase">
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-slate-500 uppercase">
             Instructeur overzicht
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Dashboard
           </h1>
-          <p className="mt-1 text-sm text-slate-300">
+          <p className="mt-2 text-base leading-7 text-slate-400">
             Welkom terug, {displayName}. Alles wat vandaag telt staat hier
             compact bij elkaar.
           </p>

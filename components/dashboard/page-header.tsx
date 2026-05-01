@@ -24,58 +24,66 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "overflow-hidden p-4 xl:p-5",
+        "overflow-hidden",
         isUrban
-          ? "rounded-xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035))] text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]"
+          ? "p-0 text-white"
           : isHazard
-            ? "re-frame-flash re-scanlines rounded-[1.35rem] border border-red-300/14 bg-[linear-gradient(145deg,rgba(8,10,14,0.98),rgba(18,9,12,0.98),rgba(52,14,18,0.9),rgba(31,22,25,0.9))] shadow-[0_28px_90px_-45px_rgba(0,0,0,0.82)]"
-            : "surface-panel rounded-[1.35rem]"
+            ? "re-frame-flash re-scanlines rounded-[1.35rem] border border-red-300/14 bg-[linear-gradient(145deg,rgba(8,10,14,0.98),rgba(18,9,12,0.98),rgba(52,14,18,0.9),rgba(31,22,25,0.9))] p-4 shadow-[0_28px_90px_-45px_rgba(0,0,0,0.82)] xl:p-5"
+            : "surface-panel rounded-[1.35rem] p-4 xl:p-5",
       )}
     >
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <p
-              className={cn(
-                "text-[11px] font-semibold tracking-[0.22em] uppercase",
-                isUrban
-                  ? "text-slate-200"
-                  : isHazard
-                    ? "text-red-100/86"
-                    : "text-primary dark:text-sky-300"
-              )}
-            >
-              {eyebrow}
-            </p>
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-0.5 text-[11px] font-medium",
-                isUrban
-                  ? "border border-white/10 bg-white/6 text-slate-300"
-                  : isHazard
-                    ? "border border-red-300/12 bg-white/6 text-stone-300"
-                  : "bg-slate-100 text-slate-600 dark:border dark:border-white/10 dark:bg-white/6 dark:text-slate-300"
-              )}
-            >
-              {now}
-            </span>
-          </div>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className={cn(isUrban ? "space-y-2" : "space-y-1.5")}>
+          {isUrban ? null : (
+            <div className="flex flex-wrap items-center gap-2">
+              <p
+                className={cn(
+                  "text-[11px] font-semibold tracking-[0.22em] uppercase",
+                  isUrban
+                    ? "text-slate-200"
+                    : isHazard
+                      ? "text-red-100/86"
+                      : "text-primary dark:text-sky-300",
+                )}
+              >
+                {eyebrow}
+              </p>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                  isUrban
+                    ? "border border-white/10 bg-white/6 text-slate-300"
+                    : isHazard
+                      ? "border border-red-300/12 bg-white/6 text-stone-300"
+                      : "bg-slate-100 text-slate-600 dark:border dark:border-white/10 dark:bg-white/6 dark:text-slate-300",
+                )}
+              >
+                {now}
+              </span>
+            </div>
+          )}
           <h1
             className={cn(
-              "text-[1.65rem] font-semibold tracking-tight sm:text-[2rem]",
-              isUrban || isHazard ? "text-white" : "text-slate-950 dark:text-white"
+              isUrban
+                ? "text-3xl font-semibold tracking-tight text-white sm:text-4xl"
+                : "text-[1.65rem] font-semibold tracking-tight sm:text-[2rem]",
+              isUrban || isHazard
+                ? "text-white"
+                : "text-slate-950 dark:text-white",
             )}
           >
             {title}
           </h1>
           <p
             className={cn(
-              "max-w-2xl text-[13px] leading-6 sm:text-sm",
+              isUrban
+                ? "max-w-3xl text-base leading-7 text-slate-400"
+                : "max-w-2xl text-[13px] leading-6 sm:text-sm",
               isUrban
                 ? "text-slate-300"
                 : isHazard
                   ? "text-stone-300"
-                  : "text-muted-foreground dark:text-slate-300"
+                  : "text-muted-foreground dark:text-slate-300",
             )}
           >
             {description}
