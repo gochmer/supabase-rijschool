@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
-  BriefcaseBusiness,
   CalendarDays,
   Camera,
   Check,
@@ -17,7 +16,6 @@ import {
   ClipboardCheck,
   Clock3,
   Eye,
-  FileText,
   GraduationCap,
   IdCard,
   LayoutDashboard,
@@ -25,7 +23,6 @@ import {
   Mail,
   Settings,
   ShieldCheck,
-  Upload,
   UserRound,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
