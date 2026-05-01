@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { InstructorRegistrationFlow } from "@/components/auth/instructor-registration-flow";
+import { InstructorVerificationBoard } from "@/components/auth/instructor-verification-board";
 import { ensureCurrentUserContext, getCurrentInstructeurRecord } from "@/lib/data/profiles";
 
 export default async function InstructeurVerificatiePage() {
@@ -23,8 +23,7 @@ export default async function InstructeurVerificatiePage() {
   return (
     <main className="fixed inset-0 z-50 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_26%),#050814] text-white">
       <div className="min-h-screen px-4 py-5 sm:px-6 lg:px-8">
-        <InstructorRegistrationFlow
-          mode="verification"
+        <InstructorVerificationBoard
           initialValues={{
             fullName:
               context.profile?.volledige_naam ??
@@ -34,7 +33,6 @@ export default async function InstructeurVerificatiePage() {
             phone: context.profile?.telefoon ?? "",
             bio: instructor?.bio ?? "",
             specializations: instructor?.specialisaties ?? undefined,
-            profileStatus: instructor?.profiel_status ?? "in_beoordeling",
           }}
         />
       </div>
