@@ -1,19 +1,26 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import {
   Award,
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   ClipboardList,
+  Eye,
+  Filter,
   Flame,
   GraduationCap,
+  MoreVertical,
   Search,
   ShieldCheck,
   Sparkles,
   Target,
   TrendingUp,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,7 +70,6 @@ import { cn } from "@/lib/utils";
 import { CreateManualLessonDialog } from "@/components/instructor/create-manual-lesson-dialog";
 import {
   canDetachStudent,
-  filterInstructorStudents,
   getAverageStudentProgress,
   getRecentStudentNotes,
   getSelectedLessonNote,
@@ -89,7 +95,136 @@ import { ProgressPrintButton } from "@/components/progress/progress-print-button
 import { StudentProgressLessonNoteEditor } from "@/components/progress/student-progress-lesson-note-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { getInitials } from "@/lib/format";
+
+type StudentFilter = "all" | "active" | "inactive" | "dropped";
+type StudentStatusGroup = Exclude<StudentFilter, "all">;
+
+const pageSizeOptions = [6, 10, 20] as const;
+
+const avatarTones = [
+  "bg-violet-500/28 text-violet-100",
+  "bg-fuchsia-500/24 text-fuchsia-100",
+  "bg-emerald-500/24 text-emerald-100",
+  "bg-cyan-500/24 text-cyan-100",
+  "bg-amber-500/24 text-amber-100",
+  "bg-rose-500/24 text-rose-100",
+  "bg-blue-500/24 text-blue-100",
+];
+
+const compactDateFormatter = new Intl.DateTimeFormat("nl-NL", {
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Amsterdam",
+  year: "numeric",
+});
+
+function getStudentStatusGroup(
+  student: InstructorStudentProgressRow,
+): StudentStatusGroup {
+  if (
+    student.voortgang <= 0 &&
+    student.gekoppeldeLessen <= 0 &&
+    !student.volgendeLesAt &&
+    student.accountStatus !== "uitgenodigd"
+  ) {
+    return "dropped";
+  }
+
+  if (
+    student.accountStatus === "uitgenodigd" ||
+    (!student.volgendeLesAt &&
+      !student.zelfInplannenToegestaan &&
+      student.voortgang < 40)
+  ) {
+    return "inactive";
+  }
+
+  return "active";
+}
+
+function getStudentStatusPill(student: InstructorStudentProgressRow) {
+  const status = getStudentStatusGroup(student);
+
+  if (status === "dropped") {
+    return {
+      className: "border-red-400/28 bg-red-500/12 text-red-300",
+      label: "Uitgevallen",
+    };
+  }
+
+  if (status === "inactive") {
+    return {
+      className: "border-amber-400/35 bg-amber-400/12 text-amber-300",
+      label: "Inactief",
+    };
+  }
+
+  return {
+    className: "border-emerald-400/25 bg-emerald-500/14 text-emerald-300",
+    label: "Actief",
+  };
+}
+
+function getProgressFillClass(value: number) {
+  if (value >= 70) {
+    return "bg-emerald-400";
+  }
+
+  if (value >= 40) {
+    return "bg-amber-400";
+  }
+
+  return "bg-red-400";
+}
+
+function formatCompactDate(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return compactDateFormatter.format(date);
+}
+
+function getLastActiveLessonLabel(student: InstructorStudentProgressRow) {
+  if (student.laatsteBeoordelingAt) {
+    return formatCompactDate(`${student.laatsteBeoordelingAt}T12:00:00`);
+  }
+
+  if (student.volgendeLesAt) {
+    return formatCompactDate(student.volgendeLesAt);
+  }
+
+  return "Nog geen les";
+}
+
+function getPaginationPages(currentPage: number, totalPages: number) {
+  const candidates = [
+    1,
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    totalPages,
+  ];
+  return Array.from(
+    new Set(candidates.filter((page) => page >= 1 && page <= totalPages)),
+  ).sort((left, right) => left - right);
+}
 
 export function StudentsBoard({
   students,
@@ -113,7 +248,9 @@ export function StudentsBoard({
     students[0] ??
     null;
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("alles");
+  const [filter, setFilter] = useState<StudentFilter>("all");
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedStudentId, setSelectedStudentId] = useState(
     initialStudent?.id ?? "",
   );
@@ -136,12 +273,39 @@ export function StudentsBoard({
   const [isPending, startTransition] = useTransition();
 
   const filteredStudents = useMemo(() => {
-    return filterInstructorStudents({
-      filter,
-      query,
-      students: localStudents,
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return localStudents.filter((student) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        [
+          student.naam,
+          student.email ?? "",
+          student.telefoon ?? "",
+          student.pakket,
+          student.aanvraagStatus,
+          getStudentStatusPill(student).label,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedQuery);
+      const matchesStatus =
+        filter === "all" || getStudentStatusGroup(student) === filter;
+
+      return matchesQuery && matchesStatus;
     });
   }, [filter, localStudents, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const firstItemIndex = filteredStudents.length
+    ? (safePage - 1) * pageSize
+    : 0;
+  const visibleStudents = filteredStudents.slice(
+    firstItemIndex,
+    firstItemIndex + pageSize,
+  );
+  const paginationPages = getPaginationPages(safePage, totalPages);
 
   const selectedStudent =
     filteredStudents.find((student) => student.id === selectedStudentId) ??
@@ -571,10 +735,363 @@ export function StudentsBoard({
     });
   }
 
+  const tabs: Array<{ label: string; value: StudentFilter }> = [
+    { label: "Alle leerlingen", value: "all" },
+    { label: "Actief", value: "active" },
+    { label: "Inactief", value: "inactive" },
+    { label: "Uitgevallen", value: "dropped" },
+  ];
+  const filterLabels: Record<StudentFilter, string> = {
+    active: "Actieve leerlingen",
+    all: "Alle leerlingen",
+    dropped: "Uitgevallen",
+    inactive: "Inactieve leerlingen",
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-white">
+      <section className="overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] p-4 shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)]">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap gap-5">
+            {tabs.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => {
+                  setFilter(tab.value);
+                  setCurrentPage(1);
+                }}
+                className={cn(
+                  "border-b-2 px-2 pb-3 text-base transition",
+                  filter === tab.value
+                    ? "border-blue-400 text-white"
+                    : "border-transparent text-slate-400 hover:text-white",
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Zoek leerlingen..."
+                aria-label="Zoek leerlingen"
+                className="h-11 w-full rounded-lg border-white/10 bg-slate-950/34 pl-10 text-white placeholder:text-slate-500 sm:w-72"
+              />
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-lg border-white/10 bg-white/7 px-4 text-white hover:bg-white/12"
+                >
+                  <Filter className="size-5" />
+                  Filters
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-60 border-white/10 bg-slate-950 text-slate-100"
+              >
+                <DropdownMenuLabel>Status leerling</DropdownMenuLabel>
+                {tabs.map((tab) => (
+                  <DropdownMenuItem
+                    key={tab.value}
+                    onSelect={() => {
+                      setFilter(tab.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <span
+                      className={cn(
+                        "size-2 rounded-full",
+                        filter === tab.value ? "bg-blue-400" : "bg-white/20",
+                      )}
+                    />
+                    {filterLabels[tab.value]}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setFilter("all");
+                    setQuery("");
+                    setCurrentPage(1);
+                  }}
+                >
+                  Filters wissen
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          <div className="min-w-[1080px]">
+            <div className="grid grid-cols-[260px_170px_150px_180px_120px_150px_110px] rounded-lg border border-white/10 bg-white/5 px-2 py-4 text-base text-slate-200">
+              <span>Leerling</span>
+              <span>Laatst actieve les</span>
+              <span>Voltooide lessen</span>
+              <span>Voortgang</span>
+              <span>Status</span>
+              <span>Lid sinds</span>
+              <span>Acties</span>
+            </div>
+
+            {visibleStudents.length ? (
+              visibleStudents.map((student, index) => {
+                const statusPill = getStudentStatusPill(student);
+                const isSelected = selectedStudent?.id === student.id;
+
+                return (
+                  <div
+                    key={student.id}
+                    className={cn(
+                      "grid grid-cols-[260px_170px_150px_180px_120px_150px_110px] items-center border-b border-white/10 px-2 py-4 text-sm last:border-b-0",
+                      isSelected ? "bg-blue-500/[0.03]" : "",
+                    )}
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        className={cn(
+                          "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                          avatarTones[
+                            (firstItemIndex + index) % avatarTones.length
+                          ],
+                        )}
+                      >
+                        {getInitials(student.naam)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-white">
+                          {student.naam}
+                        </p>
+                        <p className="truncate text-sm text-slate-400">
+                          {student.email || "Geen e-mail bekend"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-slate-100">
+                      {getLastActiveLessonLabel(student)}
+                    </p>
+                    <p className="text-slate-100">
+                      {student.voltooideLessen ?? student.gekoppeldeLessen}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <span className="h-2 w-24 overflow-hidden rounded-full bg-slate-700/70">
+                        <span
+                          className={cn(
+                            "block h-full rounded-full",
+                            getProgressFillClass(student.voortgang),
+                          )}
+                          style={{
+                            width: `${Math.min(Math.max(student.voortgang, 0), 100)}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="text-slate-200">
+                        {student.voortgang}%
+                      </span>
+                    </div>
+                    <span
+                      className={cn(
+                        "inline-flex w-fit rounded-full border px-3 py-1 text-sm font-medium",
+                        statusPill.className,
+                      )}
+                    >
+                      {statusPill.label}
+                    </span>
+                    <p className="text-slate-100">
+                      {formatCompactDate(student.gekoppeldSinds)}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        aria-label={`Bekijk ${student.naam}`}
+                        title="Bekijken"
+                        size="icon-sm"
+                        variant="outline"
+                        className="size-9 rounded-lg border-white/10 bg-white/7 text-slate-200 hover:bg-white/12 hover:text-white"
+                        onClick={() => {
+                          setSelectedStudentId(student.id);
+                          setWeeklyBookingLimitDraft({
+                            studentId: student.id,
+                            value:
+                              student.zelfInplannenHandmatigeOverrideActief &&
+                              student.zelfInplannenHandmatigeLimietMinutenPerWeek !=
+                                null
+                                ? String(
+                                    student.zelfInplannenHandmatigeLimietMinutenPerWeek,
+                                  )
+                                : "",
+                          });
+                        }}
+                      >
+                        <Eye className="size-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            aria-label={`Meer acties voor ${student.naam}`}
+                            title="Meer"
+                            size="icon-sm"
+                            variant="outline"
+                            className="size-9 rounded-lg border-white/10 bg-white/7 text-slate-200 hover:bg-white/12 hover:text-white"
+                          >
+                            <MoreVertical className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-56 border-white/10 bg-slate-950 text-slate-100"
+                        >
+                          <DropdownMenuLabel>Vervolgactie</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setSelectedStudentId(student.id);
+                              setWeeklyBookingLimitDraft({
+                                studentId: student.id,
+                                value:
+                                  student.zelfInplannenHandmatigeOverrideActief &&
+                                  student.zelfInplannenHandmatigeLimietMinutenPerWeek !=
+                                    null
+                                    ? String(
+                                        student.zelfInplannenHandmatigeLimietMinutenPerWeek,
+                                      )
+                                    : "",
+                              });
+                            }}
+                          >
+                            Werkplek openen
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link
+                              href={`/instructeur/lessen?zoek=${encodeURIComponent(
+                                student.naam,
+                              )}`}
+                            >
+                              Lessen bekijken
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/instructeur/aanvragen">
+                              Aanvragen bekijken
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed border-white/12 text-center">
+                <XCircle className="size-10 text-slate-500" />
+                <p className="mt-4 font-semibold text-white">
+                  Geen leerlingen gevonden
+                </p>
+                <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+                  Pas je zoekterm of filter aan, of voeg een nieuwe leerling toe
+                  aan je werkplek.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-4 border-t border-white/10 pt-4 text-sm text-slate-400 lg:flex-row lg:items-center lg:justify-between">
+          <p>
+            {filteredStudents.length
+              ? `${firstItemIndex + 1}-${Math.min(
+                  firstItemIndex + pageSize,
+                  filteredStudents.length,
+                )} van ${filteredStudents.length} leerlingen`
+              : "0 van 0 leerlingen"}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                aria-label="Vorige pagina"
+                size="icon-sm"
+                variant="outline"
+                disabled={safePage <= 1}
+                className="size-9 rounded-lg border-white/10 bg-white/7 text-white disabled:opacity-40"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              {paginationPages.map((page, index) => {
+                const previousPage = paginationPages[index - 1];
+                const hasGap = previousPage && page - previousPage > 1;
+
+                return (
+                  <span key={page} className="inline-flex items-center gap-2">
+                    {hasGap ? (
+                      <span className="px-1 text-slate-500">...</span>
+                    ) : null}
+                    <Button
+                      size="icon-sm"
+                      variant={safePage === page ? "default" : "outline"}
+                      className={cn(
+                        "size-9 rounded-lg",
+                        safePage === page
+                          ? "bg-blue-600 text-white hover:bg-blue-500"
+                          : "border-white/10 bg-white/7 text-slate-200",
+                      )}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  </span>
+                );
+              })}
+              <Button
+                aria-label="Volgende pagina"
+                size="icon-sm"
+                variant="outline"
+                disabled={safePage >= totalPages}
+                className="size-9 rounded-lg border-white/10 bg-white/7 text-white disabled:opacity-40"
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+
+            <label className="flex items-center gap-3">
+              Toon
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setCurrentPage(1);
+                }}
+                className="h-10 rounded-lg border border-white/10 bg-slate-950/34 px-3 text-white outline-none"
+              >
+                {pageSizeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-4">
-        <aside className="space-y-3 print:hidden">
+        <aside className="hidden">
           <div className="rounded-[1.35rem] border border-white/70 bg-white/86 p-3 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.88),rgba(30,41,59,0.82),rgba(15,23,42,0.9))] dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.6)]">
             <div className="space-y-2.5">
               <div>
@@ -632,14 +1149,15 @@ export function StudentsBoard({
                 <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_11rem_auto] xl:items-center">
                   <select
                     value={filter}
-                    onChange={(event) => setFilter(event.target.value)}
+                    onChange={(event) =>
+                      setFilter(event.target.value as StudentFilter)
+                    }
                     className="native-select h-10 rounded-xl px-3 text-sm"
                   >
-                    <option value="alles">Alle leerlingen</option>
-                    <option value="hoog">Sterk op koers</option>
-                    <option value="midden">In opbouw</option>
-                    <option value="laag">Extra aandacht</option>
-                    <option value="actie">Actie nodig</option>
+                    <option value="all">Alle leerlingen</option>
+                    <option value="active">Actief</option>
+                    <option value="inactive">Inactief</option>
+                    <option value="dropped">Uitgevallen</option>
                   </select>
                   <div className="rounded-[0.95rem] border border-slate-200/80 bg-slate-50/90 px-3 py-2 text-[12px] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 xl:text-center">
                     {filteredStudents.length} zichtbaar

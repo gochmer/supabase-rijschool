@@ -2,6 +2,7 @@
 
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { createInstructorLearnerAction } from "@/lib/actions/instructor-learners";
@@ -26,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 const NO_PACKAGE_VALUE = "__no_package__";
 
@@ -42,8 +44,14 @@ function getInitialState() {
 
 export function StudentOnboardDialog({
   packages = [],
+  showTriggerIcon = false,
+  triggerClassName,
+  triggerLabel = "Leerling aanmelden",
 }: {
   packages?: Pakket[];
+  showTriggerIcon?: boolean;
+  triggerClassName?: string;
+  triggerLabel?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -93,17 +101,20 @@ export function StudentOnboardDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button className="h-9 rounded-full text-[13px]">
-          Leerling aanmelden
+        <Button
+          className={cn("h-9 rounded-full text-[13px]", triggerClassName)}
+        >
+          {showTriggerIcon ? <PlusCircle className="size-5" /> : null}
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
         <DialogHeader>
           <DialogTitle>Leerling handmatig toevoegen</DialogTitle>
           <DialogDescription>
-            Voeg een leerling direct toe aan je werkplek. Bestaat het e-mailadres al,
-            dan koppelen we die leerling meteen. Bestaat het nog niet, dan sturen we
-            automatisch een uitnodiging.
+            Voeg een leerling direct toe aan je werkplek. Bestaat het
+            e-mailadres al, dan koppelen we die leerling meteen. Bestaat het nog
+            niet, dan sturen we automatisch een uitnodiging.
           </DialogDescription>
         </DialogHeader>
 
@@ -114,7 +125,10 @@ export function StudentOnboardDialog({
               id={nameId}
               value={form.fullName}
               onChange={(event) =>
-                setForm((current) => ({ ...current, fullName: event.target.value }))
+                setForm((current) => ({
+                  ...current,
+                  fullName: event.target.value,
+                }))
               }
               placeholder="Bijvoorbeeld Mila Jansen"
               className="dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
@@ -128,7 +142,10 @@ export function StudentOnboardDialog({
               type="email"
               value={form.email}
               onChange={(event) =>
-                setForm((current) => ({ ...current, email: event.target.value }))
+                setForm((current) => ({
+                  ...current,
+                  email: event.target.value,
+                }))
               }
               placeholder="leerling@example.com"
               className="dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
@@ -141,7 +158,10 @@ export function StudentOnboardDialog({
               id={phoneId}
               value={form.phone}
               onChange={(event) =>
-                setForm((current) => ({ ...current, phone: event.target.value }))
+                setForm((current) => ({
+                  ...current,
+                  phone: event.target.value,
+                }))
               }
               placeholder="06 12 34 56 78"
               className="dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
@@ -160,7 +180,9 @@ export function StudentOnboardDialog({
                 <SelectValue placeholder="Kies een pakket" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_PACKAGE_VALUE}>Nog geen pakket koppelen</SelectItem>
+                <SelectItem value={NO_PACKAGE_VALUE}>
+                  Nog geen pakket koppelen
+                </SelectItem>
                 {packages.map((pkg) => (
                   <SelectItem key={pkg.id} value={pkg.id}>
                     {pkg.naam}
@@ -185,7 +207,8 @@ export function StudentOnboardDialog({
             <span>
               Agenda direct vrijgeven
               <span className="mt-1 block text-[12px] leading-5 text-slate-500 dark:text-slate-400">
-                Handig als je wilt dat deze leerling meteen zelf boekbare momenten uit jouw agenda kan kiezen.
+                Handig als je wilt dat deze leerling meteen zelf boekbare
+                momenten uit jouw agenda kan kiezen.
               </span>
             </span>
           </label>
@@ -208,7 +231,11 @@ export function StudentOnboardDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+          >
             Annuleren
           </Button>
           <Button

@@ -59,8 +59,14 @@ type StudentSchedulingAccessRow = {
 
 type StudentSchedulingAccessListBuilder = {
   select: (columns: string) => {
-    eq: (column: string, value: string) => {
-      in: (column: string, values: string[]) => Promise<{
+    eq: (
+      column: string,
+      value: string,
+    ) => {
+      in: (
+        column: string,
+        values: string[],
+      ) => Promise<{
         data: StudentSchedulingAccessRow[] | null;
       }>;
     };
@@ -151,9 +157,11 @@ const DEMO_STUDENTS: InstructorStudentProgressRow[] = [
     laatsteBeoordeling: "23 april 2026",
     laatsteBeoordelingAt: "2026-04-23",
     gekoppeldeLessen: 8,
+    voltooideLessen: 6,
     aanvraagStatus: "Actief traject",
     email: "mila@example.com",
     telefoon: "06 12 34 56 78",
+    gekoppeldSinds: "2026-03-12T09:00:00",
     zelfInplannenToegestaan: true,
     zelfInplannenLimietMinutenPerWeek: 120,
     zelfInplannenGebruiktMinutenDezeWeek: 60,
@@ -170,9 +178,11 @@ const DEMO_STUDENTS: InstructorStudentProgressRow[] = [
     laatsteBeoordeling: "21 april 2026",
     laatsteBeoordelingAt: "2026-04-21",
     gekoppeldeLessen: 4,
+    voltooideLessen: 2,
     aanvraagStatus: "Nieuwe aanvraag",
     email: "noah@example.com",
     telefoon: "06 98 76 54 32",
+    gekoppeldSinds: "2026-04-05T11:30:00",
     zelfInplannenToegestaan: false,
     zelfInplannenLimietMinutenPerWeek: null,
     zelfInplannenGebruiktMinutenDezeWeek: 0,
@@ -247,7 +257,8 @@ const DEMO_NOTES: StudentProgressLessonNote[] = [
     samenvatting:
       "Sterke, rustige les met goede spiegelroutine. Kruispunten vragen nog wat meer voorsorteren en ritme.",
     sterk_punt: "Voorbereiding en basisbediening gaan steeds zelfstandiger.",
-    focus_volgende_les: "Meer herhaling op kruispunten en vloeiender afslaan naar rechts.",
+    focus_volgende_les:
+      "Meer herhaling op kruispunten en vloeiender afslaan naar rechts.",
     created_at: "2026-04-23T09:00:00",
     updated_at: "2026-04-23T09:00:00",
   },
@@ -259,7 +270,8 @@ const DEMO_NOTES: StudentProgressLessonNote[] = [
     samenvatting:
       "Noah is gemotiveerd, maar schakelmomenten kosten nog te veel aandacht waardoor het verkeersbeeld sneller wegvalt.",
     sterk_punt: "Rustige houding en goede inzet tijdens uitleg.",
-    focus_volgende_les: "Schakelen automatiseren en meer vooruit kijken in druk verkeer.",
+    focus_volgende_les:
+      "Schakelen automatiseren en meer vooruit kijken in druk verkeer.",
     created_at: "2026-04-21T09:00:00",
     updated_at: "2026-04-21T09:00:00",
   },
@@ -286,13 +298,15 @@ export async function getInstructeurStudentsWorkspace() {
     supabase
       .from("lesaanvragen")
       .select(
-        "id, leerling_id, status, pakket_naam_snapshot, created_at, voorkeursdatum, tijdvak"
+        "id, leerling_id, status, pakket_naam_snapshot, created_at, voorkeursdatum, tijdvak",
       )
       .eq("instructeur_id", instructeur.id)
       .not("leerling_id", "is", null),
     supabase
       .from("instructeur_leerling_koppelingen" as never)
-      .select("leerling_id, created_at, bron, onboarding_notitie, intake_checklist_keys")
+      .select(
+        "leerling_id, created_at, bron, onboarding_notitie, intake_checklist_keys",
+      )
       .eq("instructeur_id", instructeur.id)
       .not("leerling_id", "is", null),
   ])) as unknown as [
@@ -309,8 +323,8 @@ export async function getInstructeurStudentsWorkspace() {
     new Set(
       [...lessonRows, ...requestRows, ...linkRows]
         .map((row) => row.leerling_id)
-        .filter((value): value is string => Boolean(value))
-    )
+        .filter((value): value is string => Boolean(value)),
+    ),
   );
 
   if (!leerlingIds.length) {
@@ -324,14 +338,16 @@ export async function getInstructeurStudentsWorkspace() {
   const { data: leerlingenRows } = (await supabase
     .from("leerlingen")
     .select("id, profile_id, voortgang_percentage, pakket_id")
-    .in("id", leerlingIds)) as unknown as { data: InstructorStudentRow[] | null };
+    .in("id", leerlingIds)) as unknown as {
+    data: InstructorStudentRow[] | null;
+  };
 
   const profileIds = (leerlingenRows ?? []).map((row) => row.profile_id);
   const packageIds = (leerlingenRows ?? [])
     .map((row) => row.pakket_id)
     .filter((value): value is string => Boolean(value));
   const studentSchedulingAccess = supabase.from(
-    "leerling_planningsrechten" as never
+    "leerling_planningsrechten" as never,
   ) as unknown as StudentSchedulingAccessListBuilder;
 
   const [
@@ -348,17 +364,17 @@ export async function getInstructeurStudentsWorkspace() {
           .in("id", profileIds)
       : Promise.resolve({ data: [] }),
     packageIds.length
-      ? ((supabase
+      ? (supabase
           .from("pakketten")
           .select("id, naam, zelf_inplannen_limiet_minuten_per_week")
-          .in("id", packageIds)) as unknown as Promise<{
+          .in("id", packageIds) as unknown as Promise<{
           data: InstructorStudentPackageRow[] | null;
         }>)
       : Promise.resolve({ data: [] }),
     supabase
       .from("leerling_voortgang_beoordelingen")
       .select(
-        "id, leerling_id, instructeur_id, vaardigheid_key, beoordelings_datum, status, notitie, created_at"
+        "id, leerling_id, instructeur_id, vaardigheid_key, beoordelings_datum, status, notitie, created_at",
       )
       .eq("instructeur_id", instructeur.id)
       .in("leerling_id", leerlingIds)
@@ -367,7 +383,7 @@ export async function getInstructeurStudentsWorkspace() {
     supabase
       .from("leerling_voortgang_lesnotities")
       .select(
-        "id, leerling_id, instructeur_id, lesdatum, samenvatting, sterk_punt, focus_volgende_les, created_at, updated_at"
+        "id, leerling_id, instructeur_id, lesdatum, samenvatting, sterk_punt, focus_volgende_les, created_at, updated_at",
       )
       .eq("instructeur_id", instructeur.id)
       .in("leerling_id", leerlingIds)
@@ -375,31 +391,32 @@ export async function getInstructeurStudentsWorkspace() {
       .order("updated_at", { ascending: false }),
     studentSchedulingAccess
       .select(
-        "leerling_id, zelf_inplannen_toegestaan, zelf_inplannen_limiet_minuten_per_week, zelf_inplannen_limiet_is_handmatig"
+        "leerling_id, zelf_inplannen_toegestaan, zelf_inplannen_limiet_minuten_per_week, zelf_inplannen_limiet_is_handmatig",
       )
       .eq("instructeur_id", instructeur.id)
       .in("leerling_id", leerlingIds),
   ]);
 
   const profileMap = new Map(
-    (profilesResult.data ?? []).map((profile) => [profile.id, profile])
+    (profilesResult.data ?? []).map((profile) => [profile.id, profile]),
   );
   const packageMap = new Map(
-    (packagesResult.data ?? []).map((pkg) => [pkg.id, pkg])
+    (packagesResult.data ?? []).map((pkg) => [pkg.id, pkg]),
   );
   const schedulingAccessMap = new Map(
-    ((schedulingAccessResult.data ?? []) as StudentSchedulingAccessRow[]).map((row) => [
-      row.leerling_id,
-      row,
-    ])
+    ((schedulingAccessResult.data ?? []) as StudentSchedulingAccessRow[]).map(
+      (row) => [row.leerling_id, row],
+    ),
   );
 
   const assessments =
     ((assessmentsResult.data ?? []) as StudentProgressAssessment[]) ?? [];
   const notes =
-    ((notesResult.data ?? []) as StudentProgressLessonNoteRow[]).map((note) => ({
-      ...note,
-    })) ?? [];
+    ((notesResult.data ?? []) as StudentProgressLessonNoteRow[]).map(
+      (note) => ({
+        ...note,
+      }),
+    ) ?? [];
   const authStateMap = new Map<string, StudentAuthState>();
 
   if (profileIds.length) {
@@ -408,7 +425,9 @@ export async function getInstructeurStudentsWorkspace() {
       profileIds.map(async (profileId) => {
         const { data } = await admin.auth.admin.getUserById(profileId);
         const user = data.user;
-        const isActive = Boolean(user?.last_sign_in_at || user?.email_confirmed_at);
+        const isActive = Boolean(
+          user?.last_sign_in_at || user?.email_confirmed_at,
+        );
 
         return [
           profileId,
@@ -417,7 +436,7 @@ export async function getInstructeurStudentsWorkspace() {
             lastSignInAt: user?.last_sign_in_at ?? null,
           },
         ] as const;
-      })
+      }),
     );
 
     for (const [profileId, authState] of authStates) {
@@ -505,167 +524,192 @@ export async function getInstructeurStudentsWorkspace() {
     });
   }
 
-  const students: InstructorStudentProgressRow[] = (leerlingenRows ?? []).map((student) => {
-    const profile = profileMap.get(student.profile_id);
-    const studentAssessments = assessmentsByStudent.get(student.id) ?? [];
-    const summary = getStudentProgressSummary(studentAssessments);
-    const relatedLessons = lessonsByStudent.get(student.id) ?? [];
-    const relatedRequests = requestsByStudent.get(student.id) ?? [];
-    const manualLink = manualLinksByStudent.get(student.id) ?? null;
-    const schedulingAccess = schedulingAccessMap.get(student.id);
-    const nextLesson = [...relatedLessons]
-      .filter((lesson) => lesson.start_at)
-      .sort((left, right) =>
-        (left.start_at ?? "").localeCompare(right.start_at ?? "")
-      )
-      .find((lesson) => {
-        if (!lesson.start_at) {
-          return false;
+  const students: InstructorStudentProgressRow[] = (leerlingenRows ?? []).map(
+    (student) => {
+      const profile = profileMap.get(student.profile_id);
+      const studentAssessments = assessmentsByStudent.get(student.id) ?? [];
+      const summary = getStudentProgressSummary(studentAssessments);
+      const relatedLessons = lessonsByStudent.get(student.id) ?? [];
+      const relatedRequests = requestsByStudent.get(student.id) ?? [];
+      const manualLink = manualLinksByStudent.get(student.id) ?? null;
+      const schedulingAccess = schedulingAccessMap.get(student.id);
+      const nextLesson = [...relatedLessons]
+        .filter((lesson) => lesson.start_at)
+        .sort((left, right) =>
+          (left.start_at ?? "").localeCompare(right.start_at ?? ""),
+        )
+        .find((lesson) => {
+          if (!lesson.start_at) {
+            return false;
+          }
+
+          return new Date(lesson.start_at).getTime() >= Date.now();
+        });
+
+      const latestRequest = [...relatedRequests].sort((left, right) =>
+        right.created_at.localeCompare(left.created_at),
+      )[0];
+      const firstKnownConnectionAt =
+        [
+          manualLink?.created_at,
+          ...relatedRequests.map((request) => request.created_at),
+          ...relatedLessons.map((lesson) => lesson.start_at),
+        ]
+          .filter((value): value is string => Boolean(value))
+          .sort((left, right) => left.localeCompare(right))[0] ?? null;
+      const latestAssessmentDate =
+        summary.lastReviewedAt ??
+        [...studentAssessments].sort((left, right) =>
+          right.beoordelings_datum.localeCompare(left.beoordelings_datum),
+        )[0]?.beoordelings_datum ??
+        null;
+
+      const computedProgress = studentAssessments.length
+        ? calculateStudentProgressPercentage(studentAssessments)
+        : Number(student.voortgang_percentage ?? 0);
+      const planningVrijTeGeven =
+        Boolean(manualLink) ||
+        relatedLessons.length > 0 ||
+        relatedRequests.some((request) =>
+          ACTIVE_PLANNING_REQUEST_STATUSES.includes(
+            (request.status ??
+              "") as (typeof ACTIVE_PLANNING_REQUEST_STATUSES)[number],
+          ),
+        );
+      const zelfInplannenToegestaan =
+        planningVrijTeGeven &&
+        Boolean(schedulingAccess?.zelf_inplannen_toegestaan);
+      const linkedRequestIds = new Set(
+        relatedLessons
+          .map((lesson) => extractLessonRequestReference(lesson.notities))
+          .filter((value): value is string => Boolean(value)),
+      );
+      const bookedMinutesByWeekStart: Record<string, number> = {};
+
+      relatedLessons.forEach((lesson) => {
+        if (
+          !lesson.start_at ||
+          !["geaccepteerd", "ingepland", "afgerond"].includes(lesson.status)
+        ) {
+          return;
         }
 
-        return new Date(lesson.start_at).getTime() >= Date.now();
+        addBookedMinutesForWeek({
+          map: bookedMinutesByWeekStart,
+          dateLike: lesson.start_at,
+          minutes: lesson.duur_minuten,
+        });
       });
 
-    const latestRequest = [...relatedRequests].sort((left, right) =>
-      right.created_at.localeCompare(left.created_at)
-    )[0];
-    const latestAssessmentDate =
-      summary.lastReviewedAt ??
-      [...studentAssessments]
-        .sort((left, right) =>
-          right.beoordelings_datum.localeCompare(left.beoordelings_datum)
-        )[0]?.beoordelings_datum ??
-      null;
+      relatedRequests.forEach((request) => {
+        if (
+          linkedRequestIds.has(request.id) ||
+          !request.voorkeursdatum ||
+          !["aangevraagd", "geaccepteerd", "ingepland"].includes(
+            request.status ?? "",
+          )
+        ) {
+          return;
+        }
 
-    const computedProgress = studentAssessments.length
-      ? calculateStudentProgressPercentage(studentAssessments)
-      : Number(student.voortgang_percentage ?? 0);
-    const planningVrijTeGeven =
-      Boolean(manualLink) ||
-      relatedLessons.length > 0 ||
-      relatedRequests.some((request) =>
-        ACTIVE_PLANNING_REQUEST_STATUSES.includes(
-          (request.status ?? "") as (typeof ACTIVE_PLANNING_REQUEST_STATUSES)[number]
-        )
-      );
-    const zelfInplannenToegestaan =
-      planningVrijTeGeven && Boolean(schedulingAccess?.zelf_inplannen_toegestaan);
-    const linkedRequestIds = new Set(
-      relatedLessons
-        .map((lesson) => extractLessonRequestReference(lesson.notities))
-        .filter((value): value is string => Boolean(value))
-    );
-    const bookedMinutesByWeekStart: Record<string, number> = {};
+        const { startAt, endAt } = parseRequestWindow(
+          request.voorkeursdatum,
+          request.tijdvak,
+        );
 
-    relatedLessons.forEach((lesson) => {
-      if (!lesson.start_at || !["geaccepteerd", "ingepland", "afgerond"].includes(lesson.status)) {
-        return;
-      }
+        if (!startAt || !endAt) {
+          return;
+        }
 
-      addBookedMinutesForWeek({
-        map: bookedMinutesByWeekStart,
-        dateLike: lesson.start_at,
-        minutes: lesson.duur_minuten,
+        addBookedMinutesForWeek({
+          map: bookedMinutesByWeekStart,
+          dateLike: startAt,
+          minutes: Math.max(
+            30,
+            Math.round(
+              (new Date(endAt).getTime() - new Date(startAt).getTime()) / 60000,
+            ),
+          ),
+        });
       });
-    });
 
-    relatedRequests.forEach((request) => {
-      if (
-        linkedRequestIds.has(request.id) ||
-        !request.voorkeursdatum ||
-        !["aangevraagd", "geaccepteerd", "ingepland"].includes(request.status ?? "")
-      ) {
-        return;
-      }
-
-      const { startAt, endAt } = parseRequestWindow(
-        request.voorkeursdatum,
-        request.tijdvak
-      );
-
-      if (!startAt || !endAt) {
-        return;
-      }
-
-      addBookedMinutesForWeek({
-        map: bookedMinutesByWeekStart,
-        dateLike: startAt,
-        minutes: Math.max(
-          30,
-          Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60000)
+      const pakketZelfInplannenLimietMinutenPerWeek =
+        packageMap.get(student.pakket_id ?? "")
+          ?.zelf_inplannen_limiet_minuten_per_week ?? null;
+      const resolvedWeeklyLimit = resolveEffectiveWeeklyBookingLimit({
+        manualLimitIsSet: Boolean(
+          schedulingAccess?.zelf_inplannen_limiet_is_handmatig,
         ),
+        manualLimitMinutes:
+          schedulingAccess?.zelf_inplannen_limiet_minuten_per_week ?? null,
+        packageLimitMinutes: pakketZelfInplannenLimietMinutenPerWeek,
       });
-    });
+      const zelfInplannenLimietMinutenPerWeek =
+        resolvedWeeklyLimit.weeklyLimitMinutes;
+      const zelfInplannenHandmatigeLimietMinutenPerWeek = Boolean(
+        schedulingAccess?.zelf_inplannen_limiet_is_handmatig,
+      )
+        ? (schedulingAccess?.zelf_inplannen_limiet_minuten_per_week ?? null)
+        : null;
+      const zelfInplannenGebruiktMinutenDezeWeek =
+        bookedMinutesByWeekStart[weekStartKey] ?? 0;
+      const zelfInplannenResterendMinutenDezeWeek =
+        getRemainingWeeklyBookingMinutes(
+          zelfInplannenLimietMinutenPerWeek,
+          zelfInplannenGebruiktMinutenDezeWeek,
+        );
 
-    const pakketZelfInplannenLimietMinutenPerWeek =
-      packageMap.get(student.pakket_id ?? "")?.zelf_inplannen_limiet_minuten_per_week ??
-      null;
-    const resolvedWeeklyLimit = resolveEffectiveWeeklyBookingLimit({
-      manualLimitIsSet: Boolean(
-        schedulingAccess?.zelf_inplannen_limiet_is_handmatig
-      ),
-      manualLimitMinutes:
-        schedulingAccess?.zelf_inplannen_limiet_minuten_per_week ?? null,
-      packageLimitMinutes: pakketZelfInplannenLimietMinutenPerWeek,
-    });
-    const zelfInplannenLimietMinutenPerWeek =
-      resolvedWeeklyLimit.weeklyLimitMinutes;
-    const zelfInplannenHandmatigeLimietMinutenPerWeek = Boolean(
-      schedulingAccess?.zelf_inplannen_limiet_is_handmatig
-    )
-      ? schedulingAccess?.zelf_inplannen_limiet_minuten_per_week ?? null
-      : null;
-    const zelfInplannenGebruiktMinutenDezeWeek =
-      bookedMinutesByWeekStart[weekStartKey] ?? 0;
-    const zelfInplannenResterendMinutenDezeWeek =
-      getRemainingWeeklyBookingMinutes(
+      return {
+        id: student.id,
+        profileId: student.profile_id,
+        naam: profile?.volledige_naam ?? "Leerling",
+        pakket:
+          (student.pakket_id
+            ? packageMap.get(student.pakket_id)?.naam
+            : null) ??
+          latestRequest?.pakket_naam_snapshot ??
+          "Nog geen pakket",
+        pakketId: student.pakket_id ?? null,
+        voortgang: computedProgress,
+        volgendeLes: formatRelativeOrFallback(nextLesson?.start_at),
+        volgendeLesAt: nextLesson?.start_at ?? null,
+        laatsteBeoordeling: latestAssessmentDate
+          ? formatLongDate(latestAssessmentDate)
+          : "Nog geen beoordeling",
+        laatsteBeoordelingAt: latestAssessmentDate,
+        gekoppeldeLessen: relatedLessons.length,
+        voltooideLessen: relatedLessons.filter(
+          (lesson) => lesson.status === "afgerond",
+        ).length,
+        aanvraagStatus:
+          latestRequest?.status != null
+            ? getRequestStatusLabel(latestRequest.status)
+            : manualLink
+              ? "Handmatig gekoppeld"
+              : "Actief traject",
+        email: profile?.email ?? "",
+        telefoon: profile?.telefoon ?? "",
+        gekoppeldSinds: firstKnownConnectionAt,
+        zelfInplannenToegestaan,
         zelfInplannenLimietMinutenPerWeek,
-        zelfInplannenGebruiktMinutenDezeWeek
-      );
-
-    return {
-      id: student.id,
-      profileId: student.profile_id,
-      naam: profile?.volledige_naam ?? "Leerling",
-      pakket:
-        (student.pakket_id ? packageMap.get(student.pakket_id)?.naam : null) ??
-        latestRequest?.pakket_naam_snapshot ??
-        "Nog geen pakket",
-      pakketId: student.pakket_id ?? null,
-      voortgang: computedProgress,
-      volgendeLes: formatRelativeOrFallback(nextLesson?.start_at),
-      volgendeLesAt: nextLesson?.start_at ?? null,
-      laatsteBeoordeling: latestAssessmentDate
-        ? formatLongDate(latestAssessmentDate)
-        : "Nog geen beoordeling",
-      laatsteBeoordelingAt: latestAssessmentDate,
-      gekoppeldeLessen: relatedLessons.length,
-      aanvraagStatus:
-        latestRequest?.status != null
-          ? getRequestStatusLabel(latestRequest.status)
-          : manualLink
-            ? "Handmatig gekoppeld"
-            : "Actief traject",
-      email: profile?.email ?? "",
-      telefoon: profile?.telefoon ?? "",
-      zelfInplannenToegestaan,
-      zelfInplannenLimietMinutenPerWeek,
-      zelfInplannenPakketLimietMinutenPerWeek:
-        pakketZelfInplannenLimietMinutenPerWeek,
-      zelfInplannenHandmatigeLimietMinutenPerWeek,
-      zelfInplannenHandmatigeOverrideActief: Boolean(
-        schedulingAccess?.zelf_inplannen_limiet_is_handmatig
-      ),
-      zelfInplannenGebruiktMinutenDezeWeek,
-      zelfInplannenResterendMinutenDezeWeek,
-      planningVrijTeGeven,
-      isHandmatigGekoppeld: Boolean(manualLink),
-      onboardingNotitie: manualLink?.onboarding_notitie ?? null,
-      intakeChecklistKeys: manualLink?.intake_checklist_keys ?? [],
-      accountStatus: authStateMap.get(student.profile_id)?.accountStatus,
-      lastSignInAt: authStateMap.get(student.profile_id)?.lastSignInAt ?? null,
-    };
-  });
+        zelfInplannenPakketLimietMinutenPerWeek:
+          pakketZelfInplannenLimietMinutenPerWeek,
+        zelfInplannenHandmatigeLimietMinutenPerWeek,
+        zelfInplannenHandmatigeOverrideActief: Boolean(
+          schedulingAccess?.zelf_inplannen_limiet_is_handmatig,
+        ),
+        zelfInplannenGebruiktMinutenDezeWeek,
+        zelfInplannenResterendMinutenDezeWeek,
+        planningVrijTeGeven,
+        isHandmatigGekoppeld: Boolean(manualLink),
+        onboardingNotitie: manualLink?.onboarding_notitie ?? null,
+        intakeChecklistKeys: manualLink?.intake_checklist_keys ?? [],
+        accountStatus: authStateMap.get(student.profile_id)?.accountStatus,
+        lastSignInAt:
+          authStateMap.get(student.profile_id)?.lastSignInAt ?? null,
+      };
+    },
+  );
 
   students.sort((left, right) => right.voortgang - left.voortgang);
 
@@ -692,7 +736,7 @@ export async function getCurrentLeerlingProgressWorkspace() {
     supabase
       .from("leerling_voortgang_beoordelingen")
       .select(
-        "id, leerling_id, instructeur_id, vaardigheid_key, beoordelings_datum, status, notitie, created_at"
+        "id, leerling_id, instructeur_id, vaardigheid_key, beoordelings_datum, status, notitie, created_at",
       )
       .eq("leerling_id", leerling.id)
       .order("beoordelings_datum", { ascending: false })
@@ -700,7 +744,7 @@ export async function getCurrentLeerlingProgressWorkspace() {
     supabase
       .from("leerling_voortgang_lesnotities")
       .select(
-        "id, leerling_id, instructeur_id, lesdatum, samenvatting, sterk_punt, focus_volgende_les, created_at, updated_at"
+        "id, leerling_id, instructeur_id, lesdatum, samenvatting, sterk_punt, focus_volgende_les, created_at, updated_at",
       )
       .eq("leerling_id", leerling.id)
       .order("lesdatum", { ascending: false })
@@ -710,15 +754,17 @@ export async function getCurrentLeerlingProgressWorkspace() {
   const assessments =
     ((assessmentsResult.data ?? []) as StudentProgressAssessment[]) ?? [];
   const notes =
-    ((notesResult.data ?? []) as StudentProgressLessonNoteRow[]).map((note) => ({
-      ...note,
-    })) ?? [];
+    ((notesResult.data ?? []) as StudentProgressLessonNoteRow[]).map(
+      (note) => ({
+        ...note,
+      }),
+    ) ?? [];
 
   const instructeurIds = Array.from(
     new Set([
       ...assessments.map((assessment) => assessment.instructeur_id),
       ...notes.map((note) => note.instructeur_id),
-    ])
+    ]),
   );
 
   const { data: instructeursRows } = instructeurIds.length
@@ -739,10 +785,10 @@ export async function getCurrentLeerlingProgressWorkspace() {
     : { data: [] };
 
   const instructorProfileMap = new Map(
-    (instructeursRows ?? []).map((row) => [row.id, row.profile_id])
+    (instructeursRows ?? []).map((row) => [row.id, row.profile_id]),
   );
   const profileNameMap = new Map(
-    (profiles ?? []).map((row) => [row.id, row.volledige_naam])
+    (profiles ?? []).map((row) => [row.id, row.volledige_naam]),
   );
   const latestAssessment = [...assessments].sort((left, right) => {
     if (left.beoordelings_datum !== right.beoordelings_datum) {
@@ -765,9 +811,9 @@ export async function getCurrentLeerlingProgressWorkspace() {
     assessments,
     notes,
     laatsteInstructeurNaam: latestInstructorId
-      ? profileNameMap.get(
-          instructorProfileMap.get(latestInstructorId) ?? ""
-        ) ?? null
+      ? (profileNameMap.get(
+          instructorProfileMap.get(latestInstructorId) ?? "",
+        ) ?? null)
       : null,
   };
 }

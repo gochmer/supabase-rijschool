@@ -260,9 +260,11 @@ export interface InstructorStudentProgressRow {
   laatsteBeoordeling: string;
   laatsteBeoordelingAt?: string | null;
   gekoppeldeLessen: number;
+  voltooideLessen?: number;
   aanvraagStatus: string;
   email?: string;
   telefoon?: string;
+  gekoppeldSinds?: string | null;
   zelfInplannenToegestaan?: boolean;
   zelfInplannenLimietMinutenPerWeek?: number | null;
   zelfInplannenPakketLimietMinutenPerWeek?: number | null;
