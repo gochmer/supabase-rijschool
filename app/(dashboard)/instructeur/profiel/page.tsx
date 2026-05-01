@@ -1,656 +1,715 @@
 import {
-  ArrowUpRight,
+  Award,
   BadgeCheck,
+  CalendarDays,
   Camera,
+  Car,
+  Clock3,
+  Languages,
+  LockKeyhole,
+  Mail,
   MapPin,
-  Rocket,
+  MessageSquare,
+  MoreHorizontal,
+  Phone,
   ShieldCheck,
-  Sparkles,
   Star,
-  WalletCards,
+  Trophy,
+  UsersRound,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
-import { PageHeader } from "@/components/dashboard/page-header";
 import { AvatarUploadCard } from "@/components/profile/avatar-upload-card";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { InstructorReviewReplyDialog } from "@/components/reviews/instructor-review-reply-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
 import { getInstructorReviews } from "@/lib/data/instructors";
-import { getCurrentProfile, getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import { getInstructeurLessons } from "@/lib/data/lesson-requests";
+import {
+  getCurrentInstructeurRecord,
+  getCurrentProfile,
+} from "@/lib/data/profiles";
 import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
-import { formatCurrency, formatStars, getInitials } from "@/lib/format";
+import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
+import { formatStars, getInitials } from "@/lib/format";
 import { instructorColorOptions } from "@/lib/instructor-profile";
+import { cn } from "@/lib/utils";
 
 function transmissionLabel(value?: string | null) {
-  if (value === "automaat") return "Automaat";
-  if (value === "handgeschakeld") return "Handgeschakeld";
-  return "Automaat en schakel";
+  if (value === "automaat") return "B (Automaat)";
+  if (value === "handgeschakeld") return "B (Schakel)";
+  return "B (Auto)";
 }
 
-function getConversionLevel(score: number) {
-  if (score >= 90) return "Topprofiel";
-  if (score >= 70) return "Sterk profiel";
-  if (score >= 45) return "In opbouw";
-  return "Actie nodig";
+function getProfileStatusLabel(value?: string | null) {
+  if (value === "goedgekeurd") return "Actief";
+  if (value === "in_beoordeling") return "In beoordeling";
+  return value ?? "Concept";
+}
+
+function formatMemberSince() {
+  return "Lid sinds 2026";
+}
+
+function getWorkAreaMap(area: string | null | undefined) {
+  const normalized = (area || "Amsterdam").trim().toLowerCase();
+  const presets: Record<string, { bbox: string; marker: string; label: string }> = {
+    amsterdam: {
+      bbox: "4.728,52.278,5.079,52.431",
+      marker: "52.3676,4.9041",
+      label: "Amsterdam",
+    },
+    amstelveen: {
+      bbox: "4.780,52.250,4.945,52.350",
+      marker: "52.3025,4.8627",
+      label: "Amstelveen",
+    },
+    diemen: {
+      bbox: "4.930,52.315,5.020,52.365",
+      marker: "52.3380,4.9597",
+      label: "Diemen",
+    },
+    aalsmeer: {
+      bbox: "4.690,52.230,4.830,52.300",
+      marker: "52.2592,4.7597",
+      label: "Aalsmeer",
+    },
+  };
+  const preset =
+    presets[normalized] ??
+    presets[Object.keys(presets).find((key) => normalized.includes(key)) ?? "amsterdam"];
+
+  return {
+    ...preset,
+    src: `https://www.openstreetmap.org/export/embed.html?bbox=${preset.bbox}&layer=mapnik&marker=${preset.marker}`,
+  };
+}
+
+function getAvailabilityPreview(
+  slots: Awaited<ReturnType<typeof getCurrentInstructorAvailability>>
+) {
+  const active = slots.filter((slot) => slot.beschikbaar && slot.start_at);
+  const grouped = new Map<string, string>();
+
+  for (const slot of active) {
+    if (!slot.dag || grouped.has(slot.dag)) continue;
+    grouped.set(slot.dag, slot.tijdvak);
+  }
+
+  const rows = Array.from(grouped.entries()).slice(0, 6).map(([day, window]) => ({
+    day,
+    window,
+    label: "Beschikbaar",
+  }));
+
+  if (rows.length) return rows;
+
+  return [
+    { day: "Maandag", window: "Nog niet ingesteld", label: "Aanvullen" },
+    { day: "Dinsdag", window: "Nog niet ingesteld", label: "Aanvullen" },
+    { day: "Woensdag", window: "Nog niet ingesteld", label: "Aanvullen" },
+    { day: "Donderdag", window: "Nog niet ingesteld", label: "Aanvullen" },
+  ];
+}
+
+function ProfilePanel({
+  children,
+  className,
+  id,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
+  return (
+    <section
+      id={id}
+      className={cn(
+        "rounded-[1.35rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.075),rgba(148,163,184,0.055),rgba(15,23,42,0.2))] p-4 shadow-[0_22px_70px_-48px_rgba(15,23,42,0.75)]",
+        className
+      )}
+    >
+      {children}
+    </section>
+  );
+}
+
+function SectionTitle({
+  title,
+  action,
+}: {
+  title: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <h2 className="text-base font-semibold text-white">{title}</h2>
+      {action}
+    </div>
+  );
 }
 
 export default async function InstructeurProfielPage() {
-  const [profile, instructor, reviewSummary] = await Promise.all([
-    getCurrentProfile(),
-    getCurrentInstructeurRecord(),
-    getCurrentInstructorReviewSummary(),
-  ]);
+  const [profile, instructor, reviewSummary, lessons, availability, studentsWorkspace] =
+    await Promise.all([
+      getCurrentProfile(),
+      getCurrentInstructeurRecord(),
+      getCurrentInstructorReviewSummary(),
+      getInstructeurLessons(),
+      getCurrentInstructorAvailability(),
+      getInstructeurStudentsWorkspace(),
+    ]);
+
   const publicReviews = instructor?.slug
     ? await getInstructorReviews(instructor.slug)
     : [];
 
-  const completionScore = Number(instructor?.profiel_compleetheid ?? 0);
-  const safeScore = Math.min(100, Math.max(0, completionScore));
-  const workArea = instructor?.werkgebied ?? [];
-  const specialisaties = instructor?.specialisaties ?? [];
-  const publicProfilePath = instructor?.slug
-    ? `/instructeurs/${instructor.slug}`
-    : "/instructeurs";
+  const profileName = profile?.volledige_naam ?? "RijBasis";
   const avatarUrl = profile?.avatar_url ?? null;
   const fallbackColor =
     instructor?.profielfoto_kleur ?? instructorColorOptions[0].value;
-  const conversionLevel = getConversionLevel(safeScore);
-  const profileName = profile?.volledige_naam ?? "Instructeur";
-  const averageScoreLabel = reviewSummary.reviewCount
+  const workArea = instructor?.werkgebied ?? [];
+  const specialisaties = instructor?.specialisaties ?? [];
+  const completedLessons = lessons.filter((lesson) => lesson.status === "afgerond");
+  const activeLessons = lessons.filter((lesson) =>
+    ["ingepland", "geaccepteerd"].includes(lesson.status)
+  );
+  const successRate = lessons.length
+    ? Math.round((completedLessons.length / lessons.length) * 100)
+    : 0;
+  const averageScore = reviewSummary.reviewCount
     ? formatStars(reviewSummary.averageScore)
     : "Nog geen score";
-  const improvementTips = [
-    !avatarUrl ? "Upload een echte profielfoto voor meer vertrouwen." : null,
-    !profile?.volledige_naam ? "Vul je volledige naam in." : null,
-    !instructor?.bio ? "Schrijf een korte bio met je lesstijl en aanpak." : null,
-    !workArea.length ? "Voeg minimaal drie steden of regio's toe." : null,
-    !specialisaties.length
-      ? "Voeg specialisaties toe zoals faalangst, examentraining of automaat."
-      : null,
-    !Number(instructor?.prijs_per_les ?? 0)
-      ? "Vul een duidelijke prijs per les in."
-      : null,
-  ].filter(Boolean) as string[];
-
-  const quickChecks = [
+  const publicProfilePath = instructor?.slug
+    ? `/instructeurs/${instructor.slug}`
+    : "/instructeurs";
+  const availabilityPreview = getAvailabilityPreview(availability);
+  const activeSlotCount = availability.filter((slot) => slot.beschikbaar).length;
+  const map = getWorkAreaMap(workArea[0]);
+  const certificateRows = [
     {
-      icon: MapPin,
-      label: "Werkgebied",
-      value: workArea.length ? `${workArea.length} regio's` : "Nog leeg",
+      icon: ShieldCheck,
+      title: "WRM instructeur",
+      detail: instructor?.profiel_status === "goedgekeurd" ? "Profiel goedgekeurd" : "Status aanvullen",
+      tone: "emerald",
     },
     {
-      icon: WalletCards,
-      label: "Prijs",
-      value: Number(instructor?.prijs_per_les ?? 0)
-        ? formatCurrency(Number(instructor?.prijs_per_les ?? 0))
-        : "Nog leeg",
+      icon: Car,
+      title: transmissionLabel(instructor?.transmissie),
+      detail: "Rijbewijs en transmissie",
+      tone: "sky",
+    },
+    {
+      icon: Languages,
+      title: specialisaties[0] ?? "Specialisaties",
+      detail: specialisaties.length
+        ? `${specialisaties.length} focusgebied${specialisaties.length === 1 ? "" : "en"}`
+        : "Nog toevoegen",
+      tone: "violet",
+    },
+    {
+      icon: Award,
+      title: "Reviewkwaliteit",
+      detail: reviewSummary.reviewCount
+        ? `${reviewSummary.replyRate}% reactiegraad`
+        : "Nog geen reviews",
+      tone: "amber",
+    },
+  ] as const;
+  const detailRows = [
+    {
+      icon: Mail,
+      label: "E-mailadres",
+      value: profile?.email ?? "Nog niet bekend",
+    },
+    {
+      icon: Phone,
+      label: "Telefoonnummer",
+      value: profile?.telefoon || "Nog toevoegen",
+    },
+    {
+      icon: MapPin,
+      label: "Adres",
+      value: workArea[0] ?? "Werkgebied nog invullen",
     },
     {
       icon: ShieldCheck,
-      label: "Transmissie",
+      label: "Rijbewijs",
       value: transmissionLabel(instructor?.transmissie),
     },
+    {
+      icon: Clock3,
+      label: "Ervaring",
+      value: `${instructor?.ervaring_jaren ?? 0} jaar`,
+    },
+    {
+      icon: Car,
+      label: "Lesauto",
+      value: specialisaties.find((item) => item.toLowerCase().includes("auto")) ?? "Nog toevoegen",
+    },
+    {
+      icon: Languages,
+      label: "Talen",
+      value: "Nederlands",
+    },
   ];
-
-  const summaryCards = [
+  const stats = [
     {
-      label: "Profielscore",
-      value: `${safeScore}%`,
-      description: conversionLevel,
-      icon: Rocket,
-      tone: safeScore >= 70 ? "emerald" : "amber",
+      icon: UsersRound,
+      value: `${studentsWorkspace.students.length}`,
+      label: "Totale leerlingen",
+      detail: activeLessons.length ? `${activeLessons.length} actieve lessen` : "Nog geen actieve lessen",
+      tone: "from-violet-500 to-purple-700",
     },
     {
-      label: "Reviews",
-      value: averageScoreLabel,
-      description: reviewSummary.reviewCount
-        ? `${reviewSummary.reviewCount} review${reviewSummary.reviewCount === 1 ? "" : "s"}`
-        : "Nog geen social proof",
+      icon: CalendarDays,
+      value: `${lessons.length}`,
+      label: "Totale lessen",
+      detail: completedLessons.length ? `${completedLessons.length} afgerond` : "Start je eerste les",
+      tone: "from-emerald-500 to-green-700",
+    },
+    {
       icon: Star,
-      tone: reviewSummary.reviewCount ? "amber" : "violet",
+      value: reviewSummary.reviewCount ? reviewSummary.averageScore.toFixed(1) : "0.0",
+      label: "Gemiddelde beoordeling",
+      detail: `${reviewSummary.reviewCount} review${reviewSummary.reviewCount === 1 ? "" : "s"}`,
+      tone: "from-blue-500 to-sky-700",
     },
     {
-      label: "Werkgebied",
-      value: workArea.length ? `${workArea.length}` : "0",
-      description: workArea.length ? "Regio's ingevuld" : "Nog regio's toevoegen",
-      icon: MapPin,
-      tone: workArea.length ? "sky" : "rose",
+      icon: Trophy,
+      value: `${successRate}%`,
+      label: "Afgerond",
+      detail: lessons.length ? "Op basis van leshistorie" : "Nog geen historie",
+      tone: "from-orange-500 to-amber-700",
     },
     {
-      label: "Open punten",
-      value: improvementTips.length ? `${improvementTips.length}` : "0",
-      description: improvementTips.length ? "Nog slim om te verfijnen" : "Profiel staat sterk",
-      icon: BadgeCheck,
-      tone: improvementTips.length ? "amber" : "emerald",
-    },
-  ] as const;
-
-  const reviewMetrics = [
-    {
-      label: "Gemiddelde score",
-      value: reviewSummary.reviewCount ? averageScoreLabel : "Nog geen score",
-    },
-    {
-      label: "Reactiegraad",
-      value: `${reviewSummary.replyRate}%`,
-    },
-    {
-      label: "Laatste 30 dagen",
-      value: `${reviewSummary.recentThirtyDayCount} review${reviewSummary.recentThirtyDayCount === 1 ? "" : "s"}`,
-    },
-    {
-      label: "Gemeld",
-      value: `${reviewSummary.reportedCount}`,
+      icon: Clock3,
+      value: `${instructor?.ervaring_jaren ?? 0} jaar`,
+      label: "Ervaring",
+      detail: formatMemberSince(),
+      tone: "from-indigo-500 to-violet-700",
     },
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Instructeur profiel"
-        description="Maak je profiel scherper, betrouwbaarder en beter verkoopbaar voor nieuwe leerlingen."
-        actions={
-          <Button asChild variant="outline" className="h-9 rounded-full text-[13px]">
-            <Link href={publicProfilePath}>
-              Openbare preview
-              <ArrowUpRight className="size-4" />
-            </Link>
-          </Button>
-        }
-      />
+    <div className="space-y-4 text-slate-100">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Profiel
+          </h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Beheer je persoonlijke gegevens, publieke profielkaart en instellingen.
+          </p>
+        </div>
+        <Button
+          asChild
+          variant="outline"
+          className="w-fit rounded-xl border-white/10 bg-white/8 text-white hover:bg-white/12"
+        >
+          <Link href={publicProfilePath}>Openbare preview</Link>
+        </Button>
+      </div>
 
-      <section className="relative overflow-hidden rounded-[2.2rem] border border-white/70 bg-[linear-gradient(135deg,#020617,#172554,#0284c7)] p-6 text-white shadow-[0_34px_110px_-58px_rgba(15,23,42,0.78)] dark:border-white/10 sm:p-7">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.18),transparent_26%),radial-gradient(circle_at_88%_18%,rgba(56,189,248,0.24),transparent_24%),radial-gradient(circle_at_70%_86%,rgba(249,115,22,0.16),transparent_24%)]" />
-        <div className="relative grid gap-7 xl:grid-cols-[1fr_auto] xl:items-end">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/78">
-              <Sparkles className="size-3.5" />
-              Profiel cockpit
+      <ProfilePanel className="p-5">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+          <div className="grid gap-5 md:grid-cols-[10rem_minmax(0,1fr)]">
+            <div className="flex flex-col items-center gap-3">
+              <div
+                className={`relative flex size-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br ${fallbackColor} text-4xl font-bold text-white shadow-[0_26px_70px_-30px_rgba(239,68,68,0.65)] ring-1 ring-white/10`}
+              >
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={`Profielfoto van ${profileName}`}
+                    fill
+                    sizes="128px"
+                    className="object-cover"
+                  />
+                ) : (
+                  getInitials(profileName)
+                )}
+              </div>
+              <Button
+                asChild
+                size="sm"
+                className="rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+              >
+                <a href="#foto-beheren">
+                  <Camera className="size-4" />
+                  Wijzig foto
+                </a>
+              </Button>
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-              Laat leerlingen in een blik vertrouwen krijgen.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/72 sm:text-[15px]">
-              Je profiel is je verkooppagina. Maak direct duidelijk waar je lesgeeft,
-              waar je goed in bent en waarom leerlingen voor jou moeten kiezen.
-            </p>
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-semibold text-white">{profileName}</h2>
+                <Badge className="border-blue-400/20 bg-blue-500/15 text-blue-100">
+                  <BadgeCheck className="mr-1 size-3.5" />
+                  {getProfileStatusLabel(instructor?.profiel_status)}
+                </Badge>
+              </div>
+              <p className="mt-2 text-sm text-slate-400">Instructeur</p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2 py-1 text-sm font-semibold text-amber-200">
+                  <Star className="size-4 fill-amber-300 text-amber-300" />
+                  {averageScore}
+                </span>
+                <span className="text-sm text-slate-300">
+                  ({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? "" : "s"})
+                </span>
+              </div>
+              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-300">
+                {instructor?.bio ||
+                  "Vertel kort wie je bent, hoe je lesgeeft en waarom leerlingen met vertrouwen bij jou kunnen starten."}
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
+                <span className="inline-flex items-center gap-2 text-emerald-300">
+                  <span className="size-2 rounded-full bg-emerald-400" />
+                  {getProfileStatusLabel(instructor?.profiel_status)}
+                </span>
+                <span className="text-slate-400">{formatMemberSince()}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid min-w-[17rem] gap-3 rounded-[1.6rem] border border-white/14 bg-white/10 p-4 backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/62">
-                  Profielscore
-                </p>
-                <p className="mt-1 text-4xl font-semibold">{safeScore}%</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {detailRows.map((item) => (
+              <div key={item.label} className="flex items-start gap-3">
+                <item.icon className="mt-0.5 size-4 shrink-0 text-slate-400" />
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-400">{item.label}</p>
+                  <p className="mt-1 truncate text-sm font-medium text-slate-100">
+                    {item.value}
+                  </p>
+                </div>
               </div>
-              <Rocket className="size-8 text-sky-200" />
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/12">
-              <div
-                className="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8,#22c55e,#facc15)]"
-                style={{ width: `${safeScore}%` }}
-              />
-            </div>
-            <p className="text-xs leading-5 text-white/68">
-              {conversionLevel} • hoe completer, hoe sterker je profiel converteert.
-            </p>
+            ))}
           </div>
         </div>
-      </section>
+      </ProfilePanel>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((item) => (
-          <DashboardStatCard
-            key={item.label}
-            detail={item.description}
-            icon={item.icon}
-            label={item.label}
-            tone={item.tone}
-            value={item.value}
-          />
+      <div className="grid gap-3 md:grid-cols-5">
+        {stats.map((item) => (
+          <ProfilePanel key={item.label} className="p-4">
+            <div className="flex items-start gap-3">
+              <div
+                className={cn(
+                  "flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white",
+                  item.tone
+                )}
+              >
+                <item.icon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-2xl font-semibold text-white">{item.value}</p>
+                <p className="mt-1 text-sm text-slate-300">{item.label}</p>
+                <p className="mt-2 text-xs leading-5 text-emerald-300">{item.detail}</p>
+              </div>
+            </div>
+          </ProfilePanel>
         ))}
       </div>
 
-      <Tabs defaultValue="overzicht" className="space-y-4">
-        <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-[1.4rem] border border-white/60 bg-white/85 p-1 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.32)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/72 [&::-webkit-scrollbar]:hidden">
-          <TabsTrigger value="overzicht" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-sky-200 data-active:text-slate-950">
-            Overzicht
-          </TabsTrigger>
-          <TabsTrigger value="bewerken" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-emerald-200 data-active:text-slate-950">
-            Bewerken
-          </TabsTrigger>
-          <TabsTrigger value="reviews" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-amber-200 data-active:text-slate-950">
-            Reviews
-          </TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ProfilePanel>
+          <SectionTitle
+            title="Over mij"
+            action={
+              <Button asChild size="sm" variant="outline" className="rounded-lg border-white/10 bg-white/8 text-white">
+                <a href="#profiel-bewerken">Bewerken</a>
+              </Button>
+            }
+          />
+          <p className="text-sm leading-7 text-slate-300">
+            {instructor?.bio ||
+              "Hoi! Vul hier je persoonlijke introductie in. Beschrijf je lesstijl, ervaring, sterke punten en hoe jij leerlingen rustig richting hun rijexamen helpt."}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(specialisaties.length ? specialisaties : ["Rustige uitleg", "Examenfocus", "Veilige begeleiding"]).map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </ProfilePanel>
 
-        <TabsContent value="overzicht" className="space-y-5">
-          <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-            <AvatarUploadCard
-              avatarUrl={avatarUrl}
-              name={profileName}
-              fallbackClassName={fallbackColor}
-            />
-
-            <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86),rgba(15,23,42,0.94))]">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                    Openbare indruk
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
-                    Leerling-preview
-                  </h2>
+        <ProfilePanel>
+          <SectionTitle
+            title="Werkgebied"
+            action={
+              <Button asChild size="sm" variant="outline" className="rounded-lg border-white/10 bg-white/8 text-white">
+                <a href="#profiel-bewerken">Bewerken</a>
+              </Button>
+            }
+          />
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]">
+            <div className="space-y-3">
+              {(workArea.length ? workArea : ["Amsterdam", "Amstelveen", "Diemen", "Aalsmeer"]).slice(0, 6).map((area) => (
+                <div key={area} className="flex items-center gap-2 text-sm text-slate-300">
+                  <MapPin className="size-4 text-slate-500" />
+                  {area}
                 </div>
-                <Badge
-                  variant={
-                    instructor?.profiel_status === "goedgekeurd"
-                      ? "success"
-                      : "warning"
-                  }
-                >
-                  {instructor?.profiel_status ?? "concept"}
-                </Badge>
+              ))}
+            </div>
+            <div className="relative min-h-44 overflow-hidden rounded-xl border border-white/10 bg-slate-950">
+              <iframe
+                title={`Plattegrond werkgebied ${map.label}`}
+                src={map.src}
+                className="absolute inset-0 h-full w-full border-0 grayscale-[0.18] invert-[0.88] hue-rotate-180 saturate-[0.85]"
+                loading="lazy"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.1),rgba(15,23,42,0.34)),radial-gradient(circle_at_50%_52%,rgba(59,130,246,0.18),transparent_34%)]" />
+              <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg border border-white/10 bg-slate-950/78 px-3 py-2 text-xs font-semibold text-slate-100 backdrop-blur">
+                {map.label}
               </div>
+            </div>
+          </div>
+        </ProfilePanel>
+      </div>
 
-              <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5">
-                <div className="flex items-start gap-3">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ProfilePanel>
+          <SectionTitle
+            title="Beschikbaarheid"
+            action={
+              <Button asChild size="sm" variant="outline" className="rounded-lg border-white/10 bg-white/8 text-white">
+                <Link href="/instructeur/beschikbaarheid">Beheer beschikbaarheid</Link>
+              </Button>
+            }
+          />
+          <div className="space-y-2">
+            {availabilityPreview.map((row) => (
+              <div
+                key={`${row.day}-${row.window}`}
+                className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-white/8 py-2 text-sm last:border-b-0"
+              >
+                <span className="text-slate-300">{row.day}</span>
+                <span className="text-slate-200">{row.window}</span>
+                <span className="rounded-md bg-emerald-500/18 px-2 py-1 text-xs font-semibold text-emerald-200">
+                  {row.label}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-slate-400">
+            {activeSlotCount} open blok{activeSlotCount === 1 ? "" : "ken"} zichtbaar in je agenda.
+          </p>
+        </ProfilePanel>
+
+        <ProfilePanel>
+          <SectionTitle
+            title="Kwalificaties & Certificaten"
+            action={
+              <Button asChild size="sm" variant="outline" className="rounded-lg border-white/10 bg-white/8 text-white">
+                <a href="#profiel-bewerken">Toevoegen</a>
+              </Button>
+            }
+          />
+          <div className="space-y-3">
+            {certificateRows.map((item) => (
+              <div
+                key={item.title}
+                className="flex items-center justify-between gap-3 border-b border-white/8 pb-3 last:border-b-0 last:pb-0"
+              >
+                <div className="flex items-center gap-3">
                   <div
-                    className={`relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br ${fallbackColor} text-sm font-semibold text-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.42)]`}
-                  >
-                    {avatarUrl ? (
-                      <Image
-                        src={avatarUrl}
-                        alt="Profielfoto"
-                        fill
-                        sizes="64px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      getInitials(profileName)
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-lg",
+                      item.tone === "emerald" && "bg-emerald-500/18 text-emerald-200",
+                      item.tone === "sky" && "bg-sky-500/18 text-sky-200",
+                      item.tone === "violet" && "bg-violet-500/18 text-violet-200",
+                      item.tone === "amber" && "bg-amber-500/18 text-amber-200"
                     )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-semibold text-slate-950 dark:text-white">
-                      {profile?.volledige_naam || "Naam nog invullen"}
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                      {workArea.length
-                        ? workArea.join(" • ")
-                        : "Werkgebied nog invullen"}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                        <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                        {reviewSummary.reviewCount ? averageScoreLabel : "Nog geen reviews"}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                        <BadgeCheck className="size-3.5" />
-                        {reviewSummary.reviewCount} review
-                        {reviewSummary.reviewCount === 1 ? "" : "s"}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                        <WalletCards className="size-3.5" />
-                        {formatCurrency(Number(instructor?.prijs_per_les ?? 0))}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200">
-                        <Camera className="size-3.5" />
-                        {avatarUrl ? "Foto actief" : "Foto mist"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <p className="mt-4 line-clamp-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  {instructor?.bio ||
-                    "Schrijf een korte introductie zodat leerlingen direct snappen hoe jij lesgeeft en waarin je uitblinkt."}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {specialisaties.length ? (
-                    specialisaties.slice(0, 4).map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-200"
-                      >
-                        {tag}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-slate-500 dark:text-slate-400">
-                      Nog geen specialisaties toegevoegd.
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4 grid gap-2">
-                  {reviewSummary.latestReviews.length ? (
-                    reviewSummary.latestReviews.slice(0, 2).map((review) => (
-                      <div
-                        key={review.id}
-                        className="rounded-[1rem] border border-slate-200 bg-white/90 p-3 dark:border-white/10 dark:bg-white/6"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                            {review.titel}
-                          </p>
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {review.leerling_naam} • {review.datum}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                          {review.tekst}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-[1rem] border border-dashed border-slate-300 bg-white/70 p-3 text-sm leading-6 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                      Zodra leerlingen afgeronde lessen beoordelen, zie je hier meteen
-                      de eerste social proof voor je profielpreview.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-            <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
-              <div className="flex items-center gap-2">
-                <BadgeCheck className="size-4 text-primary" />
-                <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
-                  Verbeterpunten
-                </h2>
-              </div>
-              <div className="mt-4 grid gap-2">
-                {(improvementTips.length
-                  ? improvementTips
-                  : [
-                      "Je profiel staat er sterk bij. Houd prijs, werkgebied en beschikbaarheid actueel.",
-                    ]
-                ).map((tip) => (
-                  <div
-                    key={tip}
-                    className="rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm leading-6 text-slate-700 dark:bg-white/6 dark:text-slate-300"
                   >
-                    {tip}
+                    <item.icon className="size-4" />
                   </div>
-                ))}
+                  <div>
+                    <p className="text-sm font-semibold text-white">{item.title}</p>
+                    <p className="text-xs text-slate-400">{item.detail}</p>
+                  </div>
+                </div>
+                <MoreHorizontal className="size-4 text-slate-500" />
               </div>
-            </section>
+            ))}
+          </div>
+        </ProfilePanel>
+      </div>
 
-            <div className="space-y-5">
-              <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                  Snelle check
-                </p>
-                <div className="mt-3 grid gap-2">
-                  {quickChecks.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-white/80 px-3 py-2.5 text-sm shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6"
-                    >
-                      <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <item.icon className="size-4" />
-                        {item.label}
-                      </span>
-                      <span className="font-semibold text-slate-950 dark:text-white">
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
+      <ProfilePanel>
+        <SectionTitle
+          title="Recente reviews"
+          action={
+            <Button asChild size="sm" variant="outline" className="rounded-lg border-white/10 bg-white/8 text-white">
+              <a href="#reviews">Bekijk alle reviews</a>
+            </Button>
+          }
+        />
+        <div className="space-y-3">
+          {publicReviews.length ? (
+            publicReviews.slice(0, 3).map((review) => (
+              <div
+                key={review.id}
+                className="grid gap-3 border-b border-white/8 pb-3 last:border-b-0 last:pb-0 md:grid-cols-[12rem_minmax(0,1fr)_auto]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+                    {getInitials(review.leerling_naam)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{review.leerling_naam}</p>
+                    <p className="text-xs text-slate-400">{review.datum}</p>
+                  </div>
                 </div>
-              </section>
-
-              <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                  Review snapshot
-                </p>
-                <div className="mt-3 grid gap-2">
-                  {reviewMetrics.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm dark:bg-white/6"
-                    >
-                      <span className="text-slate-600 dark:text-slate-300">
-                        {item.label}
-                      </span>
-                      <span className="font-semibold text-slate-950 dark:text-white">
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
+                <div>
+                  <div className="flex items-center gap-1 text-amber-300">
+                    {Array.from({ length: Math.round(review.score) }).map((_, index) => (
+                      <Star key={`${review.id}-${index}`} className="size-4 fill-current" />
+                    ))}
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">{review.tekst}</p>
                 </div>
-              </section>
+                <MoreHorizontal className="size-4 text-slate-500" />
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/12 bg-white/5 p-4 text-sm leading-6 text-slate-400">
+              Nog geen reviews. Zodra leerlingen afgeronde lessen beoordelen, bouw je hier social proof op.
             </div>
-          </div>
-        </TabsContent>
+          )}
+        </div>
+      </ProfilePanel>
 
-        <TabsContent value="bewerken" className="space-y-5">
-          <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-            <Card className="border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(15,23,42,0.96))] dark:text-white dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
-              <CardHeader>
-                <CardTitle className="text-slate-950 dark:text-white">
-                  Profielgegevens
-                </CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-300">
-                  Deze informatie wordt zichtbaar op je openbare instructeurspagina.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProfileForm
-                  role="instructeur"
-                  tone="urban"
-                  initialValues={{
-                    volledigeNaam: profile?.volledige_naam ?? "",
-                    telefoon: profile?.telefoon ?? "",
-                    bio: instructor?.bio ?? "",
-                    ervaringJaren: instructor?.ervaring_jaren ?? 0,
-                    werkgebied: workArea.join(", "),
-                    prijsPerLes: Number(instructor?.prijs_per_les ?? 0),
-                    transmissie: instructor?.transmissie ?? "beide",
-                    specialisaties: specialisaties.join(", "),
-                    profielfotoKleur: fallbackColor,
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            <div className="space-y-5">
-              <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
-                <div className="flex items-center gap-2">
-                  <BadgeCheck className="size-4 text-primary" />
-                  <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
-                    Nu slim om te verbeteren
-                  </h2>
+      <ProfilePanel>
+        <SectionTitle title="Account instellingen" />
+        <div className="space-y-2">
+          {[
+            {
+              icon: LockKeyhole,
+              title: "Wachtwoord wijzigen",
+              detail: "Wijzig je accountwachtwoord",
+              href: "/wachtwoord-vergeten",
+              label: "Wijzigen",
+            },
+            {
+              icon: Mail,
+              title: "E-mail adres wijzigen",
+              detail: "Wijzig je e-mailadres",
+              href: "#profiel-bewerken",
+              label: "Wijzigen",
+            },
+            {
+              icon: MessageSquare,
+              title: "Notificatie instellingen",
+              detail: "Beheer hoe je notificaties ontvangt",
+              href: "/instructeur/instellingen",
+              label: "Beheren",
+            },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="grid gap-3 border-b border-white/8 py-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-white/8 text-slate-300">
+                  <item.icon className="size-4" />
                 </div>
-                <div className="mt-4 grid gap-2">
-                  {(improvementTips.length
-                    ? improvementTips
-                    : [
-                        "Je profiel staat er sterk bij. Houd prijs, werkgebied en beschikbaarheid actueel.",
-                      ]
-                  ).map((tip) => (
-                    <div
-                      key={tip}
-                      className="rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm leading-6 text-slate-700 dark:bg-white/6 dark:text-slate-300"
-                    >
-                      {tip}
-                    </div>
-                  ))}
+                <div>
+                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                  <p className="text-xs text-slate-400">{item.detail}</p>
                 </div>
-              </section>
-
-              <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                  Basis op orde
-                </p>
-                <div className="mt-3 grid gap-2">
-                  {quickChecks.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-white/80 px-3 py-2.5 text-sm shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6"
-                    >
-                      <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <item.icon className="size-4" />
-                        {item.label}
-                      </span>
-                      <span className="font-semibold text-slate-950 dark:text-white">
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              </div>
+              <Button asChild size="sm" variant="outline" className="w-fit rounded-lg border-white/10 bg-white/8 text-white">
+                <Link href={item.href}>{item.label}</Link>
+              </Button>
+              <MoreHorizontal className="hidden size-4 text-slate-500 sm:block" />
             </div>
-          </div>
-        </TabsContent>
+          ))}
+        </div>
+      </ProfilePanel>
 
-        <TabsContent value="reviews" className="space-y-5">
-          <div className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]">
-            <section className="space-y-5">
-              <section className="rounded-[1.8rem] border border-white/70 bg-white/90 p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-white/6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                  Review analytics
-                </p>
-                <div className="mt-3 grid gap-2">
-                  {reviewMetrics.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between gap-3 rounded-[1rem] bg-slate-50/85 px-3 py-2.5 text-sm dark:bg-white/6"
-                    >
-                      <span className="text-slate-600 dark:text-slate-300">
-                        {item.label}
-                      </span>
-                      <span className="font-semibold text-slate-950 dark:text-white">
-                        {item.value}
-                      </span>
+      <div id="foto-beheren" className="grid gap-4 xl:grid-cols-[0.78fr_1.22fr]">
+        <AvatarUploadCard
+          avatarUrl={avatarUrl}
+          name={profileName}
+          fallbackClassName={fallbackColor}
+        />
+
+        <ProfilePanel id="profiel-bewerken" className="scroll-mt-24">
+          <SectionTitle title="Profiel bewerken" />
+          <ProfileForm
+            role="instructeur"
+            tone="urban"
+            initialValues={{
+              volledigeNaam: profile?.volledige_naam ?? "",
+              telefoon: profile?.telefoon ?? "",
+              bio: instructor?.bio ?? "",
+              ervaringJaren: instructor?.ervaring_jaren ?? 0,
+              werkgebied: workArea.join(", "),
+              prijsPerLes: Number(instructor?.prijs_per_les ?? 0),
+              transmissie: instructor?.transmissie ?? "beide",
+              specialisaties: specialisaties.join(", "),
+              profielfotoKleur: fallbackColor,
+            }}
+          />
+        </ProfilePanel>
+      </div>
+
+      <ProfilePanel id="reviews" className="scroll-mt-24">
+        <SectionTitle title="Reviews en replies" />
+        <div className="space-y-3">
+          {publicReviews.length ? (
+            publicReviews.map((review) => (
+              <div
+                key={review.id}
+                className="rounded-xl border border-white/10 bg-white/5 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-white">{review.titel}</p>
+                      <Badge className="border-amber-400/20 bg-amber-400/12 text-amber-100">
+                        {review.score}/5
+                      </Badge>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-4 space-y-2">
-                  {[5, 4, 3, 2, 1].map((score) => {
-                    const count =
-                      reviewSummary.distribution[score as 1 | 2 | 3 | 4 | 5];
-                    const width =
-                      reviewSummary.reviewCount > 0
-                        ? Math.max(
-                            8,
-                            Math.round((count / reviewSummary.reviewCount) * 100)
-                          )
-                        : 0;
-
-                    return (
-                      <div key={score} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                          <span>{score} sterren</span>
-                          <span>{count}</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-                          <div
-                            className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#2563eb,#38bdf8)]"
-                            style={{ width: `${width}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="rounded-[1.8rem] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(240,249,255,0.9))] p-5 shadow-[0_26px_86px_-48px_rgba(15,23,42,0.38)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(30,41,59,0.84),rgba(15,23,42,0.92))]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                  Reputatie
-                </p>
-                <div className="mt-3 grid gap-2">
-                  <div className="rounded-[1rem] bg-white/80 px-3 py-3 text-sm leading-6 text-slate-700 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6 dark:text-slate-300">
-                    Reageer op sterke reviews snel, zodat nieuwe leerlingen zien dat je
-                    actief opvolgt en betrokken communiceert.
+                    <p className="mt-1 text-xs text-slate-400">
+                      {review.leerling_naam} - {review.datum}
+                    </p>
                   </div>
-                  <div className="rounded-[1rem] bg-white/80 px-3 py-3 text-sm leading-6 text-slate-700 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.18)] dark:bg-white/6 dark:text-slate-300">
-                    Gebruik replies vooral om rust, helderheid en examengerichte begeleiding
-                    terug te laten komen.
-                  </div>
+                  <InstructorReviewReplyDialog
+                    reviewId={review.id}
+                    reviewerName={review.leerling_naam}
+                    reviewTitle={review.titel}
+                    initialReply={review.antwoord_tekst}
+                  />
                 </div>
-              </section>
-            </section>
-
-            <Card className="border border-white/70 bg-white/90 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.9),rgba(15,23,42,0.96))] dark:text-white dark:shadow-[0_24px_80px_-42px_rgba(15,23,42,0.72)]">
-              <CardHeader>
-                <CardTitle className="text-slate-950 dark:text-white">
-                  Reviews en replies
-                </CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-300">
-                  Reageer op reviews zodat toekomstige leerlingen zien hoe jij
-                  communiceert en opvolgt.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                {publicReviews.length ? (
-                  publicReviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="rounded-[1.15rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                              {review.titel}
-                            </p>
-                            <Badge variant="warning">{review.score}/5</Badge>
-                          </div>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {review.leerling_naam} • {review.datum}
-                          </p>
-                        </div>
-                        <InstructorReviewReplyDialog
-                          reviewId={review.id}
-                          reviewerName={review.leerling_naam}
-                          reviewTitle={review.titel}
-                          initialReply={review.antwoord_tekst}
-                        />
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {review.tekst}
-                      </p>
-                      {review.antwoord_tekst ? (
-                        <div className="mt-3 rounded-[1rem] border border-sky-100 bg-sky-50/70 p-3 dark:border-sky-300/16 dark:bg-sky-400/10">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-100">
-                            Jouw reply
-                          </p>
-                          <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
-                            {review.antwoord_tekst}
-                          </p>
-                          {review.antwoord_datum ? (
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                              Gepubliceerd op {review.antwoord_datum}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-[1.15rem] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-sm leading-6 text-slate-600 dark:border-white/12 dark:bg-white/5 dark:text-slate-300">
-                    Zodra leerlingen reviews plaatsen, kun je hier ook direct reageren.
+                <p className="mt-3 text-sm leading-6 text-slate-300">{review.tekst}</p>
+                {review.antwoord_tekst ? (
+                  <div className="mt-3 rounded-xl border border-sky-300/16 bg-sky-400/10 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">
+                      Jouw reactie
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-200">
+                      {review.antwoord_tekst}
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+                ) : null}
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/12 bg-white/5 p-4 text-sm leading-6 text-slate-400">
+              Zodra leerlingen reviews plaatsen, kun je hier direct reageren.
+            </div>
+          )}
+        </div>
+      </ProfilePanel>
     </div>
   );
 }

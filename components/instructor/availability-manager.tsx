@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  CalendarClock,
   EyeOff,
   Luggage,
   PlusSquare,
@@ -112,7 +113,7 @@ function toAvailabilityCalendarItem(
 
   return {
     id: slot.id,
-    title: slot.beschikbaar ? "Open moment" : "Afgeschermd moment",
+    title: slot.beschikbaar ? "Beschikbaar" : "Niet beschikbaar",
     startAt: slot.start_at,
     endAt: slot.eind_at,
     available: slot.beschikbaar,
@@ -608,16 +609,112 @@ export function AvailabilityManager({
   }
 
   return (
-    <div className="space-y-6">
+    <div id="beschikbaarheid-beheer" className="space-y-5 scroll-mt-28">
+      <AvailabilityCalendar
+        availabilityItems={availabilityItems}
+        lessonItems={lessonItems}
+        selectedEntryStartAt={selectedEntryStartAt}
+        selectedAvailabilityId={resolvedSelectedAvailabilityId}
+        selectedDateValue={selectedDateValue}
+        showFooterStats={false}
+        onDateSelect={handleDateSelect}
+        onAvailabilityEventClick={handleAvailabilityEventClick}
+        onAvailabilityEventDrop={handleAvailabilityDrop}
+        onAvailabilityResize={handleAvailabilityResize}
+      />
+
+      <div className="grid gap-4 xl:grid-cols-[0.98fr_1.02fr]">
+        <div className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(17,25,36,0.98),rgba(10,16,24,0.98))] p-5 shadow-[0_24px_80px_-58px_rgba(0,0,0,0.95)]">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-lg font-semibold text-white">
+              Beschikbare tijdsloten
+            </h3>
+            <Badge className="border-0 bg-white/8 text-slate-200 ring-1 ring-white/10">
+              Bekijk alles
+            </Badge>
+          </div>
+          <div className="space-y-3">
+            {availabilityItems
+              .filter((item) => item.available)
+              .slice(0, 5)
+              .map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2.5"
+                >
+                  <CalendarClock className="size-4 text-slate-300" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-white">
+                      {item.momentLabel.split(" - ")[0]}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {formatAvailabilityTime(item.startAt)} -{" "}
+                      {formatAvailabilityTime(item.endAt)}
+                    </p>
+                  </div>
+                  <Badge className="border-0 bg-white/8 text-slate-200 ring-1 ring-white/10">
+                    Boekingen toestaan
+                  </Badge>
+                  <span className="h-5 w-9 rounded-full bg-emerald-500 p-0.5">
+                    <span className="ml-auto block size-4 rounded-full bg-white" />
+                  </span>
+                </div>
+              ))}
+            {availabilityItems.filter((item) => item.available).length === 0 ? (
+              <p className="text-sm text-slate-400">
+                Nog geen beschikbare tijdsloten.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(17,25,36,0.98),rgba(10,16,24,0.98))] p-5 shadow-[0_24px_80px_-58px_rgba(0,0,0,0.95)]">
+          <h3 className="text-lg font-semibold text-white">
+            Instellingen beschikbaarheid
+          </h3>
+          <div className="mt-5 divide-y divide-white/8">
+            {[
+              {
+                label: "Standaard beschikbaarheid",
+                value: `${startTijd} - ${eindTijd}`,
+              },
+              {
+                label: "Lesduur",
+                value: "60 minuten",
+              },
+              {
+                label: "Buffer tijd",
+                value: "15 minuten voor en na elke les",
+              },
+              {
+                label: "Boekingen",
+                value: "Leerlingen kunnen tot 24 uur van tevoren boeken",
+              },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-between gap-4 py-4"
+              >
+                <div>
+                  <p className="text-sm font-medium text-white">{item.label}</p>
+                  <p className="mt-1 text-sm text-slate-400">{item.value}</p>
+                </div>
+                <span className="text-slate-400">›</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-6">
         <div className="grid gap-6 xl:grid-cols-2">
-          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+          <div className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(17,25,36,0.98),rgba(10,16,24,0.98))] p-5 shadow-[0_24px_80px_-58px_rgba(0,0,0,0.95)]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
                   Basisrooster
                 </p>
-                <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">
+                <h3 className="mt-2 text-xl font-semibold text-white">
                   Vaste werktijden
                 </h3>
               </div>
@@ -742,13 +839,13 @@ export function AvailabilityManager({
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+          <div className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(17,25,36,0.98),rgba(10,16,24,0.98))] p-5 shadow-[0_24px_80px_-58px_rgba(0,0,0,0.95)]">
             <div className="space-y-4">
               <div>
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
                   Uitzondering
                 </p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
+                <h3 className="mt-2 text-lg font-semibold text-white">
                   Los moment dichtzetten
                 </h3>
               </div>
@@ -918,24 +1015,10 @@ export function AvailabilityManager({
 
         </div>
 
-        <div className="space-y-4">
-          <AvailabilityCalendar
-            availabilityItems={availabilityItems}
-            lessonItems={lessonItems}
-            selectedEntryStartAt={selectedEntryStartAt}
-            selectedAvailabilityId={resolvedSelectedAvailabilityId}
-            selectedDateValue={selectedDateValue}
-            showFooterStats={false}
-            onDateSelect={handleDateSelect}
-            onAvailabilityEventClick={handleAvailabilityEventClick}
-            onAvailabilityEventDrop={handleAvailabilityDrop}
-            onAvailabilityResize={handleAvailabilityResize}
-          />
-        </div>
       </div>
 
       <div>
-        <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/5">
+        <div className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(17,25,36,0.98),rgba(10,16,24,0.98))] p-5 shadow-[0_24px_80px_-58px_rgba(0,0,0,0.95)]">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">

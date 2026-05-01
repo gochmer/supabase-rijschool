@@ -32,6 +32,8 @@ import {
 import { nl } from "date-fns/locale";
 import {
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   GripVertical,
   MapPin,
@@ -151,23 +153,23 @@ function getPlannerEventSurfaceClassNames(item: TimelineItem) {
   if (item.kind === "lesson") {
     return {
       surface:
-        "border-amber-300/90 bg-amber-100/90 text-amber-950 dark:border-amber-300/25 dark:bg-amber-400/14 dark:text-amber-50",
-      rail: "bg-amber-500 dark:bg-amber-300",
+        "border-emerald-400/24 bg-[linear-gradient(145deg,rgba(22,101,52,0.92),rgba(21,128,61,0.72))] text-emerald-50 shadow-[0_14px_32px_-24px_rgba(34,197,94,0.75)]",
+      rail: "bg-emerald-300/80",
     };
   }
 
   if (item.available) {
     return {
       surface:
-        "border-sky-300/90 bg-sky-100/90 text-sky-950 dark:border-sky-300/25 dark:bg-sky-400/14 dark:text-sky-50",
-      rail: "bg-sky-500 dark:bg-sky-300",
+        "border-blue-400/24 bg-[linear-gradient(145deg,rgba(29,78,216,0.95),rgba(30,64,175,0.72))] text-blue-50 shadow-[0_14px_32px_-24px_rgba(59,130,246,0.75)]",
+      rail: "bg-blue-300/80",
     };
   }
 
   return {
     surface:
-      "border-slate-300/90 bg-slate-100/95 text-slate-900 dark:border-white/12 dark:bg-white/8 dark:text-slate-100",
-    rail: "bg-slate-400 dark:bg-slate-500",
+      "border-white/8 bg-[linear-gradient(145deg,rgba(51,65,85,0.86),rgba(30,41,59,0.74))] text-slate-200 shadow-[0_14px_32px_-26px_rgba(15,23,42,0.9)]",
+    rail: "bg-slate-400/80",
   };
 }
 
@@ -193,7 +195,7 @@ function createLessonTimelineItem(item: AvailabilityCalendarLessonItem): Timelin
   return {
     id: `lesson-${item.id}`,
     kind: "lesson",
-    title: item.title,
+    title: item.learnerName ?? item.title,
     startAt: parseISO(item.startAt),
     endAt: parseISO(item.endAt),
     momentLabel:
@@ -455,10 +457,10 @@ function TimelineCard({
   );
 }
 
-const WEEK_PLANNER_START_HOUR = 7;
-const WEEK_PLANNER_END_HOUR = 22;
-const WEEK_PLANNER_HOUR_HEIGHT = 60;
-const WEEK_PLANNER_COLUMN_MIN_WIDTH = 152;
+const WEEK_PLANNER_START_HOUR = 8;
+const WEEK_PLANNER_END_HOUR = 21;
+const WEEK_PLANNER_HOUR_HEIGHT = 64;
+const WEEK_PLANNER_COLUMN_MIN_WIDTH = 142;
 const WEEK_PLANNER_ROW_COUNT =
   WEEK_PLANNER_END_HOUR - WEEK_PLANNER_START_HOUR;
 const WEEK_PLANNER_HEIGHT =
@@ -529,7 +531,6 @@ function WeekPlannerEventCard({
   onResize?: (edge: "start" | "end", minutes: number) => void;
   draggable: boolean;
 }) {
-  const tone = getToneClassNames(item.statusTone);
   const plannerTone = getPlannerEventSurfaceClassNames(item);
   const compact = layout.height < 88;
   const superCompact = layout.height < 64;
@@ -622,7 +623,7 @@ function WeekPlannerEventCard({
         }`
       : null;
   const resizeHandleClassName =
-    "absolute left-2 right-2 z-20 flex h-2 items-center justify-center rounded-full border border-sky-200/90 bg-white/95 text-[8px] font-semibold tracking-[0.16em] text-sky-700 uppercase shadow-sm transition hover:border-sky-300 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 dark:border-sky-300/20 dark:bg-slate-950/95 dark:text-sky-100";
+    "absolute left-2 right-2 z-20 flex h-1.5 items-center justify-center rounded-full border border-sky-200/80 bg-white/90 text-[0px] text-sky-700 opacity-0 shadow-sm transition group-hover:opacity-100 hover:border-sky-300 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 dark:border-sky-300/20 dark:bg-slate-950/95 dark:text-sky-100";
 
   return (
     <div
@@ -646,7 +647,7 @@ function WeekPlannerEventCard({
           : {})}
         {...(draggable ? { ...attributes, ...listeners } : {})}
         className={cn(
-          "relative flex h-full min-h-[36px] flex-col overflow-hidden rounded-[0.62rem] border px-2 pb-1.5 pt-2 text-left transition-all",
+          "group relative flex h-full min-h-[36px] flex-col overflow-hidden rounded-md border px-2 pb-1.5 pt-2 text-left transition-all",
           plannerTone.surface,
           draggable && "cursor-grab active:cursor-grabbing",
           active &&
@@ -734,18 +735,9 @@ function WeekPlannerEventCard({
               {formatTimelineTimeRange(item)}
             </p>
           </div>
-          <Badge
-            className={cn(
-              "shrink-0 border border-white/60 bg-white/70 px-1 py-0 text-[7px] capitalize text-slate-700 dark:border-white/10 dark:bg-slate-950/35 dark:text-slate-100",
-              tone.badge
-            )}
-          >
-            {item.kind === "availability"
-              ? item.available
-                ? "Open"
-                : "Dicht"
-              : item.statusLabel}
-          </Badge>
+          {active ? (
+            <span className="mt-0.5 size-1.5 rounded-full bg-white/80" />
+          ) : null}
         </div>
 
         <div className="min-w-0 pl-1.5">
@@ -772,27 +764,24 @@ function WeekPlannerEventCard({
 
 function WeekPlannerTimeAxis() {
   return (
-    <div className="border-r border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-slate-950/30">
-      <div className="h-[72px] border-b border-slate-200/80 px-3 py-2.5 dark:border-white/10">
-        <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+    <div className="border-r border-white/10 bg-transparent">
+      <div className="h-16 border-b border-white/10 px-3 py-2.5">
+        <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">
           Tijd
-        </p>
-        <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-          Weekplanner
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-bl-[1.25rem]">
+      <div className="overflow-hidden">
         {weekPlannerHours.map((hour) => (
           <div
             key={hour}
-            className="relative border-b border-slate-200/80 px-3 pt-2 dark:border-white/10"
+            className="relative border-b border-white/10 px-3 pt-2"
             style={{ height: WEEK_PLANNER_HOUR_HEIGHT }}
           >
-            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+            <span className="text-xs text-slate-300">
               {getPlannerHourLabel(hour)}
             </span>
-            <div className="absolute inset-x-0 top-1/2 border-t border-slate-200/70 dark:border-white/8" />
+            <div className="absolute inset-x-0 top-1/2 border-t border-white/6" />
           </div>
         ))}
       </div>
@@ -842,8 +831,8 @@ function WeekPlannerDayColumn({
   return (
     <div
       className={cn(
-        "min-w-0 border-r border-slate-200 dark:border-white/10",
-        isSelectedDay && "bg-sky-50/50 dark:bg-sky-400/8"
+        "min-w-0 border-r border-white/10",
+        isSelectedDay && "bg-blue-400/5"
       )}
       style={{ minWidth: WEEK_PLANNER_COLUMN_MIN_WIDTH }}
     >
@@ -851,70 +840,47 @@ function WeekPlannerDayColumn({
         <button
           type="button"
           className={cn(
-            "relative flex h-[72px] w-full flex-col items-start justify-between border-b border-slate-200/80 px-3 py-2.5 text-left transition hover:bg-slate-100/70 dark:border-white/10 dark:hover:bg-white/6",
-            isSelectedDay && "bg-sky-50/80 dark:bg-sky-400/12"
+            "relative flex h-16 w-full flex-col items-center justify-center border-b border-white/10 px-3 py-2.5 text-center transition hover:bg-white/5",
+            isSelectedDay && "bg-blue-400/8"
           )}
           onClick={() => onDateSelect(dateValue)}
         >
           <div
             className={cn(
               "absolute inset-x-0 top-0 h-1",
-              isToday(date)
-                ? "bg-sky-500 dark:bg-sky-300"
-                : "bg-transparent"
+              isToday(date) ? "bg-blue-400" : "bg-transparent"
             )}
           />
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-              {format(date, "EEE", { locale: nl })}
+            <p className="text-xs font-semibold capitalize text-white">
+              {format(date, "EEEE", { locale: nl })}
             </p>
-            <p className="mt-1 text-sm font-semibold capitalize text-slate-950 dark:text-white">
+            <p className="mt-1 text-xs text-slate-400">
               {format(date, "d MMM", { locale: nl })}
             </p>
           </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {isToday(date) ? <Badge variant="info">Vandaag</Badge> : null}
-          {isSelectedDay ? <Badge variant="success">Formulier</Badge> : null}
-          <Badge className="border border-slate-200 bg-white px-1.5 py-0 text-[9px] text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
-            {availabilityCount} open
-          </Badge>
-          {displayMode === "internal" && lessonCount ? (
-            <Badge className="border border-amber-200 bg-amber-50 px-1.5 py-0 text-[9px] text-amber-700">
-              {lessonCount} les
-            </Badge>
-          ) : null}
-          </div>
+          <span className="sr-only">
+            {availabilityCount} open, {lessonCount} lessen
+          </span>
         </button>
       ) : (
-        <div className="relative flex h-[72px] flex-col items-start justify-between border-b border-slate-200/80 px-3 py-2.5 dark:border-white/10">
+        <div className="relative flex h-16 flex-col items-center justify-center border-b border-white/10 px-3 py-2.5 text-center">
           <div
             className={cn(
               "absolute inset-x-0 top-0 h-1",
               isToday(date)
-                ? "bg-sky-500 dark:bg-sky-300"
+                ? "bg-blue-400"
                 : "bg-transparent"
             )}
           />
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-              {format(date, "EEE", { locale: nl })}
+            <p className="text-xs font-semibold capitalize text-white">
+              {format(date, "EEEE", { locale: nl })}
             </p>
-            <p className="mt-1 text-sm font-semibold capitalize text-slate-950 dark:text-white">
+            <p className="mt-1 text-xs text-slate-400">
               {format(date, "d MMM", { locale: nl })}
             </p>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {isToday(date) ? <Badge variant="info">Vandaag</Badge> : null}
-            <Badge className="border border-slate-200 bg-white px-1.5 py-0 text-[9px] text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
-              {availabilityCount} open
-            </Badge>
-            {displayMode === "internal" && lessonCount ? (
-              <Badge className="border border-amber-200 bg-amber-50 px-1.5 py-0 text-[9px] text-amber-700">
-                {lessonCount} les
-              </Badge>
-            ) : null}
           </div>
         </div>
       )}
@@ -924,18 +890,18 @@ function WeekPlannerDayColumn({
         className={cn(
           "relative overflow-hidden",
           isOver && onAvailabilityEventDrop
-            ? "bg-sky-50/80 dark:bg-sky-400/10"
-            : "bg-white/90 dark:bg-slate-950/20"
+            ? "bg-blue-400/10"
+            : "bg-transparent"
         )}
         style={{ height: WEEK_PLANNER_HEIGHT }}
       >
         {weekPlannerHours.map((hour) => (
           <div
             key={hour}
-            className="relative border-b border-slate-200/80 dark:border-white/10"
+            className="relative border-b border-white/10"
             style={{ height: WEEK_PLANNER_HOUR_HEIGHT }}
           >
-            <div className="absolute inset-x-0 top-1/2 border-t border-slate-100 dark:border-white/6" />
+            <div className="absolute inset-x-0 top-1/2 border-t border-white/6" />
           </div>
         ))}
 
@@ -974,7 +940,7 @@ function WeekPlannerDayColumn({
             );
           })
         ) : (
-          <div className="pointer-events-none absolute inset-x-2 top-3 rounded-[0.72rem] border border-dashed border-slate-200/90 bg-white/75 px-2.5 py-1.5 text-[9px] text-slate-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-500">
+          <div className="pointer-events-none absolute inset-x-2 top-3 rounded-md border border-dashed border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[9px] text-slate-500">
             {displayMode === "booking" ? "Geen open momenten." : "Geen blokken of lessen."}
           </div>
         )}
@@ -1024,8 +990,8 @@ function WeekPlannerGrid({
   }, [timeline, weekDays]);
 
   return (
-    <div className="overflow-x-auto rounded-[1.35rem] border border-slate-200 bg-slate-50/90 dark:border-white/10 dark:bg-white/5">
-      <div className="grid min-w-[1120px] grid-cols-[82px_repeat(7,minmax(0,1fr))]">
+    <div className="overflow-x-auto border-t border-white/10">
+      <div className="grid min-w-[1040px] grid-cols-[70px_repeat(7,minmax(0,1fr))]">
         <WeekPlannerTimeAxis />
         {weekDays.map((day) => (
           <WeekPlannerDayColumn
@@ -1135,9 +1101,6 @@ export function AvailabilityCalendar({
   const weekEnd = endOfWeek(anchorDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  const weekItems = timeline.filter(
-    (item) => item.startAt >= weekStart && item.startAt <= weekEnd
-  );
   const todayItems = useMemo(() => timeline.filter((item) => isToday(item.startAt)), [timeline]);
   const todayFocusDate = useMemo(() => {
     if (todayItems.length) {
@@ -1217,152 +1180,114 @@ export function AvailabilityCalendar({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <Tabs
-            value={view}
-            onValueChange={(value) => setView(value as "week" | "today" | "list")}
-            className="gap-3"
-          >
-            <TabsList className="!h-auto min-h-12 justify-start overflow-x-auto overflow-y-hidden rounded-[1rem] bg-white/85 p-1 [-ms-overflow-style:none] [scrollbar-width:none] dark:bg-white/6 [&::-webkit-scrollbar]:hidden">
-              <TabsTrigger value="week" className="min-h-10 rounded-[0.9rem] px-3 data-active:bg-sky-200 data-active:text-slate-950">
-                Weekoverzicht
-              </TabsTrigger>
-              <TabsTrigger value="today" className="min-h-10 rounded-[0.9rem] px-3 data-active:bg-emerald-200 data-active:text-slate-950">
-                Vandaag
-              </TabsTrigger>
-              <TabsTrigger value="list" className="min-h-10 rounded-[0.9rem] px-3 data-active:bg-amber-200 data-active:text-slate-950">
-                Lijst
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="flex flex-wrap items-center gap-2">
+    <div className="overflow-hidden rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(17,25,36,0.98),rgba(10,16,24,0.98))] shadow-[0_24px_80px_-58px_rgba(0,0,0,0.95)]">
+      <div className="flex flex-col gap-3 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold text-white">Weekoverzicht</h2>
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
-              className="rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5"
+              size="icon"
+              className="size-10 rounded-lg border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/10"
               onClick={() => setAnchorDate((current) => addWeeks(current, -1))}
             >
-              Vorige week
+              <ChevronLeft className="size-4" />
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5"
-              onClick={() => {
-                setAnchorDate(new Date());
-                toast.success("Terug naar deze week");
-              }}
-            >
-              Vandaag
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full border-slate-200 bg-white dark:border-white/10 dark:bg-white/5"
+              size="icon"
+              className="size-10 rounded-lg border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/10"
               onClick={() => setAnchorDate((current) => addWeeks(current, 1))}
             >
-              Volgende week
+              <ChevronRight className="size-4" />
             </Button>
           </div>
+          <p className="hidden text-sm text-slate-400 sm:block">
+            {format(weekStart, "d MMMM", { locale: nl })} -{" "}
+            {format(weekEnd, "d MMMM", { locale: nl })}
+          </p>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-              Week van
-            </p>
-            <p className="mt-1 text-lg font-semibold capitalize text-slate-950 dark:text-white">
-              {format(weekStart, "d MMMM", { locale: nl })} -{" "}
-              {format(weekEnd, "d MMMM", { locale: nl })}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge className="border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">
-                Open moment
-              </Badge>
-              {isBookingDisplay ? null : (
-                <>
-                  <Badge className="border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
-                    Les
-                  </Badge>
-                  <Badge className="border border-slate-200 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
-                    Afgeschermd
-                  </Badge>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Badge className="border border-sky-200 bg-sky-50 text-sky-700">
-              {availabilityTimeline.filter((item) => item.available).length} open momenten
-            </Badge>
-            {!isBookingDisplay && lessonTimeline.length ? (
-              <Badge className="border border-amber-200 bg-amber-50 text-amber-700">
-                {lessonTimeline.length} lessen
-              </Badge>
-            ) : null}
-            <Badge className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
-              {isBookingDisplay
-                ? `${availabilityTimeline.filter((item) => item.available).length} boekbare momenten`
-                : `${weekItems.length} items deze week`}
-            </Badge>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-lg border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/10"
+            onClick={() => {
+              setAnchorDate(new Date());
+              toast.success("Terug naar deze week");
+            }}
+          >
+            Vandaag
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-lg border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/10"
+            onClick={() => setView(view === "week" ? "today" : "week")}
+          >
+            {view === "week" ? "Weekweergave" : "Vandaag"}
+          </Button>
         </div>
       </div>
 
       {view === "week" ? (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <WeekPlannerGrid
-            weekDays={weekDays}
-            timeline={timeline}
-            displayMode={displayMode}
-            selectedAvailabilityId={selectedAvailabilityId}
-            selectedDateValue={selectedDateValue}
-            onDateSelect={onDateSelect}
-            onAvailabilityEventClick={onAvailabilityEventClick}
-            onAvailabilityEventDrop={onAvailabilityEventDrop}
-            onAvailabilityResize={onAvailabilityResize}
-          />
-        </DndContext>
+        <>
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <WeekPlannerGrid
+              weekDays={weekDays}
+              timeline={timeline}
+              displayMode={displayMode}
+              selectedAvailabilityId={selectedAvailabilityId}
+              selectedDateValue={selectedDateValue}
+              onDateSelect={onDateSelect}
+              onAvailabilityEventClick={onAvailabilityEventClick}
+              onAvailabilityEventDrop={onAvailabilityEventDrop}
+              onAvailabilityResize={onAvailabilityResize}
+            />
+          </DndContext>
+          <div className="flex flex-wrap items-center justify-center gap-6 border-t border-white/10 px-5 py-4 text-xs text-slate-300">
+            <span className="inline-flex items-center gap-2">
+              <span className="size-3 rounded bg-emerald-500" />
+              Les bevestigd
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="size-3 rounded bg-blue-500" />
+              Beschikbaar
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="size-3 rounded bg-slate-600" />
+              Niet beschikbaar
+            </span>
+          </div>
+        </>
       ) : null}
 
       {view === "today" ? (
-        <div className="space-y-3">
-          <div className="rounded-[1.2rem] border border-slate-200 bg-white/80 p-4 dark:border-white/10 dark:bg-white/5">
+        <div className="space-y-3 border-t border-white/10 p-5">
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                <p className="text-xs font-semibold tracking-[0.18em] text-slate-400 uppercase">
                   {todayItems.length ? "Vandaag" : "Eerstvolgende dag"}
                 </p>
-                <p className="mt-1 text-lg font-semibold capitalize text-slate-950 dark:text-white">
+                <p className="mt-1 text-lg font-semibold capitalize text-white">
                   {format(todayFocusDate, "EEEE d MMMM", { locale: nl })}
-                </p>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                  {isBookingDisplay
-                    ? todayItems.length
-                      ? `Vandaag zijn er ${todayFocusAvailabilityItems.filter((item) => item.available).length} boekbare moment${todayFocusAvailabilityItems.filter((item) => item.available).length === 1 ? "" : "en"} zichtbaar.`
-                      : "Vandaag is rustig. Daarom zie je hieronder de eerstvolgende dag met boekbare momenten."
-                    : todayItems.length
-                      ? `Vandaag zijn er ${todayFocusItemCount} item${todayFocusItemCount === 1 ? "" : "s"} zichtbaar in deze planning.`
-                      : "Vandaag is rustig. Daarom zie je hieronder de eerstvolgende dag met open momenten of lessen."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Badge className="border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-100">
+                <Badge className="border-0 bg-blue-500/14 text-blue-200 ring-1 ring-blue-400/20">
                   {todayFocusAvailabilityItems.filter((item) => item.available).length} open
                 </Badge>
                 {!isBookingDisplay && todayFocusLessonItems.length ? (
-                  <Badge className="border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
+                  <Badge className="border-0 bg-emerald-500/14 text-emerald-200 ring-1 ring-emerald-400/20">
                     {todayFocusLessonItems.length} les{todayFocusLessonItems.length === 1 ? "" : "sen"}
                   </Badge>
                 ) : null}
-                <Badge className="border border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/8 dark:text-slate-100">
-                  {isBookingDisplay
-                    ? `${todayFocusAvailabilityItems.filter((item) => item.available).length} boekbaar`
-                    : `${todayFocusItemCount} items`}
+                <Badge className="border-0 bg-white/8 text-slate-200 ring-1 ring-white/10">
+                  {todayFocusItemCount} items
                 </Badge>
               </div>
             </div>
@@ -1379,11 +1304,24 @@ export function AvailabilityCalendar({
         </div>
       ) : null}
 
+      <div className="hidden">
+        <Tabs
+          value={view}
+          onValueChange={(value) => setView(value as "week" | "today" | "list")}
+        >
+          <TabsList>
+            <TabsTrigger value="week">Weekoverzicht</TabsTrigger>
+            <TabsTrigger value="today">Vandaag</TabsTrigger>
+            <TabsTrigger value="list">Lijst</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {view === "list" ? (
-        <div className="space-y-4">
+        <div className="space-y-4 border-t border-white/10 p-5">
           {groupedItems.map((group) => (
             <div key={group.key}>
-              <p className="mb-2 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+              <p className="mb-2 text-xs font-semibold tracking-[0.18em] text-slate-400 uppercase">
                 {group.label}
               </p>
               <div className="space-y-2">
@@ -1406,7 +1344,7 @@ export function AvailabilityCalendar({
       ) : null}
 
       {showFooterStats ? (
-        <div className="grid gap-3">
+        <div className="grid gap-3 border-t border-white/10 p-5">
           {[
             {
               label: "Weekslots",
@@ -1426,15 +1364,15 @@ export function AvailabilityCalendar({
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-[1.2rem] border border-slate-200 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-white/5"
+              className="rounded-lg border border-white/10 bg-white/[0.03] p-4"
             >
               <div className="flex items-center gap-2">
-                <item.icon className="size-4 text-sky-700 dark:text-sky-300" />
-                <p className="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                <item.icon className="size-4 text-blue-300" />
+                <p className="text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
                   {item.label}
                 </p>
               </div>
-              <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
+              <p className="mt-3 text-2xl font-semibold text-white">
                 {item.value}
               </p>
             </div>
