@@ -71,26 +71,18 @@ export function DataTableCard({
     <Card
       className={cn(
         isUrban
-          ? "rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] text-white shadow-[0_24px_72px_-44px_rgba(15,23,42,0.78)]"
+          ? "border border-white/10 bg-slate-950/84 text-white shadow-[0_24px_72px_-44px_rgba(15,23,42,0.78)]"
           : isHazard
-            ? "re-frame-flash border border-red-300/12 bg-[linear-gradient(145deg,rgba(9,11,16,0.98),rgba(22,12,15,0.96),rgba(40,16,19,0.9))] text-white shadow-[0_28px_88px_-46px_rgba(0,0,0,0.74)]"
-            : "surface-panel",
+          ? "re-frame-flash border border-red-300/12 bg-[linear-gradient(145deg,rgba(9,11,16,0.98),rgba(22,12,15,0.96),rgba(40,16,19,0.9))] text-white shadow-[0_28px_88px_-46px_rgba(0,0,0,0.74)]"
+          : "surface-panel"
       )}
     >
       <CardHeader className="pb-3">
-        <CardTitle
-          className={isUrban || isHazard ? "text-white" : "dark:text-white"}
-        >
-          {title}
-        </CardTitle>
+        <CardTitle className={isUrban || isHazard ? "text-white" : "dark:text-white"}>{title}</CardTitle>
         <CardDescription
           className={cn(
             "text-[13px] leading-6",
-            isUrban
-              ? "text-slate-300"
-              : isHazard
-                ? "text-stone-300"
-                : "dark:text-slate-300",
+            isUrban ? "text-slate-300" : isHazard ? "text-stone-300" : "dark:text-slate-300"
           )}
         >
           {description}
@@ -109,7 +101,7 @@ export function DataTableCard({
                       ? "border border-white/10 bg-white/7"
                       : isHazard
                         ? "border border-red-300/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(120,22,22,0.12))]"
-                        : "surface-card",
+                        : "surface-card"
                   )}
                 >
                   <div className="grid gap-2">
@@ -125,16 +117,14 @@ export function DataTableCard({
                               ? "text-slate-300"
                               : isHazard
                                 ? "text-red-100/62"
-                                : "text-slate-500 dark:text-slate-400",
+                                : "text-slate-500 dark:text-slate-400"
                           )}
                         >
                           {headers[cellIndex] ?? `Kolom ${cellIndex + 1}`}
                         </p>
                         <div className="mt-1.5 text-[13px]">
                           {badgeColumns.includes(cellIndex) ? (
-                            <Badge variant={getBadgeVariant(cell)}>
-                              {cell}
-                            </Badge>
+                            <Badge variant={getBadgeVariant(cell)}>{cell}</Badge>
                           ) : (
                             <span
                               className={
@@ -157,27 +147,19 @@ export function DataTableCard({
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-              <table className="min-w-full border-separate border-spacing-y-0 text-left text-[13px]">
+              <table className="min-w-full border-separate border-spacing-y-1.5 text-left text-[13px]">
                 <thead>
-                  <tr
-                    className={cn(
-                      isUrban
-                        ? "rounded-lg border border-white/10 bg-white/5 text-slate-200"
-                        : isHazard
-                          ? "rounded-lg border border-red-300/10 bg-white/5"
-                          : "rounded-lg border border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/5",
-                    )}
-                  >
+                  <tr>
                     {headers.map((header) => (
                       <th
                         key={header}
                         className={cn(
-                          "px-3 py-3 text-[11px] font-semibold",
+                          "px-3 py-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase",
                           isUrban
                             ? "text-slate-300"
                             : isHazard
                               ? "text-red-100/62"
-                              : "text-muted-foreground dark:text-slate-400",
+                              : "text-muted-foreground dark:text-slate-400"
                         )}
                       >
                         {header}
@@ -190,23 +172,21 @@ export function DataTableCard({
                     <tr
                       key={`${title}-${index}`}
                       className={cn(
-                        "translate-y-0 border-b transition-colors duration-200 last:border-b-0",
+                        "translate-y-0 rounded-[1rem] transition-transform duration-300 hover:-translate-y-0.5",
                         isUrban
-                          ? "border-white/10 hover:bg-white/[0.045]"
+                          ? "bg-white/7 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.52)]"
                           : isHazard
-                            ? "border-red-300/10 hover:bg-white/[0.045]"
-                            : "border-slate-200 hover:bg-slate-50/90 dark:border-white/10 dark:hover:bg-white/[0.045]",
+                            ? "bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(120,22,22,0.12))] shadow-[0_18px_40px_-28px_rgba(0,0,0,0.56)]"
+                            : "bg-slate-50/85 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.35)] dark:bg-white/5 dark:shadow-[0_14px_34px_-26px_rgba(15,23,42,0.52)]"
                       )}
                     >
                       {row.map((cell, cellIndex) => (
                         <td
                           key={`${title}-${index}-${cellIndex}`}
-                          className="px-3 py-4 align-top"
+                          className="px-3 py-3 align-top first:rounded-l-[1rem] last:rounded-r-[1rem]"
                         >
                           {badgeColumns.includes(cellIndex) ? (
-                            <Badge variant={getBadgeVariant(cell)}>
-                              {cell}
-                            </Badge>
+                            <Badge variant={getBadgeVariant(cell)}>{cell}</Badge>
                           ) : (
                             <span
                               className={
@@ -236,27 +216,16 @@ export function DataTableCard({
                 ? "border border-dashed border-white/10 bg-white/4"
                 : isHazard
                   ? "border border-dashed border-red-300/10 bg-white/4"
-                  : "surface-empty",
+                  : "surface-empty"
             )}
           >
-            <h3
-              className={cn(
-                "text-base font-semibold",
-                isUrban || isHazard
-                  ? "text-white"
-                  : "text-slate-950 dark:text-white",
-              )}
-            >
+            <h3 className={cn("text-base font-semibold", isUrban || isHazard ? "text-white" : "text-slate-950 dark:text-white")}>
               {emptyTitle}
             </h3>
             <p
               className={cn(
                 "mt-1.5 max-w-xl text-[13px] leading-6",
-                isUrban
-                  ? "text-slate-300"
-                  : isHazard
-                    ? "text-stone-300"
-                    : "text-muted-foreground dark:text-slate-300",
+                isUrban ? "text-slate-300" : isHazard ? "text-stone-300" : "text-muted-foreground dark:text-slate-300"
               )}
             >
               {emptyDescription}

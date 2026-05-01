@@ -59,24 +59,26 @@ export function DashboardStatCard({
   const styles = toneStyles[tone];
 
   return (
-    <div className="group rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.07),rgba(15,23,42,0.36))] p-5 text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)] transition hover:border-white/18 hover:bg-white/[0.08]">
-      <div className="flex items-center gap-5">
+    <div className="group rounded-xl border border-white/10 bg-white/[0.055] p-4 text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)] transition hover:border-white/18 hover:bg-white/[0.08]">
+      <div className="flex items-start gap-3">
         <div
           className={cn(
-            "flex size-16 shrink-0 items-center justify-center rounded-xl ring-1",
-            styles.icon,
+            "flex size-10 shrink-0 items-center justify-center rounded-lg ring-1",
+            styles.icon
           )}
         >
-          <Icon className="size-8" />
+          <Icon className="size-5" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-base font-medium text-slate-200">
+          <p className="text-[12px] font-medium text-slate-300">
             {label}
           </p>
-          <p className="mt-2 truncate text-3xl font-semibold tracking-tight text-white">
+          <p className="mt-2 truncate text-2xl font-semibold tracking-tight text-white">
             {value}
           </p>
-          <p className={cn("mt-3 text-sm leading-5", styles.trend)}>{detail}</p>
+          <p className={cn("mt-4 text-[12px] leading-5", styles.trend)}>
+            {detail}
+          </p>
         </div>
       </div>
     </div>

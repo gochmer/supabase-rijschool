@@ -37,8 +37,7 @@ export function CommandPalette({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const tone =
-    role === "leerling" || role === "instructeur" ? "urban" : "default";
+  const tone = role === "leerling" ? "urban" : "default";
   const isUrban = tone === "urban";
 
   useEffect(() => {
@@ -66,8 +65,7 @@ export function CommandPalette({
         id: "focus",
         title: "Focusmodus activeren",
         description: "Toon een snelle productiviteitshint voor deze sessie.",
-        toastMessage:
-          "Focusmodus geactiveerd. Werk stap voor stap vanuit je belangrijkste acties.",
+        toastMessage: "Focusmodus geactiveerd. Werk stap voor stap vanuit je belangrijkste acties.",
       },
       {
         id: "refresh",
@@ -122,8 +120,8 @@ export function CommandPalette({
               isSearchPresentation
                 ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-transparent text-slate-300"
                 : isUrban
-                  ? `flex shrink-0 items-center justify-center rounded-xl bg-white/8 text-slate-100 ${compact ? "size-8" : "size-9"}`
-                  : `flex shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-white/8 dark:text-slate-100 ${compact ? "size-8" : "size-9"}`
+                ? `flex shrink-0 items-center justify-center rounded-xl bg-white/8 text-slate-100 ${compact ? "size-8" : "size-9"}`
+                : `flex shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-white/8 dark:text-slate-100 ${compact ? "size-8" : "size-9"}`
             }
           >
             <Search className={compact ? "size-3.5" : "size-4"} />
@@ -134,8 +132,8 @@ export function CommandPalette({
                 isSearchPresentation
                   ? "block truncate text-sm font-semibold text-slate-300"
                   : isUrban
-                    ? "block truncate text-sm font-semibold text-white"
-                    : "block truncate text-sm font-semibold text-slate-950 dark:text-white"
+                  ? "block truncate text-sm font-semibold text-white"
+                  : "block truncate text-sm font-semibold text-slate-950 dark:text-white"
               }
             >
               {isSearchPresentation ? "Zoek in dashboard" : "Command palette"}
@@ -197,11 +195,7 @@ export function CommandPalette({
                 <Command className="size-5" />
               </div>
               <div>
-                <DialogTitle
-                  className={
-                    isUrban ? "text-xl text-white" : "text-xl dark:text-white"
-                  }
-                >
+                <DialogTitle className={isUrban ? "text-xl text-white" : "text-xl dark:text-white"}>
                   Command palette
                 </DialogTitle>
                 <DialogDescription

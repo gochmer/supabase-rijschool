@@ -1,8 +1,8 @@
 import {
   CalendarCheck2,
   CalendarClock,
-  CalendarDays,
-  CircleX,
+  CircleAlert,
+  ClipboardList,
 } from "lucide-react";
 
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
@@ -25,44 +25,46 @@ export default async function InstructeurLessenPage({
     getInstructeurLessonRequests(),
     getLocationOptions(),
   ]);
-  const totalLessons = lessons.length;
   const plannedLessons = lessons.filter((lesson) =>
     ["ingepland", "geaccepteerd"].includes(lesson.status),
   ).length;
   const completedLessons = lessons.filter(
     (lesson) => lesson.status === "afgerond",
   ).length;
+  const openRequests = requests.filter(
+    (request) => request.status === "aangevraagd",
+  ).length;
   const cancelledLessons = lessons.filter(
     (lesson) => lesson.status === "geannuleerd",
   ).length;
   const lessonStats = [
     {
-      icon: CalendarDays,
-      label: "Totaal lessen",
-      value: `${totalLessons}`,
-      detail: "Deze maand en komende planning.",
-      tone: "sky",
-    },
-    {
       icon: CalendarClock,
       label: "Gepland",
       value: `${plannedLessons}`,
-      detail: "Deze maand",
-      tone: plannedLessons > 0 ? "amber" : "cyan",
+      detail: "Lessen die nog in je actieve planning staan.",
+      tone: plannedLessons > 0 ? "sky" : "cyan",
     },
     {
       icon: CalendarCheck2,
-      label: "Voltooid",
+      label: "Afgerond",
       value: `${completedLessons}`,
-      detail: "Deze maand",
+      detail: "Ritten die al verwerkt zijn in je leshistorie.",
       tone: "emerald",
     },
     {
-      icon: CircleX,
+      icon: ClipboardList,
+      label: "Open aanvragen",
+      value: `${openRequests}`,
+      detail: "Aanvragen die nog invloed hebben op je planning.",
+      tone: openRequests > 0 ? "amber" : "emerald",
+    },
+    {
+      icon: CircleAlert,
       label: "Geannuleerd",
       value: `${cancelledLessons}`,
-      detail: "Deze maand",
-      tone: "rose",
+      detail: "Momenten die extra opvolging kunnen vragen.",
+      tone: cancelledLessons > 0 ? "rose" : "violet",
     },
   ] as const;
 
