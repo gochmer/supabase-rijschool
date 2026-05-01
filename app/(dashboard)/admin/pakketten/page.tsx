@@ -10,6 +10,7 @@ export default async function AdminPakkettenPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Pakketten beheren"
         description="Maak, wijzig, activeer of pauzeer pakketten met een aantrekkelijker commercieel overzicht."
       />

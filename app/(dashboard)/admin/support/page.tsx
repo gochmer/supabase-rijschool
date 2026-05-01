@@ -20,6 +20,7 @@ export default async function AdminSupportPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Support"
         description="Beheer supportvragen, prioriteiten en afhandeling in een moderne serviceflow."
       />

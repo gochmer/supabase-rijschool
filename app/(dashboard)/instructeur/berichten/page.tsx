@@ -91,6 +91,7 @@ export default async function InstructeurBerichtenPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        tone="urban"
         title="Berichten"
         description="Werk sneller en rustiger met een duidelijke inbox, direct bruikbare templates en een net overzicht van je laatste opvolging."
       />

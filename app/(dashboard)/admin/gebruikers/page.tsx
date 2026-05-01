@@ -8,6 +8,7 @@ export default async function GebruikersPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Gebruikers beheren"
         description="Bekijk, filter en beheer alle accounts op het platform."
       />

@@ -11,6 +11,7 @@ export default async function AdminLeerlingenPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Leerlingen beheren"
         description="Volg voortgang, pakketten en accountstatus in een modern operationeel overzicht."
       />

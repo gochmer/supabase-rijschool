@@ -297,6 +297,7 @@ export default async function LeerlingDashboardPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Leerling dashboard"
         description="Volg je aanvragen, geplande lessen, voortgang en meldingen vanuit een rustig overzicht."
         actions={

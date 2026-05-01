@@ -5,6 +5,7 @@ export default function AdminInstellingenPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Platforminstellingen"
         description="Beheer globale voorkeuren, toegangen en operationele instellingen."
       />

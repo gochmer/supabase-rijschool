@@ -8,6 +8,7 @@ export default async function AdminLessenPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Lessen beheren"
         description="Platformbreed overzicht van lessen, planningen en statussen."
       />

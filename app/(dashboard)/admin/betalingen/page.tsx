@@ -12,6 +12,7 @@ export default async function AdminBetalingenPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Betalingen beheren"
         description="Controleer betaalstatus, historie, trend en afwijkingen in een moderner financieel overzicht."
       />

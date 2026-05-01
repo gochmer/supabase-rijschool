@@ -34,6 +34,7 @@ export default async function AdminReviewsPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Reviews beheren"
         description="Modereren, analyseren en opvolgen van beoordelingen en geschreven feedback."
       />

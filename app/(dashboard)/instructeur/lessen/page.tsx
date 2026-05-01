@@ -61,6 +61,7 @@ export default async function InstructeurLessenPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Lessen"
         description="Bekijk ingeplande, afgeronde en geannuleerde lessen per leerling."
       />

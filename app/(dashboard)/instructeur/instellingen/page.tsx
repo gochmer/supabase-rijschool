@@ -284,6 +284,7 @@ export default async function InstructeurInstellingenPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        tone="urban"
         title="Instellingen"
         description="Maak je instructeurwerkplek rustiger en betrouwbaarder met een helder overzicht van voertuigen, bevoegdheden en profielbestanden."
       />

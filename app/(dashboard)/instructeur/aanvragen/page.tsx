@@ -251,6 +251,7 @@ export default async function AanvragenPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        tone="urban"
         title="Lesaanvragen"
         description="Werk open aanvragen eerst af en houd daarna rustig zicht op wat al verwerkt is."
         actions={

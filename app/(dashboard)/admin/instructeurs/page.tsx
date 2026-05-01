@@ -8,6 +8,7 @@ export default async function AdminInstructeursPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Instructeurs beheren"
         description="Keur instructeurs goed, wijs af en bewaak profielkwaliteit en zichtbaarheid."
       />

@@ -113,6 +113,7 @@ export default async function LeerlingenPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Leerlingen"
         description="Werk per leerling vanuit één rustige werkplek voor voortgang, intake en het plannen van de volgende stap."
         actions={

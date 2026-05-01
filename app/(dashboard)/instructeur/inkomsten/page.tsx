@@ -62,6 +62,7 @@ export default async function InkomstenPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        tone="urban"
         title="Inkomsten"
         description="Een cockpit voor geplande omzet, pakketwaarde, open gaten en leerlingen waar nu geld of vervolg blijft liggen."
         actions={

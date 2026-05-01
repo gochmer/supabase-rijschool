@@ -309,6 +309,7 @@ export default async function AdminDashboardPage() {
   return (
     <>
       <PageHeader
+        tone="urban"
         title="Admin dashboard"
         description="Je controlekamer voor gebruikers, support, betalingen, goedkeuringen en platformkwaliteit."
         actions={
