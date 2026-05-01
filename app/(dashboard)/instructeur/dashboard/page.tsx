@@ -1,6 +1,7 @@
 import { InstructorCommandCenter } from "@/components/dashboard/instructor-command-center";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
+import { getLocationOptions } from "@/lib/data/locations";
 import {
   getInstructeurLessonRequests,
   getInstructeurLessons,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/data/profiles";
 import { getReviewStatsByInstructorIds } from "@/lib/data/reviews";
 import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
+import { resolveInstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 
 export default async function InstructeurDashboardPage() {
   const [
@@ -24,6 +26,7 @@ export default async function InstructeurDashboardPage() {
     instructorPackages,
     availabilitySlots,
     studentsWorkspace,
+    locationOptions,
   ] = await Promise.all([
     getInstructeurLessons(),
     getInstructeurLessonRequests(),
@@ -33,6 +36,7 @@ export default async function InstructeurDashboardPage() {
     getCurrentInstructorPackages(),
     getCurrentInstructorAvailability(),
     getInstructeurStudentsWorkspace(),
+    getLocationOptions(),
   ]);
 
   const reviewStats = instructor
@@ -58,6 +62,10 @@ export default async function InstructeurDashboardPage() {
       packages={instructorPackages}
       availabilitySlots={availabilitySlots}
       students={studentsWorkspace.students}
+      locationOptions={locationOptions}
+      lessonDurationDefaults={resolveInstructorLessonDurationDefaults(
+        instructor,
+      )}
       realtime={<RealtimeDashboardSync profileLabel="instructeur-dashboard" />}
     />
   );
