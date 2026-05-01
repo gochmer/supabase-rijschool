@@ -98,7 +98,9 @@ export interface Les {
   selfCancelMessage?: string | null;
   locatie: string;
   locatie_id?: string | null;
+  leerling_id?: string | null;
   leerling_naam: string;
+  leerling_email?: string | null;
   instructeur_naam: string;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Archive,
@@ -139,6 +139,38 @@ function matchesTab(request: LesAanvraag, tab: RequestTab) {
   return true;
 }
 
+function getInitialRequestTab({
+  initialFocusId,
+  initialTab,
+  requests,
+}: {
+  initialFocusId?: string | null;
+  initialTab: RequestTab;
+  requests: LesAanvraag[];
+}) {
+  if (!initialFocusId) {
+    return initialTab;
+  }
+
+  const focusedRequest = requests.find(
+    (request) => request.id === initialFocusId,
+  );
+
+  if (!focusedRequest) {
+    return initialTab;
+  }
+
+  if (focusedRequest.status === "aangevraagd") {
+    return "pending";
+  }
+
+  if (["geweigerd", "geannuleerd"].includes(focusedRequest.status)) {
+    return "rejected";
+  }
+
+  return "accepted";
+}
+
 function getStatusPill(request: LesAanvraag) {
   if (request.status === "aangevraagd") {
     return {
@@ -186,7 +218,7 @@ function StatCard({
         <div
           className={cn(
             "flex size-16 shrink-0 items-center justify-center rounded-xl border",
-            toneClass
+            toneClass,
           )}
         >
           <Icon className="size-8" />
@@ -290,7 +322,7 @@ function RequestDetailsDialog({
             <span
               className={cn(
                 "inline-flex rounded-full border px-3 py-1 text-xs font-semibold",
-                statusPill.className
+                statusPill.className,
               )}
             >
               {statusPill.label}
@@ -378,7 +410,7 @@ function RequestRow({
         <div
           className={cn(
             "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-            avatarTones[index % avatarTones.length]
+            avatarTones[index % avatarTones.length],
           )}
         >
           {getInitials(request.leerling_naam)}
@@ -393,7 +425,9 @@ function RequestRow({
         </div>
       </div>
       <p className="text-slate-100">{getRequestTypeLabel(request)}</p>
-      <p className="truncate text-slate-100">{getRequestLessonLabel(request)}</p>
+      <p className="truncate text-slate-100">
+        {getRequestLessonLabel(request)}
+      </p>
       <div className="flex items-center gap-2 text-slate-100">
         <CalendarDays className="size-4 text-slate-300" />
         {getTableDate(request.voorkeursdatum)}
@@ -405,7 +439,7 @@ function RequestRow({
       <span
         className={cn(
           "w-fit rounded-full border px-3 py-1 text-sm font-medium",
-          statusPill.className
+          statusPill.className,
         )}
       >
         {statusPill.label}
@@ -441,7 +475,9 @@ export function InstructorRequestsBoard({
   initialTab?: RequestTab;
   initialFocusId?: string | null;
 }) {
-  const [activeTab, setActiveTab] = useState<RequestTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<RequestTab>(() =>
+    getInitialRequestTab({ initialFocusId, initialTab, requests }),
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [kindFilter, setKindFilter] = useState<RequestKindFilter>("all");
   const [pageSize, setPageSize] = useState<number>(10);
@@ -450,16 +486,16 @@ export function InstructorRequestsBoard({
   const counts = useMemo(
     () => ({
       accepted: requests.filter((request) =>
-        ["geaccepteerd", "ingepland", "afgerond"].includes(request.status)
+        ["geaccepteerd", "ingepland", "afgerond"].includes(request.status),
       ).length,
       pending: requests.filter((request) => request.status === "aangevraagd")
         .length,
       rejected: requests.filter((request) =>
-        ["geweigerd", "geannuleerd"].includes(request.status)
+        ["geweigerd", "geannuleerd"].includes(request.status),
       ).length,
       total: requests.length,
     }),
-    [requests]
+    [requests],
   );
 
   const filteredRequests = useMemo(() => {
@@ -490,35 +526,13 @@ export function InstructorRequestsBoard({
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const firstItemIndex = filteredRequests.length ? (safePage - 1) * pageSize : 0;
+  const firstItemIndex = filteredRequests.length
+    ? (safePage - 1) * pageSize
+    : 0;
   const visibleRequests = filteredRequests.slice(
     firstItemIndex,
-    firstItemIndex + pageSize
+    firstItemIndex + pageSize,
   );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, kindFilter, pageSize, searchTerm]);
-
-  useEffect(() => {
-    if (!initialFocusId) {
-      return;
-    }
-
-    const focusedRequest = requests.find((request) => request.id === initialFocusId);
-
-    if (!focusedRequest) {
-      return;
-    }
-
-    if (focusedRequest.status === "aangevraagd") {
-      setActiveTab("pending");
-    } else if (["geweigerd", "geannuleerd"].includes(focusedRequest.status)) {
-      setActiveTab("rejected");
-    } else {
-      setActiveTab("accepted");
-    }
-  }, [initialFocusId, requests]);
 
   const tabs: Array<{ label: string; value: RequestTab }> = [
     { label: "Alle aanvragen", value: "all" },
@@ -586,12 +600,15 @@ export function InstructorRequestsBoard({
               <button
                 key={tab.value}
                 type="button"
-                onClick={() => setActiveTab(tab.value)}
+                onClick={() => {
+                  setActiveTab(tab.value);
+                  setCurrentPage(1);
+                }}
                 className={cn(
                   "border-b-2 px-2 pb-3 text-base transition",
                   activeTab === tab.value
                     ? "border-blue-400 text-white"
-                    : "border-transparent text-slate-400 hover:text-white"
+                    : "border-transparent text-slate-400 hover:text-white",
                 )}
               >
                 {tab.label}
@@ -604,7 +621,10 @@ export function InstructorRequestsBoard({
               <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-slate-400" />
               <Input
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Zoek aanvragen..."
                 aria-label="Zoek aanvragen"
                 className="h-11 w-full rounded-lg border-white/10 bg-slate-950/34 pl-10 text-white placeholder:text-slate-500 sm:w-72"
@@ -629,17 +649,20 @@ export function InstructorRequestsBoard({
                   (value) => (
                     <DropdownMenuItem
                       key={value}
-                      onSelect={() => setKindFilter(value)}
+                      onSelect={() => {
+                        setKindFilter(value);
+                        setCurrentPage(1);
+                      }}
                     >
                       <span
                         className={cn(
                           "size-2 rounded-full",
-                          kindFilter === value ? "bg-blue-400" : "bg-white/20"
+                          kindFilter === value ? "bg-blue-400" : "bg-white/20",
                         )}
                       />
                       {kindLabels[value]}
                     </DropdownMenuItem>
-                  )
+                  ),
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -647,6 +670,7 @@ export function InstructorRequestsBoard({
                     setSearchTerm("");
                     setKindFilter("all");
                     setActiveTab("all");
+                    setCurrentPage(1);
                   }}
                 >
                   Filters wissen
@@ -697,7 +721,7 @@ export function InstructorRequestsBoard({
             {filteredRequests.length
               ? `${firstItemIndex + 1}-${Math.min(
                   firstItemIndex + pageSize,
-                  filteredRequests.length
+                  filteredRequests.length,
                 )} van ${filteredRequests.length} aanvragen`
               : "0 van 0 aanvragen"}
           </p>
@@ -714,25 +738,27 @@ export function InstructorRequestsBoard({
               >
                 <ChevronLeft className="size-4" />
               </Button>
-              {Array.from({ length: Math.min(totalPages, 4) }).map((_, index) => {
-                const page = index + 1;
-                return (
-                  <Button
-                    key={page}
-                    size="icon-sm"
-                    variant={safePage === page ? "default" : "outline"}
-                    className={cn(
-                      "size-9 rounded-lg",
-                      safePage === page
-                        ? "bg-blue-600 text-white hover:bg-blue-500"
-                        : "border-white/10 bg-white/7 text-slate-200"
-                    )}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+              {Array.from({ length: Math.min(totalPages, 4) }).map(
+                (_, index) => {
+                  const page = index + 1;
+                  return (
+                    <Button
+                      key={page}
+                      size="icon-sm"
+                      variant={safePage === page ? "default" : "outline"}
+                      className={cn(
+                        "size-9 rounded-lg",
+                        safePage === page
+                          ? "bg-blue-600 text-white hover:bg-blue-500"
+                          : "border-white/10 bg-white/7 text-slate-200",
+                      )}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  );
+                },
+              )}
               <Button
                 aria-label="Volgende pagina"
                 size="icon-sm"
@@ -751,7 +777,10 @@ export function InstructorRequestsBoard({
               Toon
               <select
                 value={pageSize}
-                onChange={(event) => setPageSize(Number(event.target.value))}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setCurrentPage(1);
+                }}
                 className="h-10 rounded-lg border border-white/10 bg-slate-950/34 px-3 text-white outline-none"
               >
                 {pageSizeOptions.map((option) => (

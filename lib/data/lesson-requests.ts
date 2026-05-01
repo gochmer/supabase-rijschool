@@ -1,6 +1,11 @@
 import "server-only";
 
-import { aanvragen, komendeLessen, leerlingMetrics, instructeurMetrics } from "@/lib/mock-data";
+import {
+  aanvragen,
+  komendeLessen,
+  leerlingMetrics,
+  instructeurMetrics,
+} from "@/lib/mock-data";
 import type { DashboardMetric, Les, LesAanvraag } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase/server";
 import {
@@ -65,7 +70,7 @@ function toLocalDateTime(dateString: string, timeString: string) {
 
 function parseRequestDateTime(
   preferredDate: string | null,
-  timeSlot: string | null
+  timeSlot: string | null,
 ) {
   if (!preferredDate) {
     return { startAt: null, endAt: null };
@@ -88,7 +93,7 @@ function parseRequestDateTime(
 
 async function getInstructorScopeIds(
   profileId: string,
-  fallbackInstructorId: string
+  fallbackInstructorId: string,
 ) {
   const supabase = await createServerClient();
   const { data: rows } = await supabase
@@ -118,7 +123,7 @@ export async function getLeerlingLessonRequests(): Promise<LesAanvraag[]> {
   const { data: rows, error } = (await supabase
     .from("lesaanvragen")
     .select(
-      "id, instructeur_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type"
+      "id, instructeur_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type",
     )
     .eq("leerling_id", leerling.id)
     .order("created_at", { ascending: false })) as unknown as {
@@ -149,14 +154,17 @@ export async function getLeerlingLessonRequests(): Promise<LesAanvraag[]> {
     .in("id", profileIds);
 
   const instructeurMap = new Map(
-    (instructeurs ?? []).map((row) => [row.id, row.profile_id])
+    (instructeurs ?? []).map((row) => [row.id, row.profile_id]),
   );
   const profileMap = new Map(
-    (profiles ?? []).map((row) => [row.id, row.volledige_naam])
+    (profiles ?? []).map((row) => [row.id, row.volledige_naam]),
   );
 
   return rows.map((row) => {
-    const requestDateTime = parseRequestDateTime(row.voorkeursdatum, row.tijdvak);
+    const requestDateTime = parseRequestDateTime(
+      row.voorkeursdatum,
+      row.tijdvak,
+    );
     const instructorProfileId = row.instructeur_id
       ? instructeurMap.get(row.instructeur_id)
       : undefined;
@@ -192,12 +200,12 @@ export async function getInstructeurLessonRequests(): Promise<LesAanvraag[]> {
   const supabase = await createServerClient();
   const instructorIds = await getInstructorScopeIds(
     instructeur.profile_id,
-    instructeur.id
+    instructeur.id,
   );
   const { data: rows, error } = (await supabase
     .from("lesaanvragen")
     .select(
-      "id, leerling_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type"
+      "id, leerling_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type",
     )
     .in("instructeur_id", instructorIds)
     .order("created_at", { ascending: false })) as unknown as {
@@ -228,7 +236,7 @@ export async function getInstructeurLessonRequests(): Promise<LesAanvraag[]> {
     .in("id", profileIds);
 
   const leerlingMap = new Map(
-    (leerlingen ?? []).map((row) => [row.id, row.profile_id])
+    (leerlingen ?? []).map((row) => [row.id, row.profile_id]),
   );
   const profileMap = new Map(
     (profiles ?? []).map((row) => [
@@ -237,11 +245,14 @@ export async function getInstructeurLessonRequests(): Promise<LesAanvraag[]> {
         email: row.email,
         name: row.volledige_naam,
       },
-    ])
+    ]),
   );
 
   return rows.map((row) => {
-    const requestDateTime = parseRequestDateTime(row.voorkeursdatum, row.tijdvak);
+    const requestDateTime = parseRequestDateTime(
+      row.voorkeursdatum,
+      row.tijdvak,
+    );
     const studentProfileId = row.leerling_id
       ? leerlingMap.get(row.leerling_id)
       : undefined;
@@ -281,7 +292,7 @@ export async function getLeerlingLessons(): Promise<Les[]> {
   const { data: rows, error } = await supabase
     .from("lessen")
     .select(
-      "id, titel, start_at, duur_minuten, status, locatie_id, instructeur_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at"
+      "id, titel, start_at, duur_minuten, status, locatie_id, instructeur_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at",
     )
     .eq("leerling_id", leerling.id)
     .order("start_at", { ascending: true });
@@ -317,27 +328,27 @@ export async function getLeerlingLessons(): Promise<Les[]> {
   const { data: profiles } = profileIds.length
     ? await supabase
         .from("profiles")
-        .select("id, volledige_naam")
+        .select("id, volledige_naam, email")
         .in("id", profileIds)
     : { data: [] };
 
   const instructeurMap = new Map(
-    (instructeurs ?? []).map((row) => [row.id, row.profile_id])
+    (instructeurs ?? []).map((row) => [row.id, row.profile_id]),
   );
   const instructorCancellationWindowMap = new Map(
     (instructeurs ?? []).map((row) => [
       row.id,
       row.leerling_annuleren_tot_uren_voor_les ?? null,
-    ])
+    ]),
   );
   const profileMap = new Map(
-    (profiles ?? []).map((row) => [row.id, row.volledige_naam])
+    (profiles ?? []).map((row) => [row.id, row.volledige_naam]),
   );
   const locatieMap = new Map(
     (locaties ?? []).map((row) => [
       row.id,
       row.naam ? `${row.naam}, ${row.stad}` : row.stad,
-    ])
+    ]),
   );
 
   return rows.map((row) => {
@@ -345,7 +356,7 @@ export async function getLeerlingLessons(): Promise<Les[]> {
       startAt: row.start_at,
       status: row.status,
       cancellationWindowHours: row.instructeur_id
-        ? instructorCancellationWindowMap.get(row.instructeur_id) ?? null
+        ? (instructorCancellationWindowMap.get(row.instructeur_id) ?? null)
         : null,
     });
 
@@ -368,15 +379,14 @@ export async function getLeerlingLessons(): Promise<Les[]> {
       selfCancelWindowHours: selfCancellation.windowHours,
       selfCancelMessage: selfCancellation.message,
       locatie: row.locatie_id
-        ? locatieMap.get(row.locatie_id) ?? "Nog onbekend"
+        ? (locatieMap.get(row.locatie_id) ?? "Nog onbekend")
         : "Nog onbekend",
       locatie_id: row.locatie_id,
       leerling_naam: "",
-      instructeur_naam:
-        row.instructeur_id
-          ? profileMap.get(instructeurMap.get(row.instructeur_id) ?? "") ??
-            "Instructeur"
-          : "Instructeur",
+      instructeur_naam: row.instructeur_id
+        ? (profileMap.get(instructeurMap.get(row.instructeur_id) ?? "") ??
+          "Instructeur")
+        : "Instructeur",
     };
   });
 }
@@ -391,12 +401,12 @@ export async function getInstructeurLessons(): Promise<Les[]> {
   const supabase = await createServerClient();
   const instructorIds = await getInstructorScopeIds(
     instructeur.profile_id,
-    instructeur.id
+    instructeur.id,
   );
   const { data: rows, error } = await supabase
     .from("lessen")
     .select(
-      "id, titel, start_at, duur_minuten, status, locatie_id, leerling_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at"
+      "id, titel, start_at, duur_minuten, status, locatie_id, leerling_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at",
     )
     .in("instructeur_id", instructorIds)
     .order("start_at", { ascending: true });
@@ -418,7 +428,10 @@ export async function getInstructeurLessons(): Promise<Les[]> {
 
   const [{ data: leerlingen }, { data: locaties }] = await Promise.all([
     leerlingIds.length
-      ? supabase.from("leerlingen").select("id, profile_id").in("id", leerlingIds)
+      ? supabase
+          .from("leerlingen")
+          .select("id, profile_id")
+          .in("id", leerlingIds)
       : Promise.resolve({ data: [] }),
     locatieIds.length
       ? supabase.from("locaties").select("id, naam, stad").in("id", locatieIds)
@@ -429,21 +442,27 @@ export async function getInstructeurLessons(): Promise<Les[]> {
   const { data: profiles } = profileIds.length
     ? await supabase
         .from("profiles")
-        .select("id, volledige_naam")
+        .select("id, volledige_naam, email")
         .in("id", profileIds)
     : { data: [] };
 
   const leerlingMap = new Map(
-    (leerlingen ?? []).map((row) => [row.id, row.profile_id])
+    (leerlingen ?? []).map((row) => [row.id, row.profile_id]),
   );
   const profileMap = new Map(
-    (profiles ?? []).map((row) => [row.id, row.volledige_naam])
+    (profiles ?? []).map((row) => [
+      row.id,
+      {
+        email: row.email,
+        name: row.volledige_naam,
+      },
+    ]),
   );
   const locatieMap = new Map(
     (locaties ?? []).map((row) => [
       row.id,
       row.naam ? `${row.naam}, ${row.stad}` : row.stad,
-    ])
+    ]),
   );
 
   return rows.map((row) => ({
@@ -460,17 +479,25 @@ export async function getInstructeurLessons(): Promise<Les[]> {
     attendance_reason: row.afwezigheids_reden,
     lesson_note: row.lesnotitie,
     reminder_24h_sent_at: row.herinnering_24h_verstuurd_at,
-    locatie: row.locatie_id ? locatieMap.get(row.locatie_id) ?? "Nog onbekend" : "Nog onbekend",
+    locatie: row.locatie_id
+      ? (locatieMap.get(row.locatie_id) ?? "Nog onbekend")
+      : "Nog onbekend",
     locatie_id: row.locatie_id,
-    leerling_naam:
-      row.leerling_id
-        ? profileMap.get(leerlingMap.get(row.leerling_id) ?? "") ?? "Leerling"
-        : "Leerling",
+    leerling_id: row.leerling_id,
+    leerling_naam: row.leerling_id
+      ? (profileMap.get(leerlingMap.get(row.leerling_id) ?? "")?.name ??
+        "Leerling")
+      : "Leerling",
+    leerling_email: row.leerling_id
+      ? (profileMap.get(leerlingMap.get(row.leerling_id) ?? "")?.email ?? null)
+      : null,
     instructeur_naam: "",
   }));
 }
 
-export async function getLeerlingDashboardMetrics(): Promise<DashboardMetric[]> {
+export async function getLeerlingDashboardMetrics(): Promise<
+  DashboardMetric[]
+> {
   const context = await ensureCurrentUserContext();
   const leerling = await getCurrentLeerlingRecord();
 
@@ -484,9 +511,11 @@ export async function getLeerlingDashboardMetrics(): Promise<DashboardMetric[]> 
   ]);
 
   const nextLesson = lessons.find((lesson) =>
-    ["ingepland", "geaccepteerd"].includes(lesson.status)
+    ["ingepland", "geaccepteerd"].includes(lesson.status),
   );
-  const pendingRequests = requests.filter((item) => item.status === "aangevraagd").length;
+  const pendingRequests = requests.filter(
+    (item) => item.status === "aangevraagd",
+  ).length;
 
   return [
     {
@@ -514,7 +543,9 @@ export async function getLeerlingDashboardMetrics(): Promise<DashboardMetric[]> 
   ];
 }
 
-export async function getInstructeurDashboardMetrics(): Promise<DashboardMetric[]> {
+export async function getInstructeurDashboardMetrics(): Promise<
+  DashboardMetric[]
+> {
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
@@ -527,10 +558,14 @@ export async function getInstructeurDashboardMetrics(): Promise<DashboardMetric[
     getCurrentInstructorReviewSummary(),
   ]);
 
-  const openRequests = requests.filter((item) => item.status === "aangevraagd").length;
-  const todayLessons = lessons.filter((lesson) => lesson.datum === formatDate(new Date().toISOString())).length;
+  const openRequests = requests.filter(
+    (item) => item.status === "aangevraagd",
+  ).length;
+  const todayLessons = lessons.filter(
+    (lesson) => lesson.datum === formatDate(new Date().toISOString()),
+  ).length;
   const plannedLessons = lessons.filter((lesson) =>
-    ["ingepland", "geaccepteerd"].includes(lesson.status)
+    ["ingepland", "geaccepteerd"].includes(lesson.status),
   ).length;
   const revenue = plannedLessons * Number(instructeur.prijs_per_les ?? 0);
 
