@@ -41,7 +41,27 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { Les, LesAanvraag, LocationOption } from "@/lib/types";
+import type {
+  BeschikbaarheidSlot,
+  InstructorStudentProgressRow,
+  Les,
+  LesAanvraag,
+  LocationOption,
+} from "@/lib/types";
+
+function getLessonEnd(lesson: Les) {
+  if (lesson.end_at) {
+    return lesson.end_at;
+  }
+
+  if (!lesson.start_at) {
+    return null;
+  }
+
+  const endDate = new Date(lesson.start_at);
+  endDate.setMinutes(endDate.getMinutes() + lesson.duur_minuten);
+  return endDate.toISOString();
+}
 
 export function LessonCalendar({
   lessons,
@@ -53,6 +73,8 @@ export function LessonCalendar({
   tone = "default",
   role = null,
   locationOptions = [],
+  students = [],
+  availabilitySlots = [],
 }: {
   lessons: Les[];
   requests?: LesAanvraag[];
@@ -63,6 +85,8 @@ export function LessonCalendar({
   tone?: CalendarTone;
   role?: CalendarRole | null;
   locationOptions?: LocationOption[];
+  students?: InstructorStudentProgressRow[];
+  availabilitySlots?: BeschikbaarheidSlot[];
 }) {
   const isUrban = tone === "urban";
 
@@ -80,6 +104,18 @@ export function LessonCalendar({
         compareAsc(left.startAt, right.startAt)
       ),
     [calendarLessons, calendarRequests]
+  );
+  const lessonBusyWindows = useMemo(
+    () =>
+      lessons
+        .filter((lesson) => lesson.start_at && getLessonEnd(lesson))
+        .map((lesson) => ({
+          id: lesson.id,
+          label: lesson.leerling_naam || lesson.titel,
+          start_at: lesson.start_at,
+          end_at: getLessonEnd(lesson),
+        })),
+    [lessons]
   );
 
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(
@@ -661,6 +697,9 @@ export function LessonCalendar({
               role={role}
               tone={tone}
               locationOptions={locationOptions}
+              students={students}
+              availabilitySlots={availabilitySlots}
+              lessonBusyWindows={lessonBusyWindows}
             />
           </div>
 

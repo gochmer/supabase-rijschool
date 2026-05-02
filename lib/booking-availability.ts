@@ -23,6 +23,41 @@ export function addMinutesToIsoTimestamp(timestamp: string, minutes: number) {
   return new Date(new Date(timestamp).getTime() + minutes * 60_000).toISOString();
 }
 
+function padTimePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+export function addMinutesToTimeValue(
+  timeValue: string | null | undefined,
+  minutes: number | null | undefined
+) {
+  if (!timeValue) {
+    return null;
+  }
+
+  const [hourPart, minutePart] = timeValue.split(":");
+  const hours = Number.parseInt(hourPart ?? "", 10);
+  const currentMinutes = Number.parseInt(minutePart ?? "", 10);
+  const durationMinutes = minutes ?? 60;
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(currentMinutes) ||
+    !Number.isFinite(durationMinutes)
+  ) {
+    return null;
+  }
+
+  const totalMinutes = hours * 60 + currentMinutes + durationMinutes;
+  const minutesInDay = 24 * 60;
+  const normalizedMinutes =
+    ((totalMinutes % minutesInDay) + minutesInDay) % minutesInDay;
+
+  return `${padTimePart(Math.floor(normalizedMinutes / 60))}:${padTimePart(
+    normalizedMinutes % 60
+  )}`;
+}
+
 export function getLessonEndAt(
   startAt: string | null | undefined,
   durationMinutes: number | null | undefined

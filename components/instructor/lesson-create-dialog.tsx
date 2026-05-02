@@ -7,7 +7,7 @@ import { CalendarPlus2, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { createInstructorLessonForLearnerAction } from "@/lib/actions/instructor-learners";
-import { getLessonEndAt } from "@/lib/booking-availability";
+import { addMinutesToTimeValue } from "@/lib/booking-availability";
 import {
   DEFAULT_LESSON_DURATION_MINUTES,
   getLessonDurationKindLabel,
@@ -110,8 +110,7 @@ export function LessonCreateDialog({
       return null;
     }
 
-    const endAt = getLessonEndAt(`${date}T${time}:00`, durationMinutes);
-    return endAt ? endAt.slice(11, 16) : null;
+    return addMinutesToTimeValue(time, durationMinutes);
   }, [date, duration, time]);
 
   function reset() {

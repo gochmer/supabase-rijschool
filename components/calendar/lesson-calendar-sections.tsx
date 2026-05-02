@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { compareAsc, format, isSameDay, isToday } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Clock3, MapPin, MessageSquare } from "lucide-react";
@@ -11,6 +11,7 @@ import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
 import { LessonNoteEditor } from "@/components/dashboard/lesson-note-editor";
 import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
 import { RequestStatusActions } from "@/components/dashboard/request-status-actions";
+import { LessonCalendarEditDialog } from "@/components/instructor/lesson-calendar-edit-dialog";
 import {
   LESSON_PLANNER_COLUMN_MIN_WIDTH,
   LESSON_PLANNER_HEIGHT,
@@ -29,7 +30,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { LocationOption } from "@/lib/types";
+import type {
+  BeschikbaarheidSlot,
+  InstructorStudentProgressRow,
+  LocationOption,
+} from "@/lib/types";
 
 export function CalendarEntryCard({
   entry,
@@ -457,13 +462,25 @@ export function CalendarActionPanel({
   role,
   tone,
   locationOptions,
+  students = [],
+  availabilitySlots = [],
+  lessonBusyWindows = [],
 }: {
   entry: CalendarEntry | null;
   role: CalendarRole | null;
   tone: CalendarTone;
   locationOptions: LocationOption[];
+  students?: InstructorStudentProgressRow[];
+  availabilitySlots?: BeschikbaarheidSlot[];
+  lessonBusyWindows?: Array<{
+    id: string;
+    label?: string | null;
+    start_at?: string | null;
+    end_at?: string | null;
+  }>;
 }) {
   const isUrban = tone === "urban";
+  const [lessonEditOpen, setLessonEditOpen] = useState(false);
 
   if (!entry || !role) {
     return null;
@@ -529,10 +546,37 @@ export function CalendarActionPanel({
             ) : (
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-2">
-                  <LessonEditDialog
-                    lesson={lesson}
-                    locationOptions={locationOptions}
-                  />
+                  {students.length ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className={cn(
+                          "rounded-full",
+                          isUrban &&
+                            "border-white/10 bg-white/6 text-white hover:bg-white/10"
+                        )}
+                        onClick={() => setLessonEditOpen(true)}
+                      >
+                        Les beheren
+                      </Button>
+                      <LessonCalendarEditDialog
+                        open={lessonEditOpen}
+                        onOpenChange={setLessonEditOpen}
+                        lesson={lesson}
+                        students={students}
+                        locationOptions={locationOptions}
+                        slots={availabilitySlots}
+                        busyWindows={lessonBusyWindows}
+                      />
+                    </>
+                  ) : (
+                    <LessonEditDialog
+                      lesson={lesson}
+                      locationOptions={locationOptions}
+                    />
+                  )}
                 </div>
                 <LessonAttendanceActions lesson={lesson} tone={tone} />
                 <LessonNoteEditor lesson={lesson} tone={tone} />

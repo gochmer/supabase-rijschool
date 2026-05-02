@@ -3,6 +3,11 @@ import type { LucideIcon } from "lucide-react";
 
 import { StudentsBoard } from "@/components/instructor/students-board";
 import { StudentOnboardDialog } from "@/components/instructor/student-onboard-dialog";
+import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
+import {
+  getInstructeurLessonRequests,
+  getInstructeurLessons,
+} from "@/lib/data/lesson-requests";
 import { getLocationOptions } from "@/lib/data/locations";
 import { getCurrentInstructorPackages } from "@/lib/data/packages";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
@@ -12,6 +17,9 @@ import type { InstructorStudentProgressRow } from "@/lib/types";
 
 type StudentStatTone = "amber" | "blue" | "emerald" | "rose";
 type StudentStatusGroup = "actief" | "inactief" | "uitgevallen";
+
+const busyLessonStatuses = new Set(["geaccepteerd", "ingepland"]);
+const busyRequestStatuses = new Set(["aangevraagd", "geaccepteerd", "ingepland"]);
 
 const statToneClasses: Record<StudentStatTone, string> = {
   amber: "border-amber-400/26 bg-amber-400/12 text-amber-300",
@@ -81,16 +89,68 @@ export default async function LeerlingenPage({
   searchParams: Promise<{ student?: string }>;
 }) {
   const params = await searchParams;
-  const [workspace, locationOptions, packages, instructeur] = await Promise.all(
-    [
-      getInstructeurStudentsWorkspace(),
-      getLocationOptions(),
-      getCurrentInstructorPackages(),
-      getCurrentInstructeurRecord(),
-    ],
-  );
+  const [
+    workspace,
+    locationOptions,
+    packages,
+    instructeur,
+    availabilitySlots,
+    lessons,
+    requests,
+  ] = await Promise.all([
+    getInstructeurStudentsWorkspace(),
+    getLocationOptions(),
+    getCurrentInstructorPackages(),
+    getCurrentInstructeurRecord(),
+    getCurrentInstructorAvailability(),
+    getInstructeurLessons(),
+    getInstructeurLessonRequests(),
+  ]);
   const lessonDurationDefaults =
     resolveInstructorLessonDurationDefaults(instructeur);
+  const nowMs = Date.now();
+  const planningAvailabilitySlots = availabilitySlots
+    .filter((slot) => {
+      if (!slot.start_at || !slot.eind_at) {
+        return false;
+      }
+
+      return slot.beschikbaar !== false && new Date(slot.eind_at).getTime() > nowMs;
+    })
+    .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
+    .slice(0, 48);
+  const busyWindows = [
+    ...lessons
+      .filter(
+        (lesson) =>
+          lesson.start_at &&
+          lesson.end_at &&
+          new Date(lesson.end_at).getTime() > nowMs &&
+          busyLessonStatuses.has(lesson.status),
+      )
+      .map((lesson) => ({
+        id: lesson.id,
+        label: lesson.leerling_naam || lesson.titel,
+        status: lesson.status,
+        start_at: lesson.start_at,
+        end_at: lesson.end_at,
+      })),
+    ...requests
+      .filter(
+        (request) =>
+          request.start_at &&
+          request.end_at &&
+          new Date(request.end_at).getTime() > nowMs &&
+          busyRequestStatuses.has(request.status),
+      )
+      .map((request) => ({
+        id: request.id,
+        label: request.leerling_naam || request.pakket_naam || "Aanvraag",
+        status: request.status,
+        start_at: request.start_at,
+        end_at: request.end_at,
+      })),
+  ];
   const totalStudents = workspace.students.length;
   const activeStudents = workspace.students.filter(
     (student) => getStudentStatusGroup(student) === "actief",
@@ -158,6 +218,8 @@ export default async function LeerlingenPage({
         assessments={workspace.assessments}
         notes={workspace.notes}
         locationOptions={locationOptions}
+        availabilitySlots={planningAvailabilitySlots}
+        busyWindows={busyWindows}
         packages={packages}
         lessonDurationDefaults={lessonDurationDefaults}
         initialStudentId={params.student ?? null}

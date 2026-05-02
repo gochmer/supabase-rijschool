@@ -53,6 +53,21 @@ type MaybePackageQueryResult = {
   data: DbPackageRow | null;
 };
 
+async function getOptionalPackageServerClient() {
+  try {
+    return await createServerClient();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("Missing env.NEXT_PUBLIC_SUPABASE")
+    ) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 function toPackagePrijs(value: number | string | null | undefined) {
   if (typeof value === "number") {
     return value;
@@ -268,24 +283,6 @@ export async function getPublicInstructorPackageMap(
     return {};
   }
 
-  const supabase = await createServerClient();
-  let query = supabase
-    .from("pakketten")
-    .select(
-      "id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type"
-    )
-    .in("instructeur_id", uniqueInstructorIds)
-    .eq("actief", true);
-
-  if (lesType) {
-    query = query.filter("les_type", "eq", lesType);
-  }
-
-  const { data: packageRows, error } = (await query
-    .order("uitgelicht", { ascending: false })
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true })) as unknown as PackageQueryResult;
-
   const publicInstructors = await getPublicInstructors();
   const instructorById = new Map(
     publicInstructors.map((instructor) => [instructor.id, instructor])
@@ -293,9 +290,8 @@ export async function getPublicInstructorPackageMap(
   const instructorBySlug = new Map(
     publicInstructors.map((instructor) => [instructor.slug, instructor])
   );
-
-  if (error || !packageRows?.length) {
-    return Object.entries(pakkettenPerInstructeur).reduce<Record<string, Pakket[]>>(
+  const buildFallbackPackageMap = () =>
+    Object.entries(pakkettenPerInstructeur).reduce<Record<string, Pakket[]>>(
       (accumulator, [slug, packagesForInstructor]) => {
         const instructor = instructorBySlug.get(slug);
 
@@ -322,6 +318,31 @@ export async function getPublicInstructorPackageMap(
       },
       {}
     );
+  const supabase = await getOptionalPackageServerClient();
+
+  if (!supabase) {
+    return buildFallbackPackageMap();
+  }
+
+  let query = supabase
+    .from("pakketten")
+    .select(
+      "id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type"
+    )
+    .in("instructeur_id", uniqueInstructorIds)
+    .eq("actief", true);
+
+  if (lesType) {
+    query = query.filter("les_type", "eq", lesType);
+  }
+
+  const { data: packageRows, error } = (await query
+    .order("uitgelicht", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true })) as unknown as PackageQueryResult;
+
+  if (error || !packageRows?.length) {
+    return buildFallbackPackageMap();
   }
 
   return packageRows.reduce<Record<string, Pakket[]>>((accumulator, pkg) => {

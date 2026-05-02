@@ -119,6 +119,142 @@ export type InstructorIncomeOverview = {
   overviewSignals: InstructorIncomeOverviewSection[];
 };
 
+export type InstructorIncomeTransactionStatus =
+  | "open"
+  | "verstuurd"
+  | "betaald"
+  | "te_laat"
+  | "terugbetaald"
+  | "geannuleerd";
+
+export type InstructorIncomeTransactionType =
+  | "les"
+  | "pakket"
+  | "losse_betaling"
+  | "correctie"
+  | "refund";
+
+export type InstructorIncomeLedgerTransaction = {
+  id: string;
+  instructeur_id: string;
+  leerling_id: string | null;
+  leerling_naam: string | null;
+  les_id: string | null;
+  pakket_id: string | null;
+  betaling_id: string | null;
+  type: InstructorIncomeTransactionType;
+  bedrag: number;
+  btw_bedrag: number;
+  platform_fee: number;
+  netto_bedrag: number;
+  status: InstructorIncomeTransactionStatus;
+  factuurnummer: string | null;
+  vervaldatum: string | null;
+  betaald_at: string | null;
+  herinnering_verstuurd_at: string | null;
+  omschrijving: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InstructorPayoutStatus =
+  | "gepland"
+  | "in_verwerking"
+  | "uitbetaald"
+  | "mislukt";
+
+export type InstructorPayout = {
+  id: string;
+  periode_start: string;
+  periode_eind: string;
+  bruto_bedrag: number;
+  platform_fee: number;
+  netto_bedrag: number;
+  status: InstructorPayoutStatus;
+  uitbetaald_at: string | null;
+  referentie: string | null;
+};
+
+export type InstructorExpenseReceiptCategory =
+  | "brandstof"
+  | "onderhoud"
+  | "verzekering"
+  | "platformkosten"
+  | "overig";
+
+export type InstructorExpenseReceipt = {
+  id: string;
+  instructeur_id: string;
+  categorie: InstructorExpenseReceiptCategory;
+  omschrijving: string;
+  bedrag: number;
+  btw_bedrag: number;
+  uitgegeven_op: string;
+  leverancier: string | null;
+  bestand_pad: string | null;
+  bestand_naam: string | null;
+  bestand_type: string | null;
+  bestand_grootte: number | null;
+  signed_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InstructorIncomeLedger = {
+  transactions: InstructorIncomeLedgerTransaction[];
+  payouts: InstructorPayout[];
+  expenseReceipts: InstructorExpenseReceipt[];
+  expenseSummary: {
+    totalAmount: number;
+    vatAmount: number;
+    count: number;
+  };
+  summary: {
+    openAmount: number;
+    overdueAmount: number;
+    paidThisMonth: number;
+    nextDueDate: string | null;
+    payoutNetto: number;
+    outstandingCount: number;
+    overdueCount: number;
+  };
+};
+
+type InstructorIncomeLedgerRow = Omit<
+  InstructorIncomeLedgerTransaction,
+  | "leerling_naam"
+  | "bedrag"
+  | "btw_bedrag"
+  | "platform_fee"
+  | "netto_bedrag"
+  | "metadata"
+> & {
+  bedrag: number | string | null;
+  btw_bedrag: number | string | null;
+  platform_fee: number | string | null;
+  netto_bedrag: number | string | null;
+  metadata: Record<string, unknown> | null;
+};
+
+type InstructorExpenseReceiptRow = Omit<
+  InstructorExpenseReceipt,
+  "bedrag" | "btw_bedrag" | "bestand_grootte" | "signed_url"
+> & {
+  bedrag: number | string | null;
+  btw_bedrag: number | string | null;
+  bestand_grootte: number | string | null;
+};
+
+type InstructorPayoutRow = Omit<
+  InstructorPayout,
+  "bruto_bedrag" | "platform_fee" | "netto_bedrag"
+> & {
+  bruto_bedrag: number | string | null;
+  platform_fee: number | string | null;
+  netto_bedrag: number | string | null;
+};
+
 function formatDate(dateString: string) {
   return new Intl.DateTimeFormat("nl-NL", {
     day: "numeric",
@@ -281,6 +417,34 @@ function isWithinNextDays(dateValue: string | null | undefined, days: number) {
   return timestamp >= now && timestamp <= now + days * 24 * 60 * 60 * 1000;
 }
 
+function isOpenIncomeStatus(status: InstructorIncomeTransactionStatus) {
+  return status === "open" || status === "verstuurd" || status === "te_laat";
+}
+
+function isOverdueIncomeTransaction(
+  row: InstructorIncomeLedgerTransaction,
+  today: string
+) {
+  return (
+    isOpenIncomeStatus(row.status) &&
+    (row.status === "te_laat" ||
+      Boolean(row.vervaldatum && row.vervaldatum < today))
+  );
+}
+
+function isSameMonth(dateValue: string | null | undefined, reference: Date) {
+  if (!dateValue) {
+    return false;
+  }
+
+  const date = new Date(dateValue);
+
+  return (
+    date.getFullYear() === reference.getFullYear() &&
+    date.getMonth() === reference.getMonth()
+  );
+}
+
 function buildStudentPackageHealth(
   student: InstructorStudentProgressRow,
   packagePrice: number,
@@ -435,6 +599,199 @@ export async function getCurrentInstructorIncomeRows() {
     datum: formatDate(row.start_at ?? row.created_at),
     status: row.status,
   }));
+}
+
+export async function getCurrentInstructorIncomeLedger(): Promise<InstructorIncomeLedger> {
+  const emptyLedger: InstructorIncomeLedger = {
+    transactions: [],
+    payouts: [],
+    expenseReceipts: [],
+    expenseSummary: {
+      totalAmount: 0,
+      vatAmount: 0,
+      count: 0,
+    },
+    summary: {
+      openAmount: 0,
+      overdueAmount: 0,
+      paidThisMonth: 0,
+      nextDueDate: null,
+      payoutNetto: 0,
+      outstandingCount: 0,
+      overdueCount: 0,
+    },
+  };
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return emptyLedger;
+  }
+
+  const supabase = await createServerClient();
+  const [
+    { data: transactionRows, error: transactionError },
+    { data: payoutRows },
+    { data: expenseRows },
+  ] =
+    await Promise.all([
+      supabase
+        .from("instructeur_inkomsten_transacties" as never)
+        .select(
+          "id, instructeur_id, leerling_id, les_id, pakket_id, betaling_id, type, bedrag, btw_bedrag, platform_fee, netto_bedrag, status, factuurnummer, vervaldatum, betaald_at, herinnering_verstuurd_at, omschrijving, metadata, created_at, updated_at"
+        )
+        .eq("instructeur_id" as never, instructeur.id as never)
+        .order("created_at" as never, { ascending: false } as never),
+      supabase
+        .from("instructeur_uitbetalingen" as never)
+        .select(
+          "id, periode_start, periode_eind, bruto_bedrag, platform_fee, netto_bedrag, status, uitbetaald_at, referentie"
+        )
+        .eq("instructeur_id" as never, instructeur.id as never)
+        .order("periode_start" as never, { ascending: false } as never),
+      supabase
+        .from("instructeur_kostenbonnen" as never)
+        .select(
+          "id, instructeur_id, categorie, omschrijving, bedrag, btw_bedrag, uitgegeven_op, leverancier, bestand_pad, bestand_naam, bestand_type, bestand_grootte, created_at, updated_at"
+        )
+        .eq("instructeur_id" as never, instructeur.id as never)
+        .order("uitgegeven_op" as never, { ascending: false } as never)
+        .order("created_at" as never, { ascending: false } as never),
+    ]);
+
+  if (transactionError) {
+    return emptyLedger;
+  }
+
+  const rawTransactions = (transactionRows ?? []) as InstructorIncomeLedgerRow[];
+  const learnerIds = Array.from(
+    new Set(
+      rawTransactions
+        .map((row) => row.leerling_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const learnerNameById = new Map<string, string>();
+
+  if (learnerIds.length) {
+    const { data: learnerRows } = await supabase
+      .from("leerlingen")
+      .select("id, profile_id")
+      .in("id", learnerIds);
+    const profileIds = Array.from(
+      new Set((learnerRows ?? []).map((row) => row.profile_id))
+    );
+
+    if (profileIds.length) {
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("id, volledige_naam")
+        .in("id", profileIds);
+      const profileNameById = new Map(
+        (profileRows ?? []).map((row) => [row.id, row.volledige_naam])
+      );
+
+      for (const learner of learnerRows ?? []) {
+        learnerNameById.set(
+          learner.id,
+          profileNameById.get(learner.profile_id) ?? "Leerling"
+        );
+      }
+    }
+  }
+
+  const transactions: InstructorIncomeLedgerTransaction[] = rawTransactions.map(
+    (row) => ({
+      ...row,
+      leerling_naam: row.leerling_id
+        ? learnerNameById.get(row.leerling_id) ?? "Leerling"
+        : null,
+      bedrag: toAmount(row.bedrag),
+      btw_bedrag: toAmount(row.btw_bedrag),
+      platform_fee: toAmount(row.platform_fee),
+      netto_bedrag: toAmount(row.netto_bedrag),
+      metadata:
+        row.metadata && typeof row.metadata === "object" ? row.metadata : {},
+    })
+  );
+  const payouts: InstructorPayout[] = ((payoutRows ?? []) as InstructorPayoutRow[]).map(
+    (row) => ({
+      ...row,
+      bruto_bedrag: toAmount(row.bruto_bedrag),
+      platform_fee: toAmount(row.platform_fee),
+      netto_bedrag: toAmount(row.netto_bedrag),
+    })
+  );
+  const expenseReceipts: InstructorExpenseReceipt[] = await Promise.all(
+    ((expenseRows ?? []) as InstructorExpenseReceiptRow[]).map(async (row) => {
+      let signedUrl: string | null = null;
+
+      if (row.bestand_pad) {
+        const { data: signedData } = await supabase.storage
+          .from("instructor-expense-receipts")
+          .createSignedUrl(row.bestand_pad, 60 * 30);
+
+        signedUrl = signedData?.signedUrl ?? null;
+      }
+
+      return {
+        ...row,
+        bedrag: toAmount(row.bedrag),
+        btw_bedrag: toAmount(row.btw_bedrag),
+        bestand_grootte:
+          typeof row.bestand_grootte === "number"
+            ? row.bestand_grootte
+            : row.bestand_grootte
+              ? Number(row.bestand_grootte)
+              : null,
+        signed_url: signedUrl,
+      };
+    })
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const openTransactions = transactions.filter((row) =>
+    isOpenIncomeStatus(row.status)
+  );
+  const overdueTransactions = transactions.filter((row) =>
+    isOverdueIncomeTransaction(row, today)
+  );
+  const futureDueDates = openTransactions
+    .map((row) => row.vervaldatum)
+    .filter(
+      (dateValue): dateValue is string =>
+        typeof dateValue === "string" && dateValue >= today
+    )
+    .sort((left, right) => left.localeCompare(right));
+
+  return {
+    transactions,
+    payouts,
+    expenseReceipts,
+    expenseSummary: {
+      totalAmount: expenseReceipts.reduce((sum, row) => sum + row.bedrag, 0),
+      vatAmount: expenseReceipts.reduce((sum, row) => sum + row.btw_bedrag, 0),
+      count: expenseReceipts.length,
+    },
+    summary: {
+      openAmount: openTransactions.reduce((sum, row) => sum + row.bedrag, 0),
+      overdueAmount: overdueTransactions.reduce(
+        (sum, row) => sum + row.bedrag,
+        0
+      ),
+      paidThisMonth: transactions
+        .filter(
+          (row) =>
+            row.status === "betaald" && isSameMonth(row.betaald_at, now)
+        )
+        .reduce((sum, row) => sum + row.bedrag, 0),
+      nextDueDate: futureDueDates[0] ?? null,
+      payoutNetto: payouts
+        .filter((row) => row.status !== "mislukt")
+        .reduce((sum, row) => sum + row.netto_bedrag, 0),
+      outstandingCount: openTransactions.length,
+      overdueCount: overdueTransactions.length,
+    },
+  };
 }
 
 export async function getCurrentInstructorIncomeOverview(): Promise<InstructorIncomeOverview> {

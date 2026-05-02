@@ -9,6 +9,7 @@ import {
   ensureCurrentUserContext,
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
+import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
 import {
   appendRequestUpdateMessage,
   extractLessonRequestReference,
@@ -23,6 +24,8 @@ import type { LessonAttendanceStatus, LesStatus } from "@/lib/types";
 
 type UpdateLessonInput = LocationSelectionInput & {
   lessonId: string;
+  leerlingId?: string | null;
+  title?: string | null;
   datum: string;
   tijd: string;
   duurMinuten: number;
@@ -78,6 +81,7 @@ function formatLessonDateAndTime(startAt: string | null | undefined) {
 
 function revalidateLessonViews() {
   revalidatePath("/instructeur/dashboard");
+  revalidatePath("/instructeur/beschikbaarheid");
   revalidatePath("/instructeur/lessen");
   revalidatePath("/instructeur/aanvragen");
   revalidatePath("/leerling/dashboard");
@@ -198,10 +202,30 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     };
   }
 
+  const nextLearnerId = input.leerlingId?.trim() || lesson.leerling_id;
+  const learnerChanged =
+    Boolean(nextLearnerId) && nextLearnerId !== lesson.leerling_id;
+  const nextTitle = input.title?.trim() || lesson.titel;
+
+  if (nextLearnerId && learnerChanged) {
+    const hasRelationship = await hasInstructorStudentPlanningRelationship(
+      instructeur.id,
+      nextLearnerId
+    );
+
+    if (!hasRelationship) {
+      return {
+        success: false,
+        message:
+          "Koppel deze leerling eerst aan jouw werkplek voordat je de les kunt overzetten.",
+      };
+    }
+  }
+
   if (input.status !== "geannuleerd") {
     const schedulingConflict = await findSchedulingConflict({
       instructorId: instructeur.id,
-      learnerId: lesson.leerling_id,
+      learnerId: nextLearnerId,
       startAt,
       endAt,
       ignoreLessonId: lesson.id,
@@ -238,6 +262,8 @@ export async function updateLessonAction(input: UpdateLessonInput) {
   const { error } = await supabase
     .from("lessen")
     .update({
+      leerling_id: nextLearnerId,
+      titel: nextTitle,
       start_at: startAt,
       duur_minuten: duration,
       status: input.status,
@@ -272,17 +298,30 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     if (shouldPromptForReview && !existingReview) {
       await notifyLearnerToLeaveReview({
         supabase,
+        leerlingId: nextLearnerId,
+        instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
+        datum: input.datum,
+        tijd: input.tijd,
+        lesTitel: nextTitle,
+      });
+    }
+  } else {
+    if (learnerChanged && lesson.leerling_id) {
+      await notifyLearnerAboutLessonChange({
+        supabase,
         leerlingId: lesson.leerling_id,
         instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
         datum: input.datum,
         tijd: input.tijd,
-        lesTitel: lesson.titel,
+        locatie: locationSummary,
+        status: "geannuleerd",
+        reason: "Deze les is overgezet naar een andere leerling.",
       });
     }
-  } else {
+
     await notifyLearnerAboutLessonChange({
       supabase,
-      leerlingId: lesson.leerling_id,
+      leerlingId: nextLearnerId,
       instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
       datum: input.datum,
       tijd: input.tijd,
