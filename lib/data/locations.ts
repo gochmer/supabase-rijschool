@@ -1,10 +1,9 @@
 import "server-only";
 
-import { cache } from "react";
 import type { LocationOption } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase/server";
 
-export const getLocationOptions = cache(async function getLocationOptions(): Promise<LocationOption[]> {
+export async function getLocationOptions(): Promise<LocationOption[]> {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("locaties")
@@ -23,4 +22,4 @@ export const getLocationOptions = cache(async function getLocationOptions(): Pro
     adres: location.adres,
     label: location.naam ? `${location.naam}, ${location.stad}` : location.stad,
   }));
-});
+}

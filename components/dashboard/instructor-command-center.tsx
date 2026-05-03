@@ -2,23 +2,17 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
-  ArrowRight,
-  BarChart3,
   Bell,
-  Bot,
   CalendarDays,
   CalendarRange,
   CheckCircle2,
   ChevronRight,
   Clock3,
   Euro,
-  Gauge,
   MessageSquare,
   PackageCheck,
   Send,
-  ShieldAlert,
   Star,
-  TrendingUp,
   UsersRound,
   XCircle,
 } from "lucide-react";
@@ -27,12 +21,7 @@ import { LessonCreateDialog } from "@/components/instructor/lesson-create-dialog
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
-import {
-  buildInstructorOperationsIntelligence,
-  type InstructorOperationsTone,
-} from "@/lib/instructor-operations";
 import type { InstructorLessonDurationDefaults } from "@/lib/lesson-durations";
-import { buildCancellationRecoveryPlans } from "@/lib/lesson-reschedule-proposals";
 import type {
   BeschikbaarheidSlot,
   InstructorStudentProgressRow,
@@ -392,7 +381,7 @@ function CommandPanel({
   return (
     <section
       className={cn(
-        "rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.055),rgba(15,23,42,0.34))] p-3 shadow-[0_22px_70px_-50px_rgba(0,0,0,0.95)] 2xl:rounded-xl 2xl:p-5",
+        "rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.055),rgba(15,23,42,0.34))] p-4 shadow-[0_22px_70px_-50px_rgba(0,0,0,0.95)]",
         className,
       )}
     >
@@ -411,14 +400,14 @@ function SectionHeader({
   cta?: string;
 }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-3 2xl:mb-4">
-      <h2 className="text-[10px] font-semibold tracking-[0.14em] text-slate-300 uppercase 2xl:text-[11px]">
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <h2 className="text-[11px] font-semibold tracking-[0.14em] text-slate-300 uppercase">
         {title}
       </h2>
       {href ? (
         <Link
           href={href}
-          className="text-[10px] font-medium text-slate-400 transition hover:text-white 2xl:text-[11px]"
+          className="text-[11px] font-medium text-slate-400 transition hover:text-white"
         >
           {cta}
         </Link>
@@ -453,86 +442,28 @@ function StatTile({
   return (
     <Link
       href={href}
-      className="group rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] p-3 text-white shadow-[0_20px_60px_-46px_rgba(0,0,0,0.95)] transition hover:border-white/18 hover:bg-white/[0.08] 2xl:rounded-xl 2xl:p-5"
+      className="group rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] p-4 text-white shadow-[0_20px_60px_-46px_rgba(0,0,0,0.95)] transition hover:border-white/18 hover:bg-white/[0.08]"
     >
-      <div className="flex items-center gap-3 2xl:gap-4">
+      <div className="flex items-center gap-4">
         <span
           className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-lg border 2xl:size-14",
+            "flex size-14 shrink-0 items-center justify-center rounded-lg border",
             toneClass,
           )}
         >
-          <Icon className="size-5 2xl:size-7" />
+          <Icon className="size-7" />
         </span>
         <div className="min-w-0">
           <p className="truncate text-[10px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
             {label}
           </p>
-          <p className="mt-1 text-xl font-semibold tracking-tight text-white 2xl:text-2xl">
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-white">
             {value}
           </p>
-          <p className="mt-1 truncate text-[11px] text-emerald-300 2xl:text-[12px]">{helper}</p>
+          <p className="mt-1 truncate text-[12px] text-emerald-300">{helper}</p>
         </div>
       </div>
     </Link>
-  );
-}
-
-function formatOperationHours(value: number) {
-  if (value <= 0) {
-    return "0u";
-  }
-
-  const rounded = Math.round(value * 10) / 10;
-
-  return Number.isInteger(rounded) ? `${rounded}u` : `${rounded.toFixed(1)}u`;
-}
-
-function getOperationToneClass(tone: InstructorOperationsTone) {
-  return {
-    danger: "border-rose-400/24 bg-rose-500/12 text-rose-200",
-    info: "border-sky-400/24 bg-sky-500/12 text-sky-200",
-    success: "border-emerald-400/24 bg-emerald-500/12 text-emerald-200",
-    warning: "border-amber-400/24 bg-amber-500/12 text-amber-200",
-  }[tone];
-}
-
-function OperationMetricCard({
-  detail,
-  icon: Icon,
-  label,
-  tone,
-  value,
-}: {
-  detail: string;
-  icon: LucideIcon;
-  label: string;
-  tone: InstructorOperationsTone;
-  value: string;
-}) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3 2xl:rounded-xl 2xl:p-4">
-      <div className="flex items-center justify-between gap-3">
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg border",
-            getOperationToneClass(tone),
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-        <Badge variant={tone} className="px-2 py-0.5 text-[10px]">
-          Live
-        </Badge>
-      </div>
-      <p className="mt-3 text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
-        {label}
-      </p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-white">
-        {value}
-      </p>
-      <p className="mt-1.5 text-[12px] leading-5 text-slate-400">{detail}</p>
-    </div>
   );
 }
 
@@ -550,7 +481,7 @@ function MiniLineChart({ values }: { values: number[] }) {
   const area = `0,100 ${polyline} 100,100`;
 
   return (
-    <div className="mt-3 h-32 rounded-lg border border-white/8 bg-slate-950/22 p-3 2xl:mt-4 2xl:h-40">
+    <div className="mt-4 h-36 rounded-lg border border-white/8 bg-slate-950/22 p-3">
       <svg viewBox="0 0 100 100" className="h-full w-full" role="img">
         <defs>
           <linearGradient
@@ -591,7 +522,7 @@ function MiniLineChart({ values }: { values: number[] }) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-white/12 bg-white/[0.035] px-3 py-3 text-xs text-slate-400 2xl:py-4 2xl:text-sm">
+    <div className="rounded-lg border border-dashed border-white/12 bg-white/[0.035] px-3 py-4 text-sm text-slate-400">
       {text}
     </div>
   );
@@ -797,96 +728,25 @@ export function InstructorCommandCenter({
     openSlotCount: availableSlots.length,
     activePackageCount: activePackages.length,
   });
-  const cancellationRecoverySince = new Date(now);
-  cancellationRecoverySince.setDate(now.getDate() - 30);
-  const cancellationRecoveryPlans = buildCancellationRecoveryPlans({
-    lessons,
-    slots: availabilitySlots,
-    now,
-    limit: 5,
-  })
-    .filter((plan) => {
-      const lessonDate = getLessonDate(plan.lesson);
-
-      return !lessonDate || lessonDate >= cancellationRecoverySince;
-    })
-    .slice(0, 3);
-  const operations = buildInstructorOperationsIntelligence({
-    availabilitySlots,
-    lessonPrice,
-    lessons,
-    now,
-    packages,
-    requests,
-    students,
-  });
-  const operationMetrics = [
-    {
-      detail: `${operations.availableGapCount} vrije blokken, ${openRequests.length} open aanvragen`,
-      icon: Bot,
-      label: "Auto-planning",
-      tone: operations.autoPlanningCount > 0 ? "success" : "info",
-      value: `${operations.autoPlanningCount}`,
-    },
-    {
-      detail: `${formatOperationHours(operations.bookedHoursThisWeek)} geboekt, ${formatOperationHours(operations.freeHoursThisWeek)} vrij`,
-      icon: Gauge,
-      label: "Bezetting week",
-      tone:
-        operations.weekUtilizationPercent >= 80
-          ? "success"
-          : operations.weekUtilizationPercent >= 50
-            ? "info"
-            : "warning",
-      value: `${operations.weekUtilizationPercent}%`,
-    },
-    {
-      detail: "Lessen waar extra bevestiging slim is",
-      icon: ShieldAlert,
-      label: "No-show risico",
-      tone: operations.noShowRiskCount > 0 ? "danger" : "success",
-      value: `${operations.noShowRiskCount}`,
-    },
-    {
-      detail: `${operations.nearPackageEndCount} bijna door pakket`,
-      icon: TrendingUp,
-      label: "Omzetkans",
-      tone: operations.estimatedRevenuePotential > 0 ? "warning" : "info",
-      value: formatCurrency(operations.estimatedRevenuePotential),
-    },
-    {
-      detail: operations.forecast.detail,
-      icon: BarChart3,
-      label: "Voorspelling",
-      tone: operations.forecast.badge,
-      value: operations.forecast.label,
-    },
-  ] satisfies Array<{
-    detail: string;
-    icon: LucideIcon;
-    label: string;
-    tone: InstructorOperationsTone;
-    value: string;
-  }>;
 
   return (
-    <div className="space-y-4 text-white 2xl:space-y-7">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
+    <div className="space-y-4 text-white">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl 2xl:text-4xl">
+          <h1 className="text-4xl font-semibold tracking-tight text-white">
             Dashboard
           </h1>
-          <p className="mt-1.5 text-sm text-slate-400 2xl:mt-2 2xl:text-lg">
+          <p className="mt-2 text-lg text-slate-400">
             Welkom terug, {displayName}! Hier is een overzicht van je
             activiteiten.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 2xl:gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {realtime}
           <Button
             asChild
             variant="outline"
-            className="h-9 rounded-lg border-white/10 bg-white/7 px-3 text-sm text-white hover:bg-white/12 2xl:h-11 2xl:px-4 2xl:text-base"
+            className="h-11 rounded-lg border-white/10 bg-white/7 px-4 text-white hover:bg-white/12"
           >
             <Link href="/instructeur/beschikbaarheid">
               <CalendarRange className="size-4" />
@@ -897,12 +757,12 @@ export function InstructorCommandCenter({
             students={students}
             locationOptions={locationOptions}
             durationDefaults={lessonDurationDefaults}
-            className="h-9 rounded-lg bg-blue-600 px-4 text-sm text-white shadow-[0_18px_50px_-28px_rgba(37,99,235,0.9)] hover:bg-blue-500 2xl:h-11 2xl:px-5 2xl:text-base"
+            className="h-11 rounded-lg bg-blue-600 px-5 text-base text-white shadow-[0_18px_50px_-28px_rgba(37,99,235,0.9)] hover:bg-blue-500"
           />
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5 2xl:gap-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile
           label="Totaal leerlingen"
           value={`${students.length}`}
@@ -945,371 +805,21 @@ export function InstructorCommandCenter({
         />
       </div>
 
-      <CommandPanel className="border-cyan-300/14 bg-[linear-gradient(145deg,rgba(14,165,233,0.11),rgba(15,23,42,0.38),rgba(16,185,129,0.08))]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="inline-flex rounded-full border border-cyan-300/18 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-cyan-100 uppercase">
-              Rijschool OS
-            </div>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-white 2xl:text-2xl">
-              Operatie, planning en groei in een cockpit
-            </h2>
-            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-300">
-              De planning wordt gelezen als bedrijfsproces: vrije blokken,
-              wachtrij, no-show risico, pakketmomenten en capaciteit komen hier
-              samen.
-            </p>
-          </div>
-          <Button
-            asChild
-            variant="outline"
-            className="h-10 rounded-lg border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 lg:shrink-0"
-          >
-            <Link href="/instructeur/inkomsten">
-              Omzet cockpit
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5 2xl:gap-4">
-          {operationMetrics.map((metric) => (
-            <OperationMetricCard
-              key={metric.label}
-              detail={metric.detail}
-              icon={metric.icon}
-              label={metric.label}
-              tone={metric.tone}
-              value={metric.value}
-            />
-          ))}
-        </div>
-
-        <div className="mt-4 rounded-lg border border-violet-300/14 bg-[linear-gradient(135deg,rgba(139,92,246,0.13),rgba(15,23,42,0.26),rgba(14,165,233,0.08))] p-3 2xl:rounded-xl 2xl:p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] text-violet-100 uppercase">
-                  <Bot className="size-3.5" />
-                  Co-pilot
-                </span>
-                <Badge variant="info" className="px-2.5 py-1 text-[10px]">
-                  Human-in-the-loop
-                </Badge>
-                <Badge
-                  variant={
-                    operations.copilot.confidence >= 78 ? "success" : "warning"
-                  }
-                  className="px-2.5 py-1 text-[10px]"
-                >
-                  {operations.copilot.confidence}% zekerheid
-                </Badge>
-              </div>
-              <h3 className="mt-3 text-lg font-semibold text-white 2xl:text-xl">
-                {operations.copilot.headline}
-              </h3>
-              <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-300">
-                {operations.copilot.detail}
-              </p>
-            </div>
-            <Button
-              asChild
-              variant="outline"
-              className="h-10 rounded-lg border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 lg:shrink-0"
-            >
-              <Link href="/instructeur/beschikbaarheid">
-                Voorstellen controleren
-                <ChevronRight className="size-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3">
-              <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                Slimme instroom
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-white">
-                  {operations.copilot.intakeLabel}
-                </p>
-                <Badge
-                  variant={
-                    operations.copilot.intakeMode === "push_leads"
-                      ? "success"
-                      : operations.copilot.intakeMode === "limit_intake"
-                        ? "warning"
-                        : "info"
-                  }
-                >
-                  {operations.copilot.safeNewStudentCapacity} veilig
-                </Badge>
-              </div>
-              <p className="mt-2 text-[12px] leading-5 text-slate-400">
-                {operations.copilot.intakeDetail}
-              </p>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3">
-              <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                Capaciteit
-              </p>
-              <p className="mt-2 text-sm font-semibold text-white">
-                {operations.copilot.capacityLabel}
-              </p>
-              <p className="mt-2 text-[12px] leading-5 text-slate-400">
-                {operations.copilot.capacityDetail}
-              </p>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3">
-              <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                Patronen
-              </p>
-              <p className="mt-2 text-sm font-semibold text-white">
-                Zwak: {operations.copilot.underusedDayLabel}
-              </p>
-              <p className="mt-2 text-[12px] leading-5 text-slate-400">
-                Sterk tijdvak: {operations.copilot.strongestTimeWindowLabel}.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-2 xl:grid-cols-2">
-            {operations.copilot.suggestions.length ? (
-              operations.copilot.suggestions.map((suggestion) => (
-                <Link
-                  key={suggestion.id}
-                  href={suggestion.href}
-                  className="rounded-lg border border-white/8 bg-white/[0.035] p-3 transition hover:border-violet-300/24 hover:bg-violet-400/8"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white">
-                        {suggestion.title}
-                      </p>
-                      <p className="mt-1 text-[12px] leading-5 text-slate-400">
-                        {suggestion.detail}
-                      </p>
-                    </div>
-                    <Badge variant={suggestion.badge} className="shrink-0">
-                      {suggestion.badgeLabel}
-                    </Badge>
-                  </div>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-                    <div className="rounded-md border border-white/8 bg-black/12 px-3 py-2">
-                      <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase">
-                        Waarom
-                      </p>
-                      <p className="mt-1 text-[12px] leading-5 text-slate-300">
-                        {suggestion.why}
-                      </p>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <p className="text-[11px] font-semibold text-violet-200">
-                        {suggestion.impactLabel}
-                      </p>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        {suggestion.confidence}% zekerheid
-                      </p>
-                    </div>
-                  </div>
-                  {suggestion.draftText ? (
-                    <p className="mt-2 rounded-md border border-cyan-300/12 bg-cyan-400/8 px-3 py-2 text-[12px] leading-5 text-cyan-100">
-                      {suggestion.draftText}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-violet-200">
-                    {suggestion.ctaLabel}
-                    <ChevronRight className="size-4" />
-                  </p>
-                </Link>
-              ))
-            ) : (
-              <EmptyState text="Nog geen autonome suggesties. Zodra er meer planning, capaciteit of voortgangsdata is, verschijnen hier voorstellen." />
-            )}
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] 2xl:gap-5">
-          <div className="rounded-lg border border-white/10 bg-slate-950/22 p-3 2xl:rounded-xl 2xl:p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                  Slimme wachtrij
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-white">
-                  Open aanvragen koppelen aan vrije blokken
-                </h3>
-              </div>
-              <Badge variant={operations.autoPlanningCount > 0 ? "success" : "info"}>
-                {operations.autoPlanningCount} match
-                {operations.autoPlanningCount === 1 ? "" : "es"}
-              </Badge>
-            </div>
-            <div className="mt-3 grid gap-2">
-              {operations.queue.length ? (
-                operations.queue.slice(0, 4).map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className="grid gap-3 rounded-lg border border-white/8 bg-white/[0.035] p-3 transition hover:border-cyan-300/24 hover:bg-cyan-400/8 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,0.72fr)_auto]"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {item.leerlingNaam}
-                      </p>
-                      <p className="mt-1 text-[12px] text-slate-400">
-                        {item.requestLabel} - voorkeur {item.preferredLabel}
-                      </p>
-                    </div>
-                    <div className="min-w-0 rounded-md border border-emerald-300/14 bg-emerald-400/10 px-3 py-2 text-[12px] font-medium text-emerald-100">
-                      {item.suggestedSlotLabel}
-                    </div>
-                    <span className="inline-flex items-center justify-end text-[12px] font-semibold text-cyan-200">
-                      Open
-                      <ChevronRight className="size-4" />
-                    </span>
-                  </Link>
-                ))
-              ) : (
-                <EmptyState text="Geen open aanvragen in de wachtrij. Nieuwe aanvragen verschijnen hier automatisch." />
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-white/10 bg-slate-950/22 p-3 2xl:rounded-xl 2xl:p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                  Acties vandaag
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-white">
-                  Wat nu de meeste impact heeft
-                </h3>
-              </div>
-              <Badge variant={operations.forecast.badge}>
-                {operations.forecast.label}
-              </Badge>
-            </div>
-            <div className="mt-3 space-y-2">
-              {operations.actions.map((action) => (
-                <Link
-                  key={action.id}
-                  href={action.href}
-                  className="block rounded-lg border border-white/8 bg-white/[0.035] p-3 transition hover:border-white/16 hover:bg-white/[0.07]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white">
-                        {action.title}
-                      </p>
-                      <p className="mt-1 text-[12px] leading-5 text-slate-400">
-                        {action.detail}
-                      </p>
-                    </div>
-                    <Badge variant={action.badge} className="shrink-0">
-                      {action.badgeLabel}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-cyan-200">
-                    {action.ctaLabel}
-                    <ChevronRight className="size-4" />
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:gap-4">
-          <div className="rounded-lg border border-white/10 bg-slate-950/20 p-3 2xl:rounded-xl 2xl:p-4">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">
-                No-show reductie
-              </h3>
-              <Badge variant={operations.noShowRiskCount > 0 ? "danger" : "success"}>
-                {operations.noShowRiskCount} risico
-              </Badge>
-            </div>
-            <div className="mt-3 space-y-2">
-              {operations.noShowRisks.length ? (
-                operations.noShowRisks.slice(0, 3).map((risk) => (
-                  <Link
-                    key={risk.id}
-                    href="/instructeur/lessen"
-                    className="grid grid-cols-[minmax(0,1fr)_3.25rem] gap-3 rounded-lg border border-white/8 bg-white/[0.035] p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {risk.leerlingNaam}
-                      </p>
-                      <p className="mt-1 text-[12px] text-slate-400">
-                        {risk.nextLessonLabel} - {risk.reason}
-                      </p>
-                    </div>
-                    <span className="text-right text-sm font-semibold text-rose-200">
-                      {risk.score}%
-                    </span>
-                  </Link>
-                ))
-              ) : (
-                <EmptyState text="Geen verhoogd no-show risico voor de komende week." />
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-white/10 bg-slate-950/20 p-3 2xl:rounded-xl 2xl:p-4">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">
-                Vervolg pakketten
-              </h3>
-              <Badge variant={operations.estimatedRevenuePotential > 0 ? "warning" : "info"}>
-                {formatCurrency(operations.estimatedRevenuePotential)}
-              </Badge>
-            </div>
-            <div className="mt-3 space-y-2">
-              {operations.revenueOpportunities.length ? (
-                operations.revenueOpportunities.slice(0, 3).map((item) => (
-                  <Link
-                    key={item.id}
-                    href="/instructeur/leerlingen"
-                    className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border border-white/8 bg-white/[0.035] p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {item.leerlingNaam}
-                      </p>
-                      <p className="mt-1 text-[12px] text-slate-400">
-                        {item.reason} - voorstel {item.packageName}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold text-amber-200">
-                      {formatCurrency(item.estimatedValue)}
-                    </span>
-                  </Link>
-                ))
-              ) : (
-                <EmptyState text="Nog geen directe pakketkansen. Zodra een leerling richting einde pakket gaat, verschijnt die hier." />
-              )}
-            </div>
-          </div>
-        </div>
-      </CommandPanel>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_19rem] 2xl:grid-cols-[minmax(0,1fr)_23rem] 2xl:gap-6">
-        <div className="space-y-4 2xl:space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[minmax(16rem,0.72fr)_minmax(0,1.38fr)] 2xl:gap-6">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(16rem,0.72fr)_minmax(0,1.38fr)]">
             <CommandPanel>
               <SectionHeader
                 title="Aankomende lessen"
                 href="/instructeur/lessen"
               />
-              <div className="space-y-2.5 2xl:space-y-3">
+              <div className="space-y-3">
                 {upcomingLessons.slice(0, 5).length ? (
                   upcomingLessons.slice(0, 5).map((lesson) => (
                     <Link
                       key={lesson.id}
                       href={getLessonDashboardHref(lesson)}
-                      className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white/7 2xl:py-2"
+                      className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition hover:bg-white/7"
                     >
                       <div className="min-w-0">
                         <p className="text-[11px] text-slate-400">
@@ -1340,7 +850,7 @@ export function InstructorCommandCenter({
               <Button
                 asChild
                 variant="outline"
-                className="mt-3 h-9 w-full justify-between rounded-lg border-white/10 bg-white/7 text-sm text-white hover:bg-white/12 2xl:mt-4 2xl:h-10 2xl:text-base"
+                className="mt-4 h-10 w-full justify-between rounded-lg border-white/10 bg-white/7 text-white hover:bg-white/12"
               >
                 <Link href="/instructeur/lessen">
                   Alle lessen bekijken
@@ -1360,7 +870,7 @@ export function InstructorCommandCenter({
                 lessons={lessonsThisWeek}
                 weekDays={weekDays}
               />
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-[10px] text-slate-400 2xl:gap-4 2xl:text-[11px]">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="size-2 rounded-full bg-emerald-400" />
                   Beschikbaar
@@ -1377,7 +887,7 @@ export function InstructorCommandCenter({
             </CommandPanel>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3 2xl:gap-6">
+          <div className="grid gap-4 lg:grid-cols-3">
             <CommandPanel>
               <SectionHeader
                 title="Recente reviews"
@@ -1476,13 +986,13 @@ export function InstructorCommandCenter({
           </div>
         </div>
 
-        <aside className="space-y-4 2xl:space-y-6">
+        <aside className="space-y-4">
           <CommandPanel>
             <SectionHeader
               title="Recente meldingen"
               href="/instructeur/berichten"
             />
-            <div className="space-y-2.5 2xl:space-y-3">
+            <div className="space-y-3">
               {notifications.slice(0, 4).length ? (
                 notifications.slice(0, 4).map((notification) => {
                   const Icon = getNotificationIcon(notification);
@@ -1491,7 +1001,7 @@ export function InstructorCommandCenter({
                     <Link
                       key={notification.id}
                       href={getNotificationHref(notification)}
-                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white/7 2xl:py-2"
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg px-2 py-2 transition hover:bg-white/7"
                     >
                       <span className="flex size-8 items-center justify-center rounded-full bg-blue-500/16 text-blue-200">
                         <Icon className="size-4" />
@@ -1518,7 +1028,7 @@ export function InstructorCommandCenter({
 
           <CommandPanel>
             <SectionHeader title="Snelle acties" />
-            <div className="space-y-1.5 2xl:space-y-2">
+            <div className="space-y-1.5">
               {[
                 {
                   href: "/instructeur/lessen",
@@ -1545,7 +1055,7 @@ export function InstructorCommandCenter({
                   key={item.label}
                   asChild
                   variant="ghost"
-                  className="h-9 w-full justify-between rounded-lg px-3 text-sm text-slate-200 hover:bg-white/10 hover:text-white 2xl:h-10 2xl:text-base"
+                  className="h-10 w-full justify-between rounded-lg px-3 text-slate-200 hover:bg-white/10 hover:text-white"
                 >
                   <Link href={item.href}>
                     <span className="inline-flex items-center gap-2">
@@ -1559,75 +1069,9 @@ export function InstructorCommandCenter({
             </div>
           </CommandPanel>
 
-          <CommandPanel className="border-sky-400/18 bg-[linear-gradient(145deg,rgba(14,165,233,0.13),rgba(15,23,42,0.34))]">
-            <SectionHeader
-              title="Annulering opvolgen"
-              href="/instructeur/lessen"
-              cta="Open agenda"
-            />
-            <div className="mb-3 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 text-[9px] font-semibold tracking-[0.08em] text-slate-300 uppercase 2xl:text-[10px]">
-              <span className="rounded-md border border-rose-400/20 bg-rose-500/12 px-2 py-1 text-center text-rose-100">
-                Geannuleerd
-              </span>
-              <ArrowRight className="size-3 text-slate-500" />
-              <span className="rounded-md border border-sky-400/20 bg-sky-500/12 px-2 py-1 text-center text-sky-100">
-                Alternatief
-              </span>
-              <ArrowRight className="size-3 text-slate-500" />
-              <span className="rounded-md border border-emerald-400/20 bg-emerald-500/12 px-2 py-1 text-center text-emerald-100">
-                Voorstel
-              </span>
-            </div>
-
-            <div className="space-y-2.5">
-              {cancellationRecoveryPlans.length ? (
-                cancellationRecoveryPlans.map((plan) => (
-                  <Link
-                    key={plan.lesson.id}
-                    href={getLessonDashboardHref(plan.lesson)}
-                    className="block rounded-lg border border-white/10 bg-slate-950/26 p-3 transition hover:border-sky-300/25 hover:bg-sky-400/8"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">
-                          {plan.lesson.leerling_naam || "Leerling"}
-                        </p>
-                        <p className="mt-1 truncate text-[11px] text-slate-400">
-                          {plan.lesson.titel} - {formatWeekday(plan.lesson.start_at, plan.lesson.datum)}
-                        </p>
-                      </div>
-                      <Badge className="border border-sky-300/22 bg-sky-400/14 px-2 py-1 text-[9px] text-sky-100">
-                        Auto
-                      </Badge>
-                    </div>
-
-                    {plan.options.length ? (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {plan.options.slice(0, 3).map((option) => (
-                          <span
-                            key={option.id}
-                            className="rounded-md border border-emerald-300/16 bg-emerald-400/12 px-2 py-1 text-[10px] font-medium text-emerald-100"
-                          >
-                            {option.compactLabel}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-3 rounded-md border border-amber-300/18 bg-amber-400/10 px-2 py-1.5 text-[11px] leading-5 text-amber-100">
-                        Geen vrije alternatieven gevonden. Zet extra beschikbaarheid open om een voorstel te sturen.
-                      </p>
-                    )}
-                  </Link>
-                ))
-              ) : (
-                <EmptyState text="Geen geannuleerde lessen die opvolging nodig hebben." />
-              )}
-            </div>
-          </CommandPanel>
-
           <CommandPanel>
             <SectionHeader title="Statistieken" />
-            <div className="space-y-2.5 text-sm 2xl:space-y-3">
+            <div className="space-y-3 text-sm">
               {[
                 {
                   icon: CalendarDays,
@@ -1673,7 +1117,7 @@ export function InstructorCommandCenter({
         </aside>
       </div>
 
-      <CommandPanel className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between 2xl:gap-5">
+      <CommandPanel className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/18 text-blue-100 ring-1 ring-blue-400/20">
             <Bell className="size-5" />

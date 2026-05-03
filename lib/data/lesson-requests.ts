@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cache } from "react";
 import {
   aanvragen,
   komendeLessen,
@@ -92,7 +91,7 @@ function parseRequestDateTime(
   };
 }
 
-const getInstructorScopeIds = cache(async function getInstructorScopeIds(
+async function getInstructorScopeIds(
   profileId: string,
   fallbackInstructorId: string,
 ) {
@@ -111,7 +110,7 @@ const getInstructorScopeIds = cache(async function getInstructorScopeIds(
   }
 
   return Array.from(new Set([fallbackInstructorId, ...scopedIds]));
-});
+}
 
 export async function getLeerlingLessonRequests(): Promise<LesAanvraag[]> {
   const leerling = await getCurrentLeerlingRecord();
@@ -191,11 +190,7 @@ export async function getLeerlingLessonRequests(): Promise<LesAanvraag[]> {
   });
 }
 
-export async function getInstructeurLessonRequests({
-  limit,
-}: {
-  limit?: number;
-} = {}): Promise<LesAanvraag[]> {
+export async function getInstructeurLessonRequests(): Promise<LesAanvraag[]> {
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
@@ -207,19 +202,13 @@ export async function getInstructeurLessonRequests({
     instructeur.profile_id,
     instructeur.id,
   );
-  let requestQuery = supabase
+  const { data: rows, error } = (await supabase
     .from("lesaanvragen")
     .select(
       "id, leerling_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type",
     )
     .in("instructeur_id", instructorIds)
-    .order("created_at", { ascending: false });
-
-  if (limit && limit > 0) {
-    requestQuery = requestQuery.limit(limit);
-  }
-
-  const { data: rows, error } = (await requestQuery) as unknown as {
+    .order("created_at", { ascending: false })) as unknown as {
     data: LessonRequestRow[] | null;
     error: unknown;
   };
@@ -402,13 +391,7 @@ export async function getLeerlingLessons(): Promise<Les[]> {
   });
 }
 
-export async function getInstructeurLessons({
-  from,
-  limit,
-}: {
-  from?: string;
-  limit?: number;
-} = {}): Promise<Les[]> {
+export async function getInstructeurLessons(): Promise<Les[]> {
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
@@ -420,24 +403,13 @@ export async function getInstructeurLessons({
     instructeur.profile_id,
     instructeur.id,
   );
-  let lessonQuery = supabase
+  const { data: rows, error } = await supabase
     .from("lessen")
     .select(
       "id, titel, start_at, duur_minuten, status, locatie_id, leerling_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at",
     )
-    .in("instructeur_id", instructorIds);
-
-  if (from) {
-    lessonQuery = lessonQuery.gte("start_at", from);
-  }
-
-  lessonQuery = lessonQuery.order("start_at", { ascending: false });
-
-  if (limit && limit > 0) {
-    lessonQuery = lessonQuery.limit(limit);
-  }
-
-  const { data: rows, error } = await lessonQuery;
+    .in("instructeur_id", instructorIds)
+    .order("start_at", { ascending: true });
 
   if (error) {
     return [];
@@ -493,9 +465,7 @@ export async function getInstructeurLessons({
     ]),
   );
 
-  return [...rows]
-    .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
-    .map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     titel: row.titel,
     datum: row.start_at ? formatDate(row.start_at) : "Nog niet gepland",
@@ -521,8 +491,8 @@ export async function getInstructeurLessons({
     leerling_email: row.leerling_id
       ? (profileMap.get(leerlingMap.get(row.leerling_id) ?? "")?.email ?? null)
       : null,
-      instructeur_naam: "",
-    }));
+    instructeur_naam: "",
+  }));
 }
 
 export async function getLeerlingDashboardMetrics(): Promise<

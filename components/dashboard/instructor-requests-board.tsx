@@ -549,15 +549,14 @@ export function InstructorRequestsBoard({
   };
 
   return (
-    <div className="space-y-4 text-white 2xl:space-y-7">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
+    <div className="space-y-6 text-white">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl 2xl:text-4xl">
+          <h1 className="text-4xl font-semibold tracking-tight text-white">
             Aanvragen
           </h1>
-          <p className="mt-1.5 text-sm text-slate-400 2xl:mt-2 2xl:text-lg">
-            Wat moet ik nog accepteren? Behandel nieuwe aanvragen en zet ze
-            door naar je planning.
+          <p className="mt-2 text-lg text-slate-400">
+            Beheer en overzicht van al je aanvragen en aanvragen voor lessen.
           </p>
         </div>
         <NewRequestDialog />
@@ -595,15 +594,6 @@ export function InstructorRequestsBoard({
       </section>
 
       <section className="overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] p-4 shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)]">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-white">
-            Aanvragenlijst
-          </h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Nieuwe aanvragen staan bovenaan je werkvoorraad; accepteer of wijs
-            ze direct af.
-          </p>
-        </div>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-5">
             {tabs.map((tab) => (

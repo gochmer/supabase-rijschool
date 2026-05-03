@@ -12,10 +12,7 @@ import { getCurrentInstructorPackages } from "@/lib/data/packages";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
 import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
 import { formatCurrency } from "@/lib/format";
-import {
-  getStudentExamReadiness,
-  getStudentPackageTrajectorySignal,
-} from "@/lib/student-progress";
+import { getStudentExamReadiness } from "@/lib/student-progress";
 import { createServerClient } from "@/lib/supabase/server";
 import type {
   InstructorStudentProgressRow,
@@ -83,10 +80,6 @@ export type InstructorGrowthInsights = {
   fillGaps: InstructorGrowthInsightItem[];
   upgradeCandidates: InstructorGrowthInsightItem[];
 };
-
-type InstructorStudentWorkspace = Awaited<
-  ReturnType<typeof getInstructeurStudentsWorkspace>
->;
 
 function formatSlotMeta(startAt: string, endAt: string) {
   const dayLabel = new Intl.DateTimeFormat("nl-NL", {
@@ -320,9 +313,7 @@ function getRotatingTargets(
   });
 }
 
-export async function getInstructorGrowthInsights(
-  workspaceOverride?: InstructorStudentWorkspace | Promise<InstructorStudentWorkspace>,
-): Promise<InstructorGrowthInsights> {
+export async function getInstructorGrowthInsights(): Promise<InstructorGrowthInsights> {
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
@@ -352,22 +343,16 @@ export async function getInstructorGrowthInsights(
     requestsResult,
     availabilityResult,
   ] = await Promise.all([
-    workspaceOverride
-      ? Promise.resolve(workspaceOverride)
-      : getInstructeurStudentsWorkspace(),
+    getInstructeurStudentsWorkspace(),
     getCurrentInstructorPackages(),
     supabase
       .from("lessen")
       .select("leerling_id, start_at, duur_minuten, status")
-      .eq("instructeur_id", instructeur.id)
-      .order("start_at", { ascending: false })
-      .limit(1000),
+      .eq("instructeur_id", instructeur.id),
     supabase
       .from("lesaanvragen")
       .select("leerling_id, voorkeursdatum, tijdvak, status")
-      .eq("instructeur_id", instructeur.id)
-      .order("created_at", { ascending: false })
-      .limit(300),
+      .eq("instructeur_id", instructeur.id),
     supabase
       .from("beschikbaarheid")
       .select("id, start_at, eind_at, beschikbaar")
@@ -423,29 +408,6 @@ export async function getInstructorGrowthInsights(
       ? packageById.get(student.pakketId) ?? null
       : null;
     const currentPackageName = currentPackage?.naam ?? student.pakket;
-    const packagePlannedLessons =
-      student.pakketIngeplandeLessen ??
-      studentLessons.filter((lesson) =>
-        ["geaccepteerd", "ingepland"].includes(lesson.status ?? "")
-      ).length;
-    const packageUsedLessons =
-      student.pakketGevolgdeLessen ??
-      studentLessons.filter((lesson) => lesson.status === "afgerond").length;
-    const packageTotalLessons =
-      student.pakketTotaalLessen ?? currentPackage?.lessen ?? null;
-    const packageRemainingLessons =
-      student.pakketResterendeLessen ??
-      (packageTotalLessons != null
-        ? Math.max(packageTotalLessons - packagePlannedLessons - packageUsedLessons, 0)
-        : null);
-    const packageSignal = getStudentPackageTrajectorySignal({
-      packageName: currentPackage ? currentPackageName : null,
-      totalLessons: packageTotalLessons,
-      plannedLessons: packagePlannedLessons,
-      usedLessons: packageUsedLessons,
-      remainingLessons: packageRemainingLessons,
-    });
-    const consumedPackageLessons = packagePlannedLessons + packageUsedLessons;
     const hasUpcomingLesson =
       Boolean(student.volgendeLesAt) &&
       new Date(student.volgendeLesAt as string).getTime() > Date.now();
@@ -513,8 +475,7 @@ export async function getInstructorGrowthInsights(
         /losse|proefles|intake|opfris/i.test(
           currentPackageName.toLowerCase()
         )) &&
-      (consumedPackageLessons >= Math.max(1, currentPackage.lessen) ||
-        packageSignal.shouldSuggestAdditionalPackage)
+      studentLessons.length >= Math.max(1, currentPackage.lessen)
     ) {
       packageOpportunities.push({
         id: `package-light-${student.id}`,
@@ -542,7 +503,7 @@ export async function getInstructorGrowthInsights(
           currentPackageName,
           nextBiggerPackage.naam
         ),
-        sortScore: 30 + consumedPackageLessons,
+        sortScore: 30 + studentLessons.length,
       });
       registerGrowthValue(
         student.id,
@@ -554,12 +515,11 @@ export async function getInstructorGrowthInsights(
       continue;
     }
 
-    const remainingLessons = packageSignal.remainingLessons ?? Math.max(
-      currentPackage.lessen - consumedPackageLessons,
+    const remainingLessons = Math.max(
+      currentPackage.lessen - studentLessons.length,
       0
     );
     const upgradeSignal =
-      packageSignal.shouldSuggestAdditionalPackage ||
       remainingLessons <= 2 ||
       readiness.score >= 62 ||
       (student.voortgang >= 60 && needsNextLesson);

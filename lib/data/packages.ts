@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cache } from "react";
 import { betalingen, pakketten, pakkettenPerInstructeur } from "@/lib/mock-data";
 import type { Pakket, RijlesType } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
@@ -366,7 +365,7 @@ export async function getPublicInstructorPackageMap(
   }, {});
 }
 
-export const getCurrentInstructorPackages = cache(async function getCurrentInstructorPackages(): Promise<Pakket[]> {
+export async function getCurrentInstructorPackages(): Promise<Pakket[]> {
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
@@ -387,7 +386,7 @@ export const getCurrentInstructorPackages = cache(async function getCurrentInstr
   }
 
   return packageRows.map((pkg) => toPackage(pkg as DbPackageRow));
-});
+}
 
 export async function getCurrentStudentPackageOverview() {
   const leerling = await getCurrentLeerlingRecord();
@@ -408,22 +407,11 @@ export async function getCurrentStudentPackageOverview() {
         lessen: pkg.lessen,
         prijsLabel: pkg.prijs ? formatCurrency(pkg.prijs) : "Op aanvraag",
       })),
-      lessonUsage: {
-        totalLessons: null,
-        plannedLessons: 0,
-        usedLessons: 0,
-        remainingLessons: null,
-      },
     };
   }
 
   const supabase = await createServerClient();
-  const [
-    { data: assignedPackage },
-    { data: packageLessonRows },
-    { data: paymentRows },
-    { data: packageRows },
-  ] =
+  const [{ data: assignedPackage }, { data: paymentRows }, { data: packageRows }] =
     await Promise.all([
       leerling.pakket_id
         ? (supabase
@@ -432,16 +420,6 @@ export async function getCurrentStudentPackageOverview() {
             .eq("id", leerling.pakket_id)
             .maybeSingle() as unknown as Promise<MaybePackageQueryResult>)
         : Promise.resolve({ data: null }),
-      leerling.pakket_id
-        ? (supabase
-            .from("lessen")
-            .select("id, status")
-            .eq("leerling_id", leerling.id)
-            .eq("pakket_id", leerling.pakket_id)
-            .neq("status", "geannuleerd") as unknown as Promise<{
-            data: Array<{ id: string; status: string | null }> | null;
-          }>)
-        : Promise.resolve({ data: [] }),
       supabase
         .from("betalingen")
         .select("id, bedrag, status, betaald_at, created_at")
@@ -457,18 +435,6 @@ export async function getCurrentStudentPackageOverview() {
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true })) as unknown as Promise<PackageQueryResult>,
     ]);
-  const packageLessonUsageRows = packageLessonRows ?? [];
-  const plannedPackageLessons = packageLessonUsageRows.filter((lesson) =>
-    ["geaccepteerd", "ingepland"].includes(lesson.status ?? "")
-  ).length;
-  const usedPackageLessons = packageLessonUsageRows.filter(
-    (lesson) => lesson.status === "afgerond"
-  ).length;
-  const assignedLessonTotal = assignedPackage?.aantal_lessen ?? null;
-  const remainingPackageLessons =
-    assignedLessonTotal && assignedLessonTotal > 0
-      ? Math.max(assignedLessonTotal - plannedPackageLessons - usedPackageLessons, 0)
-      : null;
 
   return {
     assignedPackage: assignedPackage
@@ -494,12 +460,6 @@ export async function getCurrentStudentPackageOverview() {
           cover_focus_y: parsePackageCoverFocusValue(assignedPackage.cover_focus_y),
         }
       : null,
-    lessonUsage: {
-      totalLessons: assignedLessonTotal,
-      plannedLessons: plannedPackageLessons,
-      usedLessons: usedPackageLessons,
-      remainingLessons: remainingPackageLessons,
-    },
     payments:
       paymentRows?.map((payment) => ({
         id: payment.id,

@@ -41,7 +41,6 @@ import {
   notifyInstructorAboutDirectBooking,
   notifyInstructorAboutNewRequest,
 } from "@/lib/notification-events";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import type { BeschikbaarheidWeekrooster, LesStatus } from "@/lib/types";
 
@@ -98,162 +97,6 @@ type InstructorDurationRow = {
   standaard_pakketles_duur_minuten?: number | null;
   standaard_examenrit_duur_minuten?: number | null;
 };
-
-type LessonBookingPackage = {
-  id: string;
-  naam: string;
-  les_type: string | null;
-};
-
-const PACKAGE_REQUIRED_MESSAGE =
-  "Kies eerst een lespakket voordat je vervolglessen kunt plannen. Je proefles blijft beschikbaar zolang je die nog niet hebt gebruikt.";
-
-async function getInstructorLessonPackage(params: {
-  supabase: Awaited<ReturnType<typeof createServerClient>>;
-  instructorId: string;
-  packageId: string;
-}) {
-  const { data: packageRow } = (await params.supabase
-    .from("pakketten")
-    .select("id, naam, les_type, instructeur_id, actief")
-    .eq("id", params.packageId)
-    .maybeSingle()) as unknown as {
-    data:
-      | {
-          id: string;
-          naam: string;
-          les_type: string | null;
-          instructeur_id: string | null;
-          actief: boolean | null;
-        }
-      | null;
-  };
-
-  if (!packageRow || packageRow.instructeur_id !== params.instructorId) {
-    return {
-      success: false as const,
-      message: "Dit pakket hoort niet bij deze instructeur.",
-    };
-  }
-
-  if (packageRow.actief === false) {
-    return {
-      success: false as const,
-      message: "Dit pakket is niet meer beschikbaar.",
-    };
-  }
-
-  return {
-    success: true as const,
-    package: {
-      id: packageRow.id,
-      naam: packageRow.naam,
-      les_type: packageRow.les_type,
-    } satisfies LessonBookingPackage,
-  };
-}
-
-async function resolveLessonPackageForRequest(params: {
-  supabase: Awaited<ReturnType<typeof createServerClient>>;
-  instructorId: string;
-  learnerPackageId: string | null;
-  requestedPackageId?: string | null;
-  requestType: "algemeen" | "proefles";
-}) {
-  const requestedPackageId = params.requestedPackageId?.trim() ?? "";
-
-  if (requestedPackageId) {
-    const packageResult = await getInstructorLessonPackage({
-      supabase: params.supabase,
-      instructorId: params.instructorId,
-      packageId: requestedPackageId,
-    });
-
-    if (!packageResult.success) {
-      return packageResult;
-    }
-
-    return {
-      success: true as const,
-      package: packageResult.package,
-      isPackageSelection: true,
-    };
-  }
-
-  if (params.requestType === "proefles") {
-    return {
-      success: true as const,
-      package: null,
-      isPackageSelection: false,
-    };
-  }
-
-  if (!params.learnerPackageId) {
-    return {
-      success: false as const,
-      message: PACKAGE_REQUIRED_MESSAGE,
-    };
-  }
-
-  const packageResult = await getInstructorLessonPackage({
-    supabase: params.supabase,
-    instructorId: params.instructorId,
-    packageId: params.learnerPackageId,
-  });
-
-  if (!packageResult.success) {
-    return {
-      success: false as const,
-      message:
-        "Je gekoppelde pakket hoort niet bij deze instructeur. Vraag je instructeur om het juiste pakket te koppelen.",
-    };
-  }
-
-  return {
-    success: true as const,
-    package: packageResult.package,
-    isPackageSelection: false,
-  };
-}
-
-async function activateLearnerPackageForInstructor(params: {
-  leerlingId: string;
-  instructorId: string;
-  packageId: string;
-}) {
-  const admin = await createAdminClient();
-  const now = new Date().toISOString();
-
-  const { error: learnerError } = await admin
-    .from("leerlingen" as never)
-    .update({
-      pakket_id: params.packageId,
-    } as never)
-    .eq("id", params.leerlingId);
-
-  if (learnerError) {
-    return { success: false as const };
-  }
-
-  const { error: planningError } = await admin
-    .from("leerling_planningsrechten" as never)
-    .upsert(
-      {
-        leerling_id: params.leerlingId,
-        instructeur_id: params.instructorId,
-        zelf_inplannen_toegestaan: true,
-        vrijgegeven_at: now,
-        updated_at: now,
-      } as never,
-      { onConflict: "leerling_id,instructeur_id" }
-    );
-
-  if (planningError) {
-    return { success: false as const };
-  }
-
-  return { success: true as const };
-}
 
 function getWeeklyBookingLimitMessage(params: {
   weeklyLimitMinutes: number;
@@ -814,28 +657,56 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
       message: getTrialLessonAlreadyUsedMessage(),
     };
   }
-  const packageResult = await resolveLessonPackageForRequest({
-    supabase,
-    instructorId: instructeur.id,
-    learnerPackageId: leerling.pakket_id,
-    requestedPackageId: input.packageId,
-    requestType,
-  });
-
-  if (!packageResult.success) {
-    return {
-      success: false,
-      message: packageResult.message,
-    };
-  }
-
-  const selectedPackage = packageResult.package;
-  const isPackageSelection = packageResult.isPackageSelection;
   const durationKind = getRequestedLessonDurationKind({
-    hasSelectedPackage: Boolean(selectedPackage),
+    hasSelectedPackage: Boolean(input.packageId?.trim()),
     requestType,
   });
   const fallbackDurationMinutes = getLessonDurationForKind(instructeur, durationKind);
+  let selectedPackage:
+    | {
+        id: string;
+        naam: string;
+        les_type: string | null;
+      }
+    | null = null;
+
+  if (input.packageId?.trim()) {
+    const { data: packageRow } = (await supabase
+      .from("pakketten")
+      .select("id, naam, les_type, instructeur_id, actief")
+      .eq("id", input.packageId.trim())
+      .maybeSingle()) as unknown as {
+      data:
+        | {
+            id: string;
+            naam: string;
+            les_type: string | null;
+            instructeur_id: string | null;
+            actief: boolean | null;
+          }
+        | null;
+    };
+
+    if (!packageRow || packageRow.instructeur_id !== instructeur.id) {
+      return {
+        success: false,
+        message: "Dit pakket hoort niet bij deze instructeur.",
+      };
+    }
+
+    if (packageRow.actief === false) {
+      return {
+        success: false,
+        message: "Dit pakket is niet meer beschikbaar.",
+      };
+    }
+
+    selectedPackage = {
+      id: packageRow.id,
+      naam: packageRow.naam,
+      les_type: packageRow.les_type,
+    };
+  }
 
   const resolvedMoment = await resolveRequestedLessonMoment({
     supabase,
@@ -881,7 +752,7 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     data: DuplicateLessonRequestRow[] | null;
   };
 
-  const hasDuplicatePackage = isPackageSelection && selectedPackage?.id
+  const hasDuplicatePackage = selectedPackage?.id
     ? (existingRequests ?? []).some(
         (request) => request.pakket_id === selectedPackage.id
       )
@@ -951,7 +822,7 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     tijdvak,
     bericht: input.bericht?.trim() || null,
     status: "aangevraagd",
-    aanvraag_type: isPackageSelection ? "pakket" : requestType,
+    aanvraag_type: selectedPackage ? "pakket" : requestType,
     pakket_id: selectedPackage?.id ?? null,
     pakket_naam_snapshot:
       selectedPackage?.naam ?? (requestType === "proefles" ? "Proefles" : null),
@@ -972,7 +843,7 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     voorkeursdatum,
     tijdvak,
     pakketNaam: selectedPackage?.naam ?? null,
-    aanvraagType: isPackageSelection ? "pakket" : requestType,
+    aanvraagType: selectedPackage ? "pakket" : requestType,
     lesType: selectedPackage?.les_type ?? null,
     bericht: input.bericht?.trim() || null,
   });
@@ -981,7 +852,7 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
 
   return {
     success: true,
-    message: isPackageSelection && selectedPackage
+    message: selectedPackage
       ? `Je aanvraag voor ${selectedPackage.naam} is verstuurd.`
       : requestType === "proefles"
         ? "Je proeflesaanvraag is verstuurd."
@@ -1035,30 +906,20 @@ export async function createDirectLessonBookingAction(
     };
   }
 
-  const requestType = input.requestType === "proefles" ? "proefles" : "algemeen";
   const planningAccess = await getLearnerInstructorSchedulingAccess(
     instructeur.id,
     leerling.id
   );
-  const directBookingAllowedForRequest =
-    requestType === "proefles"
-      ? planningAccess.publicBookingEnabled ||
-        planningAccess.selfSchedulingAllowed ||
-        planningAccess.directBookingAllowed
-      : planningAccess.directBookingAllowed;
 
-  if (!directBookingAllowedForRequest) {
+  if (!planningAccess.directBookingAllowed) {
     return {
       success: false,
       message:
-        requestType === "proefles"
-          ? "Direct online inplannen staat op dit moment nog niet aan bij deze instructeur."
-          : planningAccess.hasActiveRelationship && !planningAccess.packageAssigned
-            ? PACKAGE_REQUIRED_MESSAGE
-            : "Direct online inplannen staat op dit moment nog niet aan bij deze instructeur.",
+        "Direct online inplannen staat op dit moment nog niet aan bij deze instructeur.",
     };
   }
 
+  const requestType = input.requestType === "proefles" ? "proefles" : "algemeen";
   if (
     requestType === "proefles" &&
     (await hasLearnerUsedTrialLesson({ supabase, leerlingId: leerling.id }))
@@ -1069,30 +930,56 @@ export async function createDirectLessonBookingAction(
       refreshAvailability: true,
     };
   }
-
-  const packageResult = await resolveLessonPackageForRequest({
-    supabase,
-    instructorId: instructeur.id,
-    learnerPackageId: leerling.pakket_id,
-    requestedPackageId: input.packageId,
-    requestType,
-  });
-
-  if (!packageResult.success) {
-    return {
-      success: false,
-      message: packageResult.message,
-      refreshAvailability: true,
-    };
-  }
-
-  const selectedPackage = packageResult.package;
-  const isPackageSelection = packageResult.isPackageSelection;
   const durationKind = getRequestedLessonDurationKind({
-    hasSelectedPackage: Boolean(selectedPackage),
+    hasSelectedPackage: Boolean(input.packageId?.trim()),
     requestType,
   });
   const expectedDurationMinutes = getLessonDurationForKind(instructeur, durationKind);
+  let selectedPackage:
+    | {
+        id: string;
+        naam: string;
+        les_type: string | null;
+      }
+    | null = null;
+
+  if (input.packageId?.trim()) {
+    const { data: packageRow } = (await supabase
+      .from("pakketten")
+      .select("id, naam, les_type, instructeur_id, actief")
+      .eq("id", input.packageId.trim())
+      .maybeSingle()) as unknown as {
+      data:
+        | {
+            id: string;
+            naam: string;
+            les_type: string | null;
+            instructeur_id: string | null;
+            actief: boolean | null;
+          }
+        | null;
+    };
+
+    if (!packageRow || packageRow.instructeur_id !== instructeur.id) {
+      return {
+        success: false,
+        message: "Dit pakket hoort niet bij deze instructeur.",
+      };
+    }
+
+    if (packageRow.actief === false) {
+      return {
+        success: false,
+        message: "Dit pakket is niet meer beschikbaar.",
+      };
+    }
+
+    selectedPackage = {
+      id: packageRow.id,
+      naam: packageRow.naam,
+      les_type: packageRow.les_type,
+    };
+  }
 
   const resolvedMoment = await resolveRequestedLessonMoment({
     supabase,
@@ -1133,7 +1020,7 @@ export async function createDirectLessonBookingAction(
     data: DuplicateLessonRequestRow[] | null;
   };
 
-  const hasDuplicatePackage = isPackageSelection && selectedPackage?.id
+  const hasDuplicatePackage = selectedPackage?.id
     ? (existingRequests ?? []).some(
         (request) => request.pakket_id === selectedPackage.id
       )
@@ -1227,24 +1114,8 @@ export async function createDirectLessonBookingAction(
 
   const bookingTitle = getLessonRequestTitle({
     packageName: selectedPackage?.naam ?? null,
-    requestType: isPackageSelection ? "pakket" : requestType,
+    requestType: selectedPackage ? "pakket" : requestType,
   });
-
-  if (isPackageSelection && selectedPackage) {
-    const activatePackageResult = await activateLearnerPackageForInstructor({
-      leerlingId: leerling.id,
-      instructorId: instructeur.id,
-      packageId: selectedPackage.id,
-    });
-
-    if (!activatePackageResult.success) {
-      return {
-        success: false,
-        message:
-          "Het pakket kon niet aan je traject worden gekoppeld. Probeer opnieuw of neem contact op met je instructeur.",
-      };
-    }
-  }
 
   const { data: insertedRequest, error: requestError } = await supabase
     .from("lesaanvragen")
@@ -1255,7 +1126,7 @@ export async function createDirectLessonBookingAction(
       tijdvak,
       bericht: input.bericht?.trim() || null,
       status: "ingepland",
-      aanvraag_type: isPackageSelection ? "pakket" : requestType,
+      aanvraag_type: selectedPackage ? "pakket" : requestType,
       pakket_id: selectedPackage?.id ?? null,
       pakket_naam_snapshot:
         selectedPackage?.naam ?? (requestType === "proefles" ? "Proefles" : null),
@@ -1277,7 +1148,6 @@ export async function createDirectLessonBookingAction(
     start_at: startAt,
     duur_minuten: durationMinutes,
     status: "ingepland",
-    pakket_id: selectedPackage?.id ?? null,
     notities: buildLessonRequestReference(insertedRequest.id),
   } as never);
 
@@ -1303,7 +1173,7 @@ export async function createDirectLessonBookingAction(
     voorkeursdatum,
     tijdvak,
     pakketNaam: selectedPackage?.naam ?? null,
-    aanvraagType: isPackageSelection ? "pakket" : requestType,
+    aanvraagType: selectedPackage ? "pakket" : requestType,
     lesType: selectedPackage?.les_type ?? null,
     bericht: input.bericht?.trim() || null,
   });
@@ -1315,7 +1185,7 @@ export async function createDirectLessonBookingAction(
     message:
       requestType === "proefles"
         ? "Je proefles staat direct ingepland."
-        : isPackageSelection && selectedPackage
+        : selectedPackage
           ? `${selectedPackage.naam} staat direct ingepland.`
           : "Je les staat direct ingepland.",
     refreshAvailability: true,

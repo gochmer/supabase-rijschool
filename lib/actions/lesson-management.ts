@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import { getLessonEndAt } from "@/lib/booking-availability";
 import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
-import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
-import { getInstructeurLessons } from "@/lib/data/lesson-requests";
 import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
 import {
   ensureCurrentUserContext,
@@ -21,12 +19,8 @@ import {
   notifyLearnerAboutLessonAttendance,
   notifyLearnerToLeaveReview,
 } from "@/lib/notification-events";
-import { findBestLessonRescheduleOptions } from "@/lib/lesson-reschedule-proposals";
-import { evaluateStudentTrajectorySignals } from "@/lib/student-trajectory-notifications";
 import { createServerClient } from "@/lib/supabase/server";
-import type { LessonAttendanceStatus, Les, LesStatus } from "@/lib/types";
-
-const MAX_REPEAT_LESSONS = 12;
+import type { LessonAttendanceStatus, LesStatus } from "@/lib/types";
 
 type UpdateLessonInput = LocationSelectionInput & {
   lessonId: string;
@@ -37,14 +31,6 @@ type UpdateLessonInput = LocationSelectionInput & {
   duurMinuten: number;
   status: Extract<LesStatus, "geaccepteerd" | "ingepland" | "afgerond" | "geannuleerd">;
   reason?: string | null;
-  repeatCount?: number;
-  repeatStartDate?: string | null;
-  repeatDates?: string[];
-  repeatLessons?: Array<{
-    date?: string | null;
-    time?: string | null;
-    durationMinutes?: number | null;
-  }>;
 };
 
 type ManagedLessonRecord = {
@@ -66,32 +52,6 @@ function toLocalDateTime(dateString: string, timeString: string) {
   }
 
   return `${dateString}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:00`;
-}
-
-function addDaysToDateValue(dateValue: string, days: number) {
-  const date = new Date(`${dateValue}T12:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function formatDateValue(dateValue: string) {
-  const date = new Date(`${dateValue}T12:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return dateValue;
-  }
-
-  return new Intl.DateTimeFormat("nl-NL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Europe/Amsterdam",
-  }).format(date);
 }
 
 function formatLessonDateAndTime(startAt: string | null | undefined) {
@@ -126,7 +86,6 @@ function revalidateLessonViews() {
   revalidatePath("/instructeur/aanvragen");
   revalidatePath("/leerling/dashboard");
   revalidatePath("/leerling/boekingen");
-  revalidatePath("/leerling/profiel");
 }
 
 async function getManagedLesson(
@@ -146,75 +105,6 @@ async function getManagedLesson(
   };
 
   return lesson;
-}
-
-async function sendAutomaticRescheduleProposalMessage({
-  instructorName,
-  learnerId,
-  lessonTitle,
-  proposalLabels,
-  senderProfileId,
-  supabase,
-}: {
-  instructorName: string;
-  learnerId: string | null | undefined;
-  lessonTitle: string;
-  proposalLabels: string[];
-  senderProfileId: string;
-  supabase: Awaited<ReturnType<typeof createServerClient>>;
-}) {
-  const cleanProposalLabels = proposalLabels
-    .map((label) => label.trim())
-    .filter(Boolean);
-
-  if (!learnerId || !cleanProposalLabels.length) {
-    return;
-  }
-
-  const { data: learner } = await supabase
-    .from("leerlingen")
-    .select("profile_id")
-    .eq("id", learnerId)
-    .maybeSingle();
-
-  const recipientProfileId = learner?.profile_id;
-
-  if (!recipientProfileId || recipientProfileId === senderProfileId) {
-    return;
-  }
-
-  const inhoud = [
-    `Hi, je les "${lessonTitle}" is geannuleerd.`,
-    "",
-    `${instructorName} heeft automatisch deze nieuwe momenten voor je klaargezet:`,
-    "",
-    ...cleanProposalLabels.map((label) => `- ${label}`),
-    "",
-    "Laat weten welke tijd past, dan kan de les opnieuw worden ingepland.",
-  ].join("\n");
-
-  const { error } = await supabase.from("berichten").insert({
-    afzender_profiel_id: senderProfileId,
-    ontvanger_profiel_id: recipientProfileId,
-    onderwerp: "Voorstel voor nieuwe lestijd",
-    inhoud,
-  });
-
-  if (error) {
-    console.error("Automatic reschedule proposal message failed", error);
-    return;
-  }
-
-  await supabase.from("notificaties").insert({
-    profiel_id: recipientProfileId,
-    titel: "Nieuw lesvoorstel",
-    tekst: `Er staan ${cleanProposalLabels.length} nieuwe tijd${cleanProposalLabels.length === 1 ? "" : "en"} klaar na de annulering.`,
-    type: "info",
-    ongelezen: true,
-  });
-
-  revalidatePath("/leerling/berichten");
-  revalidatePath("/instructeur/berichten");
 }
 
 async function syncLinkedRequestStatus(
@@ -293,143 +183,6 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     };
   }
 
-  const legacyRepeatCount = Math.min(
-    Math.max(
-      Number.isFinite(input.repeatCount ?? 0)
-        ? Math.trunc(Number(input.repeatCount ?? 0))
-        : 0,
-      0
-    ),
-    MAX_REPEAT_LESSONS
-  );
-  const repeatStartDate = input.repeatStartDate?.trim() || null;
-  let repeatLessonValues = Array.isArray(input.repeatLessons)
-    ? input.repeatLessons
-        .map((repeatLesson) => {
-          const repeatDuration = Number(
-            repeatLesson.durationMinutes ?? duration
-          );
-
-          return {
-            date: repeatLesson.date?.trim() ?? "",
-            time: repeatLesson.time?.trim() || input.tijd,
-            duration: Number.isFinite(repeatDuration)
-              ? repeatDuration
-              : duration,
-          };
-        })
-        .filter((repeatLesson) => repeatLesson.date)
-    : [];
-
-  if (repeatLessonValues.length === 0 && Array.isArray(input.repeatDates)) {
-    repeatLessonValues = input.repeatDates
-      .map((dateValue) => ({
-        date: dateValue.trim(),
-        time: input.tijd,
-        duration,
-      }))
-      .filter((repeatLesson) => repeatLesson.date);
-  }
-
-  if (repeatLessonValues.length === 0 && legacyRepeatCount > 0) {
-    if (!repeatStartDate || repeatStartDate <= input.datum) {
-      return {
-        success: false,
-        message: "Kies een eerste herhalingsdatum na de originele lesdatum.",
-      };
-    }
-
-    const legacyRepeatLessonValues: Array<{
-      date: string;
-      time: string;
-      duration: number;
-    }> = [];
-
-    for (let repeatIndex = 0; repeatIndex < legacyRepeatCount; repeatIndex += 1) {
-      const nextDate = addDaysToDateValue(repeatStartDate, repeatIndex * 7);
-
-      if (!nextDate) {
-        return {
-          success: false,
-          message: "De datums voor de herhalingslessen konden niet worden bepaald.",
-        };
-      }
-
-      legacyRepeatLessonValues.push({
-        date: nextDate,
-        time: input.tijd,
-        duration,
-      });
-    }
-
-    repeatLessonValues = legacyRepeatLessonValues;
-  }
-
-  if (repeatLessonValues.length > MAX_REPEAT_LESSONS) {
-    return {
-      success: false,
-      message: "Je kunt maximaal 12 volgende lessen tegelijk maken.",
-    };
-  }
-
-  if (repeatLessonValues.length > 0 && input.status === "geannuleerd") {
-    return {
-      success: false,
-      message: "Volgende lessen kunnen niet worden aangemaakt bij een annulering.",
-    };
-  }
-
-  const seenRepeatMoments = new Set<string>();
-
-  for (let repeatIndex = 0; repeatIndex < repeatLessonValues.length; repeatIndex += 1) {
-    const repeatLesson = repeatLessonValues[repeatIndex];
-    const repeatDate = repeatLesson.date;
-    const parsedRepeatDate = new Date(`${repeatDate}T12:00:00`);
-
-    if (Number.isNaN(parsedRepeatDate.getTime())) {
-      return {
-        success: false,
-        message: `Volgende les ${repeatIndex + 1} heeft geen geldige datum.`,
-      };
-    }
-
-    if (repeatDate <= input.datum) {
-      return {
-        success: false,
-        message: `Kies voor volgende les ${repeatIndex + 1} een datum na de originele lesdatum.`,
-      };
-    }
-
-    if (!toLocalDateTime(repeatDate, repeatLesson.time)) {
-      return {
-        success: false,
-        message: `Volgende les ${repeatIndex + 1} heeft geen geldige tijd.`,
-      };
-    }
-
-    if (
-      !Number.isFinite(repeatLesson.duration) ||
-      repeatLesson.duration < 30 ||
-      repeatLesson.duration > 240
-    ) {
-      return {
-        success: false,
-        message: `Volgende les ${repeatIndex + 1} heeft geen geldige duur.`,
-      };
-    }
-
-    const repeatMomentKey = `${repeatDate}-${repeatLesson.time}`;
-
-    if (seenRepeatMoments.has(repeatMomentKey)) {
-      return {
-        success: false,
-        message: `Volgende les ${repeatIndex + 1} gebruikt hetzelfde moment dubbel.`,
-      };
-    }
-
-    seenRepeatMoments.add(repeatMomentKey);
-  }
-
   const supabase = await createServerClient();
   const lesson = await getManagedLesson(input.lessonId, instructeur.id);
 
@@ -488,61 +241,6 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     }
   }
 
-  const repeatedLessons: Array<{
-    startAt: string;
-    endAt: string;
-    duration: number;
-  }> = [];
-
-  if (repeatLessonValues.length > 0) {
-    if (!nextLearnerId) {
-      return {
-        success: false,
-        message: "Kies eerst een leerling voordat je volgende lessen maakt.",
-      };
-    }
-
-    for (let repeatIndex = 0; repeatIndex < repeatLessonValues.length; repeatIndex += 1) {
-      const nextRepeatLesson = repeatLessonValues[repeatIndex];
-      const repeatStartAt = toLocalDateTime(
-        nextRepeatLesson.date,
-        nextRepeatLesson.time
-      );
-      const repeatEndAt = repeatStartAt
-        ? getLessonEndAt(repeatStartAt, nextRepeatLesson.duration)
-        : null;
-
-      if (!repeatStartAt || !repeatEndAt) {
-        return {
-          success: false,
-          message: "De tijd van een volgende les kon niet worden bepaald.",
-        };
-      }
-
-      const repeatConflict = await findSchedulingConflict({
-        instructorId: instructeur.id,
-        learnerId: nextLearnerId,
-        startAt: repeatStartAt,
-        endAt: repeatEndAt,
-        includeRequestHolds: false,
-        supabase,
-      });
-
-      if (repeatConflict.hasConflict) {
-        return {
-          success: false,
-          message: `Volgende les ${repeatIndex + 1} op ${formatDateValue(nextRepeatLesson.date)} om ${nextRepeatLesson.time} botst met een andere planning.`,
-        };
-      }
-
-      repeatedLessons.push({
-        startAt: repeatStartAt,
-        endAt: repeatEndAt,
-        duration: nextRepeatLesson.duration,
-      });
-    }
-  }
-
   const locationId = await resolveLocationSelection(input);
   const locationRow =
     locationId
@@ -581,79 +279,11 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     };
   }
 
-  if (repeatedLessons.length > 0) {
-    const { error: repeatError } = await supabase.from("lessen").insert(
-      repeatedLessons.map((repeatLesson) => ({
-        leerling_id: nextLearnerId,
-        instructeur_id: instructeur.id,
-        titel: nextTitle,
-        start_at: repeatLesson.startAt,
-        duur_minuten: repeatLesson.duration,
-        status: "ingepland",
-        locatie_id: locationId,
-      })) as never
-    );
-
-    if (repeatError) {
-      return {
-        success: false,
-        message:
-          "De les is bijgewerkt, maar de volgende lessen konden niet worden aangemaakt.",
-      };
-    }
-  }
-
   await syncLinkedRequestStatus(
     extractLessonRequestReference(lesson.notities),
     input.status,
     input.reason
   );
-
-  const instructorName = context.profile?.volledige_naam || "Je instructeur";
-  let suggestedRescheduleTimes: string[] = [];
-
-  if (input.status === "geannuleerd" && nextLearnerId) {
-    try {
-      const [availabilitySlots, instructorLessons] = await Promise.all([
-        getCurrentInstructorAvailability(),
-        getInstructeurLessons(),
-      ]);
-      const lessonForProposal =
-        instructorLessons.find((item) => item.id === lesson.id) ??
-        ({
-          id: lesson.id,
-          titel: nextTitle,
-          datum: input.datum,
-          tijd: input.tijd,
-          start_at: startAt,
-          end_at: endAt,
-          duur_minuten: duration,
-          status: input.status,
-          locatie: locationSummary,
-          locatie_id: locationId,
-          leerling_id: nextLearnerId,
-          leerling_naam: "Leerling",
-          instructeur_naam: instructorName,
-        } satisfies Les);
-
-      suggestedRescheduleTimes = findBestLessonRescheduleOptions({
-        lesson: lessonForProposal,
-        lessons: instructorLessons,
-        slots: availabilitySlots,
-      }).map((option) => option.label);
-
-      await sendAutomaticRescheduleProposalMessage({
-        instructorName,
-        learnerId: nextLearnerId,
-        lessonTitle: nextTitle,
-        proposalLabels: suggestedRescheduleTimes,
-        senderProfileId: context.user.id,
-        supabase,
-      });
-    } catch (error) {
-      console.error("Automatic reschedule proposal failed", error);
-    }
-  }
 
   if (input.status === "afgerond") {
     const shouldPromptForReview = lesson.status !== "afgerond";
@@ -669,7 +299,7 @@ export async function updateLessonAction(input: UpdateLessonInput) {
       await notifyLearnerToLeaveReview({
         supabase,
         leerlingId: nextLearnerId,
-        instructeurNaam: instructorName,
+        instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
         datum: input.datum,
         tijd: input.tijd,
         lesTitel: nextTitle,
@@ -680,7 +310,7 @@ export async function updateLessonAction(input: UpdateLessonInput) {
       await notifyLearnerAboutLessonChange({
         supabase,
         leerlingId: lesson.leerling_id,
-        instructeurNaam: instructorName,
+        instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
         datum: input.datum,
         tijd: input.tijd,
         locatie: locationSummary,
@@ -692,13 +322,12 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     await notifyLearnerAboutLessonChange({
       supabase,
       leerlingId: nextLearnerId,
-      instructeurNaam: instructorName,
+      instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
       datum: input.datum,
       tijd: input.tijd,
       locatie: locationSummary,
       status: input.status,
       reason: input.reason,
-      suggestedTimes: suggestedRescheduleTimes,
     });
   }
 
@@ -709,8 +338,6 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     message:
       input.status === "geannuleerd"
         ? "De les is geannuleerd."
-        : repeatedLessons.length > 0
-          ? `De les is bijgewerkt en ${repeatedLessons.length} volgende les${repeatedLessons.length === 1 ? "" : "sen"} zijn ingepland.`
         : "De les is bijgewerkt.",
   };
 }
@@ -811,13 +438,6 @@ export async function updateLessonAttendanceAction(input: {
       reason: input.absenceReason,
     });
   }
-
-  await evaluateStudentTrajectorySignals({
-    supabase,
-    leerlingId: lesson.leerling_id,
-    instructeurId: instructeur.id,
-    instructeurNaam: context.profile?.volledige_naam,
-  });
 
   revalidateLessonViews();
 

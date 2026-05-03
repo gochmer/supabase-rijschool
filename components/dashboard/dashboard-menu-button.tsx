@@ -1,13 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Menu, Sparkles, X } from "lucide-react";
 
-import {
-  dashboardNavigation,
-  isDashboardNavigationItemActive,
-} from "@/lib/navigation";
+import { dashboardNavigation } from "@/lib/navigation";
 import type { GebruikersRol } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -34,7 +31,6 @@ export function DashboardMenuButton({
   className?: string;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const items = dashboardNavigation[role];
 
   return (
@@ -86,15 +82,12 @@ export function DashboardMenuButton({
 
           <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
             {items.map((item) => {
-              const active = isDashboardNavigationItemActive(pathname, item);
+              const active = pathname === item.href;
 
               return (
                 <DialogClose key={item.href} asChild>
                   <Link
                     href={item.href}
-                    prefetch
-                    onFocus={() => router.prefetch(item.href)}
-                    onMouseEnter={() => router.prefetch(item.href)}
                     className={cn(
                       "flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:outline-none",
                       active

@@ -5,11 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "verify": "npm run doctor && npm run typecheck && npm run lint && npm run check:links && npm run build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "doctor": "node scripts/doctor.mjs",
     "check:links": "node scripts/check-internal-links.mjs",
     "playwright:clickcheck": "node scripts/playwright-clickcheck.mjs",
     "playwright:dashboards": "node scripts/playwright-dashboard-visual-check.mjs",

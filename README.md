@@ -62,8 +62,6 @@ API:
 
 ```bash
 npm ci
-cp .env.example .env.local
-npm run doctor
 npm run dev
 ```
 
@@ -87,7 +85,6 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 LESSON_REMINDER_CRON_SECRET=local-lesson-reminder-secret
-PAYMENT_REMINDER_CRON_SECRET=local-payment-reminder-secret
 
 RESEND_API_KEY=
 NOTIFICATION_FROM_EMAIL=
@@ -102,7 +99,7 @@ PLAYWRIGHT_NOTIFICATION_TEST_EMAIL=
 PLAYWRIGHT_TEST_PASSWORD=
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` en `RESEND_API_KEY` zijn server-only secrets. Zet ze nooit in clientcode of git. Zijn deze ooit gedeeld of meegezipt, roteer ze direct in Supabase/Resend.
+`SUPABASE_SERVICE_ROLE_KEY` en `RESEND_API_KEY` zijn server-only secrets. Zet ze nooit in clientcode.
 
 ## Supabase
 
@@ -122,12 +119,9 @@ npm run supabase:seed:demo
 
 ```bash
 npm run dev
-npm run doctor
-npm run typecheck
 npm run lint
 npm run build
 npm run check:links
-npm run verify
 npm run start
 npm run playwright:clickcheck
 npm run playwright:dashboards
@@ -141,8 +135,6 @@ npm run supabase:types
 Draai minimaal:
 
 ```bash
-npm run doctor
-npm run typecheck
 npm run lint
 npm run build
 ```
@@ -174,7 +166,7 @@ dashboardpagina's op desktop en mobiel te controleren.
 
 ## Ontwikkelprioriteiten
 
-1. Houd `npm run verify` groen voordat je deployt.
+1. Houd `npm run lint` en `npm run build` groen.
 2. Bescherm de booking flow: proefles, pakket aanvraag, beschikbaarheid, self-scheduling en annuleren.
 3. Houd dashboards taakgericht per rol.
 4. Verhoog SEO-kwaliteit met unieke content, interne links en structured data.

@@ -26,7 +26,6 @@ import { extractLessonRequestReference } from "@/lib/lesson-request-flow";
 
 type InstructorStudentLessonRow = {
   leerling_id: string | null;
-  pakket_id: string | null;
   start_at: string | null;
   duur_minuten: number;
   status: string;
@@ -84,23 +83,8 @@ type InstructorStudentRow = {
 type InstructorStudentPackageRow = {
   id: string;
   naam: string;
-  aantal_lessen: number | null;
   zelf_inplannen_limiet_minuten_per_week: number | null;
 };
-
-export async function getInstructorStudentCount(instructorId: string) {
-  const supabase = await createServerClient();
-  const { count, error } = await supabase
-    .from("instructeur_leerling_koppelingen" as never)
-    .select("leerling_id", { count: "exact", head: true })
-    .eq("instructeur_id" as never, instructorId as never);
-
-  if (error) {
-    return 0;
-  }
-
-  return count ?? 0;
-}
 
 type StudentProgressLessonNoteRow = {
   id: string;
@@ -293,226 +277,6 @@ const DEMO_NOTES: StudentProgressLessonNote[] = [
   },
 ];
 
-export async function getInstructeurLessonPlannerStudents(): Promise<
-  InstructorStudentProgressRow[]
-> {
-  const instructeur = await getCurrentInstructeurRecord();
-
-  if (!instructeur) {
-    return DEMO_STUDENTS;
-  }
-
-  const supabase = await createServerClient();
-  const [lessonsResult, requestsResult, linksResult] = (await Promise.all([
-    supabase
-      .from("lessen")
-      .select("leerling_id, pakket_id, start_at, duur_minuten, status, notities")
-      .eq("instructeur_id", instructeur.id)
-      .not("leerling_id", "is", null)
-      .limit(1000),
-    supabase
-      .from("lesaanvragen")
-      .select("id, leerling_id, status, pakket_naam_snapshot, created_at")
-      .eq("instructeur_id", instructeur.id)
-      .not("leerling_id", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(300),
-    supabase
-      .from("instructeur_leerling_koppelingen" as never)
-      .select("leerling_id, created_at, bron, onboarding_notitie, intake_checklist_keys")
-      .eq("instructeur_id", instructeur.id)
-      .not("leerling_id", "is", null),
-  ])) as unknown as [
-    { data: InstructorStudentLessonRow[] | null },
-    { data: InstructorStudentRequestRow[] | null },
-    { data: InstructorStudentLinkRow[] | null },
-  ];
-
-  const lessonRows = lessonsResult.data ?? [];
-  const requestRows = requestsResult.data ?? [];
-  const linkRows = linksResult.data ?? [];
-  const leerlingIds = Array.from(
-    new Set(
-      [...lessonRows, ...requestRows, ...linkRows]
-        .map((row) => row.leerling_id)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-
-  if (!leerlingIds.length) {
-    return [];
-  }
-
-  const { data: leerlingenRows } = (await supabase
-    .from("leerlingen")
-    .select("id, profile_id, voortgang_percentage, pakket_id")
-    .in("id", leerlingIds)) as unknown as {
-    data: InstructorStudentRow[] | null;
-  };
-
-  const profileIds = (leerlingenRows ?? []).map((row) => row.profile_id);
-  const packageIds = (leerlingenRows ?? [])
-    .map((row) => row.pakket_id)
-    .filter((value): value is string => Boolean(value));
-
-  const [profilesResult, packagesResult] = await Promise.all([
-    profileIds.length
-      ? supabase
-          .from("profiles")
-          .select("id, volledige_naam, email, telefoon")
-          .in("id", profileIds)
-      : Promise.resolve({ data: [] }),
-    packageIds.length
-      ? (supabase
-          .from("pakketten")
-          .select("id, naam, aantal_lessen, zelf_inplannen_limiet_minuten_per_week")
-          .in("id", packageIds) as unknown as Promise<{
-          data: InstructorStudentPackageRow[] | null;
-        }>)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const profileMap = new Map(
-    (profilesResult.data ?? []).map((profile) => [profile.id, profile]),
-  );
-  const packageMap = new Map(
-    (packagesResult.data ?? []).map((pkg) => [pkg.id, pkg]),
-  );
-  const lessonsByStudent = new Map<string, InstructorStudentLessonRow[]>();
-  const requestsByStudent = new Map<string, InstructorStudentRequestRow[]>();
-  const manualLinksByStudent = new Map<string, InstructorStudentLinkRow>();
-
-  for (const lesson of lessonRows) {
-    if (!lesson.leerling_id) {
-      continue;
-    }
-
-    const current = lessonsByStudent.get(lesson.leerling_id) ?? [];
-    current.push(lesson);
-    lessonsByStudent.set(lesson.leerling_id, current);
-  }
-
-  for (const request of requestRows) {
-    if (!request.leerling_id) {
-      continue;
-    }
-
-    const current = requestsByStudent.get(request.leerling_id) ?? [];
-    current.push(request);
-    requestsByStudent.set(request.leerling_id, current);
-  }
-
-  for (const link of linkRows) {
-    if (link.leerling_id) {
-      manualLinksByStudent.set(link.leerling_id, link);
-    }
-  }
-
-  const nowMs = Date.now();
-
-  return (leerlingenRows ?? [])
-    .map((student) => {
-      const profile = profileMap.get(student.profile_id);
-      const relatedLessons = lessonsByStudent.get(student.id) ?? [];
-      const relatedRequests = requestsByStudent.get(student.id) ?? [];
-      const manualLink = manualLinksByStudent.get(student.id) ?? null;
-      const assignedPackage = student.pakket_id
-        ? packageMap.get(student.pakket_id) ?? null
-        : null;
-      const latestRequest = [...relatedRequests].sort((left, right) =>
-        right.created_at.localeCompare(left.created_at),
-      )[0];
-      const nextLesson = [...relatedLessons]
-        .filter((lesson) => lesson.start_at)
-        .sort((left, right) =>
-          (left.start_at ?? "").localeCompare(right.start_at ?? ""),
-        )
-        .find((lesson) => {
-          if (!lesson.start_at) {
-            return false;
-          }
-
-          return new Date(lesson.start_at).getTime() >= nowMs;
-        });
-      const packageLessons = relatedLessons.filter(
-        (lesson) =>
-          lesson.status !== "geannuleerd" &&
-          Boolean(student.pakket_id) &&
-          lesson.pakket_id === student.pakket_id,
-      );
-      const pakketIngeplandeLessen = packageLessons.filter((lesson) =>
-        ["geaccepteerd", "ingepland"].includes(lesson.status),
-      ).length;
-      const pakketGevolgdeLessen = packageLessons.filter(
-        (lesson) => lesson.status === "afgerond",
-      ).length;
-      const pakketTotaalLessen = assignedPackage?.aantal_lessen ?? null;
-      const pakketResterendeLessen =
-        pakketTotaalLessen && pakketTotaalLessen > 0
-          ? Math.max(
-              pakketTotaalLessen -
-                pakketIngeplandeLessen -
-                pakketGevolgdeLessen,
-              0,
-            )
-          : null;
-      const firstKnownConnectionAt =
-        [
-          manualLink?.created_at,
-          ...relatedRequests.map((request) => request.created_at),
-          ...relatedLessons.map((lesson) => lesson.start_at),
-        ]
-          .filter((value): value is string => Boolean(value))
-          .sort((left, right) => left.localeCompare(right))[0] ?? null;
-
-      return {
-        id: student.id,
-        profileId: student.profile_id,
-        naam: profile?.volledige_naam ?? "Leerling",
-        pakket:
-          assignedPackage?.naam ??
-          latestRequest?.pakket_naam_snapshot ??
-          "Nog geen pakket",
-        pakketId: student.pakket_id ?? null,
-        voortgang: Number(student.voortgang_percentage ?? 0),
-        volgendeLes: formatRelativeOrFallback(nextLesson?.start_at),
-        volgendeLesAt: nextLesson?.start_at ?? null,
-        laatsteBeoordeling: "Niet geladen",
-        laatsteBeoordelingAt: null,
-        gekoppeldeLessen: relatedLessons.length,
-        voltooideLessen: relatedLessons.filter(
-          (lesson) => lesson.status === "afgerond",
-        ).length,
-        pakketTotaalLessen,
-        pakketIngeplandeLessen,
-        pakketGevolgdeLessen,
-        pakketResterendeLessen,
-        pakketPlanningGeblokkeerd: !student.pakket_id,
-        aanvraagStatus:
-          latestRequest?.status != null
-            ? getRequestStatusLabel(latestRequest.status)
-            : manualLink
-              ? "Handmatig gekoppeld"
-              : "Actief traject",
-        email: profile?.email ?? "",
-        telefoon: profile?.telefoon ?? "",
-        gekoppeldSinds: firstKnownConnectionAt,
-        planningVrijTeGeven:
-          Boolean(student.pakket_id) &&
-          (Boolean(manualLink) ||
-            relatedLessons.length > 0 ||
-            relatedRequests.some((request) =>
-              ACTIVE_PLANNING_REQUEST_STATUSES.includes(
-                (request.status ??
-                  "") as (typeof ACTIVE_PLANNING_REQUEST_STATUSES)[number],
-              ),
-            )),
-        isHandmatigGekoppeld: Boolean(manualLink),
-      };
-    })
-    .sort((left, right) => left.naam.localeCompare(right.naam));
-}
-
 export async function getInstructeurStudentsWorkspace() {
   const instructeur = await getCurrentInstructeurRecord();
 
@@ -528,20 +292,16 @@ export async function getInstructeurStudentsWorkspace() {
   const [lessonsResult, requestsResult, linksResult] = (await Promise.all([
     supabase
       .from("lessen")
-      .select("leerling_id, pakket_id, start_at, duur_minuten, status, notities")
+      .select("leerling_id, start_at, duur_minuten, status, notities")
       .eq("instructeur_id", instructeur.id)
-      .not("leerling_id", "is", null)
-      .order("start_at", { ascending: false })
-      .limit(1000),
+      .not("leerling_id", "is", null),
     supabase
       .from("lesaanvragen")
       .select(
         "id, leerling_id, status, pakket_naam_snapshot, created_at, voorkeursdatum, tijdvak",
       )
       .eq("instructeur_id", instructeur.id)
-      .not("leerling_id", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(300),
+      .not("leerling_id", "is", null),
     supabase
       .from("instructeur_leerling_koppelingen" as never)
       .select(
@@ -606,7 +366,7 @@ export async function getInstructeurStudentsWorkspace() {
     packageIds.length
       ? (supabase
           .from("pakketten")
-          .select("id, naam, aantal_lessen, zelf_inplannen_limiet_minuten_per_week")
+          .select("id, naam, zelf_inplannen_limiet_minuten_per_week")
           .in("id", packageIds) as unknown as Promise<{
           data: InstructorStudentPackageRow[] | null;
         }>)
@@ -619,8 +379,7 @@ export async function getInstructeurStudentsWorkspace() {
       .eq("instructeur_id", instructeur.id)
       .in("leerling_id", leerlingIds)
       .order("beoordelings_datum", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(1200),
+      .order("created_at", { ascending: false }),
     supabase
       .from("leerling_voortgang_lesnotities")
       .select(
@@ -629,8 +388,7 @@ export async function getInstructeurStudentsWorkspace() {
       .eq("instructeur_id", instructeur.id)
       .in("leerling_id", leerlingIds)
       .order("lesdatum", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(600),
+      .order("updated_at", { ascending: false }),
     studentSchedulingAccess
       .select(
         "leerling_id, zelf_inplannen_toegestaan, zelf_inplannen_limiet_minuten_per_week, zelf_inplannen_limiet_is_handmatig",
@@ -729,7 +487,6 @@ export async function getInstructeurStudentsWorkspace() {
   const lessonsByStudent = new Map<
     string,
     Array<{
-      pakket_id: string | null;
       start_at: string | null;
       duur_minuten: number;
       status: string;
@@ -744,7 +501,6 @@ export async function getInstructeurStudentsWorkspace() {
 
     const current = lessonsByStudent.get(lesson.leerling_id) ?? [];
     current.push({
-      pakket_id: lesson.pakket_id,
       start_at: lesson.start_at,
       duur_minuten: lesson.duur_minuten,
       status: lesson.status,
@@ -811,41 +567,15 @@ export async function getInstructeurStudentsWorkspace() {
       const computedProgress = studentAssessments.length
         ? calculateStudentProgressPercentage(studentAssessments)
         : Number(student.voortgang_percentage ?? 0);
-      const assignedPackage = student.pakket_id
-        ? packageMap.get(student.pakket_id) ?? null
-        : null;
-      const packageLessons = relatedLessons.filter(
-        (lesson) =>
-          lesson.status !== "geannuleerd" &&
-          Boolean(student.pakket_id) &&
-          lesson.pakket_id === student.pakket_id,
-      );
-      const pakketIngeplandeLessen = packageLessons.filter((lesson) =>
-        ["geaccepteerd", "ingepland"].includes(lesson.status),
-      ).length;
-      const pakketGevolgdeLessen = packageLessons.filter(
-        (lesson) => lesson.status === "afgerond",
-      ).length;
-      const pakketTotaalLessen = assignedPackage?.aantal_lessen ?? null;
-      const pakketResterendeLessen =
-        pakketTotaalLessen && pakketTotaalLessen > 0
-          ? Math.max(
-              pakketTotaalLessen -
-                pakketIngeplandeLessen -
-                pakketGevolgdeLessen,
-              0,
-            )
-          : null;
       const planningVrijTeGeven =
-        Boolean(student.pakket_id) &&
-        (Boolean(manualLink) ||
-          relatedLessons.length > 0 ||
-          relatedRequests.some((request) =>
-            ACTIVE_PLANNING_REQUEST_STATUSES.includes(
-              (request.status ??
-                "") as (typeof ACTIVE_PLANNING_REQUEST_STATUSES)[number],
-            ),
-          ));
+        Boolean(manualLink) ||
+        relatedLessons.length > 0 ||
+        relatedRequests.some((request) =>
+          ACTIVE_PLANNING_REQUEST_STATUSES.includes(
+            (request.status ??
+              "") as (typeof ACTIVE_PLANNING_REQUEST_STATUSES)[number],
+          ),
+        );
       const zelfInplannenToegestaan =
         planningVrijTeGeven &&
         Boolean(schedulingAccess?.zelf_inplannen_toegestaan);
@@ -934,7 +664,9 @@ export async function getInstructeurStudentsWorkspace() {
         profileId: student.profile_id,
         naam: profile?.volledige_naam ?? "Leerling",
         pakket:
-          assignedPackage?.naam ??
+          (student.pakket_id
+            ? packageMap.get(student.pakket_id)?.naam
+            : null) ??
           latestRequest?.pakket_naam_snapshot ??
           "Nog geen pakket",
         pakketId: student.pakket_id ?? null,
@@ -949,11 +681,6 @@ export async function getInstructeurStudentsWorkspace() {
         voltooideLessen: relatedLessons.filter(
           (lesson) => lesson.status === "afgerond",
         ).length,
-        pakketTotaalLessen,
-        pakketIngeplandeLessen,
-        pakketGevolgdeLessen,
-        pakketResterendeLessen,
-        pakketPlanningGeblokkeerd: !student.pakket_id,
         aanvraagStatus:
           latestRequest?.status != null
             ? getRequestStatusLabel(latestRequest.status)

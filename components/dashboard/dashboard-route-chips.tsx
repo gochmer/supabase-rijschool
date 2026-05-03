@@ -1,23 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
-import {
-  isDashboardNavigationItemActive,
-  type DashboardNavigationItem,
-} from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export function DashboardRouteChips({
   items,
   tone = "default",
 }: {
-  items: DashboardNavigationItem[];
+  items: Array<{ href: string; label: string }>;
   tone?: "default" | "urban";
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const isUrban = tone === "urban";
 
   return (
@@ -31,15 +26,12 @@ export function DashboardRouteChips({
     >
       <div className="flex min-w-max items-center gap-2">
         {items.map((item) => {
-          const active = isDashboardNavigationItemActive(pathname, item);
+          const active = pathname === item.href;
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              prefetch
-              onFocus={() => router.prefetch(item.href)}
-              onMouseEnter={() => router.prefetch(item.href)}
               className={cn(
                 "inline-flex h-9 items-center rounded-lg px-3 text-sm font-semibold transition-colors",
                 active

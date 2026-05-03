@@ -1,10 +1,846 @@
 
 > gochoir@0.1.0 dev
-> next dev --port 3001
+> next dev
 
 ▲ Next.js 16.2.4 (Turbopack)
-- Local:         http://localhost:3001
-- Network:       http://192.168.2.15:3001
+- Local:         http://localhost:3000
+- Network:       http://192.168.2.15:3000
 - Environments: .env.local
-✓ Ready in 610ms
-[?25h
+✓ Ready in 711ms
+Creating turbopack project {
+  dir: 'C:\\Users\\gocho\\OneDrive\\Bureaublad\\app projecten\\gochoir',
+  testMode: true
+}
+
+ GET / 200 in 3.8s (next.js: 1127ms, proxy.ts: 390ms, application-code: 2.3s)
+ GET /instructeur/dashboard 200 in 4.4s (next.js: 107ms, proxy.ts: 84ms, application-code: 4.2s)
+ GET /instructeur/profiel 200 in 2.1s (next.js: 146ms, proxy.ts: 161ms, application-code: 1811ms)
+ GET /instructeur/reviews 200 in 856ms (next.js: 58ms, proxy.ts: 115ms, application-code: 683ms)
+ GET /instructeur/pakketten 200 in 621ms (next.js: 59ms, proxy.ts: 123ms, application-code: 439ms)
+ GET /instructeur/lessen 200 in 979ms (next.js: 60ms, proxy.ts: 60ms, application-code: 860ms)
+ GET /instructeur/berichten 200 in 1349ms (next.js: 74ms, proxy.ts: 54ms, application-code: 1222ms)
+ GET /instructeur/leerlingen 200 in 817ms (next.js: 53ms, proxy.ts: 60ms, application-code: 705ms)
+ GET /instructeur/aanvragen 200 in 773ms (next.js: 51ms, proxy.ts: 169ms, application-code: 554ms)
+ GET / 200 in 682ms (next.js: 6ms, proxy.ts: 8ms, application-code: 668ms)
+ GET /instructeur/inkomsten 200 in 1891ms (next.js: 68ms, proxy.ts: 52ms, application-code: 1771ms)
+ POST /instructeur/inkomsten 200 in 3.7s (next.js: 5ms, proxy.ts: 113ms, application-code: 3.6s)
+  └─ ƒ syncInstructorIncomeLedgerAction() in 688ms lib/actions/instructor-income-ledger.ts
+ GET /instructeur/inkomsten 200 in 1014ms (next.js: 6ms, proxy.ts: 999ms, application-code: 9ms)
+ GET /instructeur/inkomsten 200 in 191ms (next.js: 5ms, proxy.ts: 177ms, application-code: 9ms)
+ GET /instructeur/dashboard 200 in 2.3s (next.js: 5ms, proxy.ts: 184ms, application-code: 2.1s)
+ GET /instructeur/profiel 200 in 1902ms (next.js: 5ms, proxy.ts: 173ms, application-code: 1723ms)
+ GET /instructeur/reviews 200 in 823ms (next.js: 5ms, proxy.ts: 89ms, application-code: 729ms)
+ GET /instructeur/pakketten 200 in 560ms (next.js: 4ms, proxy.ts: 100ms, application-code: 456ms)
+ GET /instructeur/aanvragen 200 in 647ms (next.js: 4ms, proxy.ts: 90ms, application-code: 552ms)
+ GET /instructeur/leerlingen 200 in 883ms (next.js: 11ms, proxy.ts: 56ms, application-code: 816ms)
+ GET /instructeur/lessen 200 in 1044ms (next.js: 5ms, proxy.ts: 109ms, application-code: 931ms)
+ GET /instructeur/berichten 200 in 1501ms (next.js: 4ms, proxy.ts: 120ms, application-code: 1376ms)
+ GET /instructeur/lessen 200 in 983ms (next.js: 5ms, proxy.ts: 121ms, application-code: 857ms)
+ GET /instructeur/inkomsten 200 in 1962ms (next.js: 4ms, proxy.ts: 117ms, application-code: 1840ms)
+ GET /instructeur/inkomsten 200 in 726ms (next.js: 8ms, proxy.ts: 703ms, application-code: 15ms)
+ GET /instructeur/inkomsten 200 in 187ms (next.js: 4ms, proxy.ts: 174ms, application-code: 10ms)
+✓ Compiled in 347ms
+ GET /instructeur/inkomsten 200 in 3.0s (next.js: 5ms, proxy.ts: 142ms, application-code: 2.9s)
+ GET /instructeur/inkomsten 200 in 3.8s (next.js: 251ms, proxy.ts: 318ms, application-code: 3.2s)
+✓ Compiled in 267ms
+ GET /instructeur/inkomsten 200 in 1621ms (next.js: 231ms, proxy.ts: 257ms, application-code: 1133ms)
+ GET /instructeur/inkomsten 200 in 1186ms (next.js: 10ms, proxy.ts: 250ms, application-code: 927ms)
+✓ Compiled in 943ms
+ GET /instructeur/inkomsten 200 in 2.2s (next.js: 229ms, proxy.ts: 809ms, application-code: 1184ms)
+ GET /instructeur/inkomsten 200 in 1487ms (next.js: 5ms, proxy.ts: 549ms, application-code: 932ms)
+✓ Compiled in 258ms
+ GET /instructeur/inkomsten 200 in 1755ms (next.js: 225ms, proxy.ts: 300ms, application-code: 1229ms)
+ GET /instructeur/inkomsten 200 in 1203ms (next.js: 5ms, proxy.ts: 258ms, application-code: 940ms)
+✓ Compiled in 261ms
+ GET /instructeur/inkomsten 200 in 1723ms (next.js: 231ms, proxy.ts: 301ms, application-code: 1190ms)
+ GET /instructeur/inkomsten 200 in 1200ms (next.js: 8ms, proxy.ts: 293ms, application-code: 899ms)
+✓ Compiled in 230ms
+ GET /instructeur/inkomsten 200 in 1625ms (next.js: 233ms, proxy.ts: 278ms, application-code: 1114ms)
+ GET /instructeur/inkomsten 200 in 1199ms (next.js: 5ms, proxy.ts: 308ms, application-code: 886ms)
+ GET /instructeur/inkomsten?periode=week 200 in 3.1s (next.js: 5ms, proxy.ts: 186ms, application-code: 2.9s)
+ GET /instructeur/inkomsten?periode=dag 200 in 2.1s (next.js: 16ms, proxy.ts: 116ms, application-code: 1941ms)
+ GET /instructeur/inkomsten?periode=week 200 in 1532ms (next.js: 4ms, proxy.ts: 50ms, application-code: 1478ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 1882ms (next.js: 5ms, proxy.ts: 97ms, application-code: 1780ms)
+✓ Compiled in 293ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1461ms (next.js: 5ms, proxy.ts: 360ms, application-code: 1097ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 2.3s (next.js: 20ms, proxy.ts: 945ms, application-code: 1315ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 4.6s (next.js: 224ms, proxy.ts: 421ms, application-code: 3.9s)
+ GET /instructeur/inkomsten?periode=week 200 in 1673ms (next.js: 5ms, proxy.ts: 54ms, application-code: 1614ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 1680ms (next.js: 4ms, proxy.ts: 52ms, application-code: 1624ms)
+✓ Compiled in 264ms
+ GET /instructeur/inkomsten?periode=maand 200 in 1821ms (next.js: 265ms, proxy.ts: 456ms, application-code: 1100ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 1233ms (next.js: 4ms, proxy.ts: 280ms, application-code: 949ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 2.1s (next.js: 5ms, proxy.ts: 147ms, application-code: 1930ms)
+✓ Compiled in 205ms
+ GET /instructeur/inkomsten?periode=maand 200 in 1341ms (next.js: 181ms, proxy.ts: 252ms, application-code: 908ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 939ms (next.js: 4ms, proxy.ts: 291ms, application-code: 644ms)
+ GET /instructeur/inkomsten?periode=week 200 in 3.1s (next.js: 8ms, proxy.ts: 215ms, application-code: 2.8s)
+ GET /instructeur/inkomsten?periode=week 200 in 3.0s (next.js: 98ms, proxy.ts: 148ms, application-code: 2.7s)
+ GET /instructeur/inkomsten?periode=maand 200 in 1861ms (next.js: 7ms, proxy.ts: 66ms, application-code: 1789ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1639ms (next.js: 6ms, proxy.ts: 58ms, application-code: 1575ms)
+ GET /instructeur/inkomsten?periode=week 200 in 1708ms (next.js: 5ms, proxy.ts: 57ms, application-code: 1646ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 1797ms (next.js: 5ms, proxy.ts: 99ms, application-code: 1693ms)
+ GET /instructeur/inkomsten?periode=week 200 in 1942ms (next.js: 5ms, proxy.ts: 110ms, application-code: 1826ms)
+✓ Compiled in 829ms
+ GET /instructeur/inkomsten?periode=week 200 in 2.4s (next.js: 234ms, proxy.ts: 1049ms, application-code: 1113ms)
+ GET /instructeur/inkomsten?periode=week 200 in 1165ms (next.js: 5ms, proxy.ts: 349ms, application-code: 812ms)
+ GET /instructeur/inkomsten?periode=week 200 in 1045ms (next.js: 5ms, proxy.ts: 132ms, application-code: 908ms)
+ GET /instructeur/inkomsten?periode=week 200 in 1057ms (next.js: 5ms, proxy.ts: 138ms, application-code: 914ms)
+✓ Compiled in 215ms
+ GET /instructeur/inkomsten?periode=week 200 in 5.4s (next.js: 212ms, proxy.ts: 280ms, application-code: 4.9s)
+✓ Compiled in 253ms
+ GET /instructeur/inkomsten?periode=week 200 in 3.7s (next.js: 218ms, proxy.ts: 275ms, application-code: 3.2s)
+✓ Compiled in 268ms
+ GET /instructeur/inkomsten?periode=week 200 in 3.6s (next.js: 203ms, proxy.ts: 313ms, application-code: 3.1s)
+✓ Compiled in 232ms
+ GET /instructeur/inkomsten?periode=week 200 in 4.6s (next.js: 220ms, proxy.ts: 254ms, application-code: 4.1s)
+✓ Compiled in 227ms
+ GET /instructeur/inkomsten?periode=week 200 in 7.4s (next.js: 236ms, proxy.ts: 448ms, application-code: 6.7s)
+ GET /instructeur/inkomsten?periode=maand 200 in 3.1s (next.js: 11ms, proxy.ts: 869ms, application-code: 2.2s)
+ GET /instructeur/inkomsten?periode=maand 200 in 1705ms (next.js: 5ms, proxy.ts: 59ms, application-code: 1640ms)
+ GET /instructeur/inkomsten?periode=week 200 in 2.5s (next.js: 6ms, proxy.ts: 346ms, application-code: 2.1s)
+ GET /instructeur/inkomsten?periode=dag 200 in 1779ms (next.js: 5ms, proxy.ts: 62ms, application-code: 1712ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 2.0s (next.js: 5ms, proxy.ts: 146ms, application-code: 1872ms)
+✓ Compiled in 214ms
+ GET /instructeur/inkomsten?periode=dag 200 in 2.6s (next.js: 192ms, proxy.ts: 809ms, application-code: 1618ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 940ms (next.js: 27ms, proxy.ts: 238ms, application-code: 676ms)
+✓ Compiled in 232ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1260ms (next.js: 179ms, proxy.ts: 275ms, application-code: 806ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 913ms (next.js: 4ms, proxy.ts: 208ms, application-code: 701ms)
+✓ Compiled in 213ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1425ms (next.js: 185ms, proxy.ts: 249ms, application-code: 991ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1048ms (next.js: 4ms, proxy.ts: 357ms, application-code: 687ms)
+✓ Compiled in 217ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1582ms (next.js: 209ms, proxy.ts: 361ms, application-code: 1012ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 959ms (next.js: 4ms, proxy.ts: 208ms, application-code: 748ms)
+✓ Compiled in 209ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1372ms (next.js: 241ms, proxy.ts: 258ms, application-code: 872ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 942ms (next.js: 4ms, proxy.ts: 218ms, application-code: 719ms)
+✓ Compiled in 229ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1365ms (next.js: 236ms, proxy.ts: 267ms, application-code: 862ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1123ms (next.js: 4ms, proxy.ts: 257ms, application-code: 863ms)
+✓ Compiled in 337ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1884ms (next.js: 372ms, proxy.ts: 340ms, application-code: 1172ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1181ms (next.js: 6ms, proxy.ts: 250ms, application-code: 926ms)
+✓ Compiled in 268ms
+ GET /instructeur/inkomsten?periode=dag 200 in 1896ms (next.js: 310ms, proxy.ts: 353ms, application-code: 1233ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1420ms (next.js: 8ms, proxy.ts: 370ms, application-code: 1042ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 2.1s (next.js: 5ms, proxy.ts: 147ms, application-code: 1900ms)
+✓ Compiled in 1088ms
+ GET /instructeur/inkomsten?periode=dag 200 in 2.5s (next.js: 264ms, proxy.ts: 1273ms, application-code: 943ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1246ms (next.js: 6ms, proxy.ts: 347ms, application-code: 894ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1034ms (next.js: 4ms, proxy.ts: 331ms, application-code: 699ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 980ms (next.js: 4ms, proxy.ts: 176ms, application-code: 800ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 1068ms (next.js: 4ms, proxy.ts: 180ms, application-code: 884ms)
+ GET /instructeur/inkomsten?periode=dag 200 in 13.0s (next.js: 82ms, proxy.ts: 81ms, application-code: 12.8s)
+ GET /instructeur/inkomsten 200 in 2.5s (next.js: 6ms, proxy.ts: 100ms, application-code: 2.4s)
+✓ Compiled in 289ms
+ GET /instructeur/inkomsten 200 in 1990ms (next.js: 315ms, proxy.ts: 330ms, application-code: 1345ms)
+ GET /instructeur/inkomsten 200 in 1321ms (next.js: 5ms, proxy.ts: 363ms, application-code: 953ms)
+✓ Compiled in 1108ms
+ GET /instructeur/inkomsten 200 in 13.7s (next.js: 6ms, proxy.ts: 690ms, application-code: 13.0s)
+ GET /instructeur/inkomsten 200 in 9.7s (next.js: 474ms, proxy.ts: 553ms, application-code: 8.7s)
+ GET /instructeur/inkomsten 200 in 10.0s (next.js: 319ms, proxy.ts: 6.5s, application-code: 3.1s)
+ GET /instructeur/inkomsten 200 in 2.3s (next.js: 6ms, proxy.ts: 140ms, application-code: 2.2s)
+ GET /instructeur/inkomsten 200 in 2.3s (next.js: 252ms, proxy.ts: 839ms, application-code: 1183ms)
+✓ Compiled in 535ms
+ GET /instructeur/inkomsten 200 in 15.2s (next.js: 265ms, proxy.ts: 752ms, application-code: 14.2s)
+ GET /instructeur/inkomsten 200 in 269ms (next.js: 6ms, proxy.ts: 249ms, application-code: 13ms)
+ GET /instructeur/inkomsten 200 in 154ms (next.js: 7ms, proxy.ts: 141ms, application-code: 6ms)
+ GET /instructeur/inkomsten 200 in 2.1s (next.js: 5ms, proxy.ts: 86ms, application-code: 1960ms)
+ GET /instructeur/inkomsten 200 in 3.7s (next.js: 11ms, proxy.ts: 140ms, application-code: 3.5s)
+✓ Compiled in 239ms
+ GET /instructeur/inkomsten 200 in 6.3s (next.js: 306ms, proxy.ts: 786ms, application-code: 5.2s)
+ GET /instructeur/inkomsten 200 in 4.5s (next.js: 4ms, proxy.ts: 116ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 3.8s (next.js: 533ms, proxy.ts: 320ms, application-code: 2.9s)
+ GET /instructeur/inkomsten 200 in 3.8s (next.js: 37ms, proxy.ts: 317ms, application-code: 3.4s)
+ GET /instructeur/inkomsten 200 in 3.8s (next.js: 851ms, proxy.ts: 892ms, application-code: 2.0s)
+ GET /instructeur/inkomsten 200 in 3.8s (next.js: 901ms, proxy.ts: 893ms, application-code: 1983ms)
+ GET /instructeur/inkomsten 200 in 1911ms (next.js: 3ms, proxy.ts: 55ms, application-code: 1852ms)
+ GET /instructeur/inkomsten 200 in 1880ms (next.js: 248ms, proxy.ts: 537ms, application-code: 1095ms)
+✓ Compiled in 230ms
+ GET /instructeur/inkomsten 200 in 1942ms (next.js: 222ms, proxy.ts: 231ms, application-code: 1489ms)
+ GET /instructeur/inkomsten 200 in 1075ms (next.js: 4ms, proxy.ts: 95ms, application-code: 976ms)
+✓ Compiled in 218ms
+ GET /instructeur/inkomsten 200 in 1011ms (next.js: 8ms, proxy.ts: 106ms, application-code: 897ms)
+ GET /instructeur/inkomsten 200 in 2.2s (next.js: 219ms, proxy.ts: 277ms, application-code: 1675ms)
+✓ Compiled in 222ms
+ GET /instructeur/inkomsten 200 in 2.2s (next.js: 258ms, proxy.ts: 273ms, application-code: 1692ms)
+ GET /instructeur/inkomsten 200 in 1110ms (next.js: 4ms, proxy.ts: 107ms, application-code: 999ms)
+✓ Compiled in 230ms
+ GET /instructeur/inkomsten 200 in 2.5s (next.js: 218ms, proxy.ts: 338ms, application-code: 1925ms)
+ GET /instructeur/inkomsten 200 in 1108ms (next.js: 44ms, proxy.ts: 226ms, application-code: 839ms)
+✓ Compiled in 272ms
+ GET /instructeur/inkomsten 200 in 2.3s (next.js: 211ms, proxy.ts: 264ms, application-code: 1803ms)
+ GET /instructeur/inkomsten 200 in 1342ms (next.js: 5ms, proxy.ts: 105ms, application-code: 1232ms)
+✓ Compiled in 251ms
+ GET /instructeur/inkomsten 200 in 14.4s (next.js: 244ms, proxy.ts: 287ms, application-code: 13.9s)
+✓ Compiled in 217ms
+ GET /instructeur/inkomsten 200 in 11.1s (next.js: 244ms, proxy.ts: 218ms, application-code: 10.7s)
+✓ Compiled in 927ms
+ GET /instructeur/inkomsten 200 in 13.7s (next.js: 250ms, proxy.ts: 845ms, application-code: 12.6s)
+✓ Compiled in 217ms
+ GET /instructeur/inkomsten 200 in 3.8s (next.js: 220ms, proxy.ts: 237ms, application-code: 3.4s)
+✓ Compiled in 216ms
+ GET /instructeur/inkomsten 200 in 7.7s (next.js: 240ms, proxy.ts: 209ms, application-code: 7.2s)
+✓ Compiled in 233ms
+ GET /instructeur/inkomsten 200 in 2.4s (next.js: 315ms, proxy.ts: 266ms, application-code: 1819ms)
+ GET /instructeur/inkomsten 200 in 1038ms (next.js: 38ms, proxy.ts: 216ms, application-code: 784ms)
+✓ Compiled in 202ms
+ GET /instructeur/inkomsten 200 in 2.2s (next.js: 258ms, proxy.ts: 282ms, application-code: 1631ms)
+ GET /instructeur/inkomsten 200 in 1053ms (next.js: 4ms, proxy.ts: 101ms, application-code: 948ms)
+✓ Compiled in 212ms
+ GET /instructeur/inkomsten 200 in 2.3s (next.js: 270ms, proxy.ts: 255ms, application-code: 1788ms)
+ GET /instructeur/inkomsten 200 in 1033ms (next.js: 35ms, proxy.ts: 235ms, application-code: 762ms)
+ GET /instructeur/inkomsten 200 in 16.9s (next.js: 5ms, proxy.ts: 433ms, application-code: 16.5s)
+✓ Compiled in 446ms
+ GET /instructeur/inkomsten 200 in 7.8s (next.js: 318ms, proxy.ts: 1886ms, application-code: 5.6s)
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.2.15:3000
+- Environments: .env.local
+✓ Ready in 655ms
+Creating turbopack project {
+  dir: 'C:\\Users\\gocho\\OneDrive\\Bureaublad\\app projecten\\gochoir',
+  testMode: true
+}
+
+ GET /instructeur/inkomsten 200 in 13.5s (next.js: 2.1s, proxy.ts: 879ms, application-code: 10.5s)
+✓ Compiled in 1676ms
+ GET /instructeur/inkomsten 200 in 1800ms (next.js: 691ms, proxy.ts: 207ms, application-code: 902ms)
+ GET /instructeur/inkomsten 200 in 1125ms (next.js: 5ms, proxy.ts: 247ms, application-code: 874ms)
+ GET /instructeur/inkomsten 200 in 985ms (next.js: 4ms, proxy.ts: 233ms, application-code: 748ms)
+ GET /instructeur/inkomsten 200 in 1083ms (next.js: 4ms, proxy.ts: 215ms, application-code: 864ms)
+ GET /instructeur/inkomsten 200 in 1076ms (next.js: 9ms, proxy.ts: 222ms, application-code: 845ms)
+ GET /instructeur/inkomsten 200 in 1018ms (next.js: 4ms, proxy.ts: 209ms, application-code: 805ms)
+ GET /instructeur/inkomsten 200 in 1002ms (next.js: 5ms, proxy.ts: 228ms, application-code: 770ms)
+ GET /instructeur/inkomsten 200 in 1059ms (next.js: 4ms, proxy.ts: 191ms, application-code: 864ms)
+ GET /instructeur/inkomsten 200 in 1014ms (next.js: 4ms, proxy.ts: 196ms, application-code: 814ms)
+ GET /instructeur/inkomsten 200 in 961ms (next.js: 4ms, proxy.ts: 219ms, application-code: 738ms)
+ GET /instructeur/inkomsten 200 in 984ms (next.js: 4ms, proxy.ts: 192ms, application-code: 789ms)
+ GET /instructeur/inkomsten 200 in 1021ms (next.js: 4ms, proxy.ts: 208ms, application-code: 809ms)
+ GET /instructeur/inkomsten 200 in 1021ms (next.js: 4ms, proxy.ts: 204ms, application-code: 813ms)
+ GET /instructeur/inkomsten 200 in 1123ms (next.js: 4ms, proxy.ts: 220ms, application-code: 900ms)
+ GET /instructeur/inkomsten 200 in 1019ms (next.js: 4ms, proxy.ts: 195ms, application-code: 821ms)
+ GET /instructeur/inkomsten 200 in 1054ms (next.js: 5ms, proxy.ts: 254ms, application-code: 796ms)
+ GET /instructeur/inkomsten 200 in 1001ms (next.js: 4ms, proxy.ts: 193ms, application-code: 803ms)
+ GET /instructeur/inkomsten 200 in 1072ms (next.js: 4ms, proxy.ts: 202ms, application-code: 865ms)
+ GET /instructeur/inkomsten 200 in 1054ms (next.js: 3ms, proxy.ts: 234ms, application-code: 817ms)
+ GET /instructeur/inkomsten 200 in 1017ms (next.js: 4ms, proxy.ts: 196ms, application-code: 817ms)
+ GET /instructeur/inkomsten 200 in 1084ms (next.js: 4ms, proxy.ts: 221ms, application-code: 859ms)
+ GET /instructeur/inkomsten 200 in 1003ms (next.js: 4ms, proxy.ts: 209ms, application-code: 791ms)
+ GET /instructeur/inkomsten 200 in 1214ms (next.js: 4ms, proxy.ts: 190ms, application-code: 1020ms)
+ GET /instructeur/inkomsten 200 in 6.1s (next.js: 5ms, proxy.ts: 265ms, application-code: 5.8s)
+ GET /instructeur/inkomsten 200 in 6.1s (next.js: 242ms, proxy.ts: 897ms, application-code: 5.0s)
+ GET /instructeur/inkomsten 200 in 6.1s (next.js: 209ms, proxy.ts: 893ms, application-code: 5.0s)
+ GET /instructeur/inkomsten 200 in 6.1s (next.js: 340ms, proxy.ts: 2.4s, application-code: 3.4s)
+ GET /instructeur/inkomsten 200 in 6.1s (next.js: 410ms, proxy.ts: 2.4s, application-code: 3.3s)
+ GET /instructeur/inkomsten 200 in 5.9s (next.js: 379ms, proxy.ts: 2.2s, application-code: 3.3s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 5ms, proxy.ts: 63ms, application-code: 5.2s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 295ms, proxy.ts: 628ms, application-code: 4.3s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 259ms, proxy.ts: 599ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 165ms, proxy.ts: 614ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 198ms, proxy.ts: 609ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 230ms, proxy.ts: 612ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 4ms, proxy.ts: 76ms, application-code: 5.3s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 74ms, proxy.ts: 670ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 131ms, proxy.ts: 675ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 103ms, proxy.ts: 670ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 2.2s, proxy.ts: 675ms, application-code: 2.5s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 1281ms, proxy.ts: 2.8s, application-code: 1251ms)
+✓ Compiled in 256ms
+ GET /instructeur/inkomsten 200 in 7.1s (next.js: 5ms, proxy.ts: 72ms, application-code: 7.1s)
+ GET /instructeur/inkomsten 200 in 7.1s (next.js: 671ms, proxy.ts: 69ms, application-code: 6.4s)
+ GET /instructeur/inkomsten 200 in 7.2s (next.js: 2.1s, proxy.ts: 674ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 7.2s (next.js: 779ms, proxy.ts: 683ms, application-code: 5.7s)
+ GET /instructeur/inkomsten 200 in 7.1s (next.js: 2.1s, proxy.ts: 646ms, application-code: 4.3s)
+ GET /instructeur/inkomsten 200 in 7.2s (next.js: 2.7s, proxy.ts: 1492ms, application-code: 2.9s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 4ms, proxy.ts: 120ms, application-code: 5.2s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 124ms, proxy.ts: 715ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 89ms, proxy.ts: 765ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 181ms, proxy.ts: 718ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 154ms, proxy.ts: 713ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 2.9s, proxy.ts: 717ms, application-code: 1678ms)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 584ms, proxy.ts: 73ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 5ms, proxy.ts: 74ms, application-code: 5.2s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 794ms, proxy.ts: 684ms, application-code: 3.8s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 761ms, proxy.ts: 685ms, application-code: 3.9s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 1826ms, proxy.ts: 1366ms, application-code: 2.1s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 1770ms, proxy.ts: 1371ms, application-code: 2.2s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 74ms, proxy.ts: 700ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 4ms, proxy.ts: 71ms, application-code: 5.2s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 116ms, proxy.ts: 682ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 1558ms, proxy.ts: 698ms, application-code: 3.0s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 1513ms, proxy.ts: 689ms, application-code: 3.1s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 2.8s, proxy.ts: 744ms, application-code: 1677ms)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 4ms, proxy.ts: 81ms, application-code: 5.5s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 205ms, proxy.ts: 752ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 282ms, proxy.ts: 742ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 254ms, proxy.ts: 756ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 311ms, proxy.ts: 734ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 177ms, proxy.ts: 753ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 7ms, proxy.ts: 78ms, application-code: 5.3s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 610ms, proxy.ts: 75ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 645ms, proxy.ts: 73ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 1572ms, proxy.ts: 749ms, application-code: 3.0s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 1538ms, proxy.ts: 754ms, application-code: 3.1s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 3.0s, proxy.ts: 747ms, application-code: 1648ms)
+✓ Compiled in 228ms
+ GET /instructeur/inkomsten 200 in 6.5s (next.js: 342ms, proxy.ts: 169ms, application-code: 6.0s)
+ GET /instructeur/inkomsten 200 in 6.6s (next.js: 309ms, proxy.ts: 108ms, application-code: 6.1s)
+ GET /instructeur/inkomsten 200 in 6.6s (next.js: 301ms, proxy.ts: 177ms, application-code: 6.1s)
+ GET /instructeur/inkomsten 200 in 6.5s (next.js: 383ms, proxy.ts: 169ms, application-code: 6.0s)
+ GET /instructeur/inkomsten 200 in 6.6s (next.js: 503ms, proxy.ts: 97ms, application-code: 6.0s)
+ GET /instructeur/inkomsten 200 in 6.5s (next.js: 832ms, proxy.ts: 114ms, application-code: 5.6s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 5ms, proxy.ts: 150ms, application-code: 5.6s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 302ms, proxy.ts: 757ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 362ms, proxy.ts: 750ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 329ms, proxy.ts: 749ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.7s (next.js: 409ms, proxy.ts: 696ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 438ms, proxy.ts: 751ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 4ms, proxy.ts: 67ms, application-code: 5.2s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 121ms, proxy.ts: 646ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 185ms, proxy.ts: 650ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 154ms, proxy.ts: 650ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 86ms, proxy.ts: 648ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.3s (next.js: 3.1s, proxy.ts: 706ms, application-code: 1510ms)
+ GET /instructeur/inkomsten 200 in 7.6s (next.js: 7ms, proxy.ts: 74ms, application-code: 7.5s)
+ GET /instructeur/inkomsten 200 in 7.6s (next.js: 669ms, proxy.ts: 74ms, application-code: 6.9s)
+ GET /instructeur/inkomsten 200 in 7.6s (next.js: 898ms, proxy.ts: 773ms, application-code: 5.9s)
+ GET /instructeur/inkomsten 200 in 7.6s (next.js: 1689ms, proxy.ts: 771ms, application-code: 5.2s)
+ GET /instructeur/inkomsten 200 in 7.7s (next.js: 1754ms, proxy.ts: 1603ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 7.7s (next.js: 1713ms, proxy.ts: 1599ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 5.9s (next.js: 121ms, proxy.ts: 1083ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 6.0s (next.js: 153ms, proxy.ts: 190ms, application-code: 5.6s)
+ GET /instructeur/inkomsten 200 in 6.0s (next.js: 93ms, proxy.ts: 1104ms, application-code: 4.8s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 151ms, proxy.ts: 966ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.9s (next.js: 2.4s, proxy.ts: 1164ms, application-code: 2.4s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 2.4s, proxy.ts: 1111ms, application-code: 2.3s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 6ms, proxy.ts: 68ms, application-code: 5.4s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 591ms, proxy.ts: 74ms, application-code: 4.8s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 768ms, proxy.ts: 688ms, application-code: 4.0s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 1107ms, proxy.ts: 1372ms, application-code: 2.9s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 1073ms, proxy.ts: 1368ms, application-code: 3.0s)
+ GET /instructeur/inkomsten 200 in 5.4s (next.js: 1138ms, proxy.ts: 1395ms, application-code: 2.9s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 6ms, proxy.ts: 70ms, application-code: 5.1s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 576ms, proxy.ts: 72ms, application-code: 4.5s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 933ms, proxy.ts: 670ms, application-code: 3.6s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 1023ms, proxy.ts: 1386ms, application-code: 2.8s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 1051ms, proxy.ts: 1389ms, application-code: 2.7s)
+ GET /instructeur/inkomsten 200 in 5.2s (next.js: 2.2s, proxy.ts: 1630ms, application-code: 1330ms)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 4ms, proxy.ts: 66ms, application-code: 5.7s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 139ms, proxy.ts: 689ms, application-code: 5.0s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 72ms, proxy.ts: 703ms, application-code: 5.0s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 104ms, proxy.ts: 680ms, application-code: 5.0s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 176ms, proxy.ts: 681ms, application-code: 5.0s)
+ GET /instructeur/inkomsten 200 in 5.8s (next.js: 796ms, proxy.ts: 3.8s, application-code: 1272ms)
+✓ Compiled in 270ms
+ GET /instructeur/inkomsten 200 in 6.9s (next.js: 464ms, proxy.ts: 90ms, application-code: 6.4s)
+ GET /instructeur/inkomsten 200 in 6.9s (next.js: 4.1s, proxy.ts: 93ms, application-code: 2.7s)
+ GET /instructeur/inkomsten 200 in 6.9s (next.js: 1029ms, proxy.ts: 81ms, application-code: 5.8s)
+ GET /instructeur/inkomsten 200 in 6.9s (next.js: 4.0s, proxy.ts: 137ms, application-code: 2.7s)
+ GET /instructeur/inkomsten 200 in 6.9s (next.js: 568ms, proxy.ts: 90ms, application-code: 6.2s)
+ GET /instructeur/inkomsten 200 in 6.9s (next.js: 526ms, proxy.ts: 98ms, application-code: 6.3s)
+ GET /instructeur/inkomsten 200 in 5.7s (next.js: 6ms, proxy.ts: 136ms, application-code: 5.5s)
+ GET /instructeur/inkomsten 200 in 5.7s (next.js: 82ms, proxy.ts: 731ms, application-code: 4.8s)
+ GET /instructeur/inkomsten 200 in 5.7s (next.js: 871ms, proxy.ts: 737ms, application-code: 4.1s)
+ GET /instructeur/inkomsten 200 in 5.7s (next.js: 948ms, proxy.ts: 734ms, application-code: 4.0s)
+ GET /instructeur/inkomsten 200 in 5.7s (next.js: 912ms, proxy.ts: 740ms, application-code: 4.0s)
+ GET /instructeur/inkomsten 200 in 5.7s (next.js: 670ms, proxy.ts: 4.0s, application-code: 1044ms)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 4ms, proxy.ts: 69ms, application-code: 5.5s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 168ms, proxy.ts: 757ms, application-code: 4.6s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 89ms, proxy.ts: 764ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.5s (next.js: 2.4s, proxy.ts: 794ms, application-code: 2.4s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 129ms, proxy.ts: 752ms, application-code: 4.7s)
+ GET /instructeur/inkomsten 200 in 5.6s (next.js: 2.4s, proxy.ts: 817ms, application-code: 2.4s)
+ GET /instructeur/inkomsten 200 in 4.0s (next.js: 4ms, proxy.ts: 73ms, application-code: 3.9s)
+ GET /instructeur/inkomsten 200 in 3.9s (next.js: 68ms, proxy.ts: 785ms, application-code: 3.1s)
+ GET /instructeur/inkomsten 200 in 3.9s (next.js: 100ms, proxy.ts: 785ms, application-code: 3.1s)
+ GET /instructeur/inkomsten 200 in 3.9s (next.js: 1750ms, proxy.ts: 915ms, application-code: 1280ms)
+ GET /instructeur/inkomsten 200 in 1046ms (next.js: 4ms, proxy.ts: 209ms, application-code: 833ms)
+✓ Compiled in 813ms
+ GET /instructeur/inkomsten 200 in 1750ms (next.js: 173ms, proxy.ts: 454ms, application-code: 1123ms)
+ GET /instructeur/inkomsten 200 in 1291ms (next.js: 5ms, proxy.ts: 323ms, application-code: 963ms)
+✓ Compiled in 676ms
+ GET /instructeur/inkomsten 200 in 1580ms (next.js: 146ms, proxy.ts: 358ms, application-code: 1076ms)
+ GET /instructeur/inkomsten 200 in 1272ms (next.js: 5ms, proxy.ts: 353ms, application-code: 914ms)
+✓ Compiled in 194ms
+ GET /instructeur/inkomsten 200 in 1226ms (next.js: 133ms, proxy.ts: 188ms, application-code: 905ms)
+ GET /instructeur/inkomsten 200 in 1041ms (next.js: 5ms, proxy.ts: 253ms, application-code: 782ms)
+ GET /api/cron/payment-reminders 401 in 648ms (next.js: 623ms, proxy.ts: 10ms, application-code: 15ms)
+ GET /instructeur/inkomsten 200 in 12.3s (next.js: 5ms, proxy.ts: 631ms, application-code: 11.7s)
+✓ Compiled in 268ms
+ GET /instructeur/inkomsten 200 in 2.7s (next.js: 196ms, proxy.ts: 1431ms, application-code: 1026ms)
+ GET /instructeur/inkomsten 200 in 922ms (next.js: 4ms, proxy.ts: 130ms, application-code: 788ms)
+✓ Compiled in 216ms
+ GET /instructeur/inkomsten 200 in 1835ms (next.js: 205ms, proxy.ts: 689ms, application-code: 941ms)
+ GET /instructeur/inkomsten 200 in 921ms (next.js: 4ms, proxy.ts: 129ms, application-code: 789ms)
+✓ Compiled in 221ms
+ GET /instructeur/inkomsten 200 in 1400ms (next.js: 203ms, proxy.ts: 204ms, application-code: 993ms)
+ GET /instructeur/inkomsten 200 in 1123ms (next.js: 4ms, proxy.ts: 167ms, application-code: 951ms)
+✓ Compiled in 272ms
+ GET /instructeur/inkomsten 200 in 1380ms (next.js: 178ms, proxy.ts: 267ms, application-code: 935ms)
+ GET /instructeur/inkomsten 200 in 993ms (next.js: 5ms, proxy.ts: 147ms, application-code: 841ms)
+✓ Compiled in 729ms
+ GET /instructeur/inkomsten 200 in 1558ms (next.js: 190ms, proxy.ts: 369ms, application-code: 999ms)
+ GET /instructeur/inkomsten 200 in 1076ms (next.js: 3ms, proxy.ts: 220ms, application-code: 852ms)
+✓ Compiled in 208ms
+ GET /instructeur/inkomsten 200 in 1358ms (next.js: 180ms, proxy.ts: 274ms, application-code: 904ms)
+ GET /instructeur/inkomsten 200 in 1062ms (next.js: 4ms, proxy.ts: 123ms, application-code: 935ms)
+ GET /instructeur/inkomsten 200 in 700ms (next.js: 18ms, proxy.ts: 657ms, application-code: 25ms)
+ GET /instructeur/berichten 200 in 2.2s (next.js: 119ms, proxy.ts: 81ms, application-code: 2.0s)
+ GET /instructeur/inkomsten 200 in 2.0s (next.js: 5ms, proxy.ts: 54ms, application-code: 1966ms)
+✓ Compiled in 339ms
+ GET /instructeur/inkomsten 200 in 2.1s (next.js: 269ms, proxy.ts: 342ms, application-code: 1482ms)
+ GET /instructeur/inkomsten 200 in 1354ms (next.js: 6ms, proxy.ts: 141ms, application-code: 1207ms)
+✓ Compiled in 279ms
+ GET /instructeur/inkomsten 200 in 2.3s (next.js: 259ms, proxy.ts: 235ms, application-code: 1779ms)
+ GET /instructeur/inkomsten 200 in 1160ms (next.js: 4ms, proxy.ts: 134ms, application-code: 1022ms)
+✓ Compiled in 235ms
+ GET /instructeur/inkomsten 200 in 1646ms (next.js: 236ms, proxy.ts: 255ms, application-code: 1155ms)
+ GET /instructeur/inkomsten 200 in 1184ms (next.js: 5ms, proxy.ts: 128ms, application-code: 1051ms)
+✓ Compiled in 233ms
+ GET /instructeur/inkomsten 200 in 1761ms (next.js: 244ms, proxy.ts: 254ms, application-code: 1262ms)
+ GET /instructeur/inkomsten 200 in 1201ms (next.js: 5ms, proxy.ts: 139ms, application-code: 1058ms)
+✓ Compiled in 905ms
+ GET /instructeur/inkomsten 200 in 4.8s (next.js: 208ms, proxy.ts: 632ms, application-code: 4.0s)
+ GET /instructeur/inkomsten 200 in 3.9s (next.js: 27ms, proxy.ts: 388ms, application-code: 3.5s)
+✓ Compiled in 223ms
+ GET /instructeur/inkomsten 200 in 1504ms (next.js: 197ms, proxy.ts: 229ms, application-code: 1079ms)
+ GET /instructeur/inkomsten 200 in 891ms (next.js: 3ms, proxy.ts: 108ms, application-code: 780ms)
+✓ Compiled in 850ms
+ GET /instructeur/inkomsten 200 in 2.1s (next.js: 179ms, proxy.ts: 856ms, application-code: 1073ms)
+ GET /instructeur/inkomsten 200 in 1154ms (next.js: 4ms, proxy.ts: 197ms, application-code: 953ms)
+ GET /instructeur/inkomsten 200 in 929ms (next.js: 4ms, proxy.ts: 197ms, application-code: 728ms)
+ GET /instructeur/inkomsten 200 in 923ms (next.js: 4ms, proxy.ts: 73ms, application-code: 847ms)
+ GET /instructeur/inkomsten 200 in 12.8s (next.js: 5ms, proxy.ts: 159ms, application-code: 12.6s)
+ GET /instructeur/inkomsten 200 in 3.4s (next.js: 6ms, proxy.ts: 437ms, application-code: 2.9s)
+ GET /instructeur/inkomsten 200 in 201ms (next.js: 8ms, proxy.ts: 173ms, application-code: 21ms)
+ GET /instructeur/inkomsten 200 in 152ms (next.js: 9ms, proxy.ts: 128ms, application-code: 15ms)
+ GET /instructeur/inkomsten 200 in 2.2s (next.js: 5ms, proxy.ts: 81ms, application-code: 2.1s)
+ GET /instructeur/inkomsten 200 in 79ms (next.js: 6ms, proxy.ts: 61ms, application-code: 12ms)
+ GET /instructeur/inkomsten 200 in 157ms (next.js: 8ms, proxy.ts: 107ms, application-code: 42ms)
+ GET /instructeur/inkomsten 200 in 1994ms (next.js: 8ms, proxy.ts: 69ms, application-code: 1917ms)
+ GET /instructeur/inkomsten 200 in 1938ms (next.js: 23ms, proxy.ts: 93ms, application-code: 1822ms)
+ GET /instructeur/inkomsten 200 in 77ms (next.js: 5ms, proxy.ts: 64ms, application-code: 8ms)
+ GET /instructeur/inkomsten 200 in 1813ms (next.js: 5ms, proxy.ts: 63ms, application-code: 1746ms)
+ POST /instructeur/inkomsten 200 in 2.6s (next.js: 4ms, proxy.ts: 125ms, application-code: 2.5s)
+  └─ ƒ sendIncomePaymentLinkAction({}) in 559ms lib/actions/instructor-income-ledger.ts
+ POST /instructeur/inkomsten 200 in 2.9s (next.js: 11ms, proxy.ts: 124ms, application-code: 2.7s)
+  └─ ƒ resendIncomeInvoiceAction({}) in 589ms lib/actions/instructor-income-ledger.ts
+ POST /instructeur/inkomsten 200 in 2.7s (next.js: 6ms, proxy.ts: 194ms, application-code: 2.5s)
+  └─ ƒ resendIncomeInvoiceAction({}) in 558ms lib/actions/instructor-income-ledger.ts
+ GET /instructeur/inkomsten 200 in 2.6s (next.js: 6ms, proxy.ts: 114ms, application-code: 2.4s)
+ GET /instructeur/inkomsten 200 in 2.6s (next.js: 5ms, proxy.ts: 120ms, application-code: 2.5s)
+ POST /instructeur/inkomsten 200 in 3.2s (next.js: 5ms, proxy.ts: 457ms, application-code: 2.7s)
+  └─ ƒ resendIncomeInvoiceAction({}) in 657ms lib/actions/instructor-income-ledger.ts
+✓ Compiled in 364ms
+ GET /instructeur/inkomsten 200 in 1143ms (next.js: 295ms, proxy.ts: 798ms, application-code: 50ms)
+ GET /instructeur/inkomsten 200 in 1726ms (next.js: 4ms, proxy.ts: 326ms, application-code: 1396ms)
+ GET /instructeur/inkomsten 200 in 3.2s (next.js: 5ms, proxy.ts: 159ms, application-code: 3.1s)
+✓ Compiled in 227ms
+ GET /instructeur/inkomsten 200 in 4.0s (next.js: 227ms, proxy.ts: 679ms, application-code: 3.0s)
+ GET /instructeur/inkomsten 200 in 9.6s (next.js: 6ms, proxy.ts: 56ms, application-code: 9.5s)
+ GET /instructeur/inkomsten 200 in 2.1s (next.js: 641ms, proxy.ts: 129ms, application-code: 1283ms)
+ GET /instructeur/inkomsten 200 in 1292ms (next.js: 5ms, proxy.ts: 198ms, application-code: 1089ms)
+ GET /instructeur/inkomsten 200 in 829ms (next.js: 9ms, proxy.ts: 802ms, application-code: 18ms)
+ POST /instructeur/inkomsten 200 in 3.6s (next.js: 8ms, proxy.ts: 415ms, application-code: 3.1s)
+  └─ ƒ resendIncomeInvoiceAction({}) in 894ms lib/actions/instructor-income-ledger.ts
+ POST /instructeur/inkomsten 200 in 2.5s (next.js: 5ms, proxy.ts: 124ms, application-code: 2.3s)
+  └─ ƒ runAutomaticPaymentRemindersAction() in 345ms lib/actions/instructor-income-ledger.ts
+ POST /instructeur/inkomsten 200 in 1180ms (next.js: 5ms, proxy.ts: 72ms, application-code: 1103ms)
+  └─ ƒ cancelIncomeTransactionAction({}) in 1092ms lib/actions/instructor-income-ledger.ts
+ POST /instructeur/inkomsten 200 in 2.5s (next.js: 5ms, proxy.ts: 98ms, application-code: 2.4s)
+  └─ ƒ cancelIncomeTransactionAction({}) in 489ms lib/actions/instructor-income-ledger.ts
+ POST /instructeur/inkomsten 200 in 2.7s (next.js: 5ms, proxy.ts: 151ms, application-code: 2.6s)
+  └─ ƒ cancelIncomeTransactionAction({}) in 526ms lib/actions/instructor-income-ledger.ts
+ GET /instructeur/inkomsten 200 in 404ms (next.js: 5ms, proxy.ts: 391ms, application-code: 8ms)
+ GET /instructeur/inkomsten 200 in 148ms (next.js: 5ms, proxy.ts: 135ms, application-code: 8ms)
+ GET /instructeur/inkomsten 200 in 142ms (next.js: 5ms, proxy.ts: 130ms, application-code: 7ms)
+ GET /instructeur/inkomsten 200 in 135ms (next.js: 4ms, proxy.ts: 123ms, application-code: 7ms)
+ GET /instructeur/inkomsten 200 in 142ms (next.js: 5ms, proxy.ts: 130ms, application-code: 7ms)
+ GET /instructeur/inkomsten 200 in 343ms (next.js: 98ms, proxy.ts: 183ms, application-code: 62ms)
+ GET /instructeur/inkomsten 200 in 2.4s (next.js: 5ms, proxy.ts: 79ms, application-code: 2.3s)
+ GET /instructeur/inkomsten 200 in 1032ms (next.js: 72ms, proxy.ts: 862ms, application-code: 98ms)
+ GET /instructeur/inkomsten 200 in 3.3s (next.js: 100ms, proxy.ts: 102ms, application-code: 3.1s)
+ GET /instructeur/inkomsten 200 in 2.2s (next.js: 8ms, proxy.ts: 94ms, application-code: 2.1s)
+ GET /instructeur/inkomsten 200 in 68ms (next.js: 5ms, proxy.ts: 56ms, application-code: 7ms)
+ POST /instructeur/inkomsten 200 in 2.5s (next.js: 4ms, proxy.ts: 104ms, application-code: 2.4s)
+  └─ ƒ runAutomaticPaymentRemindersAction() in 337ms lib/actions/instructor-income-ledger.ts
+✓ Compiled in 308ms
+ GET /instructeur/inkomsten 200 in 2.1s (next.js: 244ms, proxy.ts: 793ms, application-code: 1085ms)
+ GET /instructeur/inkomsten 200 in 894ms (next.js: 4ms, proxy.ts: 124ms, application-code: 767ms)
+ GET /instructeur/inkomsten 200 in 15.7s (next.js: 12ms, proxy.ts: 254ms, application-code: 15.4s)
+ GET /instructeur/aanvragen 200 in 871ms (next.js: 131ms, proxy.ts: 98ms, application-code: 642ms)
+ GET /instructeur/leerlingen 200 in 1894ms (next.js: 417ms, proxy.ts: 342ms, application-code: 1135ms)
+ GET /instructeur/inkomsten 200 in 2.0s (next.js: 5ms, proxy.ts: 122ms, application-code: 1907ms)
+ GET /api/cron/payment-reminders 401 in 155ms (next.js: 128ms, proxy.ts: 6ms, application-code: 22ms)
+✓ Compiled in 364ms
+ GET /instructeur/inkomsten 200 in 2.1s (next.js: 223ms, proxy.ts: 850ms, application-code: 1043ms)
+ GET /instructeur/inkomsten 200 in 987ms (next.js: 4ms, proxy.ts: 130ms, application-code: 853ms)
+✓ Compiled in 246ms
+ GET /instructeur/inkomsten 200 in 1403ms (next.js: 200ms, proxy.ts: 203ms, application-code: 1000ms)
+ GET /instructeur/inkomsten 200 in 910ms (next.js: 4ms, proxy.ts: 119ms, application-code: 786ms)
+ GET /instructeur/inkomsten 200 in 16.3s (next.js: 7ms, proxy.ts: 180ms, application-code: 16.1s)
+ GET /instructeur/inkomsten 200 in 3.4s (next.js: 10ms, proxy.ts: 146ms, application-code: 3.3s)
+ GET /instructeur/inkomsten?periode=maand&facturen=alle 200 in 2.2s (next.js: 7ms, proxy.ts: 100ms, application-code: 2.1s)
+ GET /instructeur/inkomsten?periode=maand 200 in 2.1s (next.js: 5ms, proxy.ts: 101ms, application-code: 1947ms)
+✓ Compiled in 356ms
+ GET /instructeur/inkomsten?periode=maand 200 in 2.2s (next.js: 303ms, proxy.ts: 847ms, application-code: 1087ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 1006ms (next.js: 5ms, proxy.ts: 117ms, application-code: 885ms)
+✓ Compiled in 248ms
+ GET /instructeur/inkomsten?periode=maand 200 in 1443ms (next.js: 211ms, proxy.ts: 211ms, application-code: 1021ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 919ms (next.js: 4ms, proxy.ts: 98ms, application-code: 818ms)
+✓ Compiled in 266ms
+ GET /instructeur/inkomsten?periode=maand 200 in 1879ms (next.js: 256ms, proxy.ts: 254ms, application-code: 1369ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 1217ms (next.js: 5ms, proxy.ts: 92ms, application-code: 1120ms)
+✓ Compiled in 235ms
+ GET /instructeur/inkomsten?periode=maand 200 in 13.7s (next.js: 214ms, proxy.ts: 198ms, application-code: 13.2s)
+✓ Compiled in 228ms
+ GET /instructeur/inkomsten?periode=maand 200 in 1528ms (next.js: 210ms, proxy.ts: 204ms, application-code: 1114ms)
+ GET /instructeur/inkomsten?periode=maand 200 in 836ms (next.js: 5ms, proxy.ts: 105ms, application-code: 726ms)
+✓ Compiled in 231ms
+ GET /instructeur/inkomsten?periode=maand 200 in 4.9s (next.js: 216ms, proxy.ts: 297ms, application-code: 4.4s)
+ GET /instructeur/inkomsten 200 in 2.4s (next.js: 9ms, proxy.ts: 67ms, application-code: 2.4s)
+ GET /instructeur/inkomsten?periode=maand&factuurPeriode=kwartaal 200 in 2.2s (next.js: 4ms, proxy.ts: 170ms, application-code: 1993ms)
+ GET /instructeur/inkomsten?periode=maand&factuurPeriode=maand 200 in 2.1s (next.js: 5ms, proxy.ts: 71ms, application-code: 1988ms)
+ GET /instructeur/inkomsten?periode=maand&factuurPeriode=kwartaal 200 in 2.7s (next.js: 41ms, proxy.ts: 235ms, application-code: 2.4s)
+ GET /instructeur/dashboard 200 in 3.3s (next.js: 207ms, proxy.ts: 141ms, application-code: 2.9s)
+ GET /instructeur/leerlingen 200 in 1694ms (next.js: 52ms, proxy.ts: 522ms, application-code: 1121ms)
+ GET /instructeur/inkomsten 200 in 3.3s (next.js: 5ms, proxy.ts: 697ms, application-code: 2.6s)
+ GET /instructeur/inkomsten 200 in 704ms (next.js: 6ms, proxy.ts: 689ms, application-code: 9ms)
+ POST /instructeur/inkomsten 200 in 3.7s (next.js: 6ms, proxy.ts: 142ms, application-code: 3.6s)
+  └─ ƒ resendIncomeInvoiceAction({}) in 763ms lib/actions/instructor-income-ledger.ts
+ GET /instructeur/leerlingen 200 in 1710ms (next.js: 12ms, proxy.ts: 506ms, application-code: 1192ms)
+ GET /instructeur/aanvragen 200 in 1891ms (next.js: 88ms, proxy.ts: 699ms, application-code: 1104ms)
+ GET /instructeur/dashboard 200 in 2.4s (next.js: 10ms, proxy.ts: 136ms, application-code: 2.2s)
+ GET /instructeur/profiel 200 in 3.0s (next.js: 307ms, proxy.ts: 194ms, application-code: 2.5s)
+✓ Compiled in 1553ms
+ GET /instructeur/profiel 200 in 3.4s (next.js: 193ms, proxy.ts: 774ms, application-code: 2.4s)
+ GET /instructeur/profiel 200 in 1817ms (next.js: 4ms, proxy.ts: 142ms, application-code: 1671ms)
+ GET /instructeur/profiel 200 in 1962ms (next.js: 7ms, proxy.ts: 106ms, application-code: 1849ms)
+ GET /instructeur/leerlingen 200 in 5.1s (next.js: 252ms, proxy.ts: 132ms, application-code: 4.8s)
+✓ Compiled in 251ms
+ GET /instructeur/leerlingen 200 in 1055ms (next.js: 240ms, proxy.ts: 243ms, application-code: 572ms)
+ POST /instructeur/leerlingen 200 in 2.4s (next.js: 10ms, proxy.ts: 199ms, application-code: 2.2s)
+  └─ ƒ updateStudentSelfSchedulingAccessAction("4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd", true) in 632ms lib/actions/student-scheduling.ts
+ POST /instructeur/leerlingen 200 in 1581ms (next.js: 6ms, proxy.ts: 67ms, application-code: 1508ms)
+  └─ ƒ updateStudentSelfSchedulingAccessAction("4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd", false) in 364ms lib/actions/student-scheduling.ts
+ POST /instructeur/leerlingen 200 in 3.1s (next.js: 7ms, proxy.ts: 64ms, application-code: 3.0s)
+  └─ ƒ updateStudentSelfSchedulingAccessAction("4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd", true) in 343ms lib/actions/student-scheduling.ts
+ POST /instructeur/leerlingen 200 in 2.5s (next.js: 5ms, proxy.ts: 130ms, application-code: 2.4s)
+  └─ ƒ updateStudentWeeklyBookingLimitAction("4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd", 120, "manual") in 561ms lib/actions/student-scheduling.ts
+ POST /instructeur/leerlingen 200 in 2.1s (next.js: 24ms, proxy.ts: 177ms, application-code: 1937ms)
+  └─ ƒ updateStudentWeeklyBookingLimitAction("4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd", null, "package") in 565ms lib/actions/student-scheduling.ts
+ POST /instructeur/leerlingen 200 in 1536ms (next.js: 5ms, proxy.ts: 97ms, application-code: 1434ms)
+  └─ ƒ updateStudentWeeklyBookingLimitAction("4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd", null, "manual") in 468ms lib/actions/student-scheduling.ts
+✓ Compiled in 288ms
+ GET /instructeur/leerlingen 200 in 1165ms (next.js: 262ms, proxy.ts: 350ms, application-code: 552ms)
+ GET /instructeur/dashboard 200 in 2.9s (next.js: 56ms, proxy.ts: 360ms, application-code: 2.5s)
+ GET /instructeur/leerlingen 200 in 1733ms (next.js: 6ms, proxy.ts: 524ms, application-code: 1204ms)
+✓ Compiled in 883ms
+ GET /instructeur/leerlingen 200 in 1598ms (next.js: 246ms, proxy.ts: 949ms, application-code: 403ms)
+ GET /instructeur/leerlingen 200 in 467ms (next.js: 6ms, proxy.ts: 96ms, application-code: 365ms)
+ GET /instructeur/leerlingen 200 in 551ms (next.js: 21ms, proxy.ts: 84ms, application-code: 446ms)
+✓ Compiled in 876ms
+ GET /instructeur/leerlingen 200 in 2.1s (next.js: 284ms, proxy.ts: 281ms, application-code: 1575ms)
+ GET /instructeur/leerlingen 200 in 2.9s (next.js: 8ms, proxy.ts: 419ms, application-code: 2.5s)
+ GET /instructeur/leerlingen 200 in 2.1s (next.js: 9ms, proxy.ts: 616ms, application-code: 1525ms)
+✓ Compiled in 685ms
+ GET /instructeur/leerlingen 200 in 1065ms (next.js: 284ms, proxy.ts: 298ms, application-code: 483ms)
+ GET /instructeur/leerlingen 200 in 469ms (next.js: 5ms, proxy.ts: 66ms, application-code: 398ms)
+ GET /instructeur/leerlingen 200 in 464ms (next.js: 5ms, proxy.ts: 61ms, application-code: 399ms)
+ GET /instructeur/leerlingen 200 in 1954ms (next.js: 9ms, proxy.ts: 170ms, application-code: 1776ms)
+✓ Compiled in 877ms
+ GET /instructeur/leerlingen 200 in 974ms (next.js: 225ms, proxy.ts: 329ms, application-code: 419ms)
+ GET /instructeur/leerlingen 200 in 1769ms (next.js: 5ms, proxy.ts: 121ms, application-code: 1642ms)
+ GET /instructeur/leerlingen 200 in 1876ms (next.js: 7ms, proxy.ts: 143ms, application-code: 1726ms)
+✓ Compiled in 460ms
+ GET /instructeur/leerlingen 200 in 8.0s (next.js: 207ms, proxy.ts: 7.3s, application-code: 572ms)
+ GET /instructeur/leerlingen 200 in 705ms (next.js: 4ms, proxy.ts: 238ms, application-code: 463ms)
+ GET /instructeur/leerlingen 200 in 482ms (next.js: 5ms, proxy.ts: 91ms, application-code: 387ms)
+ GET /instructeur/leerlingen 200 in 472ms (next.js: 5ms, proxy.ts: 92ms, application-code: 374ms)
+ GET /instructeur/leerlingen 200 in 421ms (next.js: 5ms, proxy.ts: 89ms, application-code: 327ms)
+ GET /instructeur/leerlingen 200 in 411ms (next.js: 4ms, proxy.ts: 105ms, application-code: 303ms)
+ GET /instructeur/leerlingen 200 in 394ms (next.js: 4ms, proxy.ts: 88ms, application-code: 302ms)
+ GET /instructeur/leerlingen 200 in 420ms (next.js: 4ms, proxy.ts: 89ms, application-code: 327ms)
+ GET /instructeur/leerlingen 200 in 491ms (next.js: 4ms, proxy.ts: 83ms, application-code: 404ms)
+ GET /instructeur/leerlingen 200 in 643ms (next.js: 4ms, proxy.ts: 86ms, application-code: 554ms)
+ GET /instructeur/leerlingen 200 in 366ms (next.js: 6ms, proxy.ts: 78ms, application-code: 283ms)
+ GET /instructeur/leerlingen 200 in 358ms (next.js: 4ms, proxy.ts: 57ms, application-code: 297ms)
+ GET /instructeur/leerlingen 200 in 314ms (next.js: 4ms, proxy.ts: 60ms, application-code: 251ms)
+ GET /instructeur/leerlingen 200 in 341ms (next.js: 3ms, proxy.ts: 64ms, application-code: 274ms)
+ GET /instructeur/leerlingen 200 in 337ms (next.js: 5ms, proxy.ts: 70ms, application-code: 262ms)
+ GET /instructeur/leerlingen 200 in 304ms (next.js: 4ms, proxy.ts: 71ms, application-code: 229ms)
+ GET /instructeur/leerlingen 200 in 320ms (next.js: 4ms, proxy.ts: 58ms, application-code: 258ms)
+ GET /instructeur/leerlingen 200 in 327ms (next.js: 4ms, proxy.ts: 55ms, application-code: 268ms)
+ GET /instructeur/leerlingen 200 in 329ms (next.js: 4ms, proxy.ts: 56ms, application-code: 270ms)
+ GET /instructeur/leerlingen 200 in 346ms (next.js: 4ms, proxy.ts: 58ms, application-code: 284ms)
+ GET /instructeur/leerlingen 200 in 332ms (next.js: 4ms, proxy.ts: 58ms, application-code: 270ms)
+ GET /instructeur/leerlingen 200 in 346ms (next.js: 4ms, proxy.ts: 60ms, application-code: 282ms)
+ GET /instructeur/leerlingen 200 in 347ms (next.js: 4ms, proxy.ts: 64ms, application-code: 279ms)
+ GET /instructeur/leerlingen 200 in 2.2s (next.js: 5ms, proxy.ts: 250ms, application-code: 1899ms)
+ GET /instructeur/leerlingen 200 in 1173ms (next.js: 37ms, proxy.ts: 232ms, application-code: 904ms)
+✓ Compiled in 0ms
+ GET /instructeur/leerlingen 200 in 2.6s (next.js: 4ms, proxy.ts: 80ms, application-code: 2.5s)
+ GET /instructeur/leerlingen 200 in 2.6s (next.js: 107ms, proxy.ts: 364ms, application-code: 2.1s)
+ GET /instructeur/leerlingen 200 in 2.6s (next.js: 75ms, proxy.ts: 364ms, application-code: 2.2s)
+ GET /instructeur/leerlingen 200 in 2.6s (next.js: 519ms, proxy.ts: 425ms, application-code: 1666ms)
+ GET /instructeur/leerlingen 200 in 2.6s (next.js: 469ms, proxy.ts: 391ms, application-code: 1719ms)
+ GET /instructeur/leerlingen 200 in 2.6s (next.js: 1239ms, proxy.ts: 936ms, application-code: 392ms)
+ GET /instructeur/leerlingen 200 in 423ms (next.js: 4ms, proxy.ts: 159ms, application-code: 259ms)
+ GET /instructeur/leerlingen 200 in 620ms (next.js: 133ms, proxy.ts: 181ms, application-code: 306ms)
+ GET /instructeur/leerlingen 200 in 403ms (next.js: 4ms, proxy.ts: 117ms, application-code: 281ms)
+ GET /instructeur/dashboard 200 in 4.2s (next.js: 232ms, proxy.ts: 155ms, application-code: 3.8s)
+ GET /instructeur/profiel 200 in 3.2s (next.js: 219ms, proxy.ts: 89ms, application-code: 2.8s)
+ GET /instructeur/leerlingen 200 in 843ms (next.js: 7ms, proxy.ts: 52ms, application-code: 784ms)
+ GET /instructeur/leerlingen 200 in 2.8s (next.js: 8ms, proxy.ts: 702ms, application-code: 2.1s)
+✓ Compiled in 494ms
+ GET /instructeur/leerlingen 200 in 1296ms (next.js: 212ms, proxy.ts: 700ms, application-code: 384ms)
+✓ Compiled in 264ms
+ GET /instructeur/leerlingen 200 in 896ms (next.js: 195ms, proxy.ts: 332ms, application-code: 369ms)
+✓ Compiled in 225ms
+ GET /instructeur/leerlingen 200 in 1473ms (next.js: 190ms, proxy.ts: 816ms, application-code: 467ms)
+✓ Compiled in 220ms
+ GET /instructeur/leerlingen 200 in 1211ms (next.js: 163ms, proxy.ts: 637ms, application-code: 411ms)
+ GET /instructeur/leerlingen 200 in 1962ms (next.js: 4ms, proxy.ts: 127ms, application-code: 1831ms)
+✓ Compiled in 602ms
+ GET /instructeur/leerlingen 200 in 1707ms (next.js: 239ms, proxy.ts: 250ms, application-code: 1218ms)
+ GET /instructeur/leerlingen 200 in 1162ms (next.js: 5ms, proxy.ts: 62ms, application-code: 1096ms)
+ GET /instructeur/leerlingen 200 in 2.6s (next.js: 7ms, proxy.ts: 191ms, application-code: 2.4s)
+ GET /inloggen 200 in 1311ms (next.js: 164ms, proxy.ts: 16ms, application-code: 1131ms)
+ GET /inloggen 200 in 479ms (next.js: 161ms, proxy.ts: 88ms, application-code: 230ms)
+ GET /leerling/dashboard 200 in 6.2s (next.js: 131ms, proxy.ts: 166ms, application-code: 5.9s)
+ GET /leerling/boekingen 200 in 2.7s (next.js: 98ms, proxy.ts: 104ms, application-code: 2.4s)
+ GET /inloggen 200 in 43ms (next.js: 6ms, proxy.ts: 6ms, application-code: 31ms)
+ GET /inloggen 200 in 49ms (next.js: 5ms, proxy.ts: 8ms, application-code: 36ms)
+ GET /instructeur/dashboard 200 in 5.7s (next.js: 50ms, proxy.ts: 227ms, application-code: 5.4s)
+ GET /instructeur/leerlingen 200 in 2.9s (next.js: 8ms, proxy.ts: 162ms, application-code: 2.7s)
+ GET /inloggen 200 in 42ms (next.js: 6ms, proxy.ts: 7ms, application-code: 30ms)
+ GET /inloggen 200 in 46ms (next.js: 4ms, proxy.ts: 7ms, application-code: 34ms)
+ GET /leerling/dashboard 200 in 2.2s (next.js: 6ms, proxy.ts: 129ms, application-code: 2.0s)
+ GET /leerling/boekingen 200 in 2.8s (next.js: 30ms, proxy.ts: 111ms, application-code: 2.6s)
+ GET /leerling/boekingen 200 in 2.3s (next.js: 194ms, proxy.ts: 745ms, application-code: 1319ms)
+✓ Compiled in 228ms
+ GET /leerling/boekingen 200 in 2.3s (next.js: 123ms, proxy.ts: 645ms, application-code: 1578ms)
+ GET /leerling/boekingen 200 in 2.0s (next.js: 152ms, proxy.ts: 743ms, application-code: 1140ms)
+ GET /inloggen 200 in 123ms (next.js: 35ms, proxy.ts: 10ms, application-code: 78ms)
+ GET /inloggen 200 in 126ms (next.js: 11ms, proxy.ts: 15ms, application-code: 100ms)
+ GET /instructeur/dashboard 200 in 6.8s (next.js: 59ms, proxy.ts: 149ms, application-code: 6.6s)
+ GET /instructeur/leerlingen 200 in 2.9s (next.js: 240ms, proxy.ts: 91ms, application-code: 2.5s)
+ GET /instructeur/dashboard 200 in 3.6s (next.js: 7ms, proxy.ts: 514ms, application-code: 3.1s)
+ GET /instructeur/leerlingen 200 in 1776ms (next.js: 6ms, proxy.ts: 111ms, application-code: 1659ms)
+ GET / 200 in 2.7s (next.js: 229ms, proxy.ts: 219ms, application-code: 2.2s)
+ GET /instructeur/dashboard 200 in 2.1s (next.js: 5ms, proxy.ts: 64ms, application-code: 2.1s)
+ GET /instructeur/profiel 200 in 1791ms (next.js: 67ms, proxy.ts: 56ms, application-code: 1667ms)
+ GET /instructeur/reviews 200 in 885ms (next.js: 76ms, proxy.ts: 59ms, application-code: 749ms)
+ GET /instructeur/leerlingen 200 in 3.5s (next.js: 5ms, proxy.ts: 58ms, application-code: 3.4s)
+ GET /inloggen?redirect=%2Finstructeur%2Fleerlingen 200 in 139ms (next.js: 6ms, proxy.ts: 5ms, application-code: 128ms)
+ GET /inloggen?redirect=%2Finstructeur%2Fleerlingen 200 in 87ms (next.js: 6ms, proxy.ts: 5ms, application-code: 76ms)
+✓ Compiled in 355ms
+ GET /instructeur/leerlingen 200 in 2.2s (next.js: 237ms, proxy.ts: 1168ms, application-code: 836ms)
+ GET /instructeur/leerlingen 200 in 984ms (next.js: 4ms, proxy.ts: 216ms, application-code: 764ms)
+ GET /inloggen?redirect=%2Finstructeur%2Fleerlingen 200 in 337ms (next.js: 28ms, proxy.ts: 8ms, application-code: 301ms)
+ GET /instructeur/leerlingen 200 in 5.8s (next.js: 6ms, proxy.ts: 265ms, application-code: 5.5s)
+ GET /inloggen?redirect=%2Finstructeur%2Fleerlingen 200 in 212ms (next.js: 4ms, proxy.ts: 5ms, application-code: 203ms)
+ GET /inloggen?redirect=%2Finstructeur%2Fleerlingen 200 in 132ms (next.js: 7ms, proxy.ts: 11ms, application-code: 115ms)
+ GET /instructeur/aanvragen 200 in 2.1s (next.js: 582ms, proxy.ts: 367ms, application-code: 1157ms)
+ GET /instructeur/leerlingen 200 in 3.0s (next.js: 8ms, proxy.ts: 56ms, application-code: 3.0s)
+ POST /instructeur/leerlingen 200 in 5.2s (next.js: 7ms, proxy.ts: 124ms, application-code: 5.1s)
+  └─ ƒ createInstructorLessonForLearnerAction({"datum":"2026-05-07","duurMinuten":60,"leerlingId":"4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd","...":"3 items not stringified"}) in 1188ms lib/actions/instructor-learners.ts
+ GET /instructeur/leerlingen 200 in 3.6s (next.js: 97ms, proxy.ts: 121ms, application-code: 3.4s)
+ GET /instructeur/dashboard 200 in 3.8s (next.js: 46ms, proxy.ts: 596ms, application-code: 3.2s)
+ GET /instructeur/beschikbaarheid 200 in 1313ms (next.js: 136ms, proxy.ts: 106ms, application-code: 1071ms)
+✓ Compiled in 1995ms
+ GET /instructeur/beschikbaarheid 200 in 7.8s (next.js: 33ms, proxy.ts: 1084ms, application-code: 6.7s)
+ GET /instructeur/aanvragen 200 in 1230ms (next.js: 27ms, proxy.ts: 203ms, application-code: 1000ms)
+✓ Compiled in 1661ms
+ GET /instructeur/aanvragen 200 in 2.8s (next.js: 2.1s, proxy.ts: 170ms, application-code: 599ms)
+ GET /instructeur/beschikbaarheid 200 in 1914ms (next.js: 76ms, proxy.ts: 201ms, application-code: 1637ms)
+ GET /instructeur/beschikbaarheid 200 in 1985ms (next.js: 7ms, proxy.ts: 549ms, application-code: 1429ms)
+ GET /instructeur/beschikbaarheid 200 in 5.8s (next.js: 255ms, proxy.ts: 923ms, application-code: 4.6s)
+ GET /instructeur/beschikbaarheid 200 in 1305ms (next.js: 8ms, proxy.ts: 212ms, application-code: 1085ms)
+ GET /instructeur/beschikbaarheid 200 in 1778ms (next.js: 9ms, proxy.ts: 284ms, application-code: 1485ms)
+ GET /instructeur/beschikbaarheid 200 in 2.2s (next.js: 13ms, proxy.ts: 340ms, application-code: 1876ms)
+✓ Compiled in 331ms
+ GET /instructeur/beschikbaarheid 200 in 2.1s (next.js: 306ms, proxy.ts: 444ms, application-code: 1301ms)
+ GET /inloggen?redirect=%2Finstructeur%2Fbeschikbaarheid 200 in 491ms (next.js: 37ms, proxy.ts: 8ms, application-code: 446ms)
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.2.15:3000
+- Environments: .env.local
+✓ Ready in 644ms
+Creating turbopack project {
+  dir: 'C:\\Users\\gocho\\OneDrive\\Bureaublad\\app projecten\\gochoir',
+  testMode: true
+}
+
+ GET /instructeur/beschikbaarheid 200 in 6.3s (next.js: 1727ms, proxy.ts: 777ms, application-code: 3.8s)
+✓ Compiled in 3.2s
+ GET /instructeur/beschikbaarheid 200 in 1329ms (next.js: 207ms, proxy.ts: 231ms, application-code: 891ms)
+ GET /inloggen?redirect=%2Finstructeur%2Fbeschikbaarheid 200 in 466ms (next.js: 121ms, proxy.ts: 13ms, application-code: 333ms)
+ POST /instructeur/beschikbaarheid 200 in 784ms (next.js: 9ms, proxy.ts: 198ms, application-code: 578ms)
+  └─ ƒ createAvailabilitySlotAction({"beschikbaar":true,"datum":"2026-04-27","eindTijd":"17:00","...":"5 items not stringified"}) in 541ms lib/actions/instructor-availability.ts
+ POST /instructeur/beschikbaarheid 200 in 757ms (next.js: 6ms, proxy.ts: 140ms, application-code: 611ms)
+  └─ ƒ createAvailabilitySlotAction({"beschikbaar":true,"datum":"2026-04-27","eindTijd":"23:00","...":"5 items not stringified"}) in 591ms lib/actions/instructor-availability.ts
+ GET /instructeur/beschikbaarheid 200 in 2.4s (next.js: 7ms, proxy.ts: 112ms, application-code: 2.3s)
+ POST /instructeur/beschikbaarheid 200 in 3.5s (next.js: 5ms, proxy.ts: 717ms, application-code: 2.8s)
+  └─ ƒ updateInstructorOnlineBookingAction(false) in 726ms lib/actions/instructor-online-booking.ts
+ GET /instructeur/beschikbaarheid 200 in 1994ms (next.js: 5ms, proxy.ts: 62ms, application-code: 1927ms)
+ POST /instructeur/beschikbaarheid 200 in 2.5s (next.js: 6ms, proxy.ts: 135ms, application-code: 2.4s)
+  └─ ƒ updateInstructorOnlineBookingAction(true) in 375ms lib/actions/instructor-online-booking.ts
+ GET /instructeur/beschikbaarheid 200 in 2.0s (next.js: 24ms, proxy.ts: 79ms, application-code: 1913ms)
+✓ Compiled in 518ms
+ GET /instructeur/beschikbaarheid 200 in 2.1s (next.js: 308ms, proxy.ts: 922ms, application-code: 908ms)
+✓ Compiled in 322ms
+ GET /instructeur/beschikbaarheid 200 in 1631ms (next.js: 302ms, proxy.ts: 365ms, application-code: 963ms)
+✓ Compiled in 308ms
+ GET /instructeur/beschikbaarheid 200 in 3.7s (next.js: 262ms, proxy.ts: 377ms, application-code: 3.0s)
+✓ Compiled in 1301ms
+ GET /instructeur/beschikbaarheid 200 in 3.7s (next.js: 327ms, proxy.ts: 687ms, application-code: 2.6s)
+ POST /instructeur/beschikbaarheid 200 in 2.6s (next.js: 18ms, proxy.ts: 1529ms, application-code: 1003ms)
+  └─ ƒ createAvailabilitySlotAction({"beschikbaar":true,"datum":"2026-04-27","eindTijd":"20:00","...":"5 items not stringified"}) in 963ms lib/actions/instructor-availability.ts
+ POST /instructeur/beschikbaarheid 200 in 903ms (next.js: 5ms, proxy.ts: 260ms, application-code: 638ms)
+  └─ ƒ createAvailabilitySlotAction({"beschikbaar":true,"datum":"2026-04-27","eindTijd":"20:00","...":"3 items not stringified"}) in 627ms lib/actions/instructor-availability.ts
+ GET /inloggen?redirect=%2Finstructeur%2Fbeschikbaarheid 200 in 201ms (next.js: 27ms, proxy.ts: 8ms, application-code: 165ms)
+ GET /instructeur/beschikbaarheid 200 in 2.7s (next.js: 8ms, proxy.ts: 296ms, application-code: 2.4s)
+ GET /inloggen?redirect=%2Finstructeur%2Fbeschikbaarheid 200 in 91ms (next.js: 5ms, proxy.ts: 7ms, application-code: 78ms)
+ POST /instructeur/beschikbaarheid 200 in 664ms (next.js: 5ms, proxy.ts: 124ms, application-code: 534ms)
+  └─ ƒ createAvailabilitySlotAction({"beschikbaar":true,"datum":"2026-04-27","eindTijd":"17:00","...":"5 items not stringified"}) in 522ms lib/actions/instructor-availability.ts
+ POST /instructeur/beschikbaarheid 200 in 3.3s (next.js: 7ms, proxy.ts: 135ms, application-code: 3.2s)
+  └─ ƒ updateInstructorOnlineBookingAction(false) in 420ms lib/actions/instructor-online-booking.ts
+ GET /instructeur/beschikbaarheid 200 in 2.6s (next.js: 10ms, proxy.ts: 95ms, application-code: 2.5s)
+ POST /instructeur/beschikbaarheid 200 in 2.2s (next.js: 10ms, proxy.ts: 151ms, application-code: 2.0s)
+  └─ ƒ updateInstructorOnlineBookingAction(true) in 334ms lib/actions/instructor-online-booking.ts
+ GET /instructeur/beschikbaarheid 200 in 1731ms (next.js: 9ms, proxy.ts: 61ms, application-code: 1660ms)
+ POST /instructeur/beschikbaarheid 200 in 3.4s (next.js: 8ms, proxy.ts: 348ms, application-code: 3.0s)
+  └─ ƒ updateInstructorLearnerLessonCancellationWindowAction(24) in 534ms lib/actions/instructor-lesson-cancellation.ts
+ GET /instructeur/beschikbaarheid 200 in 2.4s (next.js: 10ms, proxy.ts: 90ms, application-code: 2.3s)
+ POST /instructeur/beschikbaarheid 200 in 2.6s (next.js: 7ms, proxy.ts: 111ms, application-code: 2.5s)
+  └─ ƒ updateInstructorOnlineBookingAction(false) in 290ms lib/actions/instructor-online-booking.ts
+ GET /instructeur/beschikbaarheid 200 in 2.2s (next.js: 6ms, proxy.ts: 96ms, application-code: 2.1s)
+ POST /instructeur/beschikbaarheid 200 in 2.4s (next.js: 5ms, proxy.ts: 118ms, application-code: 2.3s)
+  └─ ƒ updateInstructorOnlineBookingAction(true) in 288ms lib/actions/instructor-online-booking.ts
+ GET /instructeur/beschikbaarheid 200 in 1894ms (next.js: 25ms, proxy.ts: 57ms, application-code: 1812ms)
+ GET /instructeur/beschikbaarheid 200 in 4.3s (next.js: 39ms, proxy.ts: 1367ms, application-code: 2.9s)
+ GET /instructeur/beschikbaarheid 200 in 2.8s (next.js: 7ms, proxy.ts: 488ms, application-code: 2.3s)
+✓ Compiled in 1472ms
+ GET /instructeur/beschikbaarheid 200 in 1745ms (next.js: 368ms, proxy.ts: 430ms, application-code: 947ms)
+ GET /inloggen?redirect=%2Finstructeur%2Fbeschikbaarheid 200 in 395ms (next.js: 35ms, proxy.ts: 8ms, application-code: 352ms)
+ GET /instructeur/profiel 200 in 4.3s (next.js: 113ms, proxy.ts: 519ms, application-code: 3.6s)
+ GET /instructeur/leerlingen 200 in 1882ms (next.js: 100ms, proxy.ts: 157ms, application-code: 1624ms)
+ GET /instructeur/lessen 200 in 1104ms (next.js: 76ms, proxy.ts: 111ms, application-code: 917ms)
+ GET /instructeur/beschikbaarheid 200 in 1311ms (next.js: 6ms, proxy.ts: 113ms, application-code: 1192ms)
+ GET /instructeur/instellingen 200 in 1061ms (next.js: 87ms, proxy.ts: 239ms, application-code: 735ms)
+ GET /instructeur/dashboard 200 in 2.4s (next.js: 77ms, proxy.ts: 241ms, application-code: 2.0s)
+ GET /instructeur/profiel 200 in 1926ms (next.js: 5ms, proxy.ts: 162ms, application-code: 1759ms)
+ GET /instructeur/aanvragen 200 in 696ms (next.js: 72ms, proxy.ts: 103ms, application-code: 521ms)
+ GET /instructeur/beschikbaarheid 200 in 1291ms (next.js: 6ms, proxy.ts: 101ms, application-code: 1185ms)
+✓ Compiled in 1371ms
+✓ Compiled in 272ms
+ GET /instructeur/beschikbaarheid 200 in 1930ms (next.js: 297ms, proxy.ts: 905ms, application-code: 728ms)
+✓ Compiled in 218ms
+ GET /instructeur/beschikbaarheid 200 in 1244ms (next.js: 222ms, proxy.ts: 296ms, application-code: 726ms)
+✓ Compiled in 282ms
+ GET /instructeur/beschikbaarheid 200 in 1152ms (next.js: 219ms, proxy.ts: 231ms, application-code: 702ms)
+✓ Compiled in 332ms
+ GET /instructeur/aanvragen 200 in 982ms (next.js: 218ms, proxy.ts: 293ms, application-code: 471ms)
+ GET /instructeur/aanvragen 200 in 2.4s (next.js: 48ms, proxy.ts: 271ms, application-code: 2.1s)
+ GET /instructeur/leerlingen 200 in 2.5s (next.js: 59ms, proxy.ts: 111ms, application-code: 2.4s)
+ GET /instructeur/lessen 200 in 1047ms (next.js: 36ms, proxy.ts: 109ms, application-code: 902ms)
+✓ Compiled in 930ms
+ GET /instructeur/lessen 200 in 3.8s (next.js: 271ms, proxy.ts: 2.7s, application-code: 768ms)
+ GET /instructeur/lessen 200 in 718ms (next.js: 6ms, proxy.ts: 227ms, application-code: 484ms)
+ GET /instructeur/lessen 200 in 550ms (next.js: 8ms, proxy.ts: 96ms, application-code: 446ms)
+ GET /instructeur/lessen 200 in 555ms (next.js: 6ms, proxy.ts: 65ms, application-code: 485ms)
+ GET /instructeur/lessen 200 in 515ms (next.js: 5ms, proxy.ts: 66ms, application-code: 444ms)
+ GET /instructeur/lessen 200 in 522ms (next.js: 6ms, proxy.ts: 67ms, application-code: 449ms)
+ GET /instructeur/lessen 200 in 497ms (next.js: 6ms, proxy.ts: 59ms, application-code: 432ms)
+ GET /instructeur/lessen 200 in 563ms (next.js: 15ms, proxy.ts: 79ms, application-code: 470ms)
+✓ Compiled in 1410ms
+ GET /instructeur/lessen 200 in 1112ms (next.js: 205ms, proxy.ts: 316ms, application-code: 591ms)
+✓ Compiled in 344ms
+ GET /instructeur/lessen 200 in 1433ms (next.js: 191ms, proxy.ts: 633ms, application-code: 609ms)
+ GET /instructeur/lessen 200 in 606ms (next.js: 6ms, proxy.ts: 143ms, application-code: 457ms)
+ GET /instructeur/lessen 200 in 583ms (next.js: 6ms, proxy.ts: 85ms, application-code: 493ms)
+ GET /instructeur/leerlingen 200 in 1846ms (next.js: 37ms, proxy.ts: 174ms, application-code: 1635ms)
+ GET /instructeur/lessen?zoek=gochmer 200 in 2.1s (next.js: 6ms, proxy.ts: 813ms, application-code: 1236ms)
+ GET /instructeur/aanvragen 200 in 968ms (next.js: 50ms, proxy.ts: 170ms, application-code: 749ms)
+ GET /instructeur/leerlingen 200 in 1859ms (next.js: 6ms, proxy.ts: 126ms, application-code: 1727ms)
+ GET /instructeur/profiel 200 in 2.9s (next.js: 148ms, proxy.ts: 169ms, application-code: 2.6s)
+ GET /instructeur/reviews 200 in 861ms (next.js: 73ms, proxy.ts: 101ms, application-code: 686ms)
+ GET /instructeur/pakketten 200 in 655ms (next.js: 64ms, proxy.ts: 106ms, application-code: 485ms)
+ GET /instructeur/beschikbaarheid 200 in 4.4s (next.js: 449ms, proxy.ts: 462ms, application-code: 3.5s)
+ POST /instructeur/beschikbaarheid 200 in 4.0s (next.js: 7ms, proxy.ts: 150ms, application-code: 3.9s)
+  └─ ƒ createInstructorLessonForLearnerAction({"datum":"2026-05-01","duurMinuten":60,"leerlingId":"4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd","...":"3 items not stringified"}) in 1328ms lib/actions/instructor-learners.ts
+ GET /instructeur/beschikbaarheid 200 in 2.4s (next.js: 6ms, proxy.ts: 76ms, application-code: 2.3s)
+ GET /instructeur/dashboard 200 in 3.5s (next.js: 72ms, proxy.ts: 666ms, application-code: 2.7s)
+ GET /instructeur/beschikbaarheid 200 in 1755ms (next.js: 9ms, proxy.ts: 119ms, application-code: 1628ms)
+ GET /instructeur/dashboard 200 in 1906ms (next.js: 5ms, proxy.ts: 105ms, application-code: 1796ms)
+ GET /instructeur/beschikbaarheid 200 in 2.7s (next.js: 7ms, proxy.ts: 700ms, application-code: 1949ms)
+ GET /instructeur/beschikbaarheid 200 in 4.0s (next.js: 6ms, proxy.ts: 739ms, application-code: 3.2s)
+ GET /instructeur/beschikbaarheid 200 in 4.6s (next.js: 9ms, proxy.ts: 877ms, application-code: 3.7s)
+✓ Compiled in 1022ms
+ GET /instructeur/beschikbaarheid 200 in 3.9s (next.js: 321ms, proxy.ts: 2.4s, application-code: 1172ms)
+ GET /instructeur/beschikbaarheid 200 in 1192ms (next.js: 6ms, proxy.ts: 333ms, application-code: 853ms)
+ GET /instructeur/beschikbaarheid 200 in 1035ms (next.js: 7ms, proxy.ts: 96ms, application-code: 933ms)
+ GET /instructeur/beschikbaarheid 200 in 1003ms (next.js: 5ms, proxy.ts: 159ms, application-code: 838ms)
+ GET /instructeur/beschikbaarheid 200 in 898ms (next.js: 5ms, proxy.ts: 86ms, application-code: 806ms)
+ GET /instructeur/beschikbaarheid 200 in 1003ms (next.js: 7ms, proxy.ts: 94ms, application-code: 902ms)
+ GET /instructeur/beschikbaarheid 200 in 924ms (next.js: 5ms, proxy.ts: 68ms, application-code: 851ms)
+✓ Compiled in 387ms
+ GET /instructeur/beschikbaarheid 200 in 3.1s (next.js: 169ms, proxy.ts: 1896ms, application-code: 1055ms)
+ GET /instructeur/beschikbaarheid 200 in 961ms (next.js: 6ms, proxy.ts: 303ms, application-code: 652ms)
+ GET /instructeur/beschikbaarheid 200 in 792ms (next.js: 5ms, proxy.ts: 115ms, application-code: 671ms)
+ GET /instructeur/beschikbaarheid 200 in 751ms (next.js: 4ms, proxy.ts: 113ms, application-code: 634ms)
+ GET /instructeur/beschikbaarheid 200 in 737ms (next.js: 4ms, proxy.ts: 115ms, application-code: 619ms)
+ GET /instructeur/beschikbaarheid 200 in 873ms (next.js: 4ms, proxy.ts: 113ms, application-code: 756ms)
+ GET /instructeur/beschikbaarheid 200 in 746ms (next.js: 4ms, proxy.ts: 93ms, application-code: 648ms)
+✓ Compiled in 1390ms
+ GET /instructeur/beschikbaarheid 200 in 3.3s (next.js: 11ms, proxy.ts: 194ms, application-code: 3.1s)
+✓ Compiled in 415ms
+ GET /instructeur/beschikbaarheid 200 in 1997ms (next.js: 312ms, proxy.ts: 633ms, application-code: 1051ms)
+✓ Compiled in 450ms
+ GET /instructeur/beschikbaarheid 200 in 5.0s (next.js: 292ms, proxy.ts: 3.3s, application-code: 1411ms)
+ GET /instructeur/beschikbaarheid 200 in 1294ms (next.js: 7ms, proxy.ts: 377ms, application-code: 910ms)
+ GET /instructeur/beschikbaarheid 200 in 992ms (next.js: 5ms, proxy.ts: 124ms, application-code: 863ms)
+ GET /instructeur/beschikbaarheid 200 in 999ms (next.js: 7ms, proxy.ts: 138ms, application-code: 855ms)
+ GET /instructeur/beschikbaarheid 200 in 1075ms (next.js: 6ms, proxy.ts: 138ms, application-code: 931ms)
+ GET /instructeur/beschikbaarheid 200 in 1052ms (next.js: 7ms, proxy.ts: 130ms, application-code: 915ms)
+✓ Compiled in 1445ms
+ GET /instructeur/beschikbaarheid 200 in 1842ms (next.js: 270ms, proxy.ts: 272ms, application-code: 1300ms)
+ GET /instructeur/beschikbaarheid 200 in 4.7s (next.js: 10ms, proxy.ts: 562ms, application-code: 4.1s)
+ POST /instructeur/beschikbaarheid 200 in 4.1s (next.js: 6ms, proxy.ts: 165ms, application-code: 3.9s)
+  └─ ƒ updateLessonAction({"datum":"2026-05-01","duurMinuten":60,"leerlingId":"4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd","...":"9 items not stringified"}) in 1189ms lib/actions/lesson-management.ts
+ GET /instructeur/beschikbaarheid 200 in 2.6s (next.js: 6ms, proxy.ts: 127ms, application-code: 2.5s)
+ GET /instructeur/dashboard 200 in 3.0s (next.js: 59ms, proxy.ts: 775ms, application-code: 2.1s)
+ GET /inloggen 200 in 72ms (next.js: 32ms, proxy.ts: 8ms, application-code: 32ms)
+ GET /inloggen 200 in 56ms (next.js: 5ms, proxy.ts: 11ms, application-code: 40ms)
+ GET /leerling/dashboard 200 in 4.0s (next.js: 97ms, proxy.ts: 176ms, application-code: 3.7s)
+ GET /leerling/boekingen 200 in 3.7s (next.js: 206ms, proxy.ts: 251ms, application-code: 3.3s)
+ GET /inloggen 200 in 50ms (next.js: 6ms, proxy.ts: 8ms, application-code: 36ms)
+ GET /inloggen 200 in 52ms (next.js: 6ms, proxy.ts: 9ms, application-code: 38ms)
+ GET /instructeur/dashboard 200 in 4.3s (next.js: 6ms, proxy.ts: 205ms, application-code: 4.1s)
+ GET /instructeur/dashboard 200 in 2.3s (next.js: 473ms, proxy.ts: 452ms, application-code: 1331ms)
+ GET /instructeur/dashboard 200 in 1259ms (next.js: 5ms, proxy.ts: 89ms, application-code: 1165ms)
+ GET /instructeur/lessen 200 in 3.4s (next.js: 354ms, proxy.ts: 155ms, application-code: 2.9s)
+✓ Compiled in 974ms
+ GET /instructeur/dashboard 200 in 2.7s (next.js: 484ms, proxy.ts: 308ms, application-code: 1919ms)
+ GET /instructeur/dashboard 200 in 1901ms (next.js: 6ms, proxy.ts: 151ms, application-code: 1744ms)
+ GET /instructeur/dashboard 200 in 4.9s (next.js: 59ms, proxy.ts: 510ms, application-code: 4.3s)
+ GET /instructeur/beschikbaarheid 200 in 9.1s (next.js: 325ms, proxy.ts: 1177ms, application-code: 7.6s)
+ GET /instructeur/dashboard 200 in 5.3s (next.js: 62ms, proxy.ts: 748ms, application-code: 4.5s)
+ GET /instructeur/dashboard 200 in 3.1s (next.js: 1240ms, proxy.ts: 289ms, application-code: 1597ms)
+ GET /instructeur/dashboard 200 in 3.1s (next.js: 13ms, proxy.ts: 287ms, application-code: 2.8s)
+ GET /instructeur/aanvragen 200 in 1494ms (next.js: 118ms, proxy.ts: 472ms, application-code: 903ms)
+ GET /instructeur/profiel 200 in 2.8s (next.js: 101ms, proxy.ts: 129ms, application-code: 2.6s)
+ GET /instructeur/beschikbaarheid 200 in 1917ms (next.js: 13ms, proxy.ts: 135ms, application-code: 1769ms)
+ GET /instructeur/beschikbaarheid 200 in 4.8s (next.js: 12ms, proxy.ts: 657ms, application-code: 4.2s)
+ POST /instructeur/beschikbaarheid 200 in 5.5s (next.js: 8ms, proxy.ts: 411ms, application-code: 5.1s)
+  └─ ƒ updateLessonAction({"datum":"2026-04-30","duurMinuten":90,"leerlingId":"4c3ad90a-a58b-46eb-bbe3-fa5c7584bbdd","...":"9 items not stringified"}) in 957ms lib/actions/lesson-management.ts
+ GET /instructeur/beschikbaarheid 200 in 4.1s (next.js: 9ms, proxy.ts: 218ms, application-code: 3.8s)
+ GET /instructeur/pakketten 200 in 960ms (next.js: 55ms, proxy.ts: 227ms, application-code: 678ms)
+ GET /instructeurs 200 in 2.1s (next.js: 185ms, proxy.ts: 65ms, application-code: 1805ms)
+ GET /instructeur/beschikbaarheid 200 in 1431ms (next.js: 4ms, proxy.ts: 114ms, application-code: 1313ms)
+ GET /instructeur/leerlingen 200 in 2.9s (next.js: 149ms, proxy.ts: 477ms, application-code: 2.3s)
+ GET /instructeur/lessen 200 in 3.2s (next.js: 724ms, proxy.ts: 126ms, application-code: 2.3s)

@@ -47,8 +47,6 @@ type InstructorPublicBookingReadBuilder = {
 export type LearnerInstructorSchedulingAccess = {
   instructorId: string | null;
   hasActiveRelationship: boolean;
-  packageAssigned: boolean;
-  planningBlockedUntilPackage: boolean;
   trialLessonAvailable: boolean;
   publicBookingEnabled: boolean;
   selfSchedulingAllowed: boolean;
@@ -128,8 +126,6 @@ export type LearnerBookingEligibility = {
   instructorSlug: string;
   instructorName: string;
   hasActiveRelationship: boolean;
-  packageAssigned: boolean;
-  planningBlockedUntilPackage: boolean;
   hasPendingRequest: boolean;
   trialLessonAvailable: boolean;
   publicBookingEnabled: boolean;
@@ -446,22 +442,9 @@ export async function getLearnerInstructorSchedulingAccess(
     .select("online_boeken_actief")
     .eq("id", instructorId)
     .maybeSingle();
-  const learnerPackageQuery = (supabase
-    .from("leerlingen")
-    .select("pakket_id")
-    .eq("id", leerlingId)
-    .maybeSingle()) as unknown as Promise<{
-    data: { pakket_id: string | null } | null;
-  }>;
-  const [
-    { data: accessRow },
-    { data: instructorRow },
-    { data: learnerPackageRow },
-    hasRelationship,
-  ] = await Promise.all([
+  const [{ data: accessRow }, { data: instructorRow }, hasRelationship] = await Promise.all([
     schedulingAccessQuery,
     publicBookingQuery,
-    learnerPackageQuery,
     hasInstructorStudentPlanningRelationship(instructorId, leerlingId),
   ]);
   const limitSnapshot =
@@ -478,22 +461,18 @@ export async function getLearnerInstructorSchedulingAccess(
   }));
 
   const publicBookingEnabled = Boolean(instructorRow?.online_boeken_actief);
-  const packageAssigned = Boolean(learnerPackageRow?.pakket_id);
   const selfSchedulingAllowed =
-    packageAssigned && hasRelationship && Boolean(accessRow?.zelf_inplannen_toegestaan);
-  const directBookingAllowed =
-    packageAssigned && (publicBookingEnabled || selfSchedulingAllowed);
+    hasRelationship && Boolean(accessRow?.zelf_inplannen_toegestaan);
+  const directBookingAllowed = publicBookingEnabled || selfSchedulingAllowed;
 
   return {
     instructorId,
     hasActiveRelationship: hasRelationship,
-    packageAssigned,
-    planningBlockedUntilPackage: hasRelationship && !packageAssigned,
     trialLessonAvailable,
     publicBookingEnabled,
     selfSchedulingAllowed,
     directBookingAllowed,
-    canViewAgenda: directBookingAllowed || (publicBookingEnabled && trialLessonAvailable),
+    canViewAgenda: directBookingAllowed,
     weeklyBookingLimitMinutes: limitSnapshot.weeklyBookingLimitMinutes,
     manualWeeklyBookingLimitMinutes:
       limitSnapshot.manualWeeklyBookingLimitMinutes,
@@ -521,8 +500,6 @@ export async function getCurrentLearnerSchedulingAccessForInstructorSlug(
     return {
       instructorId: null,
       hasActiveRelationship: false,
-      packageAssigned: false,
-      planningBlockedUntilPackage: false,
       trialLessonAvailable: true,
       publicBookingEnabled: false,
       selfSchedulingAllowed: false,
@@ -539,8 +516,6 @@ export async function getCurrentLearnerSchedulingAccessForInstructorSlug(
     return {
       instructorId: instructeur.id,
       hasActiveRelationship: false,
-      packageAssigned: false,
-      planningBlockedUntilPackage: false,
       trialLessonAvailable: true,
       publicBookingEnabled,
       selfSchedulingAllowed: false,
@@ -590,8 +565,6 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
         accumulator[instructorId] = {
           instructorId,
           hasActiveRelationship: false,
-          packageAssigned: false,
-          planningBlockedUntilPackage: false,
           trialLessonAvailable: true,
           publicBookingEnabled,
           selfSchedulingAllowed: false,
@@ -644,7 +617,6 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
     supabase,
     leerlingId: leerling.id,
   }));
-  const packageAssigned = Boolean(leerling.pakket_id);
   const limitSnapshots = await getLearnerBookingLimitSnapshotsForInstructorIds({
     supabase,
     leerlingId: leerling.id,
@@ -670,25 +642,21 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
       );
       const hasActiveRelationship = relationshipInstructorIds.has(instructorId);
       const selfSchedulingAllowed =
-        packageAssigned &&
         hasActiveRelationship &&
         Boolean(selfSchedulingByInstructorId.get(instructorId));
       const directBookingAllowed =
-        packageAssigned && (publicBookingEnabled || selfSchedulingAllowed);
+        publicBookingEnabled || selfSchedulingAllowed;
       const limitSnapshot =
         limitSnapshots[instructorId] ?? createEmptyBookingLimitSnapshot();
 
       accumulator[instructorId] = {
         instructorId,
         hasActiveRelationship,
-        packageAssigned,
-        planningBlockedUntilPackage: hasActiveRelationship && !packageAssigned,
         trialLessonAvailable,
         publicBookingEnabled,
         selfSchedulingAllowed,
         directBookingAllowed,
-        canViewAgenda:
-          directBookingAllowed || (publicBookingEnabled && trialLessonAvailable),
+        canViewAgenda: directBookingAllowed,
         weeklyBookingLimitMinutes: limitSnapshot.weeklyBookingLimitMinutes,
         manualWeeklyBookingLimitMinutes:
           limitSnapshot.manualWeeklyBookingLimitMinutes,
@@ -834,14 +802,12 @@ export async function getCurrentLearnerBookingOverview(): Promise<LearnerBooking
       const rawAvailableSlots = access.hasActiveRelationship
         ? availableSlotsByInstructorId[instructorId] ?? []
         : [];
-      const regularAvailableSlots = access.packageAssigned
-        ? filterAvailabilitySlotsByWeeklyLimit(
-            rawAvailableSlots,
-            regularLessonDurationMinutes,
-            access.weeklyBookingLimitMinutes,
-            access.bookedMinutesByWeekStart
-          )
-        : [];
+      const regularAvailableSlots = filterAvailabilitySlotsByWeeklyLimit(
+        rawAvailableSlots,
+        regularLessonDurationMinutes,
+        access.weeklyBookingLimitMinutes,
+        access.bookedMinutesByWeekStart
+      );
       const trialAvailableSlots = filterAvailabilitySlotsByWeeklyLimit(
         rawAvailableSlots,
         trialLessonDurationMinutes,
@@ -854,8 +820,6 @@ export async function getCurrentLearnerBookingOverview(): Promise<LearnerBooking
         instructorSlug: row.slug,
         instructorName: row.volledige_naam ?? "Instructeur",
         hasActiveRelationship: access.hasActiveRelationship,
-        packageAssigned: access.packageAssigned,
-        planningBlockedUntilPackage: access.planningBlockedUntilPackage,
         hasPendingRequest: pendingRequestInstructorIds.has(instructorId),
         trialLessonAvailable: access.trialLessonAvailable,
         publicBookingEnabled: access.publicBookingEnabled,

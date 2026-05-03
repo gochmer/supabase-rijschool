@@ -63,13 +63,6 @@ export default async function LeerlingProfielPage() {
   const favoriteCount = leerling?.favoriete_instructeurs?.length ?? 0;
   const packageLabel =
     packageOverview.assignedPackage?.naam ?? "Nog geen pakket gekoppeld";
-  const packageUsage = packageOverview.lessonUsage;
-  const packageUsageLabel =
-    packageOverview.assignedPackage && packageUsage.totalLessons
-      ? `${packageUsage.usedLessons}/${packageUsage.totalLessons} gevolgd, ${packageUsage.plannedLessons} gepland, ${packageUsage.remainingLessons ?? 0} beschikbaar`
-      : packageOverview.assignedPackage
-        ? `${packageUsage.usedLessons} gevolgd, ${packageUsage.plannedLessons} gepland`
-        : null;
   const hasProfileName = Boolean(profile?.volledige_naam.trim());
   const hasProfilePhone = Boolean(profile?.telefoon.trim());
   const profileIntegrity = [
@@ -159,8 +152,7 @@ export default async function LeerlingProfielPage() {
       iconClassName: "bg-amber-400/14 text-amber-100",
       barClassName: "bg-amber-300",
       detail: packageOverview.assignedPackage
-        ? packageUsageLabel ??
-          `${packageOverview.assignedPackage.lessen || "Flexibel"} lessen - ${packageOverview.assignedPackage.prijsLabel}`
+        ? `${packageOverview.assignedPackage.lessen || "Flexibel"} lessen - ${packageOverview.assignedPackage.prijsLabel}`
         : `${packageOverview.availablePackages.length} pakketopties staan klaar.`,
     },
   ];
@@ -184,23 +176,14 @@ export default async function LeerlingProfielPage() {
           action: "Telefoon toevoegen",
         }
       : pendingRequests > 0
-      ? {
-          icon: CalendarDays,
-          label: "Aanvraag",
-          title: "Er loopt nog een aanvraag.",
-          text: "Bekijk de status en houd je boekingen rustig op orde.",
-          href: "/leerling/boekingen",
-          action: "Aanvraag bekijken",
-        }
-        : !packageOverview.assignedPackage
-          ? {
-              icon: Package,
-              label: "Pakket",
-              title: "Kies eerst een passend pakket.",
-              text: "Na je proefles geeft een gekoppeld pakket vervolglessen en je lesteller vrij.",
-              href: "/leerling/instructeurs",
-              action: "Pakketten bekijken",
-            }
+        ? {
+            icon: CalendarDays,
+            label: "Aanvraag",
+            title: "Er loopt nog een aanvraag.",
+            text: "Bekijk de status en houd je boekingen rustig op orde.",
+            href: "/leerling/boekingen",
+            action: "Aanvraag bekijken",
+          }
         : !nextLesson
           ? {
               icon: CalendarDays,
@@ -210,6 +193,15 @@ export default async function LeerlingProfielPage() {
               href: "/leerling/instructeurs",
               action: "Instructeur kiezen",
             }
+          : !packageOverview.assignedPackage
+            ? {
+                icon: Package,
+                label: "Pakket",
+                title: "Vergelijk een passend pakket.",
+                text: "Een gekoppeld pakket maakt je lessen en betalingen duidelijker.",
+                href: "/leerling/instructeurs",
+                action: "Pakketten bekijken",
+              }
             : {
                 icon: CalendarDays,
                 label: "Rustig op orde",
@@ -493,20 +485,6 @@ export default async function LeerlingProfielPage() {
               nextLesson ? `${nextLesson.datum} om ${nextLesson.tijd}` : "Nog niet ingepland"
             }
             laatsteInstructeurNaam={progressWorkspace.laatsteInstructeurNaam}
-            profile={{
-              email: profile?.email ?? "",
-              inschrijfdatum: profile?.created_at ?? "",
-              naam: profile?.volledige_naam ?? "Leerling",
-              pakket: packageLabel,
-              telefoon: profile?.telefoon ?? "",
-            }}
-            packageUsage={{
-              packageName: packageOverview.assignedPackage?.naam ?? null,
-              totalLessons: packageUsage.totalLessons,
-              plannedLessons: packageUsage.plannedLessons,
-              usedLessons: packageUsage.usedLessons,
-              remainingLessons: packageUsage.remainingLessons,
-            }}
           />
         </TabsContent>
       </Tabs>

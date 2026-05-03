@@ -61,24 +61,6 @@ export async function updateStudentSelfSchedulingAccessAction(
   }
 
   const supabase = await createServerClient();
-
-  if (zelfInplannenToegestaan) {
-    const { data: learner } = (await supabase
-      .from("leerlingen")
-      .select("pakket_id")
-      .eq("id", leerlingId)
-      .maybeSingle()) as unknown as {
-      data: { pakket_id: string | null } | null;
-    };
-
-    if (!learner?.pakket_id) {
-      return {
-        success: false,
-        message: "Koppel eerst een pakket voordat je zelf inplannen vrijgeeft.",
-      };
-    }
-  }
-
   const studentSchedulingRights = supabase.from(
     "leerling_planningsrechten" as never
   ) as unknown as StudentSchedulingRightsWriteBuilder;

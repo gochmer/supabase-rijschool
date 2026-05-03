@@ -98,7 +98,6 @@ export interface Les {
   selfCancelMessage?: string | null;
   locatie: string;
   locatie_id?: string | null;
-  pakket_id?: string | null;
   leerling_id?: string | null;
   leerling_naam: string;
   leerling_email?: string | null;
@@ -262,11 +261,6 @@ export interface InstructorStudentProgressRow {
   laatsteBeoordelingAt?: string | null;
   gekoppeldeLessen: number;
   voltooideLessen?: number;
-  pakketTotaalLessen?: number | null;
-  pakketIngeplandeLessen?: number;
-  pakketGevolgdeLessen?: number;
-  pakketResterendeLessen?: number | null;
-  pakketPlanningGeblokkeerd?: boolean;
   aanvraagStatus: string;
   email?: string;
   telefoon?: string;

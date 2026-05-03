@@ -641,6 +641,264 @@
     position: relative;
     z-index: 1;
   }
+
+  .lesson-calendar .fc {
+    min-width: 0;
+    --fc-page-bg-color: transparent;
+    --fc-button-border-radius: 999px;
+  }
+
+  .lesson-calendar .fc .fc-toolbar {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .lesson-calendar .fc .fc-toolbar-title {
+    font-size: clamp(1.05rem, 2vw, 1.4rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .lesson-calendar .fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+
+  .lesson-calendar .fc .fc-button {
+    border-radius: 999px;
+    box-shadow: none;
+    font-weight: 600;
+    padding: 0.62rem 0.92rem;
+  }
+
+  .lesson-calendar .fc .fc-button-group {
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .lesson-calendar .fc-direction-ltr .fc-button-group > .fc-button:not(:first-child) {
+    margin-left: 0;
+  }
+
+  .lesson-calendar .fc-direction-ltr .fc-button-group > .fc-button:not(:last-child) {
+    border-bottom-right-radius: 999px;
+    border-top-right-radius: 999px;
+  }
+
+  .lesson-calendar .fc-direction-ltr .fc-button-group > .fc-button:not(:first-child) {
+    border-bottom-left-radius: 999px;
+    border-top-left-radius: 999px;
+  }
+
+  .lesson-calendar .fc .fc-scrollgrid,
+  .lesson-calendar .fc-theme-standard td,
+  .lesson-calendar .fc-theme-standard th {
+    border-color: var(--fc-border-color);
+  }
+
+  .lesson-calendar .fc .fc-scrollgrid {
+    border-radius: 1.35rem;
+    overflow: hidden;
+  }
+
+  .lesson-calendar .fc .fc-col-header-cell-cushion,
+  .lesson-calendar .fc .fc-daygrid-day-number {
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .lesson-calendar .fc .fc-daygrid-day-number:hover,
+  .lesson-calendar .fc .fc-col-header-cell-cushion:hover {
+    text-decoration: none;
+  }
+
+  .lesson-calendar .fc .fc-event {
+    border-radius: 0.9rem;
+    border-width: 1px;
+    box-shadow: 0 16px 32px -22px rgba(15, 23, 42, 0.42);
+    overflow: hidden;
+  }
+
+  .lesson-calendar .fc .lesson-calendar-event--request {
+    border-style: dashed;
+    opacity: 0.94;
+  }
+
+  .lesson-calendar .fc .lesson-calendar-event--availability {
+    opacity: 0.98;
+  }
+
+  .lesson-calendar .fc .lesson-calendar-event--availability-muted {
+    border-style: dashed;
+    opacity: 0.78;
+  }
+
+  .lesson-calendar .fc .fc-event-main {
+    padding: 0.15rem 0.35rem;
+  }
+
+  .lesson-calendar .fc .fc-timegrid-slot {
+    height: 2.7rem;
+  }
+
+  .lesson-calendar .fc .fc-day-today {
+    background: var(--fc-today-bg-color);
+  }
+
+  .lesson-calendar--default .fc {
+    color: #0f172a;
+    --fc-border-color: rgba(148, 163, 184, 0.26);
+    --fc-button-text-color: #0f172a;
+    --fc-button-bg-color: rgba(255, 255, 255, 0.94);
+    --fc-button-border-color: rgba(203, 213, 225, 0.9);
+    --fc-button-hover-bg-color: #f8fafc;
+    --fc-button-hover-border-color: rgba(148, 163, 184, 0.9);
+    --fc-button-active-bg-color: #0f172a;
+    --fc-button-active-border-color: #0f172a;
+    --fc-page-bg-color: rgba(255, 255, 255, 0.2);
+    --fc-neutral-bg-color: rgba(226, 232, 240, 0.46);
+    --fc-today-bg-color: rgba(56, 189, 248, 0.08);
+    --fc-now-indicator-color: rgba(14, 165, 233, 0.82);
+  }
+
+  .lesson-calendar--default .fc .fc-button-primary:not(:disabled).fc-button-active,
+  .lesson-calendar--default .fc .fc-button-primary:not(:disabled):active {
+    color: #f8fafc;
+  }
+
+  .lesson-calendar--default .fc .fc-daygrid-day-number,
+  .lesson-calendar--default .fc .fc-col-header-cell-cushion,
+  .lesson-calendar--default .fc .fc-toolbar-title {
+    color: #0f172a;
+  }
+
+  .dark .lesson-calendar--default .fc {
+    color: #e2e8f0;
+    --fc-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-text-color: #e2e8f0;
+    --fc-button-bg-color: rgba(255, 255, 255, 0.06);
+    --fc-button-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-hover-bg-color: rgba(255, 255, 255, 0.1);
+    --fc-button-hover-border-color: rgba(255, 255, 255, 0.14);
+    --fc-button-active-bg-color: rgba(148, 163, 184, 0.18);
+    --fc-button-active-border-color: rgba(148, 163, 184, 0.22);
+    --fc-page-bg-color: rgba(15, 23, 42, 0.42);
+    --fc-neutral-bg-color: rgba(148, 163, 184, 0.08);
+    --fc-today-bg-color: rgba(125, 211, 252, 0.08);
+    --fc-now-indicator-color: rgba(125, 211, 252, 0.88);
+  }
+
+  .dark .lesson-calendar--default .fc .fc-daygrid-day-number,
+  .dark .lesson-calendar--default .fc .fc-col-header-cell-cushion,
+  .dark .lesson-calendar--default .fc .fc-toolbar-title {
+    color: #f8fafc;
+  }
+
+  .dark .availability-manager,
+  .dark .availability-manager-dialog {
+    color: #e2e8f0;
+  }
+
+  .dark .availability-manager [class*="bg-white/88"] {
+    background-color: rgba(15, 23, 42, 0.82);
+    background-image: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.76));
+    backdrop-filter: blur(18px);
+  }
+
+  .dark .availability-manager [class*="bg-slate-50/90"],
+  .dark .availability-manager [class*="bg-slate-50/80"],
+  .dark .availability-manager [class*="bg-slate-50/70"],
+  .dark .availability-manager [class*="bg-slate-100"],
+  .dark .availability-manager [class*="bg-white/92"],
+  .dark .availability-manager [class*="bg-white/90"],
+  .dark .availability-manager [class*="bg-white/80"],
+  .dark .availability-manager [class~="bg-white"],
+  .dark .availability-manager [class*="bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.9))]"],
+  .dark .availability-manager [class*="bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))]"],
+  .dark .availability-manager-dialog,
+  .dark .availability-manager-dialog [class*="bg-slate-50/90"],
+  .dark .availability-manager-dialog [class*="bg-slate-50/80"],
+  .dark .availability-manager-dialog [class~="bg-white"] {
+    background-color: rgba(15, 23, 42, 0.74);
+    background-image: none;
+  }
+
+  .dark .availability-manager [class*="border-slate-200"],
+  .dark .availability-manager [class*="border-slate-200/80"],
+  .dark .availability-manager [class*="border-white/70"],
+  .dark .availability-manager [class*="border-white/90"],
+  .dark .availability-manager [class*="border-white/80"],
+  .dark .availability-manager-dialog,
+  .dark .availability-manager-dialog [class*="border-slate-200"],
+  .dark .availability-manager-dialog [class*="border-white/80"] {
+    border-color: rgba(148, 163, 184, 0.18);
+  }
+
+  .dark .availability-manager .text-slate-950,
+  .dark .availability-manager-dialog .text-slate-950 {
+    color: #f8fafc;
+  }
+
+  .dark .availability-manager .text-slate-700,
+  .dark .availability-manager-dialog .text-slate-700 {
+    color: #dbe4f0;
+  }
+
+  .dark .availability-manager .text-slate-600,
+  .dark .availability-manager-dialog .text-slate-600 {
+    color: #cbd5e1;
+  }
+
+  .dark .availability-manager .text-slate-500,
+  .dark .availability-manager-dialog .text-slate-500 {
+    color: #94a3b8;
+  }
+
+  .dark .availability-manager-dialog-footer {
+    background-color: rgba(2, 6, 23, 0.68);
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .lesson-calendar--urban .fc {
+    color: #e2e8f0;
+    --fc-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-text-color: #e2e8f0;
+    --fc-button-bg-color: rgba(255, 255, 255, 0.06);
+    --fc-button-border-color: rgba(255, 255, 255, 0.08);
+    --fc-button-hover-bg-color: rgba(255, 255, 255, 0.1);
+    --fc-button-hover-border-color: rgba(255, 255, 255, 0.14);
+    --fc-button-active-bg-color: rgba(148, 163, 184, 0.18);
+    --fc-button-active-border-color: rgba(148, 163, 184, 0.22);
+    --fc-page-bg-color: rgba(15, 23, 42, 0.42);
+    --fc-neutral-bg-color: rgba(148, 163, 184, 0.08);
+    --fc-today-bg-color: rgba(125, 211, 252, 0.08);
+    --fc-now-indicator-color: rgba(125, 211, 252, 0.88);
+  }
+
+  .lesson-calendar--urban .fc .fc-daygrid-day-number,
+  .lesson-calendar--urban .fc .fc-col-header-cell-cushion,
+  .lesson-calendar--urban .fc .fc-toolbar-title {
+    color: #f8fafc;
+  }
+
+  .lesson-calendar--urban .fc .fc-button-primary:focus,
+  .lesson-calendar--urban .fc .fc-button-primary:not(:disabled).fc-button-active:focus,
+  .lesson-calendar--urban .fc .fc-button-primary:not(:disabled):active:focus {
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
+  }
+
+  @media (max-width: 920px) {
+    .lesson-calendar .fc .fc-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .lesson-calendar .fc .fc-toolbar-chunk {
+      justify-content: center;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

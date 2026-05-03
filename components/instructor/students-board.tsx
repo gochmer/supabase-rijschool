@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { ComponentType, HTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -45,27 +45,28 @@ import type {
   Pakket,
   StudentProgressAssessment,
   StudentProgressLessonNote,
-  StudentProgressStatus,
 } from "@/lib/types";
 import {
   SELF_SCHEDULING_WEEKLY_LIMIT_PRESETS,
   formatMinutesAsHoursLabel,
 } from "@/lib/self-scheduling-limits";
 import {
+  getStudentAutomaticNotifications,
   getStudentExamReadiness,
   formatStudentProgressDate,
   getStudentProgressFocusItems,
   getStudentProgressItem,
   getStudentMilestoneOverview,
   getStudentProgressMomentum,
+  getStudentProgressSectionSummaries,
   getStudentProgressStreak,
   getStudentProgressStatusMeta,
   getStudentProgressStrongestItems,
   getStudentProgressSummary,
   getStudentThreeLessonTrack,
-  getStudentTrajectoryIntelligence,
   getStudentWeeklyGoals,
   STUDENT_PROGRESS_SECTIONS,
+  STUDENT_PROGRESS_STATUS_OPTIONS,
   type StudentProgressSection,
 } from "@/lib/student-progress";
 import { cn } from "@/lib/utils";
@@ -76,8 +77,10 @@ import {
 } from "@/components/instructor/create-manual-lesson-dialog";
 import {
   canDetachStudent,
+  getAverageStudentProgress,
   getRecentStudentNotes,
   getSelectedLessonNote,
+  getStudentAttentionCount,
   getStudentWeeklyPlanningSummary,
   getWeeklyBookingLimitInput,
 } from "@/components/instructor/students-board-model";
@@ -88,7 +91,9 @@ import {
   formatDateTimeLabel,
   formatFullDate,
   getAssessmentDatesForStudent,
+  getStatusStyles,
   getTodayInputValue,
+  StudentSectionRows,
   type ActiveMarkMode,
 } from "@/components/instructor/students-board-parts";
 import { StudentPackageDialog } from "@/components/instructor/student-package-dialog";
@@ -242,7 +247,7 @@ function Panel({
     <section
       {...props}
       className={cn(
-        "rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.055),rgba(15,23,42,0.38))] p-3 shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)] 2xl:rounded-xl 2xl:p-5",
+        "rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.055),rgba(15,23,42,0.38))] p-4 shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)]",
         className,
       )}
     >
@@ -259,386 +264,12 @@ function SectionTitle({
   title: string;
 }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-3 2xl:mb-4">
-      <h2 className="text-[10px] font-semibold tracking-[0.16em] text-slate-300 uppercase 2xl:text-[11px]">
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <h2 className="text-[11px] font-semibold tracking-[0.16em] text-slate-300 uppercase">
         {title}
       </h2>
       {action}
     </div>
-  );
-}
-
-const paperProgressColumnCount = 12;
-
-const paperStatusSymbols: Record<StudentProgressStatus, string> = {
-  begeleid: "X",
-  herhaling: "H",
-  uitleg: "/",
-  zelfstandig: "\u2713",
-};
-
-function getPaperStatusSymbol(status?: StudentProgressStatus | null) {
-  return status ? paperStatusSymbols[status] : "";
-}
-
-function PaperLineField({
-  label,
-  value,
-}: {
-  label: string;
-  value?: ReactNode;
-}) {
-  return (
-    <div className="grid grid-cols-[minmax(5.25rem,32%)_minmax(0,1fr)] items-end gap-1.5 text-[clamp(0.62rem,0.36vw,0.95rem)] leading-none 2xl:grid-cols-[minmax(8rem,30%)_minmax(0,1fr)]">
-      <span className="truncate">{label}</span>
-      <span className="min-h-[clamp(1rem,0.68vw,1.8rem)] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap border-b-2 border-black px-1 pb-0.5 text-[clamp(0.55rem,0.35vw,0.92rem)] font-medium 2xl:px-1.5">
-        {value || "\u00a0"}
-      </span>
-    </div>
-  );
-}
-
-function formatPaperDateValue(value?: string | null) {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat("nl-NL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Europe/Amsterdam",
-  }).format(date);
-}
-
-function PaperProgressLegendButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "grid grid-cols-[clamp(1.2rem,0.8vw,2rem)_minmax(0,1fr)] items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1 text-left transition 2xl:gap-2 2xl:px-2",
-        active && "border-black bg-orange-100",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function StudentProgressPaperCard({
-  activeMarkMode,
-  assessments,
-  instructorName,
-  isPending,
-  onDateChange,
-  onMark,
-  onModeChange,
-  selectedDate,
-  selectedStudent,
-  visibleDates,
-}: {
-  activeMarkMode: ActiveMarkMode;
-  assessments: StudentProgressAssessment[];
-  instructorName: string;
-  isPending: boolean;
-  onDateChange: (date: string) => void;
-  onMark: (vaardigheidKey: string, section: StudentProgressSection) => void;
-  onModeChange: (mode: ActiveMarkMode) => void;
-  selectedDate: string;
-  selectedStudent: InstructorStudentProgressRow;
-  visibleDates: string[];
-}) {
-  const paperDates = Array.from({ length: paperProgressColumnCount }, (_, index) =>
-    visibleDates[index] ?? null,
-  );
-  const reversedSections = [...STUDENT_PROGRESS_SECTIONS].reverse();
-  const paperRowCount =
-    STUDENT_PROGRESS_SECTIONS.length +
-    STUDENT_PROGRESS_SECTIONS.reduce(
-      (total, section) => total + section.items.length,
-      0,
-    );
-  const paperSections = reversedSections.map((section, sectionIndex) => {
-    const previousRowCount = reversedSections
-      .slice(0, sectionIndex)
-      .reduce((total, previousSection) => total + previousSection.items.length + 1, 0);
-    const sectionNumber = paperRowCount - previousRowCount;
-    const rows = [...section.items].reverse().map((item, itemIndex) => ({
-      item,
-      number: sectionNumber - itemIndex - 1,
-    }));
-
-    return {
-      rows,
-      section,
-      sectionNumber,
-    };
-  });
-
-  return (
-    <Panel
-      data-progress-matrix-root
-      data-progress-print-root
-      className="mx-auto w-full max-w-[1280px] overflow-hidden border-black/20 bg-white p-[clamp(0.35rem,0.35vw,0.9rem)] text-black shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)]"
-    >
-      <div className="mx-auto w-full max-w-[1280px] overflow-hidden bg-white p-[clamp(0.35rem,0.34vw,0.9rem)] font-sans text-black">
-        <div className="grid gap-[clamp(0.65rem,0.55vw,1.35rem)] [@media(min-width:1280px)]:grid-cols-[1.12fr_0.72fr_0.88fr]">
-          <div className="space-y-2">
-            <PaperLineField label="Naam leerling" value={selectedStudent.naam} />
-            <PaperLineField label="Straat en huisnummer" />
-            <PaperLineField label="Postcode en woonplaats" />
-            <PaperLineField
-              label="Telefoonnummer"
-              value={selectedStudent.telefoon}
-            />
-            <PaperLineField label="E-mail adres" value={selectedStudent.email} />
-            <PaperLineField
-              label="Niveau pakket"
-              value={
-                <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-1.5">
-                  <span className="whitespace-nowrap">START/A/B/C/D/Op maat:</span>
-                  <span className="truncate">{selectedStudent.pakket}</span>
-                </span>
-              }
-            />
-          </div>
-
-          <div className="flex min-w-0 flex-col justify-between gap-[clamp(0.65rem,0.5vw,1.2rem)]">
-            <div className="mx-auto w-full max-w-[clamp(10rem,12vw,22rem)] border-2 border-black bg-zinc-900 px-[clamp(0.55rem,0.55vw,1.3rem)] py-[clamp(0.5rem,0.5vw,1.2rem)] text-center text-white">
-              <p className="text-[clamp(0.55rem,0.35vw,0.9rem)] font-bold uppercase">Autorijschool</p>
-              <p className="mt-1 text-[clamp(1.25rem,1.25vw,2.8rem)] font-black italic text-orange-400">
-                GOCHOIR
-              </p>
-            </div>
-            <PaperLineField label="Instructeur" value={instructorName} />
-          </div>
-
-          <div className="space-y-2 2xl:pt-7">
-            <PaperLineField
-              label="Inschrijfdatum"
-              value={formatPaperDateValue(selectedStudent.gekoppeldSinds)}
-            />
-            <PaperLineField label="Geboortedatum" />
-            <PaperLineField label="Geboorteplaats" />
-            <div className="grid grid-cols-[minmax(5.25rem,32%)_minmax(0,1fr)] items-center gap-1.5 pt-1 text-[clamp(0.58rem,0.34vw,0.9rem)] 2xl:grid-cols-[minmax(7rem,30%)_minmax(0,1fr)] 2xl:gap-2">
-              <span className="text-right">2ToDrive</span>
-              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <span>{"\u25a1"} Ja</span>
-                <span>{"\u25a1"} Geregeld</span>
-                <span>{"\u25a1"} Nee</span>
-              </span>
-            </div>
-            <label className="grid grid-cols-[minmax(5.25rem,32%)_minmax(0,1fr)] items-center gap-1.5 pt-1 text-[clamp(0.58rem,0.34vw,0.9rem)] 2xl:grid-cols-[minmax(7rem,30%)_minmax(0,1fr)] 2xl:gap-2">
-              <span>Lesdatum</span>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(event) => onDateChange(event.target.value)}
-                className="min-w-0 border-0 border-b-2 border-black bg-transparent px-1.5 py-0.5 text-[clamp(0.55rem,0.35vw,0.92rem)] text-black outline-none 2xl:px-2"
-              />
-            </label>
-          </div>
-        </div>
-
-        <table className="mt-[clamp(0.65rem,0.55vw,1.25rem)] w-full table-fixed border-collapse text-[clamp(0.52rem,0.34vw,0.95rem)] leading-tight">
-          <colgroup>
-            <col style={{ width: "38%" }} />
-            <col style={{ width: "clamp(1.55rem,1.35vw,3.15rem)" }} />
-            {paperDates.map((_, index) => (
-              <col key={`col-${index}`} />
-            ))}
-          </colgroup>
-          <tbody>
-            {paperSections.map(({ rows, section, sectionNumber }) => {
-              return (
-                <Fragment key={section.key}>
-                  <tr>
-                    <td className="border border-black bg-orange-400 px-1 py-1 font-semibold 2xl:border-2 2xl:px-1.5">
-                      <span className="block whitespace-normal break-words leading-tight">
-                        {section.label}
-                      </span>
-                    </td>
-                    <td className="border border-black bg-orange-400 text-center font-semibold 2xl:border-2">
-                      {sectionNumber}
-                    </td>
-                    {paperDates.map((_, index) => (
-                      <td
-                        key={`${section.key}-header-${index}`}
-                        className="h-[clamp(1.35rem,0.72vw,2.35rem)] border border-black bg-orange-400 2xl:border-2"
-                      />
-                    ))}
-                  </tr>
-
-                  {rows.map(({ item, number }, rowIndex) => (
-                    <tr key={item.key}>
-                      <td
-                        className={cn(
-                            "border border-black px-1 py-1 2xl:border-2 2xl:px-1.5",
-                          rowIndex % 2 === 0 ? "bg-white" : "bg-neutral-200",
-                        )}
-                      >
-                        <span className="block whitespace-normal break-words leading-tight">
-                          {item.label}
-                        </span>
-                      </td>
-                      <td
-                        className={cn(
-                          "border border-black text-center 2xl:border-2",
-                          rowIndex % 2 === 0 ? "bg-white" : "bg-neutral-200",
-                        )}
-                      >
-                        {number}
-                      </td>
-                      {paperDates.map((dateValue, columnIndex) => {
-                        const assessment = dateValue
-                          ? assessments.find(
-                              (entry) =>
-                                entry.vaardigheid_key === item.key &&
-                                entry.beoordelings_datum === dateValue,
-                            )
-                          : null;
-                        const isEditableColumn = dateValue === selectedDate;
-                        const symbol = getPaperStatusSymbol(assessment?.status);
-
-                        return (
-                          <td
-                            key={`${item.key}-${dateValue ?? columnIndex}`}
-                            className={cn(
-                              "h-[clamp(1.35rem,0.72vw,2.3rem)] border border-black bg-white p-0 text-center align-middle 2xl:border-2",
-                              !dateValue && "bg-white",
-                              assessment?.status === "herhaling" && "bg-orange-100",
-                            )}
-                          >
-                            {dateValue ? (
-                              isEditableColumn ? (
-                                <button
-                                  type="button"
-                                  disabled={isPending}
-                                  onClick={() => onMark(item.key, section)}
-                                  className={cn(
-                                    "flex h-full w-full items-center justify-center text-[clamp(0.58rem,0.38vw,1rem)] font-bold text-black transition hover:bg-orange-200 disabled:cursor-not-allowed disabled:opacity-55",
-                                    symbol && "bg-white",
-                                  )}
-                                  title={`${item.label} markeren op ${formatStudentProgressDate(
-                                    dateValue,
-                                  )}`}
-                                >
-                                  {symbol || "+"}
-                                </button>
-                              ) : (
-                                <span className="flex h-full w-full items-center justify-center font-bold">
-                                  {symbol}
-                                </span>
-                              )
-                            ) : null}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </Fragment>
-              );
-            })}
-
-            <tr>
-              <td
-                rowSpan={2}
-                className="border border-black bg-white px-2 py-2 align-top 2xl:border-2 2xl:px-5"
-              >
-                <p className="mb-2 text-center text-[10px] 2xl:mb-3 2xl:text-[13px]">
-                  Verklaring van de te gebruiken tekens
-                </p>
-                <div className="grid max-w-full gap-1 text-[9px] sm:text-[10px] 2xl:max-w-[420px] 2xl:text-[13px]">
-                  <PaperProgressLegendButton
-                    active={activeMarkMode === "uitleg"}
-                    onClick={() => onModeChange("uitleg")}
-                  >
-                    <span className="text-lg leading-none 2xl:text-2xl">/</span>
-                    <span>Beknopte uitleg/demonstratie/afnemende hulp</span>
-                  </PaperProgressLegendButton>
-                  <PaperProgressLegendButton
-                    active={activeMarkMode === "zelfstandig"}
-                    onClick={() => onModeChange("zelfstandig")}
-                  >
-                    <span className="text-xl leading-none">{"\u2713"}</span>
-                    <span>Zelfstandig uitgevoerd</span>
-                  </PaperProgressLegendButton>
-                  <PaperProgressLegendButton
-                    active={activeMarkMode === "begeleid"}
-                    onClick={() => onModeChange("begeleid")}
-                  >
-                    <span className="text-base leading-none 2xl:text-xl">X</span>
-                    <span>Met begeleiding uitgevoerd</span>
-                  </PaperProgressLegendButton>
-                  <PaperProgressLegendButton
-                    active={activeMarkMode === "herhaling"}
-                    onClick={() => onModeChange("herhaling")}
-                  >
-                    <span className="text-base leading-none 2xl:text-xl">H</span>
-                    <span>Herhaling noodzakelijk gebleken</span>
-                  </PaperProgressLegendButton>
-                  <PaperProgressLegendButton
-                    active={activeMarkMode === "clear"}
-                    onClick={() => onModeChange("clear")}
-                  >
-                    <span className="text-xl leading-none">{"\u25a1"}</span>
-                    <span>Vakje wissen</span>
-                  </PaperProgressLegendButton>
-                </div>
-              </td>
-              <td className="border border-black bg-white text-center text-[clamp(0.55rem,0.34vw,0.95rem)] [writing-mode:vertical-rl] 2xl:border-2">
-                Tijd
-              </td>
-              {paperDates.map((dateValue, index) => (
-                <td
-                  key={`time-${dateValue ?? index}`}
-                  className="h-[clamp(2.6rem,1.75vw,5rem)] border border-black bg-white 2xl:border-2"
-                />
-              ))}
-            </tr>
-            <tr>
-              <td className="border border-black bg-white text-center text-[clamp(0.55rem,0.34vw,0.95rem)] [writing-mode:vertical-rl] 2xl:border-2">
-                Datum
-              </td>
-              {paperDates.map((dateValue, index) => (
-                <td
-                  key={`date-${dateValue ?? index}`}
-                  className="h-[clamp(2.6rem,1.75vw,5rem)] border border-black bg-white p-0 text-center align-bottom 2xl:border-2"
-                >
-                  {dateValue ? (
-                    <button
-                      type="button"
-                      onClick={() => onDateChange(dateValue)}
-                      className={cn(
-                        "flex h-full w-full items-end justify-center px-0.5 pb-1 text-[clamp(0.45rem,0.28vw,0.8rem)] font-semibold [writing-mode:vertical-rl]",
-                        dateValue === selectedDate && "bg-orange-200",
-                      )}
-                    >
-                      {formatStudentProgressDate(dateValue)}
-                    </button>
-                  ) : null}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </Panel>
   );
 }
 
@@ -652,7 +283,7 @@ function MiniStat({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.045] p-3 2xl:p-4">
+    <div className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
       <Icon className="size-4 text-slate-400" />
       <p className="mt-2 text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase">
         {label}
@@ -666,7 +297,6 @@ export function StudentsBoard({
   students,
   assessments,
   notes,
-  instructorName = "Instructeur",
   locationOptions = [],
   availabilitySlots = [],
   busyWindows = [],
@@ -677,7 +307,6 @@ export function StudentsBoard({
   students: InstructorStudentProgressRow[];
   assessments: StudentProgressAssessment[];
   notes: StudentProgressLessonNote[];
-  instructorName?: string;
   locationOptions?: LocationOption[];
   availabilitySlots?: LessonPlanningAvailabilitySlot[];
   busyWindows?: LessonPlanningBusyWindow[];
@@ -806,6 +435,14 @@ export function StudentsBoard({
     return localNotes.filter((note) => note.leerling_id === selectedStudent.id);
   }, [localNotes, selectedStudent]);
 
+  const summary = useMemo(
+    () => getStudentProgressSummary(selectedStudentAssessments),
+    [selectedStudentAssessments],
+  );
+  const sectionSummaries = useMemo(
+    () => getStudentProgressSectionSummaries(selectedStudentAssessments),
+    [selectedStudentAssessments],
+  );
   const selectedPackage = useMemo(() => {
     if (!selectedStudent) {
       return null;
@@ -849,6 +486,14 @@ export function StudentsBoard({
       getStudentExamReadiness(selectedStudentAssessments, selectedStudentNotes),
     [selectedStudentAssessments, selectedStudentNotes],
   );
+  const automaticNotifications = useMemo(
+    () =>
+      getStudentAutomaticNotifications(
+        selectedStudentAssessments,
+        selectedStudentNotes,
+      ),
+    [selectedStudentAssessments, selectedStudentNotes],
+  );
   const weeklyGoals = useMemo(
     () =>
       getStudentWeeklyGoals(selectedStudentAssessments, selectedStudentNotes),
@@ -878,25 +523,6 @@ export function StudentsBoard({
       ),
     [selectedStudentAssessments, selectedStudentNotes],
   );
-  const trajectoryIntelligence = useMemo(
-    () =>
-      getStudentTrajectoryIntelligence({
-        assessments: selectedStudentAssessments,
-        notes: selectedStudentNotes,
-        packageUsage: {
-          packageName:
-            selectedStudent?.pakket &&
-            selectedStudent.pakket !== "Nog geen pakket"
-              ? selectedStudent.pakket
-              : null,
-          totalLessons: selectedStudent?.pakketTotaalLessen ?? null,
-          plannedLessons: selectedStudent?.pakketIngeplandeLessen ?? 0,
-          usedLessons: selectedStudent?.pakketGevolgdeLessen ?? 0,
-          remainingLessons: selectedStudent?.pakketResterendeLessen ?? null,
-        },
-      }),
-    [selectedStudent, selectedStudentAssessments, selectedStudentNotes],
-  );
   const visibleDates = useMemo(
     () =>
       getAssessmentDatesForStudent(
@@ -905,6 +531,14 @@ export function StudentsBoard({
         selectedDate,
       ),
     [localAssessments, selectedDate, selectedStudent?.id],
+  );
+  const averageProgress = useMemo(
+    () => getAverageStudentProgress(localStudents),
+    [localStudents],
+  );
+  const attentionStudents = useMemo(
+    () => getStudentAttentionCount(localStudents),
+    [localStudents],
   );
   const selectedLessonNote = useMemo(() => {
     return getSelectedLessonNote({
@@ -1230,11 +864,11 @@ export function StudentsBoard({
   ] as const;
 
   return (
-    <div className="space-y-4 text-white 2xl:space-y-6">
+    <div className="space-y-4 text-white">
       <Panel className="p-0">
-        <div className="flex flex-col gap-3 border-b border-white/10 p-3 xl:flex-row xl:items-center xl:justify-between 2xl:p-5">
+        <div className="flex flex-col gap-3 border-b border-white/10 p-4 xl:flex-row xl:items-center xl:justify-between">
           <SectionTitle title="Leerlingen overzicht" />
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center 2xl:gap-3">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="relative">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-500" />
               <Input
@@ -1245,7 +879,7 @@ export function StudentsBoard({
                 }}
                 placeholder="Zoek leerlingen..."
                 aria-label="Zoek leerlingen"
-                className="h-9 w-full rounded-lg border-white/10 bg-slate-950/45 pl-9 text-sm text-white placeholder:text-slate-500 lg:w-64 2xl:h-10 2xl:w-80 2xl:text-base"
+                className="h-10 w-full rounded-lg border-white/10 bg-slate-950/45 pl-9 text-white placeholder:text-slate-500 lg:w-72"
               />
             </div>
             <select
@@ -1254,7 +888,7 @@ export function StudentsBoard({
                 setFilter(event.target.value as StudentFilter);
                 setCurrentPage(1);
               }}
-              className="h-9 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-sm text-white outline-none 2xl:h-10"
+              className="h-10 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-sm text-white outline-none"
             >
               {filters.map((item) => (
                 <option key={item.value} value={item.value}>
@@ -1268,7 +902,7 @@ export function StudentsBoard({
                 setPackageFilter(event.target.value);
                 setCurrentPage(1);
               }}
-              className="h-9 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-sm text-white outline-none 2xl:h-10"
+              className="h-10 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-sm text-white outline-none"
             >
               <option value={ALL_PACKAGES_VALUE}>Pakket: Alle</option>
               {packageOptions.map((pkg) => (
@@ -1280,7 +914,7 @@ export function StudentsBoard({
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as StudentSort)}
-              className="h-9 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-sm text-white outline-none 2xl:h-10"
+              className="h-10 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-sm text-white outline-none"
             >
               <option value="newest">Sorteren: Nieuwste</option>
               <option value="progress">Sorteren: Voortgang</option>
@@ -1290,7 +924,7 @@ export function StudentsBoard({
             <Button
               type="button"
               variant="outline"
-              className="size-9 rounded-lg border-white/10 bg-white/7 p-0 text-white 2xl:size-10"
+              className="size-10 rounded-lg border-white/10 bg-white/7 p-0 text-white"
               onClick={() => {
                 setFilter("all");
                 setPackageFilter(ALL_PACKAGES_VALUE);
@@ -1418,7 +1052,6 @@ export function StudentsBoard({
                           <CreateManualLessonDialog
                             leerlingId={student.id}
                             leerlingNaam={student.naam}
-                            studentOptions={localStudents}
                             suggestedTitle={
                               student.pakket !== "Nog geen pakket"
                                 ? student.pakket
@@ -1535,7 +1168,7 @@ export function StudentsBoard({
           </table>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/10 p-3 text-sm text-slate-400 lg:flex-row lg:items-center lg:justify-between 2xl:gap-4 2xl:p-5">
+        <div className="flex flex-col gap-4 border-t border-white/10 p-4 text-sm text-slate-400 lg:flex-row lg:items-center lg:justify-between">
           <p>
             {filteredStudents.length
               ? `${firstItemIndex + 1}-${Math.min(
@@ -1600,7 +1233,7 @@ export function StudentsBoard({
                   setPageSize(Number(event.target.value));
                   setCurrentPage(1);
                 }}
-                className="h-9 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-white outline-none 2xl:h-10"
+                className="h-10 rounded-lg border border-white/10 bg-slate-950/45 px-3 text-white outline-none"
               >
                 {pageSizeOptions.map((option) => (
                   <option key={option} value={option}>
@@ -1615,8 +1248,8 @@ export function StudentsBoard({
 
       {selectedStudent ? (
         <>
-            <div className="grid gap-4 xl:grid-cols-[17rem_minmax(0,1fr)] 2xl:grid-cols-[20rem_minmax(0,1fr)] 2xl:gap-6 [@media(min-width:2200px)]:grid-cols-[20rem_minmax(0,1fr)_24rem]">
-            <Panel data-progress-print-root className="space-y-3 2xl:space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]">
+            <Panel data-progress-print-root className="space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="flex size-14 items-center justify-center rounded-full bg-violet-500/28 text-lg font-semibold text-violet-100">
@@ -1683,59 +1316,6 @@ export function StudentsBoard({
                 </p>
               </div>
 
-              <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
-                      Pakketverbruik
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      {selectedStudent.pakketPlanningGeblokkeerd
-                        ? "Pakket nodig"
-                        : selectedStudent.pakket}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      selectedStudent.pakketPlanningGeblokkeerd
-                        ? "warning"
-                        : "success"
-                    }
-                  >
-                    {selectedStudent.pakketPlanningGeblokkeerd
-                      ? "Geblokkeerd"
-                      : "Vrijgegeven"}
-                  </Badge>
-                </div>
-                {selectedStudent.pakketPlanningGeblokkeerd ? (
-                  <p className="mt-3 text-xs leading-5 text-amber-100">
-                    Vervolglessen blijven dicht tot je een pakket koppelt. Een proefles kan nog wel los in het traject staan.
-                  </p>
-                ) : (
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <MiniStat
-                      icon={CalendarDays}
-                      label="Gepland"
-                      value={`${selectedStudent.pakketIngeplandeLessen ?? 0}`}
-                    />
-                    <MiniStat
-                      icon={CheckCircle2}
-                      label="Gevolgd"
-                      value={`${selectedStudent.pakketGevolgdeLessen ?? 0}`}
-                    />
-                    <MiniStat
-                      icon={ShieldCheck}
-                      label="Over"
-                      value={
-                        selectedStudent.pakketResterendeLessen == null
-                          ? "Flex"
-                          : `${selectedStudent.pakketResterendeLessen}`
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-
               <div className="grid gap-2">
                 <StudentPackageDialog
                   leerlingId={selectedStudent.id}
@@ -1750,7 +1330,6 @@ export function StudentsBoard({
                 <CreateManualLessonDialog
                   leerlingId={selectedStudent.id}
                   leerlingNaam={selectedStudent.naam}
-                  studentOptions={localStudents}
                   suggestedTitle={
                     selectedStudent.pakket !== "Nog geen pakket"
                       ? selectedStudent.pakket
@@ -1814,9 +1393,7 @@ export function StudentsBoard({
                       Zelf inplannen
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {selectedStudent.pakketPlanningGeblokkeerd
-                        ? "Eerst pakket koppelen"
-                        : selectedStudent.planningVrijTeGeven
+                      {selectedStudent.planningVrijTeGeven
                         ? weeklyPlanningSummary.limitLabel
                         : "Nog niet beschikbaar"}
                     </p>
@@ -1973,19 +1550,108 @@ export function StudentsBoard({
               ) : null}
             </Panel>
 
-            <div className="min-w-0 space-y-4">
-              <StudentProgressPaperCard
-                activeMarkMode={activeMarkMode}
-                assessments={selectedStudentAssessments}
-                instructorName={instructorName}
-                isPending={isPending}
-                onDateChange={setSelectedDate}
-                onMark={handleAssessmentUpdate}
-                onModeChange={setActiveMarkMode}
-                selectedDate={selectedDate}
-                selectedStudent={selectedStudent}
-                visibleDates={visibleDates}
-              />
+            <div className="space-y-4">
+              <Panel data-progress-matrix-root data-progress-print-root>
+                <SectionTitle
+                  title="Voortgang per lesdatum"
+                  action={
+                    <Input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(event) => setSelectedDate(event.target.value)}
+                      className="h-9 w-36 rounded-lg border-white/10 bg-slate-950/45 text-white"
+                    />
+                  }
+                />
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {STUDENT_PROGRESS_STATUS_OPTIONS.map((option) => {
+                    const styles = getStatusStyles(option.value);
+                    const active = activeMarkMode === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setActiveMarkMode(option.value)}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-[12px] font-medium transition",
+                          styles.card,
+                          active
+                            ? "ring-2 ring-white/20"
+                            : "opacity-80 hover:opacity-100",
+                        )}
+                      >
+                        {option.shortLabel} {option.label}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setActiveMarkMode("clear")}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-[12px] font-medium",
+                      activeMarkMode === "clear"
+                        ? "border-white/30 bg-white text-slate-950"
+                        : "border-white/10 bg-white/5 text-slate-300",
+                    )}
+                  >
+                    Wissen
+                  </button>
+                </div>
+
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {visibleDates.map((dateValue) => (
+                    <button
+                      key={dateValue}
+                      type="button"
+                      onClick={() => setSelectedDate(dateValue)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs font-semibold",
+                        dateValue === selectedDate
+                          ? "border-blue-400/35 bg-blue-500/20 text-blue-100"
+                          : "border-white/10 bg-white/[0.04] text-slate-300",
+                      )}
+                    >
+                      {formatStudentProgressDate(dateValue)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-separate border-spacing-y-2 text-left">
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 z-10 min-w-[15rem] rounded-l-lg bg-slate-950/95 px-3 py-2 text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                          Onderdeel
+                        </th>
+                        {visibleDates.map((dateValue) => (
+                          <th
+                            key={dateValue}
+                            className="min-w-[5.2rem] px-1.5 py-2 text-center text-[10px] font-semibold tracking-[0.12em] text-slate-400 uppercase"
+                          >
+                            {formatStudentProgressDate(dateValue)}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {STUDENT_PROGRESS_SECTIONS.map((section) => (
+                        <StudentSectionRows
+                          key={section.key}
+                          section={section}
+                          assessments={selectedStudentAssessments}
+                          visibleDates={visibleDates}
+                          selectedDate={selectedDate}
+                          isPending={isPending}
+                          onMark={(vaardigheidKey) =>
+                            handleAssessmentUpdate(vaardigheidKey, section)
+                          }
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
 
               <Panel data-note-editor-root>
                 <SectionTitle
@@ -2038,53 +1704,9 @@ export function StudentsBoard({
               </Panel>
             </div>
 
-            <Panel className="xl:col-start-2 2xl:col-start-2 [@media(min-width:2200px)]:col-start-auto">
+            <Panel>
               <SectionTitle title="Automatische inzichten" />
               <div className="space-y-3">
-                <div className="rounded-lg border border-white/10 bg-[linear-gradient(135deg,rgba(14,165,233,0.12),rgba(255,255,255,0.035))] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
-                        Trajectbewaking
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-white">
-                        {trajectoryIntelligence.packageSignal.title}
-                      </p>
-                    </div>
-                    <Badge variant={trajectoryIntelligence.packageSignal.badge}>
-                      {trajectoryIntelligence.packageSignal.badgeLabel}
-                    </Badge>
-                  </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
-                    <span
-                      className={cn(
-                        "block h-full rounded-full",
-                        trajectoryIntelligence.packageSignal.badge === "danger"
-                          ? "bg-red-400"
-                          : trajectoryIntelligence.packageSignal.badge ===
-                              "warning"
-                            ? "bg-amber-400"
-                            : "bg-emerald-400",
-                      )}
-                      style={{
-                        width: `${Math.min(
-                          Math.max(
-                            trajectoryIntelligence.packageSignal.pressure,
-                            6,
-                          ),
-                          100,
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-slate-300">
-                    {trajectoryIntelligence.packageSignal.usageLabel}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">
-                    {trajectoryIntelligence.packageSignal.nextAction}
-                  </p>
-                </div>
-
                 <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-300">Examengereedheid</span>
@@ -2101,23 +1723,6 @@ export function StudentsBoard({
                   <p className="mt-2 text-xs text-emerald-300">
                     {examReadiness.label}
                   </p>
-                  {examReadiness.score >= 82 ? (
-                    <div className="mt-3">
-                      <CreateManualLessonDialog
-                        leerlingId={selectedStudent.id}
-                        leerlingNaam={selectedStudent.naam}
-                        studentOptions={localStudents}
-                        suggestedTitle="Praktijkexamen / proefexamen"
-                        defaultLessonKind="examenrit"
-                        locationOptions={locationOptions}
-                        availabilitySlots={availabilitySlots}
-                        busyWindows={busyWindows}
-                        durationDefaults={lessonDurationDefaults}
-                        triggerLabel="Examenmoment plannen"
-                        triggerClassName="h-9 w-full rounded-full bg-emerald-500 text-[12px] font-semibold text-slate-950 hover:bg-emerald-400"
-                      />
-                    </div>
-                  ) : null}
                 </div>
 
                 <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
@@ -2253,7 +1858,6 @@ export function StudentsBoard({
                 <CreateManualLessonDialog
                   leerlingId={selectedStudent.id}
                   leerlingNaam={selectedStudent.naam}
-                  studentOptions={localStudents}
                   suggestedTitle={
                     selectedStudent.pakket !== "Nog geen pakket"
                       ? selectedStudent.pakket

@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
 import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
 import { createServerClient } from "@/lib/supabase/server";
-import { evaluateStudentTrajectorySignals } from "@/lib/student-trajectory-notifications";
 import {
   calculateStudentProgressPercentage,
   getStudentProgressItem,
@@ -119,16 +118,10 @@ export async function saveStudentProgressAssessmentAction(input: {
   }
 
   await syncStudentProgressPercentage(input.leerlingId);
-  await evaluateStudentTrajectorySignals({
-    supabase,
-    leerlingId: input.leerlingId,
-    instructeurId: instructeur.id,
-  });
 
   revalidatePath("/instructeur/leerlingen");
   revalidatePath("/instructeur/dashboard");
   revalidatePath("/admin/leerlingen");
-  revalidatePath("/leerling/dashboard");
   revalidatePath("/leerling/profiel");
 
   return {
@@ -198,16 +191,10 @@ export async function clearStudentProgressAssessmentAction(input: {
   }
 
   await syncStudentProgressPercentage(input.leerlingId);
-  await evaluateStudentTrajectorySignals({
-    supabase,
-    leerlingId: input.leerlingId,
-    instructeurId: instructeur.id,
-  });
 
   revalidatePath("/instructeur/leerlingen");
   revalidatePath("/instructeur/dashboard");
   revalidatePath("/admin/leerlingen");
-  revalidatePath("/leerling/dashboard");
   revalidatePath("/leerling/profiel");
 
   return {
@@ -298,15 +285,8 @@ export async function saveStudentProgressLessonNoteAction(input: {
     }
   }
 
-  await evaluateStudentTrajectorySignals({
-    supabase,
-    leerlingId: input.leerlingId,
-    instructeurId: instructeur.id,
-  });
-
   revalidatePath("/instructeur/leerlingen");
   revalidatePath("/instructeur/dashboard");
-  revalidatePath("/leerling/dashboard");
   revalidatePath("/leerling/profiel");
 
   return {

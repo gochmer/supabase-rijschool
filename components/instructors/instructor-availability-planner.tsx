@@ -22,10 +22,7 @@ import {
 import type { BeschikbaarheidSlot } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  PlanningWeekView,
-  type PlanningWeekItem,
-} from "@/components/calendar/planning-week-view";
+import { AvailabilityCalendar } from "@/components/instructor/availability-calendar";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
 
 type AvailabilityEntry = {
@@ -122,36 +119,6 @@ export function InstructorAvailabilityPlanner({
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedSlotId) ?? entries[0] ?? null,
     [entries, selectedSlotId]
-  );
-  const planningItems = useMemo<Array<PlanningWeekItem<{ entry: AvailabilityEntry }>>>(
-    () =>
-      entries.flatMap((entry) => {
-        const startAt = new Date(entry.startAt);
-        const endAt = new Date(entry.endAt);
-
-        if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
-          return [];
-        }
-
-        return [
-          {
-            id: entry.id,
-            kind: "available",
-            title: "Open moment",
-            startAt,
-            endAt,
-            typeLabel: "Live agenda",
-            statusLabel: "Open",
-            contextLabel: entry.durationLabel,
-            actionLabel: directBookingEnabled
-              ? "Boek dit moment"
-              : "Vraag dit moment aan",
-            ariaLabel: `${entry.dag} ${entry.tijdvak} selecteren`,
-            meta: { entry },
-          } satisfies PlanningWeekItem<{ entry: AvailabilityEntry }>,
-        ];
-      }),
-    [directBookingEnabled, entries],
   );
   const weeklyLimitSourceLabel =
     weeklyBookingLimitSource === "manual"
@@ -275,17 +242,23 @@ export function InstructorAvailabilityPlanner({
 
       <div className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.75fr)_19.5rem]">
         <div className="min-w-0">
-          <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 p-4 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-white/5 dark:shadow-[0_24px_70px_-42px_rgba(2,6,23,0.55)] lg:p-5">
-            <PlanningWeekView
-              emptyLabel="Geen vrije momenten."
-              initialAnchorDate={planningItems[0]?.startAt}
-              items={planningItems}
-              onSelectItem={(item) => {
-                if (item.meta?.entry) {
-                  setSelectedSlotId(item.meta.entry.id);
-                }
-              }}
-              selectedItemId={selectedEntry?.id ?? null}
+          <div className="lesson-calendar-shell rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.95))] p-4 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.72),rgba(15,23,42,0.58))] dark:shadow-[0_24px_70px_-42px_rgba(2,6,23,0.55)] lg:p-5">
+            <AvailabilityCalendar
+              selectedEntryStartAt={selectedEntry?.startAt ?? undefined}
+              selectedAvailabilityId={selectedEntry?.id ?? null}
+              showFooterStats={false}
+              displayMode="booking"
+              availabilityItems={entries.map((entry) => ({
+                id: entry.id,
+                title: "Open moment",
+                startAt: entry.startAt,
+                endAt: entry.endAt,
+                available: true,
+                momentLabel: entry.momentLabel,
+                durationLabel: entry.durationLabel,
+                sourceLabel: "Live agenda",
+              }))}
+              onAvailabilityEventClick={setSelectedSlotId}
             />
           </div>
         </div>

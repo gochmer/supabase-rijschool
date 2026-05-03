@@ -8,7 +8,7 @@ const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD ?? "Test123!Aa";
 const TEST_PHONE = "06 98 76 54 32";
 const MAILBOX_BASE =
   process.env.PLAYWRIGHT_NOTIFICATION_TEST_EMAIL ??
-  "notification-test@example.com";
+  "gochmershahab@gmail.com";
 const NOTIFICATION_TARGET_EMAIL =
   process.env.NOTIFICATION_TEST_TO_EMAIL ?? MAILBOX_BASE;
 

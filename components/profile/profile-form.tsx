@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   Check,
   CheckCircle2,
@@ -59,7 +58,6 @@ export function ProfileForm({
   role: "leerling" | "instructeur";
   tone?: "default" | "resident" | "urban";
 }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isUrban = tone === "urban";
   const isResident = tone === "resident";
@@ -104,7 +102,6 @@ export function ProfileForm({
 
       if (result.success) {
         toast.success(result.message);
-        router.refresh();
       } else {
         toast.error(result.message);
       }

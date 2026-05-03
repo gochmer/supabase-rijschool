@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   BookOpen,
@@ -12,17 +12,12 @@ import {
   FolderKanban,
   LayoutDashboard,
   LifeBuoy,
-  Loader2,
   Settings,
   ShieldCheck,
   Star,
   Users,
 } from "lucide-react";
 
-import {
-  isDashboardNavigationItemActive,
-  type DashboardNavigationItem,
-} from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
@@ -32,8 +27,6 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   Boekingen: CalendarDays,
   Betalingen: CreditCard,
   Berichten: Bell,
-  Agenda: CalendarDays,
-  Financiën: CreditCard,
   Reviews: Star,
   Instellingen: Settings,
   Beschikbaarheid: CalendarDays,
@@ -52,67 +45,24 @@ export function DashboardNav({
   tone = "default",
   compact = false,
 }: {
-  items: DashboardNavigationItem[];
+  items: Array<{ href: string; label: string }>;
   tone?: "default" | "hazard" | "urban";
   compact?: boolean;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [pendingRoute, setPendingRoute] = useState<{
-    href: string;
-    fromPathname: string;
-    startedAt: number;
-  } | null>(null);
   const isUrban = tone === "urban";
   const isHazard = tone === "hazard";
-
-  useEffect(() => {
-    if (!pendingRoute || pendingRoute.fromPathname === pathname) {
-      return;
-    }
-
-    if (process.env.NODE_ENV !== "production") {
-      const duration = Math.round(performance.now() - pendingRoute.startedAt);
-      console.info(
-        `[perf] dashboard route ${pendingRoute.fromPathname} -> ${pathname}: ${duration}ms`,
-      );
-    }
-  }, [pathname, pendingRoute]);
 
   return (
     <nav className={cn("flex flex-col", compact ? "gap-1.5" : "gap-2")}>
       {items.map((item) => {
-        const active = isDashboardNavigationItemActive(pathname, item);
-        const pending = pendingRoute?.href === item.href && !active;
+        const active = pathname === item.href;
         const Icon = iconMap[item.label] ?? ShieldCheck;
 
         return (
           <Link
             key={item.href}
             href={item.href}
-            prefetch
-            onFocus={() => router.prefetch(item.href)}
-            onMouseEnter={() => router.prefetch(item.href)}
-            onClick={(event) => {
-              if (
-                active ||
-                event.defaultPrevented ||
-                event.button !== 0 ||
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey
-              ) {
-                return;
-              }
-
-              setPendingRoute({
-                href: item.href,
-                fromPathname: pathname,
-                startedAt: performance.now(),
-              });
-              router.prefetch(item.href);
-            }}
             className={cn(
               "group flex min-w-0 items-center rounded-[1.4rem] font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               compact ? "gap-2.5 px-2.5 py-2 text-[0.92rem]" : "gap-3 px-4 py-3 text-sm",
@@ -146,21 +96,9 @@ export function DashboardNav({
                     : "bg-slate-100 text-slate-600 group-hover:bg-slate-950 group-hover:text-white dark:bg-white/6 dark:text-slate-300 dark:group-hover:bg-white/10 dark:group-hover:text-white"
               )}
             >
-              {pending ? (
-                <Loader2
-                  className={cn(
-                    "animate-spin",
-                    compact ? "size-3.5" : "size-4",
-                  )}
-                />
-              ) : (
-                <Icon className={compact ? "size-3.5" : "size-4"} />
-              )}
+              <Icon className={compact ? "size-3.5" : "size-4"} />
             </span>
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {pending ? (
-              <span className="size-1.5 shrink-0 rounded-full bg-current opacity-80" />
-            ) : null}
           </Link>
         );
       })}

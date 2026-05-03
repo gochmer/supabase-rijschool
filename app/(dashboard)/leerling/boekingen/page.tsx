@@ -7,10 +7,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-import {
-  PlanningWeekView,
-  type PlanningWeekItem,
-} from "@/components/calendar/planning-week-view";
+import { LessonCalendar } from "@/components/calendar/lesson-calendar";
 import { LearnerLessonActions } from "@/components/dashboard/learner-lesson-actions";
 import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
 import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
@@ -34,7 +31,6 @@ import {
   formatMinutesAsHoursLabel,
   formatWeeklyLimitLabel,
 } from "@/lib/self-scheduling-limits";
-import type { Les, LesAanvraag } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function getRequestLabel(request: {
@@ -76,85 +72,6 @@ function getWeeklyLimitSourceVariant(source: "manual" | "package" | "none") {
   return "default" as const;
 }
 
-function getLessonStartDate(lesson: Les) {
-  if (!lesson.start_at) {
-    return null;
-  }
-
-  const date = new Date(lesson.start_at);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function getLessonEndDate(lesson: Les) {
-  if (lesson.end_at) {
-    const date = new Date(lesson.end_at);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-
-  const startDate = getLessonStartDate(lesson);
-  return startDate
-    ? new Date(startDate.getTime() + lesson.duur_minuten * 60_000)
-    : null;
-}
-
-function createBookingCalendarItems(
-  lessons: Les[],
-  requests: LesAanvraag[],
-): PlanningWeekItem[] {
-  const lessonItems = lessons.flatMap((lesson) => {
-    const startAt = getLessonStartDate(lesson);
-    const endAt = getLessonEndDate(lesson);
-
-    if (!startAt || !endAt) {
-      return [];
-    }
-
-    return [
-      {
-        id: `lesson-${lesson.id}`,
-        kind: "lesson",
-        title: lesson.titel,
-        startAt,
-        endAt,
-        typeLabel: lesson.instructeur_naam,
-        statusLabel: lesson.status,
-        contextLabel: lesson.locatie,
-      } satisfies PlanningWeekItem,
-    ];
-  });
-  const requestItems = requests.flatMap((request) => {
-    if (!request.start_at) {
-      return [];
-    }
-
-    const startAt = new Date(request.start_at);
-    const endAt = request.end_at
-      ? new Date(request.end_at)
-      : new Date(startAt.getTime() + 60 * 60_000);
-
-    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
-      return [];
-    }
-
-    return [
-      {
-        id: `request-${request.id}`,
-        kind: "request",
-        title: request.pakket_naam ?? getRequestLabel(request),
-        startAt,
-        endAt,
-        typeLabel: request.instructeur_naam,
-        statusLabel: request.status,
-        contextLabel: request.tijdvak,
-      } satisfies PlanningWeekItem,
-    ];
-  });
-
-  return [...lessonItems, ...requestItems].sort(
-    (left, right) => left.startAt.getTime() - right.startAt.getTime(),
-  );
-}
-
 const urbanCardClassName =
   "rounded-xl border border-white/10 bg-white/[0.055] p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]";
 
@@ -192,10 +109,6 @@ export default async function LeerlingBoekingenPage() {
     ...request,
     pakket_naam: request.pakket_naam ?? getRequestLabel(request),
   }));
-  const calendarItems = createBookingCalendarItems(
-    lessons,
-    requestsWithLabels,
-  );
   const planningStats = [
     {
       icon: CalendarDays,
@@ -359,23 +272,17 @@ export default async function LeerlingBoekingenPage() {
                           <Badge
                             variant={item.directBookingAllowed ? "info" : "default"}
                           >
-                            {item.planningBlockedUntilPackage
-                              ? "Pakket nodig"
-                              : item.directBookingAllowed
-                                ? "Direct boeken"
-                                : "Voorkeursblok"}
+                            {item.directBookingAllowed
+                              ? "Direct boeken"
+                              : "Voorkeursblok"}
                           </Badge>
                         </div>
                         <p className="mt-2 text-sm leading-6 text-slate-300">
-                          {item.planningBlockedUntilPackage
-                            ? "Vervolglessen zijn geblokkeerd tot er een pakket aan je traject gekoppeld is."
-                            : `${item.availableSlots.length} open rijlesblok${
-                                item.availableSlots.length === 1 ? "" : "ken"
-                              } beschikbaar${
-                                item.availableSlots[0]
-                                  ? `, eerst ${item.availableSlots[0].dag} - ${item.availableSlots[0].tijdvak}`
-                                  : "."
-                              }`}
+                          {item.availableSlots.length} open rijlesblok
+                          {item.availableSlots.length === 1 ? "" : "ken"} beschikbaar
+                          {item.availableSlots[0]
+                            ? `, eerst ${item.availableSlots[0].dag} - ${item.availableSlots[0].tijdvak}`
+                            : "."}
                         </p>
                       </div>
                       <span className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 text-xs font-semibold text-slate-100">
@@ -419,25 +326,7 @@ export default async function LeerlingBoekingenPage() {
                         </Badge>
                       </div>
 
-                      {item.planningBlockedUntilPackage ? (
-                        <div className="rounded-2xl border border-amber-300/18 bg-amber-400/8 p-3 text-sm leading-6 text-amber-100">
-                          <p className="font-semibold text-amber-50">
-                            Eerst pakket kiezen
-                          </p>
-                          <p className="mt-1">
-                            Na je proefles moet er een pakket gekoppeld zijn. Daarna worden nieuwe rijlessen automatisch aan dat pakket en je lesteller gekoppeld.
-                          </p>
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="mt-3 h-9 rounded-full border-amber-200/20 bg-white/8 px-3 text-xs text-white hover:bg-white/12"
-                          >
-                            <Link href={`/instructeurs/${item.instructorSlug}`}>
-                              Pakketten bekijken
-                            </Link>
-                          </Button>
-                        </div>
-                      ) : item.availableSlots.length ? (
+                      {item.availableSlots.length ? (
                         <div className="flex flex-wrap gap-2">
                           {item.availableSlots.slice(0, 4).map((slot) => (
                             <span
@@ -469,44 +358,40 @@ export default async function LeerlingBoekingenPage() {
                       <div
                         className={cn(
                           "grid gap-2",
-                          item.trialLessonAvailable && item.packageAssigned
+                          item.trialLessonAvailable
                             ? "sm:grid-cols-2"
                             : "sm:grid-cols-1"
                         )}
                       >
-                        {item.packageAssigned ? (
-                          <LessonRequestDialog
-                            instructorName={item.instructorName}
-                            instructorSlug={item.instructorSlug}
-                            availableSlots={item.availableSlots}
-                            directBookingEnabled={item.directBookingAllowed}
-                            defaultDurationMinutes={item.regularLessonDurationMinutes}
-                            weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
-                            bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
-                            weeklyRemainingMinutesThisWeek={
-                              item.weeklyRemainingMinutesThisWeek
-                            }
-                            triggerLabel={
-                              item.directBookingAllowed
-                                ? item.availableSlots.length
-                                  ? "Plan rijles"
-                                  : "Vraag nieuw moment aan"
-                                : item.availableSlots.length
-                                  ? "Kies rijlesmoment"
-                                  : "Vraag rijles aan"
-                            }
-                            triggerClassName="!h-10 !w-full"
-                          />
-                        ) : null}
+                        <LessonRequestDialog
+                          instructorName={item.instructorName}
+                          instructorSlug={item.instructorSlug}
+                          availableSlots={item.availableSlots}
+                          directBookingEnabled={item.directBookingAllowed}
+                          defaultDurationMinutes={item.regularLessonDurationMinutes}
+                          weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
+                          bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
+                          weeklyRemainingMinutesThisWeek={
+                            item.weeklyRemainingMinutesThisWeek
+                          }
+                          triggerLabel={
+                            item.directBookingAllowed
+                              ? item.availableSlots.length
+                                ? "Plan rijles"
+                                : "Vraag nieuw moment aan"
+                              : item.availableSlots.length
+                                ? "Kies rijlesmoment"
+                                : "Vraag rijles aan"
+                          }
+                          triggerClassName="!h-10 !w-full"
+                        />
                         {item.trialLessonAvailable ? (
                           <LessonRequestDialog
                             instructorName={item.instructorName}
                             instructorSlug={item.instructorSlug}
                             requestType="proefles"
                             availableSlots={item.trialAvailableSlots}
-                            directBookingEnabled={
-                              item.publicBookingEnabled || item.selfSchedulingAllowed
-                            }
+                            directBookingEnabled={item.directBookingAllowed}
                             defaultDurationMinutes={item.trialLessonDurationMinutes}
                             weeklyBookingLimitMinutes={item.weeklyBookingLimitMinutes}
                             bookedMinutesByWeekStart={item.bookedMinutesByWeekStart}
@@ -659,21 +544,15 @@ export default async function LeerlingBoekingenPage() {
         </TabsContent>
 
         <TabsContent value="agenda" className="mt-0">
-          <div className={urbanCardClassName}>
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold text-white">Agenda</h2>
-              <p className="mt-1 text-sm text-slate-300">
-                Je bevestigde lessen en open aanvragen staan samen in hetzelfde
-                weekbeeld.
-              </p>
-            </div>
-            <PlanningWeekView
-              emptyLabel="Zodra een les of aanvraag een concreet moment heeft, verschijnt die hier."
-              initialAnchorDate={calendarItems[0]?.startAt}
-              items={calendarItems}
-              tone="urban"
-            />
-          </div>
+          <LessonCalendar
+            lessons={lessons}
+            requests={requests}
+            tone="urban"
+            role="leerling"
+            title="Agenda"
+            description="Je bevestigde lessen en open aanvragen staan samen in een kalenderbeeld."
+            emptyDescription="Zodra een les of aanvraag een concreet moment heeft, verschijnt die hier automatisch in je agenda."
+          />
         </TabsContent>
       </Tabs>
     </div>

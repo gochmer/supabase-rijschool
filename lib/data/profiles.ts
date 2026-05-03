@@ -1,15 +1,11 @@
 import "server-only";
 
-import { cache } from "react";
 import type { User } from "@supabase/supabase-js";
 
 import type { GebruikersRol, Profiel, TransmissieType } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase/server";
 
 type ZelfRegistratieRol = Extract<GebruikersRol, "leerling" | "instructeur">;
-
-const PROFILE_SELECT_COLUMNS =
-  "id, volledige_naam, email, telefoon, avatar_url, rol, created_at, updated_at";
 
 function normalizeSelfSignupRole(value: unknown): ZelfRegistratieRol {
   return value === "instructeur" ? "instructeur" : "leerling";
@@ -60,13 +56,13 @@ async function ensureProfileExists(
       avatar_url: avatarUrl,
       rol: requestedRole,
     })
-    .select(PROFILE_SELECT_COLUMNS)
+    .select("*")
     .maybeSingle();
 
   return (insertedProfile as Profiel | null) ?? null;
 }
 
-export const ensureCurrentUserContext = cache(async function ensureCurrentUserContext() {
+export async function ensureCurrentUserContext() {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -78,7 +74,7 @@ export const ensureCurrentUserContext = cache(async function ensureCurrentUserCo
 
   const { data: existingProfile } = await supabase
     .from("profiles")
-    .select(PROFILE_SELECT_COLUMNS)
+    .select("*")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -93,7 +89,7 @@ export const ensureCurrentUserContext = cache(async function ensureCurrentUserCo
         updated_at: new Date().toISOString(),
       })
       .eq("id", user.id)
-      .select(PROFILE_SELECT_COLUMNS)
+      .select("*")
       .maybeSingle();
 
     profile =
@@ -147,7 +143,7 @@ export const ensureCurrentUserContext = cache(async function ensureCurrentUserCo
     role,
     profile: (profile as Profiel | null) ?? null,
   };
-});
+}
 
 export async function getCurrentProfile() {
   const context = await ensureCurrentUserContext();
@@ -159,7 +155,7 @@ export async function getCurrentRole() {
   return context?.role ?? null;
 }
 
-export const getCurrentLeerlingRecord = cache(async function getCurrentLeerlingRecord() {
+export async function getCurrentLeerlingRecord() {
   const context = await ensureCurrentUserContext();
 
   if (!context || context.role !== "leerling") {
@@ -216,9 +212,9 @@ export const getCurrentLeerlingRecord = cache(async function getCurrentLeerlingR
     pakket_id: string | null;
     favoriete_instructeurs: string[] | null;
   } | null) ?? null;
-});
+}
 
-export const getCurrentInstructeurRecord = cache(async function getCurrentInstructeurRecord() {
+export async function getCurrentInstructeurRecord() {
   const context = await ensureCurrentUserContext();
 
   if (!context || context.role !== "instructeur") {
@@ -327,4 +323,4 @@ export const getCurrentInstructeurRecord = cache(async function getCurrentInstru
       specialisaties: string[] | null;
     profielfoto_kleur: string | null;
   } | null) ?? null;
-});
+}
