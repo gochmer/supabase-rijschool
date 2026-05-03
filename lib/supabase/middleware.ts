@@ -48,9 +48,20 @@ async function resolveRole(
 }
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const isProtected = protectedPrefixes.some((prefix) =>
+    matchesRoutePrefix(pathname, prefix)
+  );
+  const isGuestOnlyRoute = guestOnlyRoutes.some((route) =>
+    matchesRoutePrefix(pathname, route)
+  );
   const response = NextResponse.next({
     request,
   });
+
+  if (!isProtected && !isGuestOnlyRoute) {
+    return response;
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
@@ -80,14 +91,6 @@ export async function updateSession(request: NextRequest) {
   const userId =
     typeof claimsData?.claims?.sub === "string" ? claimsData.claims.sub : null;
   const user = userId ? { id: userId } : null;
-
-  const pathname = request.nextUrl.pathname;
-  const isProtected = protectedPrefixes.some((prefix) =>
-    matchesRoutePrefix(pathname, prefix)
-  );
-  const isGuestOnlyRoute = guestOnlyRoutes.some((route) =>
-    matchesRoutePrefix(pathname, route)
-  );
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();

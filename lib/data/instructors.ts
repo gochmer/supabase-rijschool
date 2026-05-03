@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import {
   instructeurs,
   pakkettenPerInstructeur,
@@ -33,7 +34,7 @@ import {
   getReviewStatsByInstructorIds,
 } from "@/lib/data/reviews";
 import { normalizeCityForSlug } from "@/lib/seo-cities";
-import { createServerClient } from "@/lib/supabase/server";
+import { createPublicServerClient } from "@/lib/supabase/public";
 
 type DbInstructorRow = {
   id: string;
@@ -85,9 +86,9 @@ const gradientPalette = [
   "from-indigo-300 via-violet-400 to-purple-600",
 ];
 
-async function getOptionalServerClient() {
+function getOptionalPublicClient() {
   try {
-    return await createServerClient();
+    return createPublicServerClient();
   } catch (error) {
     if (
       error instanceof Error &&
@@ -185,8 +186,8 @@ function appendBookingWindow(
   map.set(instructorId, existingWindows);
 }
 
-export async function getPublicInstructors() {
-  const supabase = await getOptionalServerClient();
+export const getPublicInstructors = cache(async function getPublicInstructors() {
+  const supabase = getOptionalPublicClient();
 
   if (!supabase) {
     return instructeurs;
@@ -216,11 +217,11 @@ export async function getPublicInstructors() {
       latestReviewMap.get(row.id)
     )
   );
-}
+});
 
-export async function getPublicInstructorsByLessonType(lesType: RijlesType) {
+export const getPublicInstructorsByLessonType = cache(async function getPublicInstructorsByLessonType(lesType: RijlesType) {
   const allInstructors = await getPublicInstructors();
-  const supabase = await getOptionalServerClient();
+  const supabase = getOptionalPublicClient();
 
   if (!supabase) {
     const fallbackSlugs = new Set(
@@ -259,9 +260,9 @@ export async function getPublicInstructorsByLessonType(lesType: RijlesType) {
   );
 
   return allInstructors.filter((instructor) => supportedInstructorIds.has(instructor.id));
-}
+});
 
-export async function getPublicInstructorsByCity(
+export const getPublicInstructorsByCity = cache(async function getPublicInstructorsByCity(
   citySlug: string,
   lesType: RijlesType = "auto"
 ) {
@@ -270,9 +271,9 @@ export async function getPublicInstructorsByCity(
   return instructors.filter((instructor) =>
     instructor.steden.some((city) => normalizeCityForSlug(city) === citySlug)
   );
-}
+});
 
-export async function getPublicInstructorsByCityAndTransmission(
+export const getPublicInstructorsByCityAndTransmission = cache(async function getPublicInstructorsByCityAndTransmission(
   citySlug: string,
   transmission: Extract<TransmissieType, "automaat" | "handgeschakeld">,
   lesType: RijlesType = "auto"
@@ -292,21 +293,21 @@ export async function getPublicInstructorsByCityAndTransmission(
       instructor.transmissie === "beide"
     );
   });
-}
+});
 
-export async function getPublicInstructorBySlug(slug: string) {
+export const getPublicInstructorBySlug = cache(async function getPublicInstructorBySlug(slug: string) {
   const liveInstructors = await getPublicInstructors();
   return liveInstructors.find((item) => item.slug === slug) ?? null;
-}
+});
 
-export async function getInstructorReviews(slug: string): Promise<Review[]> {
+export const getInstructorReviews = cache(async function getInstructorReviews(slug: string): Promise<Review[]> {
   const instructor = await getPublicInstructorBySlug(slug);
 
   if (!instructor) {
     return [];
   }
 
-  const supabase = await getOptionalServerClient();
+  const supabase = getOptionalPublicClient();
 
   if (!supabase) {
     return reviewsPerInstructeur[slug] ?? [];
@@ -345,9 +346,9 @@ export async function getInstructorReviews(slug: string): Promise<Review[]> {
         }).format(new Date(row.antwoord_datum))
       : null,
   }));
-}
+});
 
-export async function getInstructorAvailability(
+export const getInstructorAvailability = cache(async function getInstructorAvailability(
   slug: string
 ): Promise<BeschikbaarheidSlot[]> {
   const instructor = await getPublicInstructorBySlug(slug);
@@ -356,7 +357,7 @@ export async function getInstructorAvailability(
     return [];
   }
 
-  const supabase = await getOptionalServerClient();
+  const supabase = getOptionalPublicClient();
 
   if (!supabase) {
     return [];
@@ -454,7 +455,7 @@ export async function getInstructorAvailability(
   )
     .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
     .slice(0, 24);
-}
+});
 
 export async function getPublicInstructorAvailabilityMap(
   instructorIds: string[],
@@ -466,7 +467,7 @@ export async function getPublicInstructorAvailabilityMap(
     return {};
   }
 
-  const supabase = await getOptionalServerClient();
+  const supabase = getOptionalPublicClient();
 
   if (!supabase) {
     return {};

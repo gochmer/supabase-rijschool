@@ -272,6 +272,39 @@
   }
 }
 
+@keyframes marketing-reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marketing-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-8px) scale(1.01);
+  }
+}
+
+@keyframes marketing-signature-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
 @media print {
   body {
     background: white !important;
@@ -641,12 +674,68 @@
     position: relative;
     z-index: 1;
   }
+
+  .marketing-reveal {
+    animation: marketing-reveal-up 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--reveal-delay, 0s);
+  }
+
+  .marketing-float {
+    animation: marketing-float 7.5s ease-in-out infinite;
+    animation-delay: var(--float-delay, 0s);
+  }
+
+  .marketing-signature-line {
+    background-image: linear-gradient(
+      90deg,
+      rgba(186, 230, 253, 0.08),
+      rgba(14, 165, 233, 0.9),
+      rgba(16, 185, 129, 0.8),
+      rgba(186, 230, 253, 0.08)
+    );
+    background-size: 200% 100%;
+    animation: marketing-signature-sweep 9s linear infinite;
+  }
+
+  .marketing-hover-tilt {
+    position: relative;
+    transition:
+      transform 180ms ease,
+      translate 180ms ease;
+    will-change: transform;
+  }
+
+  .marketing-hover-tilt:hover {
+    translate: 0 -5px;
+  }
+
+  .marketing-hover-tilt-glow {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      circle at var(--hover-x, 50%) var(--hover-y, 50%),
+      rgba(255, 255, 255, 0.24),
+      transparent 38%
+    );
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .marketing-reveal,
+  .marketing-float,
+  .marketing-signature-line,
   .milestone-badge-fresh,
   .milestone-celebration {
     animation: none !important;
+  }
+
+  .marketing-reveal,
+  .marketing-float,
+  .marketing-hover-tilt {
+    transform: none !important;
+    translate: none !important;
   }
 
   .milestone-badge-fresh::after,

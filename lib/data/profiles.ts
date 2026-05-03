@@ -68,6 +68,14 @@ async function ensureProfileExists(
 
 export const ensureCurrentUserContext = cache(async function ensureCurrentUserContext() {
   const supabase = await createServerClient();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const claimsUserId =
+    typeof claimsData?.claims?.sub === "string" ? claimsData.claims.sub : null;
+
+  if (!claimsUserId) {
+    return null;
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();

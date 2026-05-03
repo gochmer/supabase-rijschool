@@ -12,6 +12,7 @@ import {
 } from "@/lib/package-covers";
 import { normalizePackageLabels } from "@/lib/package-labels";
 import { getPackageIconKey, getPackageThemeKey } from "@/lib/package-visuals";
+import { createPublicServerClient } from "@/lib/supabase/public";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   getCurrentInstructeurRecord,
@@ -54,9 +55,9 @@ type MaybePackageQueryResult = {
   data: DbPackageRow | null;
 };
 
-async function getOptionalPackageServerClient() {
+function getOptionalPublicPackageClient() {
   try {
-    return await createServerClient();
+    return createPublicServerClient();
   } catch (error) {
     if (
       error instanceof Error &&
@@ -127,8 +128,8 @@ function toPackage(row: DbPackageRow, instructeurNaam?: string | null): Pakket {
   };
 }
 
-export async function getPublicPackages(): Promise<Pakket[]> {
-  const supabase = await createServerClient();
+export const getPublicPackages = cache(async function getPublicPackages(): Promise<Pakket[]> {
+  const supabase = createPublicServerClient();
   const { data: packageRows, error } = (await supabase
     .from("pakketten")
     .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
@@ -144,7 +145,7 @@ export async function getPublicPackages(): Promise<Pakket[]> {
   }
 
   return packageRows.map((pkg) => toPackage(pkg as DbPackageRow));
-}
+});
 
 function getMockPackagesByLessonType(lesType: Pakket["les_type"]) {
   const platformPackages = pakketten
@@ -168,10 +169,10 @@ function getMockPackagesByLessonType(lesType: Pakket["les_type"]) {
   return [...platformPackages, ...instructorPackages];
 }
 
-export async function getCatalogPackagesByLessonType(
+export const getCatalogPackagesByLessonType = cache(async function getCatalogPackagesByLessonType(
   lesType: Pakket["les_type"]
 ): Promise<Pakket[]> {
-  const supabase = await createServerClient();
+  const supabase = createPublicServerClient();
   const { data: packageRows, error } = (await supabase
     .from("pakketten")
     .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
@@ -225,9 +226,9 @@ export async function getCatalogPackagesByLessonType(
         : null,
     };
   });
-}
+});
 
-export async function getPublicInstructorPackages(
+export const getPublicInstructorPackages = cache(async function getPublicInstructorPackages(
   slug: string,
   lesType?: RijlesType
 ): Promise<Pakket[]> {
@@ -237,7 +238,7 @@ export async function getPublicInstructorPackages(
     return [];
   }
 
-  const supabase = await createServerClient();
+  const supabase = createPublicServerClient();
   let query = supabase
     .from("pakketten")
     .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, zelf_inplannen_limiet_minuten_per_week, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type")
@@ -270,7 +271,7 @@ export async function getPublicInstructorPackages(
   return packageRows.map((pkg) =>
     toPackage(pkg as DbPackageRow, instructor.volledige_naam)
   );
-}
+});
 
 export async function getPublicInstructorPackageMap(
   instructorIds: string[],
@@ -319,7 +320,7 @@ export async function getPublicInstructorPackageMap(
       },
       {}
     );
-  const supabase = await getOptionalPackageServerClient();
+  const supabase = getOptionalPublicPackageClient();
 
   if (!supabase) {
     return buildFallbackPackageMap();
