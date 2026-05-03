@@ -15,6 +15,7 @@ import {
   buildLessonRequestReference,
 } from "@/lib/lesson-request-flow";
 import { notifyLearnerAboutRequestDecision } from "@/lib/notification-events";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import type { LesStatus } from "@/lib/types";
 
@@ -25,6 +26,7 @@ type LessonRequestForScheduling = {
   voorkeursdatum: string | null;
   tijdvak: string | null;
   aanvraag_type: string | null;
+  pakket_id: string | null;
   pakket_naam_snapshot: string | null;
   bericht: string | null;
   status: LesStatus;
@@ -173,6 +175,7 @@ async function ensureLessonForAcceptedRequest(
     duur_minuten: durationMinutes,
     status: "geaccepteerd",
     locatie_id: locationId,
+    pakket_id: request.pakket_id,
     notities: buildLessonRequestReference(request.id),
   } as never);
 
@@ -203,7 +206,7 @@ export async function updateLessonRequestStatusAction(
   const { data: request } = (await supabase
     .from("lesaanvragen")
     .select(
-      "id, leerling_id, instructeur_id, voorkeursdatum, tijdvak, aanvraag_type, pakket_naam_snapshot, bericht, status"
+      "id, leerling_id, instructeur_id, voorkeursdatum, tijdvak, aanvraag_type, pakket_id, pakket_naam_snapshot, bericht, status"
     )
     .eq("id", input.requestId)
     .eq("instructeur_id", instructeur.id)
@@ -233,6 +236,44 @@ export async function updateLessonRequestStatusAction(
   }
 
   if (input.status === "geaccepteerd") {
+    if (request.aanvraag_type === "pakket" && request.pakket_id && request.leerling_id) {
+      const admin = await createAdminClient();
+      const now = new Date().toISOString();
+      const { error: learnerPackageError } = await admin
+        .from("leerlingen" as never)
+        .update({
+          pakket_id: request.pakket_id,
+        } as never)
+        .eq("id", request.leerling_id);
+
+      if (learnerPackageError) {
+        return {
+          success: false,
+          message: "Het pakket kon niet aan deze leerling worden gekoppeld.",
+        };
+      }
+
+      const { error: planningAccessError } = await admin
+        .from("leerling_planningsrechten" as never)
+        .upsert(
+          {
+            leerling_id: request.leerling_id,
+            instructeur_id: instructeur.id,
+            zelf_inplannen_toegestaan: true,
+            vrijgegeven_at: now,
+            updated_at: now,
+          } as never,
+          { onConflict: "leerling_id,instructeur_id" }
+        );
+
+      if (planningAccessError) {
+        return {
+          success: false,
+          message: "Het pakket is gekoppeld, maar de planning kon niet worden vrijgegeven.",
+        };
+      }
+    }
+
     const lessonResult = await ensureLessonForAcceptedRequest(
       request,
       input,
@@ -289,6 +330,7 @@ export async function updateLessonRequestStatusAction(
   revalidatePath("/instructeur/lessen");
   revalidatePath("/leerling/boekingen");
   revalidatePath("/leerling/dashboard");
+  revalidatePath("/leerling/profiel");
 
   return {
     success: true,

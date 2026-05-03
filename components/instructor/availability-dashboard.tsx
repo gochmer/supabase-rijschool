@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Ban,
@@ -10,8 +10,6 @@ import {
   CalendarClock,
   CalendarDays,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   ExternalLink,
   EyeOff,
@@ -32,7 +30,6 @@ import { updateInstructorOnlineBookingAction } from "@/lib/actions/instructor-on
 import {
   addDaysToDateValue,
   createAvailabilityTimestamp,
-  formatAvailabilityShortDay,
   formatAvailabilityTime,
   getAvailabilityDateValue,
   getAvailabilityDurationMinutes,
@@ -47,10 +44,16 @@ import type {
   BeschikbaarheidSlot,
   InstructorStudentProgressRow,
   Les,
+  LesAanvraag,
   LocationOption,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  PlanningWeekView,
+  type PlanningWeekItem,
+} from "@/components/calendar/planning-week-view";
 import { LessonCalendarEditDialog } from "@/components/instructor/lesson-calendar-edit-dialog";
+import { PlanningRequestDialog } from "@/components/instructor/planning-request-dialog";
 import { ScheduleLessonFromSlotDialog } from "@/components/instructor/schedule-lesson-from-slot-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -91,6 +94,11 @@ type DaySchedule = {
   eindTijd: string;
 };
 type DayScheduleMap = Record<WeekdayValue, DaySchedule>;
+type AvailabilityPlanningMeta = {
+  lesson?: Les;
+  request?: LesAanvraag;
+  slot?: BeschikbaarheidSlot;
+};
 
 const durationFields: Array<{
   key: DurationFieldKey;
@@ -123,17 +131,11 @@ function createDayScheduleMap({
 }
 
 const busyLessonStatuses = new Set(["geaccepteerd", "ingepland", "afgerond"]);
-const timelineHours = Array.from({ length: 13 }, (_, index) => index + 8);
 
 const dateFormatter = new Intl.DateTimeFormat("nl-NL", {
   day: "numeric",
   month: "long",
   year: "numeric",
-  timeZone: "Europe/Amsterdam",
-});
-
-const weekdayFormatter = new Intl.DateTimeFormat("nl-NL", {
-  weekday: "long",
   timeZone: "Europe/Amsterdam",
 });
 
@@ -199,26 +201,6 @@ function sumAvailabilityMinutes(slots: BeschikbaarheidSlot[], available: boolean
     );
 }
 
-function getMinutesOfDay(isoDate: string) {
-  const [hours, minutes] = formatAvailabilityTime(isoDate)
-    .split(":")
-    .map((part) => Number.parseInt(part, 10));
-
-  return hours * 60 + minutes;
-}
-
-function getTimelineStyle(startAt: string, endAt: string) {
-  const startMinute = Math.max(8 * 60, getMinutesOfDay(startAt));
-  const endMinute = Math.min(20 * 60, getMinutesOfDay(endAt));
-  const top = ((startMinute - 8 * 60) / (12 * 60)) * 100;
-  const height = Math.max(6, ((endMinute - startMinute) / (12 * 60)) * 100);
-
-  return {
-    top: `${top}%`,
-    height: `${height}%`,
-  };
-}
-
 function getLessonEnd(lesson: Les) {
   if (lesson.end_at) {
     return lesson.end_at;
@@ -269,24 +251,29 @@ function SmallField({
 export function AvailabilityDashboard({
   slots,
   lessons,
+  requests = [],
   students,
   locationOptions,
   onlineBookingEnabled,
   activeCancellationHours,
   durationDefaults,
   publicAgendaHref,
+  currentTimeMs,
 }: {
   slots: BeschikbaarheidSlot[];
   lessons: Les[];
+  requests?: LesAanvraag[];
   students: InstructorStudentProgressRow[];
   locationOptions: LocationOption[];
   onlineBookingEnabled: boolean;
   activeCancellationHours: number | null;
   durationDefaults: InstructorLessonDurationDefaults;
   publicAgendaHref: string;
+  currentTimeMs: number;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const nowMs = currentTimeMs;
   const todayValue = useMemo(() => getTodayValue(), []);
   const currentWeekStart = useMemo(
     () => getStartOfWeekDateValue(todayValue),
@@ -299,6 +286,9 @@ export function AvailabilityDashboard({
     null,
   );
   const [editingLesson, setEditingLesson] = useState<Les | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<LesAanvraag | null>(
+    null,
+  );
   const [schedulePreset, setSchedulePreset] = useState("workday");
   const [daySchedules, setDaySchedules] = useState<DayScheduleMap>(() =>
     createDayScheduleMap({
@@ -337,6 +327,9 @@ export function AvailabilityDashboard({
     addDaysToDateValue(todayValue, 2),
   );
   const [bulkCutoffTime, setBulkCutoffTime] = useState("17:00");
+  const syncCalendarWeekStart = useCallback((weekStart: Date) => {
+    setCalendarWeekStart(getAvailabilityDateValue(weekStart.toISOString()));
+  }, []);
 
   const currentWeekRange = useMemo(
     () => getRange(currentWeekStart, 7),
@@ -424,17 +417,128 @@ export function AvailabilityDashboard({
         return false;
       }
 
-      return new Date(slot.eind_at).getTime() >= Date.now();
+      return new Date(slot.eind_at).getTime() >= nowMs;
     })
     .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
     .slice(0, 3);
-  const calendarDays = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, index) =>
-        addDaysToDateValue(calendarWeekStart, index),
-      ),
-    [calendarWeekStart],
-  );
+  const calendarPlanningItems = useMemo<
+    Array<PlanningWeekItem<AvailabilityPlanningMeta>>
+  >(() => {
+    const slotItems = slots
+      .flatMap((slot) => {
+        if (!slot.start_at || !slot.eind_at) {
+          return [];
+        }
+
+        const kind = slot.beschikbaar ? "available" : "blocked";
+        const startAt = new Date(slot.start_at);
+        const endAt = new Date(slot.eind_at);
+
+        if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+          return [];
+        }
+
+        return [
+          {
+            id: `${kind}-${slot.id}-${slot.start_at}`,
+            kind,
+            title: slot.beschikbaar
+              ? "Beschikbaar"
+              : slot.source === "weekrooster"
+                ? "Vaste blokkade"
+                : "Geblokkeerd",
+            startAt,
+            endAt,
+            typeLabel: slot.source === "weekrooster" ? "Vaste planning" : "Los blok",
+            statusLabel: slot.beschikbaar ? "Open" : "Dicht",
+            contextLabel: slot.beschikbaar
+              ? "Leerling kan worden ingepland"
+              : "Niet boekbaar",
+            actionLabel: slot.beschikbaar ? "Leerling inplannen" : undefined,
+            interactive: slot.beschikbaar,
+            meta: { slot },
+          } satisfies PlanningWeekItem<AvailabilityPlanningMeta>,
+        ];
+      });
+    const lessonItems = lessons
+      .filter((lesson) => {
+        const endAt = getLessonEnd(lesson);
+
+        return (
+          lesson.start_at &&
+          endAt &&
+          busyLessonStatuses.has(lesson.status)
+        );
+      })
+      .flatMap((lesson) => {
+        const endAt = getLessonEnd(lesson);
+
+        if (!lesson.start_at || !endAt) {
+          return [];
+        }
+
+        const startAt = new Date(lesson.start_at);
+        const lessonEndAt = new Date(endAt);
+
+        if (
+          Number.isNaN(startAt.getTime()) ||
+          Number.isNaN(lessonEndAt.getTime())
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            id: `lesson-${lesson.id}`,
+            kind: "lesson",
+            title: lesson.leerling_naam || "Les",
+            startAt,
+            endAt: lessonEndAt,
+            typeLabel: lesson.titel,
+            statusLabel: lesson.status,
+            contextLabel: lesson.locatie,
+            actionLabel: "Bewerken / verzetten",
+            meta: { lesson },
+          } satisfies PlanningWeekItem<AvailabilityPlanningMeta>,
+        ];
+      });
+    const requestItems = requests.flatMap((request) => {
+      if (!request.start_at) {
+        return [];
+      }
+
+      const startAt = new Date(request.start_at);
+      const endAt = request.end_at
+        ? new Date(request.end_at)
+        : new Date(startAt.getTime() + 60 * 60_000);
+
+      if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+        return [];
+      }
+
+      return [
+        {
+          id: `request-${request.id}`,
+          kind: "request",
+          title: request.leerling_naam || "Aanvraag",
+          startAt,
+          endAt,
+          typeLabel:
+            request.aanvraag_type === "proefles"
+              ? "Proefles"
+              : request.pakket_naam ?? "Aanvraag",
+          statusLabel: request.status,
+          contextLabel: request.tijdvak,
+          actionLabel: "Aanvraag bekijken",
+          meta: { request },
+        } satisfies PlanningWeekItem<AvailabilityPlanningMeta>,
+      ];
+    });
+
+    return [...slotItems, ...lessonItems, ...requestItems].sort(
+      (left, right) => left.startAt.getTime() - right.startAt.getTime(),
+    );
+  }, [lessons, requests, slots]);
 
   function runAction(
     action: () => Promise<{
@@ -734,8 +838,9 @@ export function AvailabilityDashboard({
   >;
 
   return (
-    <div className="space-y-5 text-slate-100">
+    <div className="space-y-4 text-slate-100 2xl:space-y-7">
       <ScheduleLessonFromSlotDialog
+        key={planningSlot?.id ?? "empty-planning-slot"}
         open={Boolean(planningSlot)}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
@@ -761,14 +866,24 @@ export function AvailabilityDashboard({
         slots={slots}
         busyWindows={planningBusyWindows}
       />
+      <PlanningRequestDialog
+        request={selectedRequest}
+        locationOptions={locationOptions}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setSelectedRequest(null);
+          }
+        }}
+      />
 
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl 2xl:text-4xl">
             Beschikbaarheid
           </h1>
-          <p className="mt-2 text-base leading-7 text-slate-300">
-            Beheer je openingstijden, online boeken en lesvoorkeuren.
+          <p className="mt-1.5 text-sm text-slate-400 2xl:mt-2 2xl:text-lg">
+            Wanneer kan ik werken? Stel open momenten, vaste werkdagen en
+            blokkades in.
           </p>
         </div>
         <Button
@@ -1417,200 +1532,47 @@ export function AvailabilityDashboard({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-white">
-                Beschikbaarheid overzicht
+                Weekplanning
               </h2>
               <p className="mt-2 text-sm text-slate-400">
-                Weekoverzicht van je vaste tijden en geplande lessen.
+                Wanneer kan ik werken: open slots, lessen, aanvragen en
+                blokkades in dezelfde agenda.
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className="border border-white/10 bg-white/8 text-slate-100">
-                Deze week
-              </Badge>
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                className="rounded-lg border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white"
-                onClick={() =>
-                  setCalendarWeekStart((current) => addDaysToDateValue(current, -7))
-                }
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                className="rounded-lg border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white"
-                onClick={() =>
-                  setCalendarWeekStart((current) => addDaysToDateValue(current, 7))
-                }
-              >
-                <ChevronRight className="size-4" />
-              </Button>
             </div>
           </div>
 
-          <div className="mt-6 overflow-x-auto">
-            <div className="min-w-[760px]">
-              <div className="grid grid-cols-[3.25rem_repeat(7,minmax(5.5rem,1fr))] gap-1">
-                <div />
-                {calendarDays.map((dayValue) => {
-                  const date = getDateFromValue(dayValue);
+          <div className="mt-6">
+            <PlanningWeekView
+              emptyLabel="Geen lessen, vrije slots of blokkades."
+              initialAnchorDate={getDateFromValue(calendarWeekStart)}
+              items={calendarPlanningItems}
+              onSelectItem={(item) => {
+                if (item.kind === "available" && item.meta?.slot) {
+                  setPlanningSlot(item.meta.slot);
+                  return;
+                }
 
-                  return (
-                    <div key={dayValue} className="pb-2 text-center">
-                      <p className="text-xs font-semibold capitalize text-slate-300">
-                        {weekdayFormatter.format(date)}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {formatAvailabilityShortDay(
-                          createAvailabilityTimestamp(dayValue, "12:00"),
-                        )}
-                      </p>
-                    </div>
-                  );
-                })}
+                if (item.kind === "lesson" && item.meta?.lesson) {
+                  setEditingLesson(item.meta.lesson);
+                  return;
+                }
 
-                <div className="relative h-[26rem]">
-                  {timelineHours.map((hour) => (
-                    <span
-                      key={hour}
-                      className="absolute -translate-y-1/2 text-xs text-slate-500"
-                      style={{ top: `${((hour - 8) / 12) * 100}%` }}
-                    >
-                      {String(hour).padStart(2, "0")}:00
-                    </span>
-                  ))}
-                </div>
-
-                {calendarDays.map((dayValue) => {
-                  const dayRange = getRange(dayValue, 1);
-                  const daySlots = slots.filter((slot) =>
-                    isInRange(slot.start_at, slot.eind_at, dayRange),
-                  );
-                  const dayLessons = lessons.filter((lesson) => {
-                    const endAt = getLessonEnd(lesson);
-                    return (
-                      lesson.start_at &&
-                      endAt &&
-                      busyLessonStatuses.has(lesson.status) &&
-                      isInRange(lesson.start_at, endAt, dayRange)
-                    );
-                  });
-
-                  return (
-                    <div
-                      key={dayValue}
-                      className="relative h-[26rem] overflow-hidden rounded-lg border border-white/10 bg-slate-950/35"
-                    >
-                      {timelineHours.slice(0, -1).map((hour) => (
-                        <div
-                          key={hour}
-                          className="absolute left-0 right-0 border-t border-white/[0.05]"
-                          style={{ top: `${((hour - 8) / 12) * 100}%` }}
-                        />
-                      ))}
-                      {daySlots.map((slot) => {
-                        if (!slot.start_at || !slot.eind_at) {
-                          return null;
-                        }
-
-                        const slotClassName = cn(
-                          "absolute left-1 right-1 rounded-md border px-2 py-2 text-left text-[11px] leading-tight transition",
-                          slot.beschikbaar
-                            ? "border-emerald-400/30 bg-emerald-500/35 text-emerald-50 hover:border-emerald-200/70 hover:bg-emerald-400/45 focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:outline-none"
-                            : "border-amber-400/24 bg-amber-500/35 text-amber-50",
-                        );
-                        const slotStyle = getTimelineStyle(
-                          slot.start_at,
-                          slot.eind_at,
-                        );
-                        const slotContent = (
-                          <>
-                            <span className="font-semibold">
-                              {slot.beschikbaar ? "Beschikbaar" : "Geblokkeerd"}
-                            </span>
-                            <span className="mt-1 block opacity-80">
-                              {formatAvailabilityTime(slot.start_at)} -{" "}
-                              {formatAvailabilityTime(slot.eind_at)}
-                            </span>
-                            {slot.beschikbaar ? (
-                              <span className="mt-2 block rounded bg-emerald-950/35 px-1.5 py-1 text-[10px] font-semibold text-emerald-50/90 opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
-                                Leerling inplannen
-                              </span>
-                            ) : null}
-                          </>
-                        );
-
-                        if (slot.beschikbaar) {
-                          return (
-                            <button
-                              key={`${slot.id}-${slot.start_at}`}
-                              type="button"
-                              className={cn("group", slotClassName)}
-                              style={slotStyle}
-                              onClick={() => setPlanningSlot(slot)}
-                              title="Klik om een leerling in dit vrije slot in te plannen"
-                            >
-                              {slotContent}
-                            </button>
-                          );
-                        }
-
-                        return (
-                          <div
-                            key={`${slot.id}-${slot.start_at}`}
-                            className={slotClassName}
-                            style={slotStyle}
-                          >
-                            {slotContent}
-                          </div>
-                        );
-                      })}
-                      {dayLessons.map((lesson) => {
-                        const endAt = getLessonEnd(lesson);
-
-                        if (!lesson.start_at || !endAt) {
-                          return null;
-                        }
-
-                        return (
-                          <button
-                            key={lesson.id}
-                            type="button"
-                            className="group absolute left-3 right-3 rounded-md border border-blue-300/30 bg-blue-600/80 px-2 py-2 text-left text-[11px] leading-tight text-blue-50 shadow-[0_16px_35px_-22px_rgba(59,130,246,0.95)] transition hover:border-blue-100 hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-100"
-                            style={getTimelineStyle(lesson.start_at, endAt)}
-                            onClick={() => setEditingLesson(lesson)}
-                            title="Klik om deze les te bekijken, verzetten of annuleren"
-                          >
-                            <span className="font-semibold">
-                              {lesson.leerling_naam || "Les"}
-                            </span>
-                            <span className="mt-1 block opacity-85">
-                              {formatAvailabilityTime(lesson.start_at)} -{" "}
-                              {formatAvailabilityTime(endAt)}
-                            </span>
-                            <span className="mt-1 hidden text-[10px] font-semibold opacity-85 group-hover:block group-focus-visible:block">
-                              Bewerken / verzetten
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                if (item.kind === "request" && item.meta?.request) {
+                  setSelectedRequest(item.meta.request);
+                }
+              }}
+              onVisibleWeekStartChange={syncCalendarWeekStart}
+              tone="urban"
+            />
           </div>
 
           <div className="mt-5 flex flex-wrap justify-center gap-5 text-xs text-slate-400">
             {[
-              ["bg-emerald-500/70", "Beschikbaar"],
-              ["bg-blue-600/80", "Les gepland"],
+              ["bg-sky-400", "Les gepland"],
+              ["bg-amber-400", "Aanvraag"],
+              ["bg-emerald-400", "Beschikbaar"],
               ["bg-slate-500/70", "Pauze"],
-              ["bg-amber-500/70", "Geblokkeerd"],
+              ["bg-rose-400", "Geblokkeerd"],
             ].map(([color, label]) => (
               <span key={label} className="inline-flex items-center gap-2">
                 <span className={cn("size-3 rounded-sm", color)} />

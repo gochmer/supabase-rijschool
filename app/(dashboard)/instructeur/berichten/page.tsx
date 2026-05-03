@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
+import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MessageCenter } from "@/components/messages/message-center";
 import { cn } from "@/lib/utils";
@@ -16,14 +17,27 @@ import {
   getInstructorMessageSmartTemplates,
   getMessageRecipientsForCurrentUser,
 } from "@/lib/data/messages";
+import {
+  timedDashboardData,
+  timedDashboardRoute,
+} from "@/lib/performance/dashboard";
+
+const ROUTE = "/instructeur/berichten";
 
 export default async function InstructeurBerichtenPage() {
-  const [inbox, recipients, smartTemplates, outgoingLog] = await Promise.all([
-    getCurrentMessageInbox(),
-    getMessageRecipientsForCurrentUser(),
-    getInstructorMessageSmartTemplates(),
-    getCurrentOutgoingMessageLog(),
-  ]);
+  const [inbox, recipients, smartTemplates, outgoingLog] =
+    await timedDashboardRoute(ROUTE, () =>
+      Promise.all([
+        timedDashboardData(ROUTE, "inbox", getCurrentMessageInbox),
+        timedDashboardData(ROUTE, "recipients", getMessageRecipientsForCurrentUser),
+        timedDashboardData(
+          ROUTE,
+          "smart-templates",
+          getInstructorMessageSmartTemplates,
+        ),
+        timedDashboardData(ROUTE, "outgoing-log", getCurrentOutgoingMessageLog),
+      ]),
+    );
 
   const unreadCount = inbox.filter((message) => message.ongelezen).length;
   const directSendReadyCount = smartTemplates.filter(
@@ -161,6 +175,8 @@ export default async function InstructeurBerichtenPage() {
           />
         ))}
       </div>
+
+      <DashboardPerformanceMark route={ROUTE} label="MessageCenter" />
 
       <MessageCenter
         inbox={inbox}

@@ -2,7 +2,6 @@ import {
   Award,
   BadgeCheck,
   CalendarDays,
-  Camera,
   Car,
   Clock3,
   Languages,
@@ -10,6 +9,7 @@ import {
   Mail,
   MapPin,
   MessageSquare,
+  PencilLine,
   Phone,
   ShieldCheck,
   Star,
@@ -19,8 +19,16 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
-import { AvatarUploadCard } from "@/components/profile/avatar-upload-card";
+import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
+import {
+  AvatarQuickUploadButton,
+  AvatarUploadCard,
+} from "@/components/profile/avatar-upload-card";
 import { ProfileForm } from "@/components/profile/profile-form";
+import {
+  ProfileQuickEditDialog,
+  type ProfileQuickEditValues,
+} from "@/components/profile/profile-quick-edit-dialog";
 import { InstructorReviewReplyDialog } from "@/components/reviews/instructor-review-reply-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,10 +40,23 @@ import {
   getCurrentProfile,
 } from "@/lib/data/profiles";
 import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
-import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
+import { getInstructorStudentCount } from "@/lib/data/student-progress";
 import { formatStars, getInitials } from "@/lib/format";
 import { instructorColorOptions } from "@/lib/instructor-profile";
+import {
+  timedDashboardData,
+  timedDashboardRoute,
+} from "@/lib/performance/dashboard";
 import { cn } from "@/lib/utils";
+
+const ROUTE = "/instructeur/profiel";
+const LESSON_HISTORY_WINDOW_DAYS = 180;
+
+function getLessonWindowStartIso() {
+  return new Date(
+    Date.now() - LESSON_HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+}
 
 function transmissionLabel(value?: string | null) {
   if (value === "automaat") return "B (Automaat)";
@@ -51,6 +72,10 @@ function getProfileStatusLabel(value?: string | null) {
 
 function formatMemberSince() {
   return "Lid sinds 2026";
+}
+
+function formatCommaList(items: string[], fallback: string) {
+  return items.length ? items.join(", ") : fallback;
 }
 
 function getWorkAreaMap(area: string | null | undefined) {
@@ -152,19 +177,63 @@ function SectionTitle({
 }
 
 export default async function InstructeurProfielPage() {
-  const [profile, instructor, reviewSummary, lessons, availability, studentsWorkspace] =
-    await Promise.all([
-      getCurrentProfile(),
-      getCurrentInstructeurRecord(),
-      getCurrentInstructorReviewSummary(),
-      getInstructeurLessons(),
-      getCurrentInstructorAvailability(),
-      getInstructeurStudentsWorkspace(),
+  const {
+    availability,
+    instructor,
+    lessons,
+    profile,
+    publicReviews,
+    reviewSummary,
+    studentCount,
+  } = await timedDashboardRoute(ROUTE, async () => {
+    const lessonWindowStart = getLessonWindowStartIso();
+    const nowIso = new Date().toISOString();
+    const [profile, instructor, reviewSummary, lessons, availability] =
+      await Promise.all([
+        timedDashboardData(ROUTE, "profile", getCurrentProfile),
+        timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
+        timedDashboardData(
+          ROUTE,
+          "review-summary",
+          getCurrentInstructorReviewSummary,
+        ),
+        timedDashboardData(ROUTE, "lessons", () =>
+          getInstructeurLessons({
+            from: lessonWindowStart,
+            limit: 240,
+          }),
+        ),
+        timedDashboardData(ROUTE, "availability", () =>
+          getCurrentInstructorAvailability({
+            concreteLimit: 120,
+            from: nowIso,
+          }),
+        ),
+      ]);
+
+    const [publicReviews, studentCount] = await Promise.all([
+      instructor?.slug
+        ? timedDashboardData(ROUTE, "public-reviews", () =>
+            getInstructorReviews(instructor.slug),
+          )
+        : Promise.resolve([]),
+      instructor?.id
+        ? timedDashboardData(ROUTE, "student-count", () =>
+            getInstructorStudentCount(instructor.id),
+          )
+        : Promise.resolve(0),
     ]);
 
-  const publicReviews = instructor?.slug
-    ? await getInstructorReviews(instructor.slug)
-    : [];
+    return {
+      availability,
+      instructor,
+      lessons,
+      profile,
+      publicReviews,
+      reviewSummary,
+      studentCount,
+    };
+  });
 
   const profileName = profile?.volledige_naam ?? "RijBasis";
   const avatarUrl = profile?.avatar_url ?? null;
@@ -218,47 +287,81 @@ export default async function InstructeurProfielPage() {
       tone: "amber",
     },
   ] as const;
+  const profileQuickEditValues = {
+    volledigeNaam: profile?.volledige_naam ?? "",
+    email: profile?.email ?? "",
+    telefoon: profile?.telefoon ?? "",
+    bio: instructor?.bio ?? "",
+    ervaringJaren: instructor?.ervaring_jaren ?? 0,
+    werkgebied: workArea.join(", "),
+    prijsPerLes: Number(instructor?.prijs_per_les ?? 0),
+    transmissie: instructor?.transmissie ?? "beide",
+    specialisaties: specialisaties.join(", "),
+    profielfotoKleur: fallbackColor,
+  } satisfies ProfileQuickEditValues;
+  const profileFormKey = JSON.stringify(profileQuickEditValues);
   const detailRows = [
     {
+      description:
+        "Bij een nieuw e-mailadres sturen we een bevestigingsmail voordat het actief wordt.",
+      field: "email",
       icon: Mail,
+      kind: "email",
       label: "E-mailadres",
+      placeholder: "naam@voorbeeld.nl",
       value: profile?.email ?? "Nog niet bekend",
     },
     {
+      field: "telefoon",
       icon: Phone,
+      kind: "text",
       label: "Telefoonnummer",
+      placeholder: "06 12345678",
       value: profile?.telefoon || "Nog toevoegen",
     },
     {
+      field: "werkgebied",
       icon: MapPin,
-      label: "Adres",
-      value: workArea[0] ?? "Werkgebied nog invullen",
+      kind: "text",
+      label: "Werkgebied",
+      placeholder: "Amsterdam, Amstelveen, Diemen",
+      value: formatCommaList(workArea, "Werkgebied nog invullen"),
     },
     {
+      field: "transmissie",
       icon: ShieldCheck,
+      kind: "select",
       label: "Rijbewijs",
       value: transmissionLabel(instructor?.transmissie),
     },
     {
+      field: "ervaringJaren",
       icon: Clock3,
+      kind: "number",
       label: "Ervaring",
+      placeholder: "6",
       value: `${instructor?.ervaring_jaren ?? 0} jaar`,
     },
     {
+      description:
+        "Gebruik komma's voor meerdere specialisaties, bijvoorbeeld Personenauto (B), Faalangst.",
+      field: "specialisaties",
       icon: Car,
-      label: "Lesauto",
-      value: specialisaties.find((item) => item.toLowerCase().includes("auto")) ?? "Nog toevoegen",
+      kind: "text",
+      label: "Specialisaties",
+      placeholder: "Personenauto (B)",
+      value: formatCommaList(specialisaties, "Nog toevoegen"),
     },
     {
       icon: Languages,
       label: "Talen",
       value: "Nederlands",
     },
-  ];
+  ] as const;
   const stats = [
     {
       icon: UsersRound,
-      value: `${studentsWorkspace.students.length}`,
+      value: `${studentCount}`,
       label: "Totale leerlingen",
       detail: activeLessons.length ? `${activeLessons.length} actieve lessen` : "Nog geen actieve lessen",
       tone: "from-violet-500 to-purple-700",
@@ -295,6 +398,7 @@ export default async function InstructeurProfielPage() {
 
   return (
     <div className="space-y-4 text-slate-100">
+      <DashboardPerformanceMark route={ROUTE} label="ProfilePage" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
@@ -313,7 +417,29 @@ export default async function InstructeurProfielPage() {
         </Button>
       </div>
 
-      <ProfilePanel className="p-5">
+      <ProfilePanel id="profiel-overzicht" className="scroll-mt-24 p-5">
+        <div className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 uppercase">
+              Profielkaart
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Foto, naam, bio en contactgegevens die leerlingen direct zien.
+            </p>
+          </div>
+          <ProfileQuickEditDialog
+            baseValues={profileQuickEditValues}
+            field="volledigeNaam"
+            placeholder="Je profielnaam"
+            title="Wijzig profielnaam"
+            triggerClassName="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/8 px-3 text-sm font-medium text-white transition hover:bg-white/12"
+          >
+            <span className="inline-flex items-center gap-2">
+              <PencilLine className="size-4" />
+              Wijzig profiel
+            </span>
+          </ProfileQuickEditDialog>
+        </div>
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
           <div className="grid gap-5 md:grid-cols-[10rem_minmax(0,1fr)]">
             <div className="flex flex-col items-center gap-3">
@@ -332,25 +458,38 @@ export default async function InstructeurProfielPage() {
                   getInitials(profileName)
                 )}
               </div>
-              <Button
-                asChild
-                size="sm"
-                className="rounded-lg bg-blue-600 text-white hover:bg-blue-500"
-              >
-                <a href="#foto-beheren">
-                  <Camera className="size-4" />
-                  Wijzig foto
-                </a>
-              </Button>
+              <AvatarQuickUploadButton />
             </div>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-semibold text-white">{profileName}</h2>
+                <ProfileQuickEditDialog
+                  baseValues={profileQuickEditValues}
+                  field="volledigeNaam"
+                  placeholder="Je profielnaam"
+                  title="Wijzig profielnaam"
+                  triggerClassName="rounded-lg px-1 py-0.5 transition hover:bg-white/8"
+                >
+                  <span className="text-2xl font-semibold text-white">
+                    {profileName}
+                  </span>
+                </ProfileQuickEditDialog>
                 <Badge className="border-blue-400/20 bg-blue-500/15 text-blue-100">
                   <BadgeCheck className="mr-1 size-3.5" />
                   {getProfileStatusLabel(instructor?.profiel_status)}
                 </Badge>
+                <ProfileQuickEditDialog
+                  baseValues={profileQuickEditValues}
+                  field="volledigeNaam"
+                  placeholder="Je profielnaam"
+                  title="Wijzig profielnaam"
+                  triggerClassName="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/8 px-2.5 text-xs font-medium text-white transition hover:bg-white/12"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <PencilLine className="size-3.5" />
+                    Wijzig
+                  </span>
+                </ProfileQuickEditDialog>
               </div>
               <p className="mt-2 text-sm text-slate-400">Instructeur</p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -362,10 +501,17 @@ export default async function InstructeurProfielPage() {
                   ({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? "" : "s"})
                 </span>
               </div>
-              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-300">
+              <ProfileQuickEditDialog
+                baseValues={profileQuickEditValues}
+                field="bio"
+                kind="textarea"
+                placeholder="Vertel kort wie je bent en hoe je lesgeeft."
+                title="Wijzig introductietekst"
+                triggerClassName="mt-5 block w-full max-w-xl rounded-lg px-2 py-1 text-sm leading-7 text-slate-300 transition hover:bg-white/7 hover:text-white"
+              >
                 {instructor?.bio ||
                   "Vertel kort wie je bent, hoe je lesgeeft en waarom leerlingen met vertrouwen bij jou kunnen starten."}
-              </p>
+              </ProfileQuickEditDialog>
               <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
                 <span className="inline-flex items-center gap-2 text-emerald-300">
                   <span className="size-2 rounded-full bg-emerald-400" />
@@ -377,20 +523,77 @@ export default async function InstructeurProfielPage() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {detailRows.map((item) => (
-              <div key={item.label} className="flex items-start gap-3">
-                <item.icon className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-400">{item.label}</p>
-                  <p className="mt-1 truncate text-sm font-medium text-slate-100">
-                    {item.value}
-                  </p>
-                </div>
-              </div>
-            ))}
+            {detailRows.map((item) => {
+              const content = (
+                <>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <item.icon className="mt-0.5 size-4 shrink-0 text-slate-400" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-slate-400">{item.label}</p>
+                      <p className="mt-1 truncate text-sm font-medium text-slate-100">
+                        {item.value}
+                      </p>
+                    </div>
+                  </div>
+                  {"field" in item ? (
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-slate-300 opacity-100 transition hover:bg-white/12 hover:text-white sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                      <PencilLine className="size-3.5" />
+                    </span>
+                  ) : null}
+                </>
+              );
+
+              if (!("field" in item)) {
+                return (
+                  <div
+                    key={item.label}
+                    className="flex items-start justify-between gap-3 rounded-lg border border-transparent p-2"
+                  >
+                    {content}
+                  </div>
+                );
+              }
+
+              return (
+                <ProfileQuickEditDialog
+                  key={item.label}
+                  baseValues={profileQuickEditValues}
+                  description={
+                    "description" in item ? item.description : undefined
+                  }
+                  field={item.field}
+                  kind={item.kind}
+                  placeholder={
+                    "placeholder" in item ? item.placeholder : undefined
+                  }
+                  title={`Wijzig ${item.label.toLowerCase()}`}
+                  triggerClassName="group flex w-full items-start justify-between gap-3 rounded-lg border border-transparent p-2 transition hover:border-white/10 hover:bg-white/[0.04]"
+                >
+                  {content}
+                </ProfileQuickEditDialog>
+              );
+            })}
           </div>
         </div>
       </ProfilePanel>
+
+      <div id="foto-beheren" className="grid scroll-mt-24 gap-4 xl:grid-cols-[0.78fr_1.22fr]">
+        <AvatarUploadCard
+          avatarUrl={avatarUrl}
+          name={profileName}
+          fallbackClassName={fallbackColor}
+        />
+
+        <ProfilePanel id="profiel-bewerken" className="scroll-mt-24">
+          <SectionTitle title="Profiel bewerken" />
+          <ProfileForm
+            key={profileFormKey}
+            role="instructeur"
+            tone="urban"
+            initialValues={profileQuickEditValues}
+          />
+        </ProfilePanel>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-5">
         {stats.map((item) => (
@@ -636,34 +839,6 @@ export default async function InstructeurProfielPage() {
           ))}
         </div>
       </ProfilePanel>
-
-      <div id="foto-beheren" className="grid gap-4 xl:grid-cols-[0.78fr_1.22fr]">
-        <AvatarUploadCard
-          avatarUrl={avatarUrl}
-          name={profileName}
-          fallbackClassName={fallbackColor}
-        />
-
-        <ProfilePanel id="profiel-bewerken" className="scroll-mt-24">
-          <SectionTitle title="Profiel bewerken" />
-          <ProfileForm
-            role="instructeur"
-            tone="urban"
-            initialValues={{
-              volledigeNaam: profile?.volledige_naam ?? "",
-              email: profile?.email ?? "",
-              telefoon: profile?.telefoon ?? "",
-              bio: instructor?.bio ?? "",
-              ervaringJaren: instructor?.ervaring_jaren ?? 0,
-              werkgebied: workArea.join(", "),
-              prijsPerLes: Number(instructor?.prijs_per_les ?? 0),
-              transmissie: instructor?.transmissie ?? "beide",
-              specialisaties: specialisaties.join(", "),
-              profielfotoKleur: fallbackColor,
-            }}
-          />
-        </ProfilePanel>
-      </div>
 
       <ProfilePanel id="reviews" className="scroll-mt-24">
         <SectionTitle title="Reviews en replies" />

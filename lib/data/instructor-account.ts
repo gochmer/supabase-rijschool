@@ -521,9 +521,13 @@ function buildStudentPackageHealth(
   };
 }
 
-export async function getCurrentInstructorAvailability(): Promise<
-  BeschikbaarheidSlot[]
-> {
+export async function getCurrentInstructorAvailability({
+  concreteLimit,
+  from,
+}: {
+  concreteLimit?: number;
+  from?: string;
+} = {}): Promise<BeschikbaarheidSlot[]> {
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
@@ -531,12 +535,22 @@ export async function getCurrentInstructorAvailability(): Promise<
   }
 
   const supabase = await createServerClient();
+  let concreteSlotsQuery = supabase
+    .from("beschikbaarheid")
+    .select("id, start_at, eind_at, beschikbaar")
+    .eq("instructeur_id", instructeur.id)
+    .order("start_at", { ascending: true });
+
+  if (from) {
+    concreteSlotsQuery = concreteSlotsQuery.gte("eind_at", from);
+  }
+
+  if (concreteLimit && concreteLimit > 0) {
+    concreteSlotsQuery = concreteSlotsQuery.limit(concreteLimit);
+  }
+
   const [{ data: rows, error }, { data: ruleRows }] = await Promise.all([
-    supabase
-      .from("beschikbaarheid")
-      .select("id, start_at, eind_at, beschikbaar")
-      .eq("instructeur_id", instructeur.id)
-      .order("start_at", { ascending: true }),
+    concreteSlotsQuery,
     supabase
       .from("beschikbaarheid_weekroosters")
       .select(

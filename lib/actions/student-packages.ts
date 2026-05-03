@@ -34,7 +34,7 @@ export async function assignPackageToStudentAction(
 
   const { data: pakket } = await supabase
     .from("pakketten")
-    .select("id, prijs, naam")
+    .select("id, prijs, naam, instructeur_id")
     .eq("id", pakketId)
     .maybeSingle();
 
@@ -57,6 +57,20 @@ export async function assignPackageToStudentAction(
     };
   }
 
+  if (pakket.instructeur_id) {
+    const now = new Date().toISOString();
+    await supabase.from("leerling_planningsrechten" as never).upsert(
+      {
+        leerling_id: leerling.id,
+        instructeur_id: pakket.instructeur_id,
+        zelf_inplannen_toegestaan: true,
+        vrijgegeven_at: now,
+        updated_at: now,
+      } as never,
+      { onConflict: "leerling_id,instructeur_id" }
+    );
+  }
+
   await supabase.from("betalingen").insert({
     profiel_id: leerling.profile_id,
     pakket_id: pakket.id,
@@ -76,6 +90,8 @@ export async function assignPackageToStudentAction(
   revalidatePath("/admin/leerlingen");
   revalidatePath("/leerling/betalingen");
   revalidatePath("/leerling/dashboard");
+  revalidatePath("/leerling/boekingen");
+  revalidatePath("/leerling/profiel");
 
   return {
     success: true,

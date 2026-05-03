@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { notificaties } from "@/lib/mock-data";
 import type { Notificatie } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase/server";
@@ -18,7 +19,7 @@ function formatRelativeDate(dateString: string) {
   return `${days} dag${days === 1 ? "" : "en"} geleden`;
 }
 
-export async function getCurrentNotifications(): Promise<Notificatie[]> {
+export const getCurrentNotifications = cache(async function getCurrentNotifications(): Promise<Notificatie[]> {
   const context = await ensureCurrentUserContext();
 
   if (!context) {
@@ -52,4 +53,4 @@ export async function getCurrentNotifications(): Promise<Notificatie[]> {
         : "info",
     ongelezen: row.ongelezen,
   }));
-}
+});

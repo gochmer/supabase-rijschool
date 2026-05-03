@@ -39,6 +39,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { PaymentLinkCopyButton } from "@/components/dashboard/payment-link-copy-button";
 import {
   getCurrentInstructorIncomeCockpit,
@@ -66,7 +67,13 @@ import {
   uploadInstructorExpenseReceiptAction,
 } from "@/lib/actions/instructor-income-ledger";
 import { formatCurrency } from "@/lib/format";
+import {
+  timedDashboardData,
+  timedDashboardRoute,
+} from "@/lib/performance/dashboard";
 import { cn } from "@/lib/utils";
+
+const ROUTE = "/instructeur/inkomsten";
 
 type IncomeRow = InstructorIncomeCockpit["incomeRows"][number];
 
@@ -4684,11 +4691,13 @@ export default async function InkomstenPage({
     activePeriod,
   );
   const showAllInvoices = params.facturen === "alle";
-  const [overview, cockpit, ledger] = await Promise.all([
-    getCurrentInstructorIncomeOverview(),
-    getCurrentInstructorIncomeCockpit(),
-    getCurrentInstructorIncomeLedger(),
-  ]);
+  const [overview, cockpit, ledger] = await timedDashboardRoute(ROUTE, () =>
+    Promise.all([
+      timedDashboardData(ROUTE, "income-overview", getCurrentInstructorIncomeOverview),
+      timedDashboardData(ROUTE, "income-cockpit", getCurrentInstructorIncomeCockpit),
+      timedDashboardData(ROUTE, "income-ledger", getCurrentInstructorIncomeLedger),
+    ]),
+  );
   const periodSummaries = ([
     "dag",
     "week",
@@ -4815,30 +4824,33 @@ export default async function InkomstenPage({
   )}`;
 
   return (
-    <CompactIncomeDashboard
-      activePeriod={activePeriod}
-      activePeriodSummary={activePeriodSummary}
-      averageLessonPrice={averageLessonPrice}
-      categories={categories}
-      categoryTotal={categoryTotal}
-      csvHref={csvHref}
-      donutGradient={donutGradient}
-      incomeSeries={incomeSeries}
-      invoicePeriod={invoicePeriod}
-      invoiceTransactions={invoiceTransactions}
-      ledger={ledger}
-      ledgerReceivedShare={ledgerReceivedShare}
-      paidThisMonth={paidThisMonth}
-      pendingIncome={pendingIncome}
-      pendingShare={pendingShare}
-      periodExpenseReceipts={periodExpenseReceipts}
-      periodSummaries={periodSummaries}
-      periodTransactions={periodTransactions}
-      refunds={refunds}
-      showAllInvoices={showAllInvoices}
-      totalIncome={totalIncome}
-      weekExpected={weekExpected}
-    />
+    <>
+      <DashboardPerformanceMark route={ROUTE} label="CompactIncomeDashboard" />
+      <CompactIncomeDashboard
+        activePeriod={activePeriod}
+        activePeriodSummary={activePeriodSummary}
+        averageLessonPrice={averageLessonPrice}
+        categories={categories}
+        categoryTotal={categoryTotal}
+        csvHref={csvHref}
+        donutGradient={donutGradient}
+        incomeSeries={incomeSeries}
+        invoicePeriod={invoicePeriod}
+        invoiceTransactions={invoiceTransactions}
+        ledger={ledger}
+        ledgerReceivedShare={ledgerReceivedShare}
+        paidThisMonth={paidThisMonth}
+        pendingIncome={pendingIncome}
+        pendingShare={pendingShare}
+        periodExpenseReceipts={periodExpenseReceipts}
+        periodSummaries={periodSummaries}
+        periodTransactions={periodTransactions}
+        refunds={refunds}
+        showAllInvoices={showAllInvoices}
+        totalIncome={totalIncome}
+        weekExpected={weekExpected}
+      />
+    </>
   );
 
   return (

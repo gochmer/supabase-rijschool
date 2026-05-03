@@ -26,6 +26,20 @@ type UpdateProfileInput = {
   profielfotoKleur?: string;
 };
 
+const avatarAllowedMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+]);
+
+const avatarExtensionByMimeType: Record<string, string> = {
+  "image/avif": "avif",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 async function getSiteUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL;
@@ -64,8 +78,11 @@ export async function updateProfileAvatarAction(formData: FormData) {
     return { success: false, message: "Kies eerst een afbeelding." };
   }
 
-  if (!file.type.startsWith("image/")) {
-    return { success: false, message: "Upload een geldig afbeeldingsbestand." };
+  if (!avatarAllowedMimeTypes.has(file.type)) {
+    return {
+      success: false,
+      message: "Gebruik een JPG, PNG, WebP of AVIF afbeelding.",
+    };
   }
 
   if (file.size > 4 * 1024 * 1024) {
@@ -73,7 +90,7 @@ export async function updateProfileAvatarAction(formData: FormData) {
   }
 
   const supabase = await createServerClient();
-  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const extension = avatarExtensionByMimeType[file.type] ?? "jpg";
   const path = `${context.user.id}/avatar-${Date.now()}.${extension}`;
   const arrayBuffer = await file.arrayBuffer();
 

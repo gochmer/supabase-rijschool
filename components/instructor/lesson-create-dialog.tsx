@@ -1,9 +1,20 @@
 "use client";
 
-import { useId, useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarPlus2, LoaderCircle } from "lucide-react";
+import {
+  BookOpenCheck,
+  CalendarDays,
+  CalendarPlus2,
+  CheckCircle2,
+  Clock3,
+  Gauge,
+  LoaderCircle,
+  MapPin,
+  Timer,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { createInstructorLessonForLearnerAction } from "@/lib/actions/instructor-learners";
@@ -45,6 +56,17 @@ const lessonKindOptions: LessonDurationKind[] = [
   "examenrit",
 ];
 
+const fieldClassName =
+  "h-10 w-full min-w-0 rounded-lg border-white/10 bg-white/[0.06] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] placeholder:text-slate-500 focus-visible:border-sky-300/45 focus-visible:ring-sky-300/18 2xl:h-11";
+
+const compactDateFormatter = new Intl.DateTimeFormat("nl-NL", {
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Amsterdam",
+  weekday: "short",
+  year: "numeric",
+});
+
 function getTodayDate() {
   const current = new Date();
   const local = new Date(
@@ -55,6 +77,37 @@ function getTodayDate() {
 
 function getDefaultTitle(kind: LessonDurationKind) {
   return getLessonDurationKindLabel(kind);
+}
+
+function getDateLabel(dateValue: string) {
+  if (!dateValue) {
+    return "Geen datum";
+  }
+
+  const date = new Date(`${dateValue}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? dateValue
+    : compactDateFormatter.format(date);
+}
+
+function DialogField({
+  children,
+  icon: Icon,
+  label,
+}: {
+  children: ReactNode;
+  icon: typeof UserRound;
+  label: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-2 text-xs font-semibold tracking-[0.02em] text-slate-200">
+        <Icon className="size-3.5 text-sky-300" />
+        {label}
+      </Label>
+      {children}
+    </div>
+  );
 }
 
 export function LessonCreateDialog({
@@ -90,6 +143,16 @@ export function LessonCreateDialog({
   const selectedStudent = useMemo(
     () => students.find((student) => student.id === studentId) ?? null,
     [studentId, students],
+  );
+  const completedLessonCount = selectedStudent?.voltooideLessen ?? 0;
+  const linkedLessonCount = selectedStudent?.gekoppeldeLessen ?? 0;
+  const progressValue = Math.min(
+    Math.max(selectedStudent?.voortgang ?? 0, 0),
+    100,
+  );
+  const remainingLessonCount = Math.max(
+    linkedLessonCount - completedLessonCount,
+    0,
   );
 
   const locationLabel = useMemo(() => {
@@ -179,49 +242,87 @@ export function LessonCreateDialog({
           Nieuwe les
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94),rgba(15,23,42,0.98))] dark:text-white">
-        <DialogHeader>
-          <DialogTitle>Nieuwe les inplannen</DialogTitle>
-          <DialogDescription>
-            Maak direct een lesmoment aan voor een gekoppelde leerling. De les
-            verschijnt daarna in deze lijst en in het leerlingdashboard.
-          </DialogDescription>
+      <DialogContent className="max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[80rem] gap-0 overflow-x-hidden overflow-y-auto p-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:max-w-[80rem] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(15,23,42,0.96),rgba(2,6,23,0.98))] dark:text-white [&::-webkit-scrollbar]:hidden">
+        <DialogHeader className="border-b border-white/10 px-4 py-4 sm:px-5 2xl:px-6 2xl:py-5">
+          <div className="flex items-start gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-sky-300/20 bg-sky-400/12 text-sky-100">
+              <CalendarPlus2 className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle className="text-xl font-semibold text-white">
+                Nieuwe les inplannen
+              </DialogTitle>
+              <DialogDescription className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
+                Plan direct een lesmoment voor een gekoppelde leerling.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {students.length ? (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor={studentIdField}>Leerling</Label>
-                <Select value={studentId} onValueChange={setStudentId}>
-                  <SelectTrigger
-                    id={studentIdField}
-                    className="dark:border-white/10 dark:bg-white/5 dark:text-white"
-                  >
-                    <SelectValue placeholder="Kies een leerling" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.naam}
-                      </SelectItem>
+          <div className="grid min-w-0 gap-4 px-4 py-4 sm:px-5 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:gap-5 2xl:px-6 2xl:py-5">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2 2xl:gap-4">
+              <div className="sm:col-span-2">
+                <DialogField icon={UserRound} label="Leerling">
+                  <Select value={studentId} onValueChange={setStudentId}>
+                    <SelectTrigger id={studentIdField} className={fieldClassName}>
+                      <SelectValue placeholder="Kies een leerling" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id}>
+                          {student.naam}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </DialogField>
+                {selectedStudent ? (
+                  <div className="mt-3 grid gap-2 rounded-lg border border-white/10 bg-slate-950/24 p-3 text-xs text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      {
+                        icon: CheckCircle2,
+                        label: "Voltooid",
+                        value: `${completedLessonCount}`,
+                      },
+                      {
+                        icon: BookOpenCheck,
+                        label: "Totaal lessen",
+                        value: `${linkedLessonCount}`,
+                      },
+                      {
+                        icon: Gauge,
+                        label: "Voortgang",
+                        value: `${progressValue}%`,
+                      },
+                      {
+                        icon: Timer,
+                        label: "Nog open",
+                        value: `${remainingLessonCount}`,
+                      },
+                    ].map((item) => (
+                      <div key={item.label} className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <item.icon className="size-3.5 text-sky-300" />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                        <p className="mt-1 text-sm font-semibold text-white">
+                          {item.value}
+                        </p>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor={lessonKindField}>Type</Label>
+              <DialogField icon={BookOpenCheck} label="Type">
                 <Select
                   value={lessonKind}
                   onValueChange={(value) =>
                     handleLessonKindChange(value as LessonDurationKind)
                   }
                 >
-                  <SelectTrigger
-                    id={lessonKindField}
-                    className="dark:border-white/10 dark:bg-white/5 dark:text-white"
-                  >
+                  <SelectTrigger id={lessonKindField} className={fieldClassName}>
                     <SelectValue placeholder="Kies type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -232,10 +333,9 @@ export function LessonCreateDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </DialogField>
 
-              <div className="space-y-2">
-                <Label htmlFor={durationField}>Duur</Label>
+              <DialogField icon={Timer} label="Duur">
                 <Input
                   id={durationField}
                   type="number"
@@ -244,84 +344,156 @@ export function LessonCreateDialog({
                   step={15}
                   value={duration}
                   onChange={(event) => setDuration(event.target.value)}
-                  className="dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  className={fieldClassName}
                 />
+              </DialogField>
+
+              <div className="sm:col-span-2">
+                <DialogField icon={BookOpenCheck} label="Les / pakket">
+                  <Input
+                    id={titleField}
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    className={fieldClassName}
+                    placeholder="Bijvoorbeeld Rijles 60 minuten"
+                  />
+                </DialogField>
               </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor={titleField}>Les / pakket</Label>
-                <Input
-                  id={titleField}
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  className="dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400"
-                  placeholder="Bijvoorbeeld Rijles 60 minuten"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={dateField}>Datum</Label>
+              <DialogField icon={CalendarDays} label="Datum">
                 <Input
                   id={dateField}
                   type="date"
                   value={date}
                   onChange={(event) => setDate(event.target.value)}
-                  className="dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  className={fieldClassName}
                 />
-              </div>
+              </DialogField>
 
-              <div className="space-y-2">
-                <Label htmlFor={timeField}>Starttijd</Label>
+              <DialogField icon={Clock3} label="Starttijd">
                 <Input
                   id={timeField}
                   type="time"
                   value={time}
                   onChange={(event) => setTime(event.target.value)}
-                  className="dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  className={fieldClassName}
                 />
-              </div>
+              </DialogField>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Locatie</Label>
-                <Select
-                  value={locationChoice}
-                  onValueChange={setLocationChoice}
-                >
-                  <SelectTrigger className="dark:border-white/10 dark:bg-white/5 dark:text-white">
-                    <SelectValue placeholder="Kies locatie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={LOCATION_LATER_VALUE}>
-                      Locatie later bepalen
-                    </SelectItem>
-                    {locationOptions.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.label}
+              <div className="sm:col-span-2">
+                <DialogField icon={MapPin} label="Locatie">
+                  <Select
+                    value={locationChoice}
+                    onValueChange={setLocationChoice}
+                  >
+                    <SelectTrigger className={fieldClassName}>
+                      <SelectValue placeholder="Kies locatie" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={LOCATION_LATER_VALUE}>
+                        Locatie later bepalen
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {locationOptions.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </DialogField>
               </div>
             </div>
 
-            <div className="rounded-[1.05rem] border border-slate-200/80 bg-slate-50/90 p-3 text-sm leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              <strong className="text-slate-950 dark:text-white">
-                Samenvatting:
-              </strong>{" "}
-              {title.trim() || "Rijles"} voor{" "}
-              {selectedStudent?.naam ?? "leerling"}. Start {time}
-              {endTimeLabel ? `, einde ${endTimeLabel}` : ""}. Locatie:{" "}
-              {locationLabel}.
-            </div>
-          </>
+            <aside className="min-w-0 rounded-lg border border-white/10 bg-white/[0.055] p-4 shadow-[0_24px_70px_-48px_rgba(0,0,0,0.75)]">
+              <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-400 uppercase">
+                Samenvatting
+              </p>
+              <h3 className="mt-2 text-lg font-semibold text-white">
+                {title.trim() || "Rijles"}
+              </h3>
+              <div className="mt-4 space-y-3 text-sm text-slate-300">
+                {[
+                  {
+                    icon: UserRound,
+                    label: "Leerling",
+                    value: selectedStudent?.naam ?? "Nog kiezen",
+                  },
+                  {
+                    icon: CalendarDays,
+                    label: "Datum",
+                    value: getDateLabel(date),
+                  },
+                  {
+                    icon: Clock3,
+                    label: "Tijd",
+                    value: `${time || "--:--"}${endTimeLabel ? ` - ${endTimeLabel}` : ""}`,
+                  },
+                  {
+                    icon: Timer,
+                    label: "Duur",
+                    value: `${duration || "0"} min`,
+                  },
+                  {
+                    icon: MapPin,
+                    label: "Locatie",
+                    value: locationLabel,
+                  },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-slate-950/35 text-sky-200">
+                      <item.icon className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase">
+                        {item.label}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 font-medium text-slate-100">
+                        {item.value}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 rounded-lg border border-white/10 bg-slate-950/28 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase">
+                    Leerlingstatus
+                  </p>
+                  <span className="text-xs font-semibold text-sky-100">
+                    {progressValue}%
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-sky-300"
+                    style={{ width: `${progressValue}%` }}
+                  />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
+                    <p className="text-slate-500">Voltooid</p>
+                    <p className="mt-1 font-semibold text-white">
+                      {completedLessonCount} / {linkedLessonCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
+                    <p className="text-slate-500">Pakket</p>
+                    <p className="mt-1 line-clamp-1 font-semibold text-white">
+                      {selectedStudent?.pakket ?? "Geen pakket"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
         ) : (
-          <div className="rounded-[1.05rem] border border-dashed border-slate-200 bg-slate-50/90 p-4 text-sm leading-6 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+          <div className="mx-5 my-5 rounded-lg border border-dashed border-white/12 bg-white/[0.055] p-4 text-sm leading-6 text-slate-300 sm:mx-6">
             Je hebt nog geen gekoppelde leerlingen om direct een les voor in te
             plannen.
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="mx-0 mb-0 border-t border-white/10 bg-slate-950/28 px-4 py-3 sm:px-5 2xl:px-6 2xl:py-4">
           {students.length ? (
             <>
               <Button
