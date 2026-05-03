@@ -1,5 +1,11 @@
 import type { GebruikersRol } from "@/lib/types";
 
+export type DashboardNavigationItem = {
+  href: string;
+  label: string;
+  activeHrefs?: string[];
+};
+
 export const publicNavigation = [
   { href: "/", label: "Home" },
   { href: "/over-ons", label: "Over ons" },
@@ -10,7 +16,7 @@ export const publicNavigation = [
 
 export const dashboardNavigation: Record<
   GebruikersRol,
-  Array<{ href: string; label: string }>
+  DashboardNavigationItem[]
 > = {
   leerling: [
     { href: "/leerling/dashboard", label: "Dashboard" },
@@ -24,16 +30,23 @@ export const dashboardNavigation: Record<
   ],
   instructeur: [
     { href: "/instructeur/dashboard", label: "Dashboard" },
-    { href: "/instructeur/profiel", label: "Profiel" },
-    { href: "/instructeur/reviews", label: "Reviews" },
-    { href: "/instructeur/pakketten", label: "Pakketten" },
-    { href: "/instructeurs", label: "Openbare gids" },
-    { href: "/instructeur/beschikbaarheid", label: "Beschikbaarheid" },
-    { href: "/instructeur/aanvragen", label: "Aanvragen" },
+    {
+      href: "/instructeur/profiel",
+      label: "Profiel",
+      activeHrefs: ["/instructeur/reviews"],
+    },
+    {
+      href: "/instructeur/lessen",
+      label: "Agenda",
+      activeHrefs: ["/instructeur/beschikbaarheid", "/instructeur/aanvragen"],
+    },
     { href: "/instructeur/leerlingen", label: "Leerlingen" },
-    { href: "/instructeur/lessen", label: "Lessen" },
     { href: "/instructeur/berichten", label: "Berichten" },
-    { href: "/instructeur/inkomsten", label: "Inkomsten" },
+    {
+      href: "/instructeur/inkomsten",
+      label: "Financiën",
+      activeHrefs: ["/instructeur/pakketten"],
+    },
     { href: "/instructeur/instellingen", label: "Instellingen" },
   ],
   admin: [
@@ -49,3 +62,10 @@ export const dashboardNavigation: Record<
     { href: "/admin/instellingen", label: "Instellingen" },
   ],
 };
+
+export function isDashboardNavigationItemActive(
+  pathname: string,
+  item: DashboardNavigationItem,
+) {
+  return pathname === item.href || Boolean(item.activeHrefs?.includes(pathname));
+}

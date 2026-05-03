@@ -604,6 +604,7 @@ export type Database = {
           leerling_id: string | null
           locatie_id: string | null
           notities: string | null
+          pakket_id: string | null
           start_at: string | null
           status: Database["public"]["Enums"]["les_status"]
           titel: string
@@ -623,6 +624,7 @@ export type Database = {
           leerling_id?: string | null
           locatie_id?: string | null
           notities?: string | null
+          pakket_id?: string | null
           start_at?: string | null
           status?: Database["public"]["Enums"]["les_status"]
           titel: string
@@ -642,6 +644,7 @@ export type Database = {
           leerling_id?: string | null
           locatie_id?: string | null
           notities?: string | null
+          pakket_id?: string | null
           start_at?: string | null
           status?: Database["public"]["Enums"]["les_status"]
           titel?: string
@@ -659,6 +662,13 @@ export type Database = {
             columns: ["leerling_id"]
             isOneToOne: false
             referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessen_pakket_id_fkey"
+            columns: ["pakket_id"]
+            isOneToOne: false
+            referencedRelation: "pakketten"
             referencedColumns: ["id"]
           },
         ]

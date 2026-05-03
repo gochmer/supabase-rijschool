@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarPlus, Clock3 } from "lucide-react";
 import { toast } from "sonner";
@@ -110,6 +110,12 @@ function formatMinutesAsTime(minutes: number) {
   const minute = normalizedMinutes % 60;
 
   return `${String(hours).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function getSlotStartTimeValue(slot: BeschikbaarheidSlot | null | undefined) {
+  const parts = getDateTimeParts(slot?.start_at);
+
+  return parts ? formatMinutesAsTime(parts.minutesOfDay) : "09:00";
 }
 
 function overlaps(left: TimeSegment, right: TimeSegment) {
@@ -258,11 +264,16 @@ export function ScheduleLessonFromSlotDialog({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const slotDuration = getSlotDurationMinutes(slot);
+  const defaultDuration = Math.max(
+    30,
+    Math.min(durationDefaults.rijles, slotDuration ?? durationDefaults.rijles),
+  );
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");
   const [lessonKind, setLessonKind] = useState<LessonDurationKind>("rijles");
   const [title, setTitle] = useState("Rijles");
-  const [duration, setDuration] = useState(String(durationDefaults.rijles));
-  const [time, setTime] = useState("");
+  const [duration, setDuration] = useState(String(defaultDuration));
+  const [time, setTime] = useState(() => getSlotStartTimeValue(slot));
   const [locationChoice, setLocationChoice] = useState(LOCATION_LATER_VALUE);
   const dateValue = getSlotDateValue(slot);
   const durationMinutes = Number.parseInt(duration, 10);
@@ -275,47 +286,25 @@ export function ScheduleLessonFromSlotDialog({
       }),
     [busyWindows, durationMinutes, slot],
   );
-  const selectedStudent = students.find((student) => student.id === studentId);
-  const slotDuration = getSlotDurationMinutes(slot);
+  const selectedStudentId = students.some((student) => student.id === studentId)
+    ? studentId
+    : students[0]?.id ?? "";
+  const selectedStudent = students.find(
+    (student) => student.id === selectedStudentId,
+  );
+  const fallbackTime = getSlotStartTimeValue(slot);
+  const selectedTime = startTimeOptions.length
+    ? startTimeOptions.some((option) => option.value === time)
+      ? time
+      : startTimeOptions[0].value
+    : time || fallbackTime;
   const dateLabel = dateValue
     ? dateLabelFormatter.format(new Date(`${dateValue}T12:00:00`))
     : "Geen datum gekozen";
   const endTimeLabel =
-    dateValue && time && Number.isFinite(durationMinutes)
-      ? addMinutesToTimeValue(time, durationMinutes)
+    dateValue && selectedTime && Number.isFinite(durationMinutes)
+      ? addMinutesToTimeValue(selectedTime, durationMinutes)
       : null;
-
-  useEffect(() => {
-    if (!open || !slot) {
-      return;
-    }
-
-    const nextDuration = Math.max(
-      30,
-      Math.min(durationDefaults.rijles, slotDuration ?? durationDefaults.rijles),
-    );
-
-    setStudentId(students[0]?.id ?? "");
-    setLessonKind("rijles");
-    setTitle("Rijles");
-    setDuration(String(nextDuration));
-    setLocationChoice(LOCATION_LATER_VALUE);
-  }, [durationDefaults.rijles, open, slot, slotDuration, students]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    if (!startTimeOptions.length) {
-      setTime(getDateTimeParts(slot?.start_at) ? formatMinutesAsTime(getDateTimeParts(slot?.start_at)?.minutesOfDay ?? 540) : "09:00");
-      return;
-    }
-
-    if (!startTimeOptions.some((option) => option.value === time)) {
-      setTime(startTimeOptions[0].value);
-    }
-  }, [open, slot?.start_at, startTimeOptions, time]);
 
   function handleLessonKindChange(nextKind: LessonDurationKind) {
     setLessonKind(nextKind);
@@ -324,17 +313,17 @@ export function ScheduleLessonFromSlotDialog({
   }
 
   function handleSubmit() {
-    if (!slot?.beschikbaar || !dateValue || !studentId || !time) {
+    if (!slot?.beschikbaar || !dateValue || !selectedStudentId || !selectedTime) {
       toast.error("Kies eerst een vrij slot, leerling en starttijd.");
       return;
     }
 
     startTransition(async () => {
       const result = await createInstructorLessonForLearnerAction({
-        leerlingId: studentId,
+        leerlingId: selectedStudentId,
         title,
         datum: dateValue,
-        tijd: time,
+        tijd: selectedTime,
         duurMinuten: Number(duration),
         locationId:
           locationChoice !== LOCATION_LATER_VALUE ? locationChoice : null,
@@ -380,7 +369,7 @@ export function ScheduleLessonFromSlotDialog({
           <div className="space-y-2 sm:col-span-2">
             <Label>Leerling</Label>
             {students.length ? (
-              <Select value={studentId} onValueChange={setStudentId}>
+              <Select value={selectedStudentId} onValueChange={setStudentId}>
                 <SelectTrigger className="dark:border-white/10 dark:bg-white/5 dark:text-white">
                   <SelectValue placeholder="Kies een leerling" />
                 </SelectTrigger>
@@ -419,7 +408,7 @@ export function ScheduleLessonFromSlotDialog({
           <div className="space-y-2">
             <Label>Starttijd</Label>
             {startTimeOptions.length ? (
-              <Select value={time} onValueChange={setTime}>
+              <Select value={selectedTime} onValueChange={setTime}>
                 <SelectTrigger className="dark:border-white/10 dark:bg-white/5 dark:text-white">
                   <SelectValue placeholder="Kies een starttijd" />
                 </SelectTrigger>
@@ -434,7 +423,7 @@ export function ScheduleLessonFromSlotDialog({
             ) : (
               <Input
                 type="time"
-                value={time}
+                value={selectedTime}
                 onChange={(event) => setTime(event.target.value)}
                 className="dark:border-white/10 dark:bg-white/5 dark:text-white"
               />
@@ -487,7 +476,7 @@ export function ScheduleLessonFromSlotDialog({
           <strong className="text-white">Samenvatting:</strong>{" "}
           {title || "Rijles"} voor {selectedStudent?.naam ?? "leerling"} op{" "}
           {dateLabel}
-          {time ? ` om ${time}` : ""}
+          {selectedTime ? ` om ${selectedTime}` : ""}
           {endTimeLabel ? ` tot ${endTimeLabel}` : ""}.
         </div>
 
@@ -502,9 +491,9 @@ export function ScheduleLessonFromSlotDialog({
               isPending ||
               !slot?.beschikbaar ||
               !students.length ||
-              !studentId ||
+              !selectedStudentId ||
               !dateValue ||
-              !time ||
+              !selectedTime ||
               !title.trim()
             }
           >

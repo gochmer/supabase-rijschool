@@ -32,6 +32,7 @@ import {
   getVehicleTone,
   isDocumentReady,
 } from "@/components/instructor/instructor-settings-model";
+import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { getCurrentInstructorSettingsOverview } from "@/lib/data/instructor-account";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -43,9 +44,21 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import {
+  timedDashboardData,
+  timedDashboardRoute,
+} from "@/lib/performance/dashboard";
+
+const ROUTE = "/instructeur/instellingen";
 
 export default async function InstructeurInstellingenPage() {
-  const overview = await getCurrentInstructorSettingsOverview();
+  const overview = await timedDashboardRoute(ROUTE, () =>
+    timedDashboardData(
+      ROUTE,
+      "settings-overview",
+      getCurrentInstructorSettingsOverview,
+    ),
+  );
   const activeVehicles = overview.vehicles.filter(
     (vehicle) => vehicle.status === "actief"
   ).length;
@@ -284,6 +297,7 @@ export default async function InstructeurInstellingenPage() {
 
   return (
     <div className="space-y-4">
+      <DashboardPerformanceMark route={ROUTE} label="SettingsPage" />
       <PageHeader
         tone="urban"
         title="Instellingen"

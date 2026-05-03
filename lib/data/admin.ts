@@ -66,16 +66,16 @@ export async function getAdminDashboardMetrics(): Promise<DashboardMetric[]> {
     { data: recenteBetalingen },
     { count: openTickets },
   ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("leerlingen").select("*", { count: "exact", head: true }),
-    supabase.from("instructeurs").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase.from("leerlingen").select("id", { count: "exact", head: true }),
+    supabase.from("instructeurs").select("id", { count: "exact", head: true }),
     supabase
       .from("instructeurs")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .neq("profiel_status", "goedgekeurd"),
     supabase
       .from("lessen")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .gte(
         "created_at",
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -87,7 +87,7 @@ export async function getAdminDashboardMetrics(): Promise<DashboardMetric[]> {
       .limit(5),
     supabase
       .from("support_tickets")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .neq("status", "afgesloten"),
   ]);
 

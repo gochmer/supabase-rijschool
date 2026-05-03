@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getLessonEndAt } from "@/lib/booking-availability";
+import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
 import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
 import {
   ensureCurrentUserContext,
@@ -38,6 +39,7 @@ type ManagedLearnerProfileRow = {
 type ManagedLearnerRow = {
   id: string;
   profile_id: string;
+  pakket_id: string | null;
 };
 
 type ManagedPackageRow = {
@@ -311,7 +313,7 @@ async function ensureLearnerRecord(
   const existing =
     (
       await learnersTable
-        .select("id, profile_id")
+        .select("id, profile_id, pakket_id")
         .eq("profile_id", profileId)
         .maybeSingle()
     ).data ?? null;
@@ -323,7 +325,7 @@ async function ensureLearnerRecord(
   return (
     await learnersTable
       .insert({ profile_id: profileId })
-      .select("id, profile_id")
+      .select("id, profile_id, pakket_id")
       .maybeSingle()
   ).data;
 }
@@ -468,6 +470,13 @@ export async function createInstructorLearnerAction(input: {
     selectedPackage = packageRow;
   }
 
+  if (allowSelfScheduling && !selectedPackage) {
+    return {
+      success: false,
+      message: "Kies eerst een pakket voordat je zelf inplannen direct vrijgeeft.",
+    };
+  }
+
   const existingLink =
     (
       await manualLinksTable
@@ -522,7 +531,7 @@ export async function createInstructorLearnerAction(input: {
     }
   }
 
-  if (allowSelfScheduling) {
+  if (selectedPackage) {
     const { error } = await planningRightsTable.upsert(
       {
         leerling_id: learner.id,
@@ -540,7 +549,7 @@ export async function createInstructorLearnerAction(input: {
       return {
         success: false,
         message:
-          "De leerling is toegevoegd, maar het direct vrijgeven van zelf inplannen is niet gelukt.",
+          "De leerling is toegevoegd, maar het vrijgeven van de planning is niet gelukt.",
       };
     }
   }
@@ -551,7 +560,7 @@ export async function createInstructorLearnerAction(input: {
       leerlingId: learner.id,
       instructeurNaam: context.profile?.volledige_naam || "Je instructeur",
       packageName: selectedPackage?.naam ?? null,
-      selfSchedulingAllowed: allowSelfScheduling,
+      selfSchedulingAllowed: Boolean(selectedPackage),
       onboardingNote: onboardingNote || null,
     });
   }
@@ -616,8 +625,9 @@ export async function updateInstructorLearnerPackageAction(input: {
     selectedPackage = data;
   }
 
-  const { error } = await supabase
-    .from("leerlingen")
+  const admin = await createAdminClient();
+  const { error } = await admin
+    .from("leerlingen" as never)
     .update({
       pakket_id: selectedPackage?.id ?? null,
     } as never)
@@ -627,6 +637,32 @@ export async function updateInstructorLearnerPackageAction(input: {
     return {
       success: false,
       message: "Het pakket kon niet worden bijgewerkt.",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const planningRightsTable = admin.from(
+    "leerling_planningsrechten" as never
+  ) as unknown as StudentPlanningRightsDeleteBuilder;
+  const { error: planningError } = await planningRightsTable.upsert(
+    {
+      leerling_id: input.leerlingId,
+      instructeur_id: instructeur.id,
+      zelf_inplannen_toegestaan: Boolean(selectedPackage),
+      vrijgegeven_at: selectedPackage ? now : null,
+      updated_at: now,
+    },
+    {
+      onConflict: "leerling_id,instructeur_id",
+    }
+  );
+
+  if (planningError) {
+    return {
+      success: false,
+      message: selectedPackage
+        ? "Het pakket is gekoppeld, maar de planning kon niet worden vrijgegeven."
+        : "Het pakket is verwijderd, maar de planningstoegang kon niet worden bijgewerkt.",
     };
   }
 
@@ -666,13 +702,16 @@ export async function updateInstructorLearnerPackageAction(input: {
   };
 }
 
-export async function createInstructorLessonForLearnerAction(input: {
+export async function createInstructorLessonForLearnerAction(input: LocationSelectionInput & {
   leerlingId: string;
   title: string;
   datum: string;
   tijd: string;
   duurMinuten: number;
-  locationId?: string | null;
+  extraLessons?: Array<{
+    datum?: string | null;
+    tijd?: string | null;
+  }>;
 }) {
   const context = await ensureCurrentUserContext();
   const instructeur = await getCurrentInstructeurRecord();
@@ -685,10 +724,42 @@ export async function createInstructorLessonForLearnerAction(input: {
   }
 
   const title = normalizeText(input.title) || "Rijles";
-  const startAt = toLocalDateTime(input.datum, input.tijd);
   const duration = Number(input.duurMinuten);
+  const extraLessons = Array.isArray(input.extraLessons)
+    ? input.extraLessons
+        .map((lesson) => ({
+          datum: lesson.datum?.trim() ?? "",
+          tijd: lesson.tijd?.trim() ?? "",
+        }))
+        .filter((lesson) => lesson.datum && lesson.tijd)
+    : [];
 
-  if (!startAt) {
+  if (extraLessons.length > 6) {
+    return {
+      success: false,
+      message: "Je kunt maximaal 6 extra lessen tegelijk inplannen.",
+    };
+  }
+
+  const lessonPlans = [
+    {
+      datum: input.datum,
+      tijd: input.tijd,
+    },
+    ...extraLessons,
+  ].map((lesson, index) => {
+    const startAt = toLocalDateTime(lesson.datum, lesson.tijd);
+    const endAt = startAt ? getLessonEndAt(startAt, duration) : null;
+
+    return {
+      ...lesson,
+      endAt,
+      index,
+      startAt,
+    };
+  });
+
+  if (lessonPlans.some((lesson) => !lesson.startAt)) {
     return {
       success: false,
       message: "Kies een geldige datum en starttijd.",
@@ -699,6 +770,13 @@ export async function createInstructorLessonForLearnerAction(input: {
     return {
       success: false,
       message: "Kies een lesduur tussen 30 en 240 minuten.",
+    };
+  }
+
+  if (lessonPlans.some((lesson) => !lesson.endAt)) {
+    return {
+      success: false,
+      message: "De eindtijd van een les kon niet worden bepaald.",
     };
   }
 
@@ -715,34 +793,53 @@ export async function createInstructorLessonForLearnerAction(input: {
   }
 
   const supabase = await createServerClient();
-  const endAt = getLessonEndAt(startAt, duration);
 
-  if (!endAt) {
-    return {
-      success: false,
-      message: "De eindtijd van deze les kon niet worden bepaald.",
-    };
+  for (let leftIndex = 0; leftIndex < lessonPlans.length; leftIndex += 1) {
+    const left = lessonPlans[leftIndex];
+
+    for (let rightIndex = leftIndex + 1; rightIndex < lessonPlans.length; rightIndex += 1) {
+      const right = lessonPlans[rightIndex];
+
+      if (
+        left.startAt &&
+        left.endAt &&
+        right.startAt &&
+        right.endAt &&
+        left.startAt < right.endAt &&
+        left.endAt > right.startAt
+      ) {
+        return {
+          success: false,
+          message: `Les ${rightIndex + 1} overlapt met een andere les in deze planning.`,
+        };
+      }
+    }
   }
 
-  const schedulingConflict = await findSchedulingConflict({
-    instructorId: instructeur.id,
-    learnerId: input.leerlingId,
-    startAt,
-    endAt,
-    includeRequestHolds: false,
-    supabase,
-  });
+  for (const lessonPlan of lessonPlans) {
+    const schedulingConflict = await findSchedulingConflict({
+      instructorId: instructeur.id,
+      learnerId: input.leerlingId,
+      startAt: lessonPlan.startAt!,
+      endAt: lessonPlan.endAt!,
+      includeRequestHolds: false,
+      supabase,
+    });
 
-  if (schedulingConflict.hasConflict) {
-    return {
-      success: false,
-      message: schedulingConflict.message,
-    };
+    if (schedulingConflict.hasConflict) {
+      return {
+        success: false,
+        message:
+          lessonPlan.index === 0
+            ? schedulingConflict.message
+            : `Extra les ${lessonPlan.index} botst met een andere planning.`,
+      };
+    }
   }
 
   const learnerResult = (await supabase
     .from("leerlingen")
-    .select("id, profile_id")
+    .select("id, profile_id, pakket_id")
     .eq("id", input.leerlingId)
     .maybeSingle()) as unknown as {
     data: ManagedLearnerRow | null;
@@ -755,30 +852,46 @@ export async function createInstructorLessonForLearnerAction(input: {
     };
   }
 
-  const locationOptionsResult = input.locationId
+  const isTrialLesson = title.toLowerCase().includes("proefles");
+
+  if (!learnerResult.data.pakket_id && !isTrialLesson) {
+    return {
+      success: false,
+      message: "Koppel eerst een pakket voordat je vervolglessen inplant voor deze leerling.",
+    };
+  }
+
+  const locationId = await resolveLocationSelection(input);
+  const locationOptionsResult = locationId
     ? ((await supabase
         .from("locaties")
         .select("id, naam, stad")
-        .eq("id", input.locationId)
+        .eq("id", locationId)
         .maybeSingle()) as unknown as {
         data: { id: string; naam: string; stad: string } | null;
       })
     : { data: null };
 
-  const { error } = await supabase.from("lessen").insert({
-    leerling_id: input.leerlingId,
-    instructeur_id: instructeur.id,
-    titel: title,
-    start_at: startAt,
-    duur_minuten: duration,
-    status: "ingepland",
-    locatie_id: input.locationId?.trim() || null,
-  } as never);
+  const { error } = await supabase.from("lessen").insert(
+    lessonPlans.map((lessonPlan) => ({
+      leerling_id: input.leerlingId,
+      instructeur_id: instructeur.id,
+      titel: title,
+      start_at: lessonPlan.startAt,
+      duur_minuten: duration,
+      status: "ingepland",
+      locatie_id: locationId,
+      pakket_id: learnerResult.data?.pakket_id ?? null,
+    })) as never
+  );
 
   if (error) {
     return {
       success: false,
-      message: "De les kon niet worden ingepland.",
+      message:
+        lessonPlans.length === 1
+          ? "De les kon niet worden ingepland."
+          : "De lessen konden niet worden ingepland.",
     };
   }
 
@@ -818,7 +931,10 @@ export async function createInstructorLessonForLearnerAction(input: {
 
   return {
     success: true,
-    message: "De les is direct ingepland voor deze leerling.",
+    message:
+      lessonPlans.length === 1
+        ? "De les is direct ingepland voor deze leerling."
+        : `${lessonPlans.length} lessen zijn direct ingepland voor deze leerling.`,
   };
 }
 

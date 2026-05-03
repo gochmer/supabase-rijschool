@@ -1,13 +1,101 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Camera, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
 import { updateProfileAvatarAction } from "@/lib/actions/profile";
 import { getInitials } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+
+const avatarAllowedMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+]);
+const avatarAccept = Array.from(avatarAllowedMimeTypes).join(",");
+
+function getAvatarFileError(file: File | null) {
+  if (!file) {
+    return "Kies eerst een afbeelding.";
+  }
+
+  if (!avatarAllowedMimeTypes.has(file.type)) {
+    return "Gebruik een JPG, PNG, WebP of AVIF afbeelding.";
+  }
+
+  if (file.size > 4 * 1024 * 1024) {
+    return "De afbeelding mag maximaal 4 MB zijn.";
+  }
+
+  return null;
+}
+
+export function AvatarQuickUploadButton({
+  className,
+  label = "Wijzig foto",
+}: {
+  className?: string;
+  label?: string;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleFileChange(file: File | null) {
+    const validationError = getAvatarFileError(file);
+
+    if (validationError || !file) {
+      toast.error(validationError ?? "Kies eerst een afbeelding.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("avatar", file);
+
+    startTransition(async () => {
+      const result = await updateProfileAvatarAction(formData);
+
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      router.refresh();
+    });
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={avatarAccept}
+        className="hidden"
+        onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
+      />
+      <Button
+        type="button"
+        size="sm"
+        className={cn("rounded-lg bg-blue-600 text-white hover:bg-blue-500", className)}
+        disabled={isPending}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Camera className="size-4" />
+        {isPending ? "Uploaden..." : label}
+      </Button>
+    </>
+  );
+}
 
 export function AvatarUploadCard({
   avatarUrl,
@@ -24,15 +112,10 @@ export function AvatarUploadCard({
   const [isPending, startTransition] = useTransition();
 
   function handleFileChange(file: File | null) {
-    if (!file) return;
+    const validationError = getAvatarFileError(file);
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Kies een geldig afbeeldingsbestand.");
-      return;
-    }
-
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error("De afbeelding mag maximaal 4 MB zijn.");
+    if (validationError || !file) {
+      toast.error(validationError ?? "Kies eerst een afbeelding.");
       return;
     }
 
@@ -88,7 +171,7 @@ export function AvatarUploadCard({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept={avatarAccept}
           className="hidden"
           onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
         />

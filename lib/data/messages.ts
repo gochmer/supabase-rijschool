@@ -268,9 +268,10 @@ export async function getInstructorMessageSmartTemplates(): Promise<
   }
 
   const supabase = await createServerClient();
+  const workspacePromise = getInstructeurStudentsWorkspace();
   const [workspace, growthInsights, lessonsResult] = await Promise.all([
-    getInstructeurStudentsWorkspace(),
-    getInstructorGrowthInsights(),
+    workspacePromise,
+    getInstructorGrowthInsights(workspacePromise),
     supabase
       .from("lessen")
       .select("leerling_id, titel, start_at, status")

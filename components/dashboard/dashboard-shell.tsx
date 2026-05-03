@@ -1,3 +1,4 @@
+import { cache, Suspense } from "react";
 import { BellRing, Sparkles, Zap } from "lucide-react";
 
 import { getAdminActivityFeed } from "@/lib/data/admin";
@@ -16,29 +17,7 @@ import { NotificationDropdown } from "@/components/notifications/notification-dr
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
-export async function DashboardShell({
-  role,
-  children,
-}: {
-  role: GebruikersRol;
-  children: React.ReactNode;
-}) {
-  const roleLabel =
-    role === "admin"
-      ? "Beheerder"
-      : role === "instructeur"
-        ? "Instructeur"
-        : "Leerling";
-  const isLearner = role === "leerling";
-  const isInstructor = role === "instructeur";
-  const isAppDashboard = isLearner || isInstructor;
-  const isStandardCompact = isInstructor;
-  const today = new Intl.DateTimeFormat("nl-NL", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date());
-
+const getDashboardShellData = cache(async (role: GebruikersRol) => {
   const [notifications, adminActivity] = await Promise.all([
     getCurrentNotifications(),
     role === "admin" ? getAdminActivityFeed() : Promise.resolve([]),
@@ -66,14 +45,158 @@ export async function DashboardShell({
                 : ("info" as const),
         }));
 
-  if (isAppDashboard) {
-    const unreadCount = notifications.filter((item) => item.ongelezen).length;
+  return {
+    notifications,
+    drawerItems,
+    unreadCount: notifications.filter((item) => item.ongelezen).length,
+  };
+});
 
+function ActivityDrawerFallback({
+  tone = "default",
+  compact = false,
+}: {
+  tone?: "default" | "hazard" | "urban";
+  compact?: boolean;
+}) {
+  const isUrban = tone === "urban";
+  const isHazard = tone === "hazard";
+
+  return (
+    <div
+      className={cn(
+        "loading-shimmer w-full rounded-[1.4rem] border",
+        compact ? "h-[3.25rem]" : "h-[4.25rem]",
+        isUrban
+          ? "border-white/10 bg-white/6"
+          : isHazard
+            ? "border-red-300/12 bg-white/5"
+            : "border-slate-200 bg-white/70 dark:border-white/10 dark:bg-white/5",
+      )}
+    />
+  );
+}
+
+function NotificationDropdownFallback({
+  surface = "default",
+}: {
+  surface?: "default" | "urban";
+}) {
+  return (
+    <div
+      className={cn(
+        "loading-shimmer h-10 w-12 rounded-full border sm:w-36",
+        surface === "urban"
+          ? "border-white/10 bg-white/6"
+          : "border-white/70 bg-white/88 dark:border-white/10 dark:bg-white/6",
+      )}
+    />
+  );
+}
+
+async function DashboardHeaderSubtitle({
+  role,
+  className,
+}: {
+  role: GebruikersRol;
+  className?: string;
+}) {
+  const { unreadCount } = await getDashboardShellData(role);
+
+  return (
+    <p className={className}>
+      {unreadCount
+        ? `${unreadCount} melding${unreadCount === 1 ? "" : "en"}`
+        : "Bijgewerkt"}
+    </p>
+  );
+}
+
+async function DashboardStatusMessage({
+  role,
+  className,
+}: {
+  role: GebruikersRol;
+  className?: string;
+}) {
+  const { unreadCount } = await getDashboardShellData(role);
+
+  return (
+    <p className={className}>
+      {unreadCount
+        ? `${unreadCount} ongelezen melding${unreadCount === 1 ? "" : "en"} vragen aandacht.`
+        : "Geen open meldingen. Je dashboard is bijgewerkt en rustig."}
+    </p>
+  );
+}
+
+async function DashboardNotificationDropdown({
+  role,
+  surface = "default",
+}: {
+  role: GebruikersRol;
+  surface?: "default" | "urban";
+}) {
+  const { notifications } = await getDashboardShellData(role);
+
+  return <NotificationDropdown notifications={notifications} surface={surface} />;
+}
+
+async function DashboardActivityDrawer({
+  role,
+  title,
+  description,
+  tone = "default",
+  compact = false,
+}: {
+  role: GebruikersRol;
+  title: string;
+  description: string;
+  tone?: "default" | "hazard" | "urban";
+  compact?: boolean;
+}) {
+  const { drawerItems } = await getDashboardShellData(role);
+
+  return (
+    <ActivityDrawer
+      title={title}
+      description={description}
+      items={drawerItems}
+      tone={tone}
+      compact={compact}
+    />
+  );
+}
+
+export function DashboardShell({
+  role,
+  children,
+}: {
+  role: GebruikersRol;
+  children: React.ReactNode;
+}) {
+  const roleLabel =
+    role === "admin"
+      ? "Beheerder"
+      : role === "instructeur"
+        ? "Instructeur"
+        : "Leerling";
+  const isLearner = role === "leerling";
+  const isInstructor = role === "instructeur";
+  const isAppDashboard = isLearner || isInstructor;
+  const isStandardCompact = isInstructor;
+  const today = new Intl.DateTimeFormat("nl-NL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+
+  if (isAppDashboard) {
     return (
       <div className="app-dashboard relative min-h-screen overflow-hidden bg-[#0f0f0f] text-slate-100">
-        <div className="mx-auto flex min-h-screen w-full max-w-[1680px]">
-          <aside className="hidden w-[244px] shrink-0 border-r border-white/10 bg-[#0f0f0f] px-3 py-4 xl:flex xl:flex-col">
-            <div className="mb-4 flex items-center gap-3 px-2">
+        <div className="mx-auto flex min-h-screen w-full max-w-[1680px] 2xl:max-w-[1920px]">
+          <aside className="hidden w-[232px] shrink-0 border-r border-white/10 bg-[#0f0f0f] px-3 py-3 xl:flex xl:flex-col 2xl:w-[280px] 2xl:px-4 2xl:py-6">
+            <div className="mb-3 flex items-center gap-3 px-2 2xl:mb-5">
               <DashboardMenuButton
                 role={role}
                 roleLabel={roleLabel}
@@ -82,7 +205,7 @@ export async function DashboardShell({
               <Logo inverse compact />
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 2xl:p-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="size-4 text-slate-200" />
                 <p className="text-xs font-semibold tracking-[0.22em] text-white uppercase">
@@ -94,7 +217,7 @@ export async function DashboardShell({
               </p>
             </div>
 
-            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 2xl:mt-5">
               <DashboardNav
                 items={dashboardNavigation[role]}
                 tone="urban"
@@ -102,21 +225,25 @@ export async function DashboardShell({
               />
             </div>
 
-            <div className="mt-4 grid gap-3 border-t border-white/10 pt-4">
-              <ActivityDrawer
-                title="Notificaties"
-                description="Nieuwe meldingen en statusupdates."
-                items={drawerItems}
-                tone="urban"
-                compact
-              />
+            <div className="mt-3 grid gap-3 border-t border-white/10 pt-3 2xl:mt-5 2xl:gap-4 2xl:pt-5">
+              <Suspense
+                fallback={<ActivityDrawerFallback tone="urban" compact />}
+              >
+                <DashboardActivityDrawer
+                  role={role}
+                  title="Notificaties"
+                  description="Nieuwe meldingen en statusupdates."
+                  tone="urban"
+                  compact
+                />
+              </Suspense>
               <SignOutButton className="h-9 rounded-lg border border-white/10 bg-white/10 px-4 text-white hover:bg-white/14" />
             </div>
           </aside>
 
           <div className="min-w-0 flex-1">
             <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0f0f0f]/96 backdrop-blur">
-              <div className="flex h-16 items-center gap-3 px-3 sm:px-5">
+              <div className="flex h-14 items-center gap-3 px-3 sm:px-5 2xl:h-[4.5rem] 2xl:px-8">
                 <div className="flex items-center gap-3 xl:hidden">
                   <DashboardMenuButton
                     role={role}
@@ -130,23 +257,34 @@ export async function DashboardShell({
                   <p className="truncate text-sm font-semibold text-white">
                     {roleLabel} dashboard
                   </p>
-                  <p className="truncate text-[12px] text-slate-400">
-                    {unreadCount
-                      ? `${unreadCount} melding${unreadCount === 1 ? "" : "en"}`
-                      : "Bijgewerkt"}
-                  </p>
+                  <Suspense
+                    fallback={
+                      <p className="truncate text-[12px] text-slate-400">
+                        Bijgewerkt
+                      </p>
+                    }
+                  >
+                    <DashboardHeaderSubtitle
+                      role={role}
+                      className="truncate text-[12px] text-slate-400"
+                    />
+                  </Suspense>
                 </div>
 
-                <div className="mx-auto min-w-0 flex-1 sm:max-w-2xl">
+                <div className="mx-auto min-w-0 flex-1 sm:max-w-2xl 2xl:max-w-4xl">
                   <CommandPalette role={role} compact presentation="search" />
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
                   <ThemeToggle surface="dark" compact />
-                  <NotificationDropdown
-                    notifications={notifications}
-                    surface="urban"
-                  />
+                  <Suspense
+                    fallback={<NotificationDropdownFallback surface="urban" />}
+                  >
+                    <DashboardNotificationDropdown
+                      role={role}
+                      surface="urban"
+                    />
+                  </Suspense>
                 </div>
               </div>
 
@@ -156,18 +294,25 @@ export async function DashboardShell({
               />
             </header>
 
-            <main className="dashboard-fade min-w-0 space-y-4 px-3 py-4 sm:px-5 lg:px-6">
-              <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <main className="dashboard-fade min-w-0 space-y-4 px-3 py-3 sm:px-4 lg:px-5 2xl:space-y-7 2xl:px-8 2xl:py-7">
+              <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between 2xl:px-5 2xl:py-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
                     <BellRing className="size-3.5" />
                     Dashboardstatus
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-200">
-                    {unreadCount
-                      ? `${unreadCount} ongelezen melding${unreadCount === 1 ? "" : "en"} vragen aandacht.`
-                      : "Geen open meldingen. Je dashboard is bijgewerkt en rustig."}
-                  </p>
+                  <Suspense
+                    fallback={
+                      <p className="mt-1 text-sm leading-6 text-slate-200">
+                        Dashboard wordt bijgewerkt.
+                      </p>
+                    }
+                  >
+                    <DashboardStatusMessage
+                      role={role}
+                      className="mt-1 text-sm leading-6 text-slate-200"
+                    />
+                  </Suspense>
                 </div>
                 <div className="inline-flex w-fit items-center rounded-lg bg-white/10 px-3 py-1 text-[12px] font-semibold text-slate-200">
                   {today}
@@ -291,21 +436,30 @@ export async function DashboardShell({
                   role={role}
                   compact={isLearner || isStandardCompact}
                 />
-                <ActivityDrawer
-                  title={
-                    role === "admin"
-                      ? "Activiteit en platformfeed"
-                      : "Notificaties en updates"
+                <Suspense
+                  fallback={
+                    <ActivityDrawerFallback
+                      tone={isLearner ? "urban" : "default"}
+                      compact={isLearner || isStandardCompact}
+                    />
                   }
-                  description={
-                    role === "admin"
-                      ? "Volg recente platformactiviteit, supportsignalen en operationele bewegingen."
-                      : "Bekijk nieuwe meldingen, statusupdates en belangrijke accountsignalen."
-                  }
-                  items={drawerItems}
-                  tone={isLearner ? "urban" : "default"}
-                  compact={isLearner || isStandardCompact}
-                />
+                >
+                  <DashboardActivityDrawer
+                    role={role}
+                    title={
+                      role === "admin"
+                        ? "Activiteit en platformfeed"
+                        : "Notificaties en updates"
+                    }
+                    description={
+                      role === "admin"
+                        ? "Volg recente platformactiviteit, supportsignalen en operationele bewegingen."
+                        : "Bekijk nieuwe meldingen, statusupdates en belangrijke accountsignalen."
+                    }
+                    tone={isLearner ? "urban" : "default"}
+                    compact={isLearner || isStandardCompact}
+                  />
+                </Suspense>
               </div>
             </div>
 
@@ -400,24 +554,44 @@ export async function DashboardShell({
                 <BellRing className="size-3.5" />
                 Dashboardstatus
               </div>
-              <p
-                className={cn(
-                  "mt-1 text-sm leading-6",
-                  isLearner
-                    ? "text-slate-200"
-                    : "text-slate-700 dark:text-slate-200",
-                )}
+              <Suspense
+                fallback={
+                  <p
+                    className={cn(
+                      "mt-1 text-sm leading-6",
+                      isLearner
+                        ? "text-slate-200"
+                        : "text-slate-700 dark:text-slate-200",
+                    )}
+                  >
+                    Dashboard wordt bijgewerkt.
+                  </p>
+                }
               >
-                {notifications.filter((item) => item.ongelezen).length
-                  ? `${notifications.filter((item) => item.ongelezen).length} ongelezen melding(en) vragen aandacht.`
-                  : "Geen open meldingen. Je dashboard is bijgewerkt en rustig."}
-              </p>
+                <DashboardStatusMessage
+                  role={role}
+                  className={cn(
+                    "mt-1 text-sm leading-6",
+                    isLearner
+                      ? "text-slate-200"
+                      : "text-slate-700 dark:text-slate-200",
+                  )}
+                />
+              </Suspense>
             </div>
 
-            <NotificationDropdown
-              notifications={notifications}
-              surface={isLearner ? "urban" : "default"}
-            />
+            <Suspense
+              fallback={
+                <NotificationDropdownFallback
+                  surface={isLearner ? "urban" : "default"}
+                />
+              }
+            >
+              <DashboardNotificationDropdown
+                role={role}
+                surface={isLearner ? "urban" : "default"}
+              />
+            </Suspense>
           </div>
           <RoleRedirectNotice role={role} />
           {children}

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { InstructorReviewReplyDialog } from "@/components/reviews/instructor-review-reply-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +15,14 @@ import {
   getCurrentInstructorReviews,
 } from "@/lib/data/reviews";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import {
+  timedDashboardData,
+  timedDashboardRoute,
+} from "@/lib/performance/dashboard";
 import type { Review } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const ROUTE = "/instructeur/reviews";
 
 function scoreLabel(value: number) {
   return value ? value.toFixed(1) : "0.0";
@@ -163,11 +170,13 @@ function ReviewCard({
 }
 
 export default async function InstructeurReviewsPage() {
-  const [summary, reviews, instructor] = await Promise.all([
-    getCurrentInstructorReviewSummary(),
-    getCurrentInstructorReviews(),
-    getCurrentInstructeurRecord(),
-  ]);
+  const [summary, reviews, instructor] = await timedDashboardRoute(ROUTE, () =>
+    Promise.all([
+      timedDashboardData(ROUTE, "review-summary", getCurrentInstructorReviewSummary),
+      timedDashboardData(ROUTE, "reviews", getCurrentInstructorReviews),
+      timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
+    ]),
+  );
   const publicProfilePath = instructor?.slug
     ? `/instructeurs/${instructor.slug}`
     : "/instructeurs";
@@ -182,6 +191,7 @@ export default async function InstructeurReviewsPage() {
 
   return (
     <div className="space-y-6 text-white">
+      <DashboardPerformanceMark route={ROUTE} label="ReviewsPage" />
       <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_8%_0%,rgba(245,158,11,0.16),transparent_26%),radial-gradient(circle_at_100%_20%,rgba(34,211,238,0.12),transparent_34%),linear-gradient(145deg,rgba(255,255,255,0.07),rgba(8,16,18,0.94))] p-5 shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)] sm:p-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>

@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 
-import {
-  ensureCurrentUserContext,
-  getCurrentInstructeurRecord,
-  getCurrentRole,
-} from "@/lib/data/profiles";
+import { ensureCurrentUserContext, getCurrentRole } from "@/lib/data/profiles";
+import { createServerClient } from "@/lib/supabase/server";
 import type { GebruikersRol } from "@/lib/types";
 import { getDashboardRouteForRole } from "@/lib/routes";
 
@@ -26,7 +23,12 @@ export async function requireRole(allowedRoles: GebruikersRol[]) {
   }
 
   if (role === "instructeur" && allowedRoles.includes("instructeur")) {
-    const instructor = await getCurrentInstructeurRecord();
+    const supabase = await createServerClient();
+    const { data: instructor } = await supabase
+      .from("instructeurs")
+      .select("profiel_status")
+      .eq("profile_id", user.id)
+      .maybeSingle();
 
     if (instructor?.profiel_status !== "goedgekeurd") {
       redirect("/instructeur-verificatie");

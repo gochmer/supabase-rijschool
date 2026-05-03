@@ -3,8 +3,17 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
+import {
+  getStudentTrajectoryIntelligence,
+  type StudentPackageTrajectoryInput,
+} from "@/lib/student-progress";
 import type { Database } from "@/lib/supabase/database.types";
-import type { LesAanvraagType, RijlesType } from "@/lib/types";
+import type {
+  LesAanvraagType,
+  RijlesType,
+  StudentProgressAssessment,
+  StudentProgressLessonNote,
+} from "@/lib/types";
 
 type ServerSupabase = SupabaseClient<Database>;
 type NotificationTone = "info" | "succes" | "waarschuwing";
@@ -184,6 +193,47 @@ async function createInAppNotification({
     type,
     ongelezen: true,
   } as never);
+}
+
+async function createUniqueInAppNotification({
+  supabase,
+  profileId,
+  title,
+  text,
+  type = "info",
+}: {
+  supabase: ServerSupabase;
+  profileId: string | null | undefined;
+  title: string;
+  text: string;
+  type?: NotificationTone;
+}) {
+  if (!profileId) {
+    return false;
+  }
+
+  const { data: existingNotification } = await supabase
+    .from("notificaties")
+    .select("id")
+    .eq("profiel_id", profileId)
+    .eq("titel", title)
+    .eq("tekst", text)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingNotification) {
+    return false;
+  }
+
+  await createInAppNotification({
+    supabase,
+    profileId,
+    title,
+    text,
+    type,
+  });
+
+  return true;
 }
 
 async function getProfileContactById(
@@ -511,6 +561,7 @@ export async function notifyLearnerAboutLessonChange({
   locatie,
   status,
   reason,
+  suggestedTimes = [],
 }: {
   supabase: ServerSupabase;
   leerlingId: string | null;
@@ -520,8 +571,15 @@ export async function notifyLearnerAboutLessonChange({
   locatie: string;
   status: "geaccepteerd" | "ingepland" | "afgerond" | "geannuleerd";
   reason?: string | null;
+  suggestedTimes?: string[];
 }) {
   const learner = await getLearnerContactById(supabase, leerlingId);
+  const cleanSuggestedTimes = suggestedTimes
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const suggestedTimesText = cleanSuggestedTimes.length
+    ? ` Voorgestelde alternatieven: ${cleanSuggestedTimes.join(", ")}.`
+    : "";
 
   const title =
     status === "geannuleerd"
@@ -532,7 +590,7 @@ export async function notifyLearnerAboutLessonChange({
 
   const text =
     status === "geannuleerd"
-      ? `${instructeurNaam} heeft je les geannuleerd.${reason?.trim() ? ` Reden: ${reason.trim()}` : ""}`
+      ? `${instructeurNaam} heeft je les geannuleerd.${reason?.trim() ? ` Reden: ${reason.trim()}` : ""}${suggestedTimesText}`
       : status === "afgerond"
         ? `${instructeurNaam} heeft je les als afgerond gemarkeerd.`
         : `${instructeurNaam} heeft je les bijgewerkt naar ${datum} om ${tijd}.`;
@@ -549,23 +607,35 @@ export async function notifyLearnerAboutLessonChange({
     return;
   }
 
+  const details = [
+    { label: "Instructeur", value: instructeurNaam },
+    { label: "Datum", value: datum },
+    { label: "Tijd", value: tijd },
+    { label: "Locatie", value: locatie || "Locatie volgt nog" },
+  ];
+
+  if (status === "geannuleerd" && reason?.trim()) {
+    details.push({ label: "Reden", value: reason.trim() });
+  }
+
+  if (status === "geannuleerd" && cleanSuggestedTimes.length) {
+    details.push({
+      label: "Nieuwe tijden",
+      value: cleanSuggestedTimes.join(", "),
+    });
+  }
+
   await deliverNotificationEmail({
     to: learner?.email,
     subject: title,
     eyebrow: status === "geannuleerd" ? "Les geannuleerd" : "Les bijgewerkt",
     intro:
       status === "geannuleerd"
-        ? `${instructeurNaam} heeft je les geannuleerd.`
+        ? cleanSuggestedTimes.length
+          ? `${instructeurNaam} heeft je les geannuleerd en meteen nieuwe tijden voorgesteld.`
+          : `${instructeurNaam} heeft je les geannuleerd.`
         : `${instructeurNaam} heeft je lesmoment bijgewerkt.`,
-    details: [
-      { label: "Instructeur", value: instructeurNaam },
-      { label: "Datum", value: datum },
-      { label: "Tijd", value: tijd },
-      { label: "Locatie", value: locatie || "Locatie volgt nog" },
-      ...(status === "geannuleerd" && reason?.trim()
-        ? [{ label: "Reden", value: reason.trim() }]
-        : []),
-    ],
+    details,
     ctaPath: "/leerling/boekingen",
     ctaLabel: "Open je lesoverzicht",
   });
@@ -977,6 +1047,99 @@ export async function notifyLearnerAboutPackageSuggestion({
     ctaPath: "/leerling/dashboard",
     ctaLabel: "Open je dashboard",
   });
+}
+
+export async function notifyStudentTrajectorySignals({
+  supabase,
+  leerlingId,
+  instructeurId,
+  instructeurNaam,
+  packageUsage,
+  assessments,
+  notes,
+}: {
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurId: string | null;
+  instructeurNaam?: string | null;
+  packageUsage: StudentPackageTrajectoryInput;
+  assessments: StudentProgressAssessment[];
+  notes?: StudentProgressLessonNote[];
+}) {
+  const [learner, instructor] = await Promise.all([
+    getLearnerContactById(supabase, leerlingId),
+    getInstructorContactById(supabase, instructeurId),
+  ]);
+
+  if (!learner?.id && !instructor?.id) {
+    return;
+  }
+
+  const intelligence = getStudentTrajectoryIntelligence({
+    assessments,
+    notes,
+    packageUsage,
+  });
+  const learnerName = learner?.volledige_naam || "Deze leerling";
+  const resolvedInstructorName =
+    instructeurNaam?.trim() || instructor?.volledige_naam || "Je instructeur";
+
+  if (intelligence.packageSignal.shouldSuggestAdditionalPackage) {
+    const packageTitle =
+      intelligence.packageSignal.remainingLessons == null &&
+      !packageUsage.packageName?.trim()
+        ? "Pakket koppelen nodig"
+        : "Pakket loopt bijna af";
+    const learnerText = `${resolvedInstructorName} ziet dat je traject aandacht vraagt: ${intelligence.packageSignal.detail} ${intelligence.packageSignal.nextAction}`;
+    const instructorText = `${learnerName}: ${intelligence.packageSignal.detail} ${intelligence.packageSignal.nextAction}`;
+
+    await Promise.all([
+      createUniqueInAppNotification({
+        supabase,
+        profileId: learner?.id,
+        title: packageTitle,
+        text: learnerText,
+        type:
+          intelligence.packageSignal.badge === "danger" ||
+          intelligence.packageSignal.badge === "warning"
+            ? "waarschuwing"
+            : "info",
+      }),
+      createUniqueInAppNotification({
+        supabase,
+        profileId: instructor?.id,
+        title: `${learnerName}: pakket opvolgen`,
+        text: instructorText,
+        type:
+          intelligence.packageSignal.badge === "danger" ||
+          intelligence.packageSignal.badge === "warning"
+            ? "waarschuwing"
+            : "info",
+      }),
+    ]);
+  }
+
+  if (intelligence.examReadiness.score >= 82) {
+    const learnerText = `${resolvedInstructorName} ziet dat je voortgang richting proefexamen sterk staat: ${intelligence.examReadiness.nextMilestone}`;
+    const instructorText = `${learnerName} staat op ${intelligence.examReadiness.score}% examengereedheid. ${intelligence.examReadiness.nextMilestone}`;
+
+    await Promise.all([
+      createUniqueInAppNotification({
+        supabase,
+        profileId: learner?.id,
+        title: "Je bent klaar voor een proefexamenstap",
+        text: learnerText,
+        type: "succes",
+      }),
+      createUniqueInAppNotification({
+        supabase,
+        profileId: instructor?.id,
+        title: `${learnerName}: proefexamenmoment plannen`,
+        text: instructorText,
+        type: "succes",
+      }),
+    ]);
+  }
 }
 
 export async function notifyLearnerAboutOpenSlotNudge({
