@@ -1,7 +1,7 @@
 import "server-only";
 
-const DEFAULT_ROUTE_WARN_MS = 500;
-const DEFAULT_DATA_WARN_MS = 300;
+const DEFAULT_ROUTE_WARN_MS = 300;
+const DEFAULT_DATA_WARN_MS = 150;
 
 function shouldLogDashboardPerformance() {
   return process.env.NODE_ENV !== "production";
