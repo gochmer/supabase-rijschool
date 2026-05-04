@@ -54,6 +54,7 @@ const DASHBOARD_ROLES = [
 
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 1000 },
+  { name: "laptop-1280", width: 1280, height: 900 },
   { name: "mobiel", width: 390, height: 844 },
 ];
 
