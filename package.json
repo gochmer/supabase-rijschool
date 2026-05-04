@@ -13,6 +13,8 @@
     "check:links": "node scripts/check-internal-links.mjs",
     "playwright:clickcheck": "node scripts/playwright-clickcheck.mjs",
     "playwright:dashboards": "node scripts/playwright-dashboard-visual-check.mjs",
+    "playwright:product-journey": "node scripts/playwright-product-journey-check.mjs",
+    "productiereis-test": "node scripts/playwright-product-journey-check.mjs",
     "test:flows": "node scripts/playwright-flow-suite.mjs",
     "supabase:types": "supabase gen types --linked --lang typescript --schema public > lib/supabase/database.types.ts",
     "supabase:seed:demo": "node scripts/supabase-seed-demo.mjs"
