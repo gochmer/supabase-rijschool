@@ -11,11 +11,11 @@ import {
   PlanningWeekView,
   type PlanningWeekItem,
 } from "@/components/calendar/planning-week-view";
-import { LearnerLessonActions } from "@/components/dashboard/learner-lesson-actions";
-import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
-import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
+import { LearnerLessonActions } from "@/components/learners/learner-lesson-actions";
+import { LessonFocusCard } from "@/components/lessons/lesson-focus-card";
+import { LessonQuickActions } from "@/components/lessons/lesson-quick-actions";
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
-import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
+import { LearnerRequestOverview } from "@/components/learners/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -639,6 +639,35 @@ export default async function LeerlingBoekingenPage() {
                       </div>
                     </summary>
                     <div className="border-t border-white/10 p-4">
+                      <div className="mb-3 rounded-2xl border border-sky-300/14 bg-sky-400/8 p-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="info">Lesvoorbereiding</Badge>
+                          <span className="text-xs text-slate-300">
+                            Doel, aandachtspunt en praktische info
+                          </span>
+                        </div>
+                        <div className="mt-3 grid gap-2 text-sm leading-6 text-slate-300 md:grid-cols-3">
+                          <p>
+                            <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                              Lesdoel
+                            </span>
+                            {lesson.titel}
+                          </p>
+                          <p>
+                            <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                              Aandachtspunt
+                            </span>
+                            {lesson.lesson_note?.trim() ||
+                              "Vraag je instructeur naar de focus voor deze les."}
+                          </p>
+                          <p>
+                            <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                              Ophaallocatie
+                            </span>
+                            {lesson.locatie || "Locatie volgt nog"}
+                          </p>
+                        </div>
+                      </div>
                       {lesson.lesson_note?.trim() ? (
                         <p className="mb-3 rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[12px] leading-6 text-slate-300">
                           Coachnotitie: {lesson.lesson_note.trim()}

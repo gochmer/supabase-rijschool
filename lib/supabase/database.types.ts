@@ -670,6 +670,117 @@ export type Database = {
           },
         ]
       }
+      leerling_documenten: {
+        Row: {
+          bestand_grootte: number | null
+          bestand_naam: string | null
+          bestand_pad: string
+          bestand_type: string | null
+          created_at: string
+          document_type: string
+          id: string
+          leerling_id: string | null
+          naam: string
+          profiel_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bestand_grootte?: number | null
+          bestand_naam?: string | null
+          bestand_pad: string
+          bestand_type?: string | null
+          created_at?: string
+          document_type?: string
+          id?: string
+          leerling_id?: string | null
+          naam: string
+          profiel_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bestand_grootte?: number | null
+          bestand_naam?: string | null
+          bestand_pad?: string
+          bestand_type?: string | null
+          created_at?: string
+          document_type?: string
+          id?: string
+          leerling_id?: string | null
+          naam?: string
+          profiel_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leerling_documenten_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leerling_documenten_profiel_id_fkey"
+            columns: ["profiel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leerling_leervoorkeuren: {
+        Row: {
+          begeleiding: string
+          created_at: string
+          leerling_id: string | null
+          leerstijl: string
+          oefenritme: string
+          profiel_id: string
+          scenario_focus: string[]
+          spanningsniveau: string
+          updated_at: string
+        }
+        Insert: {
+          begeleiding?: string
+          created_at?: string
+          leerling_id?: string | null
+          leerstijl?: string
+          oefenritme?: string
+          profiel_id: string
+          scenario_focus?: string[]
+          spanningsniveau?: string
+          updated_at?: string
+        }
+        Update: {
+          begeleiding?: string
+          created_at?: string
+          leerling_id?: string | null
+          leerstijl?: string
+          oefenritme?: string
+          profiel_id?: string
+          scenario_focus?: string[]
+          spanningsniveau?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leerling_leervoorkeuren_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leerling_leervoorkeuren_profiel_id_fkey"
+            columns: ["profiel_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leerling_planningsrechten: {
         Row: {
           created_at: string

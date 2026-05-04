@@ -292,6 +292,13 @@ export function ScheduleLessonFromSlotDialog({
   const selectedStudent = students.find(
     (student) => student.id === selectedStudentId,
   );
+  const isTrialLessonSelected =
+    lessonKind === "proefles" || title.toLowerCase().includes("proefles");
+  const trialLessonBlocked =
+    isTrialLessonSelected && selectedStudent?.trialLessonAvailable === false;
+  const trialLessonBlockMessage =
+    selectedStudent?.trialLessonMessage ??
+    "Deze leerling heeft al een proefles gepland of afgerond.";
   const fallbackTime = getSlotStartTimeValue(slot);
   const selectedTime = startTimeOptions.length
     ? startTimeOptions.some((option) => option.value === time)
@@ -315,6 +322,11 @@ export function ScheduleLessonFromSlotDialog({
   function handleSubmit() {
     if (!slot?.beschikbaar || !dateValue || !selectedStudentId || !selectedTime) {
       toast.error("Kies eerst een vrij slot, leerling en starttijd.");
+      return;
+    }
+
+    if (trialLessonBlocked) {
+      toast.error(trialLessonBlockMessage);
       return;
     }
 
@@ -397,7 +409,14 @@ export function ScheduleLessonFromSlotDialog({
               </SelectTrigger>
               <SelectContent>
                 {lessonKindOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
+                  <SelectItem
+                    key={option}
+                    value={option}
+                    disabled={
+                      option === "proefles" &&
+                      selectedStudent?.trialLessonAvailable === false
+                    }
+                  >
                     {getLessonDurationKindLabel(option)}
                   </SelectItem>
                 ))}
@@ -478,6 +497,11 @@ export function ScheduleLessonFromSlotDialog({
           {dateLabel}
           {selectedTime ? ` om ${selectedTime}` : ""}
           {endTimeLabel ? ` tot ${endTimeLabel}` : ""}.
+          {trialLessonBlocked ? (
+            <span className="mt-2 block rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-amber-100">
+              {trialLessonBlockMessage}
+            </span>
+          ) : null}
         </div>
 
         <DialogFooter>
@@ -494,7 +518,8 @@ export function ScheduleLessonFromSlotDialog({
               !selectedStudentId ||
               !dateValue ||
               !selectedTime ||
-              !title.trim()
+              !title.trim() ||
+              trialLessonBlocked
             }
           >
             <CalendarPlus className="size-4" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Archive,
@@ -18,7 +19,6 @@ import {
   Search,
 } from "lucide-react";
 
-import { RequestStatusActions } from "@/components/requests/request-status-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +43,12 @@ import { getRequestStatusLabel } from "@/lib/lesson-request-flow";
 import { getRijlesTypeLabel } from "@/lib/lesson-types";
 import type { LesAanvraag, LesAanvraagType, LocationOption } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const RequestStatusActions = dynamic(() =>
+  import("@/components/requests/request-status-actions").then(
+    (module) => module.RequestStatusActions,
+  ),
+);
 
 type RequestTab = "all" | "pending" | "accepted" | "rejected";
 type RequestKindFilter = "all" | LesAanvraagType;
@@ -269,27 +275,18 @@ function NewRequestDialog() {
 }
 
 function RequestDetailsDialog({
+  onOpenChange,
   request,
   locationOptions,
 }: {
+  onOpenChange: (open: boolean) => void;
   request: LesAanvraag;
   locationOptions: LocationOption[];
 }) {
   const statusPill = getStatusPill(request);
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          aria-label={`Bekijk aanvraag van ${request.leerling_naam}`}
-          title="Bekijken"
-          size="icon-sm"
-          variant="outline"
-          className="size-9 rounded-lg border-white/10 bg-white/7 text-slate-200 hover:bg-white/12 hover:text-white"
-        >
-          <Eye className="size-4" />
-        </Button>
-      </DialogTrigger>
+    <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] dark:text-white">
         <DialogHeader>
           <DialogTitle>{request.leerling_naam}</DialogTitle>
@@ -394,10 +391,12 @@ function RequestRow({
   request,
   index,
   locationOptions,
+  onSelectRequest,
 }: {
   request: LesAanvraag;
   index: number;
   locationOptions: LocationOption[];
+  onSelectRequest: (request: LesAanvraag) => void;
 }) {
   const statusPill = getStatusPill(request);
 
@@ -445,10 +444,16 @@ function RequestRow({
         {statusPill.label}
       </span>
       <div className="flex items-center gap-2">
-        <RequestDetailsDialog
-          request={request}
-          locationOptions={locationOptions}
-        />
+        <Button
+          aria-label={`Bekijk aanvraag van ${request.leerling_naam}`}
+          title="Bekijken"
+          size="icon-sm"
+          variant="outline"
+          className="size-9 rounded-lg border-white/10 bg-white/7 text-slate-200 hover:bg-white/12 hover:text-white"
+          onClick={() => onSelectRequest(request)}
+        >
+          <Eye className="size-4" />
+        </Button>
         {request.status === "aangevraagd" ? (
           <RequestStatusActions
             requestId={request.id}
@@ -482,6 +487,12 @@ export function InstructorRequestsBoard({
   const [kindFilter, setKindFilter] = useState<RequestKindFilter>("all");
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRequest, setSelectedRequest] = useState<LesAanvraag | null>(
+    () =>
+      initialFocusId
+        ? requests.find((request) => request.id === initialFocusId) ?? null
+        : null,
+  );
 
   const counts = useMemo(
     () => ({
@@ -549,14 +560,27 @@ export function InstructorRequestsBoard({
   };
 
   return (
-    <div className="space-y-6 text-white">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-4 text-white 2xl:space-y-7">
+      {selectedRequest ? (
+        <RequestDetailsDialog
+          request={selectedRequest}
+          locationOptions={locationOptions}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedRequest(null);
+            }
+          }}
+        />
+      ) : null}
+
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-white">
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl 2xl:text-4xl">
             Aanvragen
           </h1>
-          <p className="mt-2 text-lg text-slate-400">
-            Beheer en overzicht van al je aanvragen en aanvragen voor lessen.
+          <p className="mt-1.5 text-sm text-slate-400 2xl:mt-2 2xl:text-lg">
+            Wat moet ik nog accepteren? Behandel nieuwe aanvragen en zet ze
+            door naar je planning.
           </p>
         </div>
         <NewRequestDialog />
@@ -594,6 +618,15 @@ export function InstructorRequestsBoard({
       </section>
 
       <section className="overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] p-4 shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)]">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white">
+            Aanvragenlijst
+          </h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Nieuwe aanvragen staan bovenaan je werkvoorraad; accepteer of wijs
+            ze direct af.
+          </p>
+        </div>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-5">
             {tabs.map((tab) => (
@@ -699,6 +732,7 @@ export function InstructorRequestsBoard({
                   request={request}
                   index={firstItemIndex + index}
                   locationOptions={locationOptions}
+                  onSelectRequest={setSelectedRequest}
                 />
               ))
             ) : (

@@ -154,6 +154,13 @@ export function LessonCreateDialog({
     linkedLessonCount - completedLessonCount,
     0,
   );
+  const isTrialLessonSelected =
+    lessonKind === "proefles" || title.toLowerCase().includes("proefles");
+  const trialLessonBlocked =
+    isTrialLessonSelected && selectedStudent?.trialLessonAvailable === false;
+  const trialLessonBlockMessage =
+    selectedStudent?.trialLessonMessage ??
+    "Deze leerling heeft al een proefles gepland of afgerond.";
 
   const locationLabel = useMemo(() => {
     if (locationChoice === LOCATION_LATER_VALUE) {
@@ -195,6 +202,11 @@ export function LessonCreateDialog({
   function handleSubmit() {
     if (!selectedStudent) {
       toast.error("Kies eerst een leerling.");
+      return;
+    }
+
+    if (trialLessonBlocked) {
+      toast.error(trialLessonBlockMessage);
       return;
     }
 
@@ -327,13 +339,25 @@ export function LessonCreateDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {lessonKindOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
+                      <SelectItem
+                        key={option}
+                        value={option}
+                        disabled={
+                          option === "proefles" &&
+                          selectedStudent?.trialLessonAvailable === false
+                        }
+                      >
                         {getLessonDurationKindLabel(option)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </DialogField>
+              {trialLessonBlocked ? (
+                <p className="mt-2 rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100">
+                  {trialLessonBlockMessage}
+                </p>
+              ) : null}
 
               <DialogField icon={Timer} label="Duur">
                 <Input
@@ -511,7 +535,8 @@ export function LessonCreateDialog({
                   !selectedStudent ||
                   !date ||
                   !time ||
-                  !title.trim()
+                  !title.trim() ||
+                  trialLessonBlocked
                 }
               >
                 {isPending ? (

@@ -12,7 +12,7 @@ import {
 import {
   formatTrajectoryDate,
   TrajectoryRelationshipCard,
-} from "@/components/dashboard/trajectory-relationship-card";
+} from "@/components/learners/trajectory-relationship-card";
 import { StudentProgressReadOnlyCard } from "@/components/progress/student-progress-readonly-card";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,18 @@ export default async function LeerlingProfielPage() {
   const acceptedRequestItems = requests.filter((request) =>
     ["ingepland", "geaccepteerd"].includes(request.status)
   );
+  const activeTrialStatuses = ["aangevraagd", "geaccepteerd", "ingepland", "afgerond"];
+  const trialLessonUnavailable =
+    requests.some(
+      (request) =>
+        request.aanvraag_type === "proefles" &&
+        activeTrialStatuses.includes(request.status),
+    ) ||
+    lessons.some(
+      (lesson) =>
+        lesson.titel.toLowerCase().includes("proefles") &&
+        activeTrialStatuses.includes(lesson.status),
+    );
   const pendingRequests = pendingRequestItems.length;
   const primaryRequest =
     acceptedRequestItems[0] ?? pendingRequestItems[0] ?? requests[0] ?? null;
@@ -232,7 +244,9 @@ export default async function LeerlingProfielPage() {
               icon: Package,
               label: "Pakket",
               title: "Kies eerst een passend pakket.",
-              text: "Na je proefles geeft een gekoppeld pakket vervolglessen en je lesteller vrij.",
+              text: trialLessonUnavailable
+                ? "Je proefles is al gebruikt of gepland. Koppel nu een pakket om vervolglessen vrij te geven."
+                : "Na je proefles geeft een gekoppeld pakket vervolglessen en je lesteller vrij.",
               href: "/leerling/instructeurs",
               action: "Pakketten bekijken",
             }

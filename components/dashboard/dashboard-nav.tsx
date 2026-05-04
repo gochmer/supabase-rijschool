@@ -7,9 +7,13 @@ import {
   Bell,
   BookOpen,
   CalendarDays,
+  CarFront,
   Compass,
   CreditCard,
+  ClipboardCheck,
+  FileText,
   FolderKanban,
+  Gauge,
   LayoutDashboard,
   LifeBuoy,
   Loader2,
@@ -27,6 +31,7 @@ import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   Dashboard: LayoutDashboard,
+  Regie: Gauge,
   Profiel: Users,
   Instructeurs: Star,
   Boekingen: CalendarDays,
@@ -43,6 +48,9 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   Inkomsten: CreditCard,
   Gebruikers: Users,
   Pakketten: FolderKanban,
+  Onboarding: ClipboardCheck,
+  Documenten: FileText,
+  Voertuigen: CarFront,
   Support: LifeBuoy,
   "Openbare gids": Compass,
 };

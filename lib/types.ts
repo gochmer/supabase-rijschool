@@ -14,6 +14,12 @@ export type LessonAttendanceStatus = "onbekend" | "aanwezig" | "afwezig";
 export type LessonCompassLastUpdatedBy = "leerling" | "instructeur";
 
 export type LesAanvraagType = "algemeen" | "pakket" | "proefles";
+export type TrialLessonStatus =
+  | "available"
+  | "pending"
+  | "planned"
+  | "completed"
+  | "unknown";
 
 export type BetaalStatus = "open" | "in_afwachting" | "betaald" | "mislukt";
 export type StudentProgressStatus =
@@ -198,10 +204,13 @@ export interface Notificatie {
 
 export interface SupportTicket {
   id: string;
+  profiel_id?: string;
   onderwerp: string;
+  omschrijving?: string;
   status: "open" | "in_behandeling" | "afgesloten";
   prioriteit: "laag" | "normaal" | "hoog";
   gebruiker: string;
+  created_at?: string;
 }
 
 export interface Voertuig {
@@ -290,6 +299,9 @@ export interface InstructorStudentProgressRow {
   journeyLabel?: string;
   journeyNextAction?: string;
   journeyTone?: import("@/lib/driver-journey").DriverJourneyTone;
+  trialLessonAvailable?: boolean;
+  trialLessonStatus?: TrialLessonStatus;
+  trialLessonMessage?: string;
 }
 
 export interface InstructorDashboardProgressSignalStudent {
@@ -304,6 +316,54 @@ export interface InstructorDashboardProgressSignals {
   behindStudents: InstructorDashboardProgressSignalStudent[];
   examReadyStudents: InstructorDashboardProgressSignalStudent[];
   packageActionStudents: InstructorDashboardProgressSignalStudent[];
+}
+
+export interface LearnerDocument {
+  id: string;
+  profiel_id: string;
+  leerling_id?: string | null;
+  document_type: string;
+  naam: string;
+  status: string;
+  bestand_pad: string;
+  bestand_naam?: string | null;
+  bestand_type?: string | null;
+  bestand_grootte?: number | null;
+  signed_url?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LearnerLearningStyle =
+  | "praktisch"
+  | "visueel"
+  | "stap_voor_stap"
+  | "examengericht";
+
+export type LearnerGuidancePreference =
+  | "rustig"
+  | "direct"
+  | "motiverend"
+  | "uitgebreid";
+
+export type LearnerPracticeRhythm =
+  | "kort_en_vaker"
+  | "lange_sessies"
+  | "vaste_weekroutine"
+  | "intensief";
+
+export type LearnerAnxietySupport = "laag" | "normaal" | "hoog";
+
+export interface LearnerLearningPreferences {
+  profiel_id: string;
+  leerling_id?: string | null;
+  leerstijl: LearnerLearningStyle;
+  begeleiding: LearnerGuidancePreference;
+  oefenritme: LearnerPracticeRhythm;
+  spanningsniveau: LearnerAnxietySupport;
+  scenario_focus: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface SharedLessonCompassBoard {

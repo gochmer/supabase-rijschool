@@ -77,7 +77,7 @@ export async function assignPackageToStudentAction(
     pakket_id: pakket.id,
     bedrag: pakket.prijs ?? 0,
     status: "open",
-    provider: "mock",
+    provider: "manual",
   });
 
   await supabase.from("notificaties").insert({

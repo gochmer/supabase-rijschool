@@ -20,15 +20,33 @@ export const dashboardNavigation: Record<
 > = {
   leerling: [
     { href: "/leerling/dashboard", label: "Dashboard" },
-    { href: "/leerling/profiel", label: "Profiel" },
-    { href: "/leerling/instructeurs", label: "Instructeurs" },
+    { href: "/leerling/voortgang", label: "Voortgang" },
     { href: "/leerling/boekingen", label: "Boekingen" },
+    { href: "/leerling/instructeurs", label: "Instructeurs" },
+    { href: "/leerling/lesmateriaal", label: "Lesmateriaal" },
     { href: "/leerling/betalingen", label: "Betalingen" },
-    { href: "/leerling/berichten", label: "Berichten" },
-    { href: "/leerling/reviews", label: "Reviews" },
+    {
+      href: "/leerling/berichten",
+      label: "Berichten",
+      activeHrefs: ["/leerling/notificaties", "/leerling/support"],
+    },
+    {
+      href: "/leerling/profiel",
+      label: "Profiel",
+      activeHrefs: ["/leerling/documenten", "/leerling/reviews"],
+    },
     { href: "/leerling/instellingen", label: "Instellingen" },
   ],
   instructeur: [
+    {
+      href: "/instructeur/regie",
+      label: "Regie",
+      activeHrefs: [
+        "/instructeur/onboarding",
+        "/instructeur/documenten",
+        "/instructeur/voertuigen",
+      ],
+    },
     { href: "/instructeur/dashboard", label: "Dashboard" },
     {
       href: "/instructeur/profiel",

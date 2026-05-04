@@ -936,8 +936,8 @@ export function buildInstructorOperationsIntelligence({
       detail: "Planning, pakketdruk en risico's blijven momenteel beheersbaar.",
       badgeLabel: "Rustig",
       badge: "success",
-      href: "/instructeur/dashboard",
-      ctaLabel: "Dashboard",
+      href: "/instructeur/regie",
+      ctaLabel: "Regie openen",
     });
   }
 

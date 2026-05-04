@@ -13,6 +13,7 @@ import {
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
 import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
+import { getLearnerTrialLessonState } from "@/lib/data/trial-lessons";
 import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import {
   appendRequestUpdateMessage,
@@ -475,6 +476,14 @@ export async function updateLessonAction(input: UpdateLessonInput) {
   const learnerChanged =
     Boolean(nextLearnerId) && nextLearnerId !== lesson.leerling_id;
   const nextTitle = input.title?.trim() || lesson.titel;
+  const nextIsTrialLesson = nextTitle.toLowerCase().includes("proefles");
+
+  if (nextIsTrialLesson && repeatLessonValues.length > 0) {
+    return {
+      success: false,
+      message: "Een proefles is een eenmalig startmoment. Maak hier geen volgende lessen van.",
+    };
+  }
 
   if (nextLearnerId && learnerChanged) {
     const hasRelationship = await hasInstructorStudentPlanningRelationship(
@@ -487,6 +496,22 @@ export async function updateLessonAction(input: UpdateLessonInput) {
         success: false,
         message:
           "Koppel deze leerling eerst aan jouw werkplek voordat je de les kunt overzetten.",
+      };
+    }
+  }
+
+  if (nextIsTrialLesson && nextLearnerId && input.status !== "geannuleerd") {
+    const trialState = await getLearnerTrialLessonState({
+      actor: "instructor",
+      excludeLessonId: lesson.id,
+      supabase,
+      leerlingId: nextLearnerId,
+    });
+
+    if (!trialState.available) {
+      return {
+        success: false,
+        message: trialState.message,
       };
     }
   }

@@ -548,6 +548,17 @@ export function CreateManualLessonDialog({
     (option) => option.dateValue === date,
   );
   const lessonCount = 1 + extraLessons.length;
+  const isTrialLessonSelected =
+    lessonKind === "proefles" || title.toLowerCase().includes("proefles");
+  const trialLessonSeriesBlocked = isTrialLessonSelected && lessonCount > 1;
+  const trialLessonBlocked =
+    trialLessonSeriesBlocked ||
+    (isTrialLessonSelected && selectedLearner?.trialLessonAvailable === false);
+  const trialLessonBlockMessage =
+    trialLessonSeriesBlocked
+      ? "Een proefles is een eenmalig startmoment. Verwijder extra lessen of kies een regulier lestype."
+      : (selectedLearner?.trialLessonMessage ??
+        "Deze leerling heeft al een proefles gepland of afgerond.");
   const selectedLearnerHasPackage = Boolean(
     selectedLearner?.pakketId ||
       (selectedLearner?.pakket && selectedLearner.pakket !== "Nog geen pakket"),
@@ -576,7 +587,7 @@ export function CreateManualLessonDialog({
     : clampNumber(selectedLearner?.voortgang ?? 0, 0, 100);
   const planningBlockedByPackage = Boolean(
     selectedLearner?.pakketPlanningGeblokkeerd ||
-      (!selectedLearnerHasPackage && !title.toLowerCase().includes("proefles")),
+      (!selectedLearnerHasPackage && !isTrialLessonSelected),
   );
   const selectedStartTimeIsAvailable =
     !hasPlanningAvailability ||
@@ -595,7 +606,19 @@ export function CreateManualLessonDialog({
         ? "Reistijd volgt"
         : `Indicatie ${5 + index * 3} min reistijd`,
   }));
-  const packageWarning = !selectedLearnerHasPackage
+  const packageWarning = trialLessonBlocked
+    ? {
+        label: "Proefles geblokkeerd",
+        text: trialLessonBlockMessage,
+        tone: "amber" as const,
+      }
+    : isTrialLessonSelected && !selectedLearnerHasPackage
+    ? {
+        label: "Proefles mogelijk",
+        text: "Dit is het eenmalige startmoment. Na de proefles koppel je een pakket voor vervolglessen.",
+        tone: "emerald" as const,
+      }
+    : !selectedLearnerHasPackage
     ? {
         label: "Pakket nodig",
         text: "Vervolglessen worden pas vrijgegeven zodra er een pakket is gekoppeld.",
@@ -625,13 +648,17 @@ export function CreateManualLessonDialog({
     },
     {
       icon: Sparkles,
-      label: planningBlockedByPackage
+      label: trialLessonBlocked
+        ? "Proefles al gebruikt"
+        : planningBlockedByPackage
         ? "Pakket koppelen voor vervolglessen"
         : "Optimale lesfrequentie",
-      detail: planningBlockedByPackage
+      detail: trialLessonBlocked
+        ? trialLessonBlockMessage
+        : planningBlockedByPackage
         ? "Plan alleen een proefles of koppel eerst een pakket."
         : "Deze les past in het huidige traject van de leerling.",
-      tone: planningBlockedByPackage ? "amber" : "violet",
+      tone: trialLessonBlocked || planningBlockedByPackage ? "amber" : "violet",
     },
     {
       icon: Route,
@@ -922,6 +949,11 @@ export function CreateManualLessonDialog({
   }
 
   function handleSubmit() {
+    if (trialLessonBlocked) {
+      toast.error(trialLessonBlockMessage);
+      return;
+    }
+
     startTransition(async () => {
       const result = await createInstructorLessonForLearnerAction({
         leerlingId: selectedLearnerId,
@@ -1407,7 +1439,14 @@ export function CreateManualLessonDialog({
                       </SelectTrigger>
                       <SelectContent>
                         {lessonKindOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
+                          <SelectItem
+                            key={option}
+                            value={option}
+                            disabled={
+                              option === "proefles" &&
+                              selectedLearner?.trialLessonAvailable === false
+                            }
+                          >
                             {getLessonDurationKindLabel(option)}
                           </SelectItem>
                         ))}
@@ -1778,12 +1817,14 @@ export function CreateManualLessonDialog({
                 <div
                   className={cn(
                     "mt-5 rounded-xl border p-3 text-sm leading-6",
-                    planningBlockedByPackage
+                    trialLessonBlocked || planningBlockedByPackage
                       ? "border-amber-300/25 bg-amber-400/10 text-amber-100"
                       : "border-sky-300/20 bg-sky-400/10 text-sky-100",
                   )}
                 >
-                  {planningBlockedByPackage
+                  {trialLessonBlocked
+                    ? trialLessonBlockMessage
+                    : planningBlockedByPackage
                     ? "Koppel eerst een pakket of kies Proefles als dit het startmoment is."
                     : "De les wordt direct gekoppeld aan het pakket van de leerling."}
                 </div>
@@ -1819,6 +1860,7 @@ export function CreateManualLessonDialog({
                       !time ||
                       !title.trim() ||
                       !selectedLearnerId ||
+                      trialLessonBlocked ||
                       planningBlockedByPackage ||
                       (locationChoice === LOCATION_NEW_VALUE &&
                         (!newLocationName.trim() || !newLocationCity.trim())) ||

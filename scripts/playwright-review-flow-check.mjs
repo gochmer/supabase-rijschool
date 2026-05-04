@@ -440,7 +440,7 @@ async function loginUser(page, email, redirectPath) {
   await gotoStable(page, `/inloggen?redirect=${encodeURIComponent(redirectPath)}`);
   await page.getByLabel("E-mailadres").fill(email);
   await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Inloggen" }).click();
+  await page.getByRole("button", { name: "Inloggen", exact: true }).click();
   await page.waitForURL(`**${redirectPath}`, { timeout: 30_000 });
   await page.waitForTimeout(1_500);
 }
@@ -592,14 +592,14 @@ async function run() {
     await loginUser(
       instructorPage,
       instructorIdentity.email,
-      "/instructeur/dashboard"
+      "/instructeur/reviews"
     );
-    await gotoStable(instructorPage, "/instructeur/dashboard");
+    await gotoStable(instructorPage, "/instructeur/reviews");
     await instructorPage
-      .getByText("Gemiddelde beoordeling")
+      .getByText("Reviewstudio")
       .waitFor({ timeout: 15_000 });
-    await instructorPage.getByText("5.0").waitFor({ timeout: 15_000 });
-    await instructorPage.getByText(/1 reviews?/).waitFor({
+    await instructorPage.getByText("5.0/5 gemiddeld").waitFor({ timeout: 15_000 });
+    await instructorPage.getByText("0/1 live replies").waitFor({
       timeout: 15_000,
     });
     await instructorContext.close();
@@ -613,7 +613,7 @@ async function run() {
             learnerReviewSubmitDialog: "ok",
             publicInstructorProfileShowsReview: "ok",
             averageScoreAndReviewCount: "ok",
-            instructorDashboardReviewMetric: "ok",
+            instructorReviewStudioMetric: "ok",
           },
           seed: {
             learnerEmail: learnerIdentity.email,

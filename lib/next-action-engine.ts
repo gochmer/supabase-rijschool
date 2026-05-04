@@ -271,7 +271,7 @@ export function resolveLearnerNextAction({
       category: "skill",
       ctaLabel: "Bekijk voortgang",
       description: `${focusSkill.label} staat nu op ${focusMeta?.label.toLowerCase() ?? "aandacht"}. Maak dit je focus voor de eerstvolgende les.`,
-      href: "/leerling/profiel#voortgang",
+      href: "/leerling/voortgang",
       id: `focus-${focusSkill.key}`,
       label: "Volgende stap",
       reason: "Een skill blijft achter op basis van de laatste beoordeling.",

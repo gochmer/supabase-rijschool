@@ -27,12 +27,18 @@ const DASHBOARD_ROLES = [
   {
     role: "leerling",
     emailEnv: "PLAYWRIGHT_LEARNER_EMAIL",
-    routes: ["/leerling/dashboard", "/leerling/profiel", "/leerling/boekingen"],
+    routes: [
+      "/leerling/dashboard",
+      "/leerling/voortgang",
+      "/leerling/profiel",
+      "/leerling/boekingen",
+    ],
   },
   {
     role: "instructeur",
     emailEnv: "PLAYWRIGHT_INSTRUCTOR_EMAIL",
     routes: [
+      "/instructeur/regie",
       "/instructeur/dashboard",
       "/instructeur/leerlingen",
       "/instructeur/pakketten",

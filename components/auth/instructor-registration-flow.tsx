@@ -63,17 +63,13 @@ type VerificationProgressStep = {
   label: string;
 };
 
-const demoDefaults = {
+const exampleValues = {
   firstName: "Jan",
   lastName: "de Vries",
-  email: "voorbeeld@mail.nl",
   phone: "06 12345678",
   wrmNumber: "123456789",
-  wrmCategory: "A",
-  wrmValidUntil: "2026-12-31",
   school: "Autorijschool de Vries",
   functionRole: "Hoofdinstructeur",
-  specializations: ["Personenauto (B)", "Aanhangwagen (BE)", "Motor (A)"],
 };
 
 const initialForm: FormState = {
@@ -84,12 +80,12 @@ const initialForm: FormState = {
   confirmPassword: "",
   phone: "",
   bio: "",
-  wrmNumber: demoDefaults.wrmNumber,
-  wrmCategory: demoDefaults.wrmCategory,
-  wrmValidUntil: demoDefaults.wrmValidUntil,
-  school: demoDefaults.school,
-  functionRole: demoDefaults.functionRole,
-  specializations: demoDefaults.specializations,
+  wrmNumber: "",
+  wrmCategory: "",
+  wrmValidUntil: "",
+  school: "",
+  functionRole: "",
+  specializations: [],
   terms: false,
 };
 
@@ -129,20 +125,16 @@ function splitFullName(value?: string) {
   };
 }
 
-function buildInitialForm(
-  initialValues?: InitialInstructorRegistrationValues,
-  mode: FlowMode = "signup"
-) {
+function buildInitialForm(initialValues?: InitialInstructorRegistrationValues) {
   const name = splitFullName(initialValues?.fullName);
   const specializations = initialValues?.specializations?.filter(Boolean) ?? [];
-  const useDemoFallbacks = mode === "verification";
 
   return {
     ...initialForm,
-    firstName: name.firstName || (useDemoFallbacks ? demoDefaults.firstName : ""),
-    lastName: name.lastName || (useDemoFallbacks ? demoDefaults.lastName : ""),
-    email: initialValues?.email || (useDemoFallbacks ? demoDefaults.email : ""),
-    phone: initialValues?.phone || (useDemoFallbacks ? demoDefaults.phone : ""),
+    firstName: name.firstName,
+    lastName: name.lastName,
+    email: initialValues?.email || "",
+    phone: initialValues?.phone || "",
     bio: initialValues?.bio ?? "",
     specializations: specializations.length ? specializations : initialForm.specializations,
   };
@@ -305,11 +297,13 @@ function MiniSelect({
   value,
   options,
   onChange,
+  placeholder,
 }: {
   label: string;
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -320,6 +314,11 @@ function MiniSelect({
           onChange={(event) => onChange(event.target.value)}
           className="h-9 w-full appearance-none rounded-md border border-white/[0.13] bg-[#08111f]/70 px-3 pr-8 text-[12px] text-white outline-none transition focus:border-[#6f61f8]/70 focus:ring-3 focus:ring-[#6f61f8]/20"
         >
+          {placeholder ? (
+            <option value="" disabled className="bg-[#08111f] text-slate-500">
+              {placeholder}
+            </option>
+          ) : null}
           {options.map((option) => (
             <option key={option} value={option} className="bg-[#08111f] text-white">
               {option}
@@ -818,13 +817,13 @@ function ProfilePanel({
             <MiniField
               label="Naam"
               value={fullName(form)}
-              placeholder={demoDefaults.firstName + " " + demoDefaults.lastName}
+              placeholder={exampleValues.firstName + " " + exampleValues.lastName}
               onChange={updateFullName}
             />
             <MiniField
               label="Telefoonnummer"
               value={form.phone}
-              placeholder={demoDefaults.phone}
+              placeholder={exampleValues.phone}
               onChange={(value) => update("phone", value)}
             />
             <UploadDrop
@@ -883,13 +882,14 @@ function WrmPanel({
             <MiniField
               label="Pasnummer"
               value={form.wrmNumber}
-              placeholder={demoDefaults.wrmNumber}
+              placeholder={exampleValues.wrmNumber}
               onChange={(value) => update("wrmNumber", value)}
             />
             <MiniSelect
               label="Categorie"
               value={form.wrmCategory}
               options={wrmCategoryOptions}
+              placeholder="Kies categorie"
               onChange={(value) => update("wrmCategory", value)}
             />
             <MiniField
@@ -988,13 +988,13 @@ function ExtraInfoPanel({
           <MiniField
             label="Rijschool / Organisatie"
             value={form.school}
-            placeholder={demoDefaults.school}
+            placeholder={exampleValues.school}
             onChange={(value) => update("school", value)}
           />
           <MiniField
             label="Functie / Rol"
             value={form.functionRole}
-            placeholder={demoDefaults.functionRole}
+            placeholder={exampleValues.functionRole}
             onChange={(value) => update("functionRole", value)}
           />
           <div className="space-y-1.5">
@@ -1206,7 +1206,7 @@ export function InstructorRegistrationFlow({
 }) {
   const router = useRouter();
   const [step, setStep] = useState(mode === "verification" ? 2 : 1);
-  const [form, setForm] = useState<FormState>(() => buildInitialForm(initialValues, mode));
+  const [form, setForm] = useState<FormState>(() => buildInitialForm(initialValues));
   const [files, setFiles] = useState<Partial<Record<FileKey, File | null>>>({});
   const [isPending, startTransition] = useTransition();
   const boardRef = useRef<HTMLDivElement | null>(null);

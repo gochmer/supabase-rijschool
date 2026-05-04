@@ -13,6 +13,7 @@ import {
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
 import { logSupabaseDataError } from "@/lib/data/runtime-safety";
+import { getTrialLessonStateFromRows } from "@/lib/data/trial-lessons";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import {
@@ -43,6 +44,7 @@ type InstructorStudentRequestRow = {
   id: string;
   leerling_id: string | null;
   status: string | null;
+  aanvraag_type: string | null;
   pakket_naam_snapshot: string | null;
   created_at: string;
   voorkeursdatum: string | null;
@@ -421,6 +423,10 @@ export async function getInstructeurDashboardStudents({
       const completedLessons = relatedLessons.filter(
         (lesson) => lesson.status === "afgerond",
       ).length;
+      const trialLessonState = getTrialLessonStateFromRows({
+        actor: "instructor",
+        lessons: relatedLessons,
+      });
       const journeyFields = getJourneyFields({
         completedLessons,
         currentStatus: student.student_status,
@@ -457,6 +463,9 @@ export async function getInstructeurDashboardStudents({
         gekoppeldSinds: link?.created_at ?? null,
         planningVrijTeGeven: Boolean(student.pakket_id),
         isHandmatigGekoppeld: Boolean(link),
+        trialLessonAvailable: trialLessonState.available,
+        trialLessonStatus: trialLessonState.status,
+        trialLessonMessage: trialLessonState.message,
         ...journeyFields,
       } satisfies InstructorStudentProgressRow;
     })
@@ -746,7 +755,9 @@ export async function getInstructeurLessonPlannerStudents(): Promise<
       .limit(1000),
     supabase
       .from("lesaanvragen")
-      .select("id, leerling_id, status, pakket_naam_snapshot, created_at")
+      .select(
+        "id, leerling_id, status, aanvraag_type, pakket_naam_snapshot, created_at, voorkeursdatum, tijdvak",
+      )
       .eq("instructeur_id", instructeur.id)
       .not("leerling_id", "is", null)
       .order("created_at", { ascending: false })
@@ -911,6 +922,11 @@ export async function getInstructeurLessonPlannerStudents(): Promise<
       const completedLessons = relatedLessons.filter(
         (lesson) => lesson.status === "afgerond",
       ).length;
+      const trialLessonState = getTrialLessonStateFromRows({
+        actor: "instructor",
+        lessons: relatedLessons,
+        requests: relatedRequests,
+      });
       const journeyFields = getJourneyFields({
         completedLessons,
         currentStatus: student.student_status,
@@ -972,6 +988,9 @@ export async function getInstructeurLessonPlannerStudents(): Promise<
               ),
             )),
         isHandmatigGekoppeld: Boolean(manualLink),
+        trialLessonAvailable: trialLessonState.available,
+        trialLessonStatus: trialLessonState.status,
+        trialLessonMessage: trialLessonState.message,
         ...journeyFields,
       };
     })
@@ -1001,7 +1020,7 @@ export async function getInstructeurStudentsWorkspace() {
     supabase
       .from("lesaanvragen")
       .select(
-        "id, leerling_id, status, pakket_naam_snapshot, created_at, voorkeursdatum, tijdvak",
+        "id, leerling_id, status, aanvraag_type, pakket_naam_snapshot, created_at, voorkeursdatum, tijdvak",
       )
       .eq("instructeur_id", instructeur.id)
       .not("leerling_id", "is", null)
@@ -1216,6 +1235,7 @@ export async function getInstructeurStudentsWorkspace() {
     Array<{
       id: string;
       status: string | null;
+      aanvraag_type: string | null;
       pakket_naam_snapshot: string | null;
       created_at: string;
       voorkeursdatum: string | null;
@@ -1453,6 +1473,11 @@ export async function getInstructeurStudentsWorkspace() {
       const completedLessons = relatedLessons.filter(
         (lesson) => lesson.status === "afgerond",
       ).length;
+      const trialLessonState = getTrialLessonStateFromRows({
+        actor: "instructor",
+        lessons: relatedLessons,
+        requests: relatedRequests,
+      });
       const journeyFields = getJourneyFields({
         completedLessons,
         currentStatus: student.student_status,
@@ -1517,6 +1542,9 @@ export async function getInstructeurStudentsWorkspace() {
         accountStatus: authStateMap.get(student.profile_id)?.accountStatus,
         lastSignInAt:
           authStateMap.get(student.profile_id)?.lastSignInAt ?? null,
+        trialLessonAvailable: trialLessonState.available,
+        trialLessonStatus: trialLessonState.status,
+        trialLessonMessage: trialLessonState.message,
         ...journeyFields,
       };
     },

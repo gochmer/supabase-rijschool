@@ -18,8 +18,8 @@ import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import {
   getLearnerInstructorBookingLimitSnapshot,
   getLearnerInstructorSchedulingAccess,
-  hasLearnerUsedTrialLesson,
 } from "@/lib/data/student-scheduling";
+import { getLearnerTrialLessonState } from "@/lib/data/trial-lessons";
 import {
   ensureCurrentUserContext,
   getCurrentLeerlingRecord,
@@ -324,10 +324,6 @@ function getRequestedLessonDurationKind(params: {
   }
 
   return "rijles";
-}
-
-function getTrialLessonAlreadyUsedMessage() {
-  return "Je hebt al eerder een proefles gepland of gevolgd. Een proefles kun je maar eenmalig boeken.";
 }
 
 async function requestedWindowFitsCurrentAvailability(params: {
@@ -806,14 +802,19 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
   }
 
   const requestType = input.requestType === "proefles" ? "proefles" : "algemeen";
-  if (
-    requestType === "proefles" &&
-    (await hasLearnerUsedTrialLesson({ supabase, leerlingId: leerling.id }))
-  ) {
-    return {
-      success: false,
-      message: getTrialLessonAlreadyUsedMessage(),
-    };
+  if (requestType === "proefles") {
+    const trialState = await getLearnerTrialLessonState({
+      actor: "learner",
+      supabase,
+      leerlingId: leerling.id,
+    });
+
+    if (!trialState.available) {
+      return {
+        success: false,
+        message: trialState.message,
+      };
+    }
   }
   const packageResult = await resolveLessonPackageForRequest({
     supabase,
@@ -1062,15 +1063,20 @@ export async function createDirectLessonBookingAction(
     };
   }
 
-  if (
-    requestType === "proefles" &&
-    (await hasLearnerUsedTrialLesson({ supabase, leerlingId: leerling.id }))
-  ) {
-    return {
-      success: false,
-      message: getTrialLessonAlreadyUsedMessage(),
-      refreshAvailability: true,
-    };
+  if (requestType === "proefles") {
+    const trialState = await getLearnerTrialLessonState({
+      actor: "learner",
+      supabase,
+      leerlingId: leerling.id,
+    });
+
+    if (!trialState.available) {
+      return {
+        success: false,
+        message: trialState.message,
+        refreshAvailability: true,
+      };
+    }
   }
 
   const packageResult = await resolveLessonPackageForRequest({

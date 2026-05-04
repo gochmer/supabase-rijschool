@@ -35,12 +35,12 @@ import {
   type PlanningWeekAccent,
   type PlanningWeekItem,
 } from "@/components/calendar/planning-week-view";
-import { LessonAttendanceActions } from "@/components/dashboard/lesson-attendance-actions";
-import { LessonEditDialog } from "@/components/dashboard/lesson-edit-dialog";
-import { LessonFocusCard } from "@/components/dashboard/lesson-focus-card";
-import { LessonNoteEditor } from "@/components/dashboard/lesson-note-editor";
-import { LessonQuickActions } from "@/components/dashboard/lesson-quick-actions";
-import { RequestStatusActions } from "@/components/dashboard/request-status-actions";
+import { LessonAttendanceActions } from "@/components/lessons/lesson-attendance-actions";
+import { LessonEditDialog } from "@/components/lessons/lesson-edit-dialog";
+import { LessonFocusCard } from "@/components/lessons/lesson-focus-card";
+import { LessonNoteEditor } from "@/components/lessons/lesson-note-editor";
+import { LessonQuickActions } from "@/components/lessons/lesson-quick-actions";
+import { RequestStatusActions } from "@/components/requests/request-status-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

@@ -404,7 +404,7 @@ export function InstructorAuthShowcase() {
     try {
       const supabase = createClient();
       const callbackUrl = new URL("/auth/callback", window.location.origin);
-      callbackUrl.searchParams.set("next", "/instructeur/dashboard");
+      callbackUrl.searchParams.set("next", "/instructeur/regie");
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,

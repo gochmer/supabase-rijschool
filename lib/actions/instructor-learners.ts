@@ -11,6 +11,7 @@ import {
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
 import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
+import { getLearnerTrialLessonState } from "@/lib/data/trial-lessons";
 import {
   isManualLearnerIntakeKey,
   normalizeManualLearnerIntakeKeys,
@@ -939,6 +940,28 @@ export async function createInstructorLessonForLearnerAction(input: LocationSele
   }
 
   const isTrialLesson = title.toLowerCase().includes("proefles");
+
+  if (isTrialLesson && lessonPlans.length > 1) {
+    return {
+      success: false,
+      message: "Een proefles is een eenmalig startmoment. Plan maximaal één proefles tegelijk.",
+    };
+  }
+
+  if (isTrialLesson) {
+    const trialState = await getLearnerTrialLessonState({
+      actor: "instructor",
+      supabase,
+      leerlingId: input.leerlingId,
+    });
+
+    if (!trialState.available) {
+      return {
+        success: false,
+        message: trialState.message,
+      };
+    }
+  }
 
   if (!learnerResult.data.pakket_id && !isTrialLesson) {
     return {

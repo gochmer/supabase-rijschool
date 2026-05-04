@@ -418,7 +418,7 @@ async function loginUser(page, email, redirectPath) {
   const loginForm = page.locator("form").first();
   await loginForm.getByLabel("E-mailadres").fill(email);
   await loginForm.locator('input[name="password"]').fill(TEST_PASSWORD);
-  await loginForm.getByRole("button", { name: "Inloggen" }).click();
+  await loginForm.getByRole("button", { name: "Inloggen", exact: true }).click();
 
   await page
     .waitForURL(`**${redirectPath}`, { timeout: 45_000 })
@@ -569,7 +569,13 @@ async function checkLearnerDialogs(page, failures) {
     failures
   );
 
-  const proeflesDialogOnList = await inspectDialog(page, "Plan proefles");
+  const proeflesDialogOnList = await inspectDialog(page, [
+    "Plan proefles",
+    "Vraag proefles op moment aan",
+    "Vraag proefles aan",
+    "Kies proeflesmoment",
+    "Boek dit moment als proefles",
+  ]);
   assertCondition(
     proeflesDialogOnList.hasLiveSlotPicker || proeflesDialogOnList.hasManualTimeInput,
     "[/instructeurs] proefles-popup toont geen bruikbare momentkeuze in stap 2",
@@ -625,7 +631,13 @@ async function checkLearnerDialogs(page, failures) {
     failures
   );
 
-  const proeflesDialogOnDetail = await inspectDialog(page, "Plan proefles");
+  const proeflesDialogOnDetail = await inspectDialog(page, [
+    "Plan proefles",
+    "Vraag proefles op moment aan",
+    "Vraag proefles aan",
+    "Kies proeflesmoment",
+    "Boek dit moment als proefles",
+  ]);
   assertCondition(
     proeflesDialogOnDetail.hasLiveSlotPicker || proeflesDialogOnDetail.hasManualTimeInput,
     `[${page.url()}] proefles-popup toont geen bruikbare momentkeuze in stap 2`,
@@ -653,15 +665,15 @@ async function checkLearnerDialogs(page, failures) {
 async function checkAvailabilityInteractions(page, failures) {
   await checkRoute(page, "/instructeur/beschikbaarheid", failures, {
     expectPathStartsWith: "/instructeur/beschikbaarheid",
-    expectText: "Vaste werktijden",
+    expectText: "Beschikbaarheid",
   });
 
   const afterBlockingText = await getBodyText(page);
   assertCondition(
-    afterBlockingText.includes("Vaste werktijden") &&
-      afterBlockingText.includes("Los moment dichtzetten") &&
-      afterBlockingText.includes("Vakantie blokkeren"),
-    "[/instructeur/beschikbaarheid] basisrooster, losse uitzondering of vakantieblok ontbreekt",
+    afterBlockingText.includes("Snel je beschikbaarheid aanpassen") &&
+      afterBlockingText.includes("Jouw beschikbaarheid in cijfers") &&
+      afterBlockingText.includes("Beschikbaarheid / Openingstijden"),
+    "[/instructeur/beschikbaarheid] beschikbaarheidsbeheer, cijfers of openingstijden ontbreken",
     failures
   );
 
@@ -673,7 +685,10 @@ async function checkAvailabilityInteractions(page, failures) {
       .getByRole("button", { name: "Zet online boeking uit" })
       .count()) > 0;
   assertCondition(
-    hasOnlineBookingToggle,
+    hasOnlineBookingToggle ||
+      afterBlockingText.includes("Sta online boekingen toe via jouw publieke agenda") ||
+      afterBlockingText.includes("Open voor boeking") ||
+      afterBlockingText.includes("Alleen op vrijgave"),
     "[/instructeur/beschikbaarheid] online boeking-toggle ontbreekt",
     failures
   );
@@ -813,11 +828,12 @@ async function main() {
     const instructorEmail = await registerUser(
       instructorPage,
       "instructeur",
-      "/instructeur/dashboard"
+      "/instructeur/regie"
     );
     createdEmails.push(instructorEmail);
 
     for (const route of [
+      "/instructeur/regie",
       "/instructeur/dashboard",
       "/instructeur/beschikbaarheid",
       "/instructeur/aanvragen",

@@ -40,7 +40,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
-import { PaymentLinkCopyButton } from "@/components/dashboard/payment-link-copy-button";
+import { PaymentLinkCopyButton } from "@/components/income/payment-link-copy-button";
 import {
   getCurrentInstructorIncomeCockpit,
   getCurrentInstructorIncomeLedger,

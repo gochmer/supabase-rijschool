@@ -68,13 +68,13 @@ export default async function LeerlingBerichtenPage() {
               variant="outline"
               className="rounded-full border-white/10 bg-white/6 text-white shadow-[0_18px_38px_-28px_rgba(15,23,42,0.42)] backdrop-blur hover:bg-white/10"
             >
-              <Link href="/leerling/boekingen">Planning openen</Link>
+              <Link href="/leerling/notificaties">Notificaties</Link>
             </Button>
             <Button
               asChild
               className="rounded-full border border-white/12 bg-[linear-gradient(135deg,#f8fafc,#cbd5e1)] text-slate-950 shadow-[0_22px_46px_-26px_rgba(148,163,184,0.42)] hover:brightness-[1.03]"
             >
-              <Link href="/leerling/instructeurs">Instructeurs bekijken</Link>
+              <Link href="/leerling/support">Support</Link>
             </Button>
           </>
         }

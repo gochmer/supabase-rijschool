@@ -6,9 +6,19 @@ import { chromium } from "playwright";
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD ?? "Test123!Aa";
 const TEST_PHONE = "06 98 76 54 32";
+
+function readOptionalLocalEnv(name) {
+  const envText = readFileSync(".env.local", "utf8");
+  const match = envText.match(new RegExp(`^${name}=(.*)$`, "m"));
+
+  return match?.[1]?.trim() || null;
+}
+
 const MAILBOX_BASE = process.env.PLAYWRIGHT_NOTIFICATION_TEST_EMAIL ?? "notification-test@example.com";
 const NOTIFICATION_TARGET_EMAIL =
-  process.env.NOTIFICATION_TEST_TO_EMAIL ?? MAILBOX_BASE;
+  process.env.NOTIFICATION_TEST_TO_EMAIL ??
+  readOptionalLocalEnv("NOTIFICATION_TEST_TO_EMAIL") ??
+  MAILBOX_BASE;
 
 function readLocalEnv(name) {
   const envText = readFileSync(".env.local", "utf8");
@@ -465,7 +475,7 @@ async function loginUser(page, email, redirectPath) {
   await gotoStable(page, `/inloggen?redirect=${encodeURIComponent(redirectPath)}`);
   await page.getByLabel("E-mailadres").fill(email);
   await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Inloggen" }).click();
+  await page.getByRole("button", { name: "Inloggen", exact: true }).click();
   await page.waitForURL(`**${redirectPath}`, { timeout: 30_000 });
   await page.waitForTimeout(1_500);
 }
@@ -546,7 +556,19 @@ async function selectOption(page, combobox, optionName) {
 }
 
 async function updateLessonStatus(page, nextStatus, options = {}) {
-  await clickButtonByName(page, "Les bewerken");
+  const viewLessonButton = page
+    .getByRole("button", { name: /Bekijk les van/i })
+    .first();
+
+  if ((await viewLessonButton.count()) === 0) {
+    await page.getByRole("button", { name: "Agenda", exact: true }).last().click();
+  }
+
+  await viewLessonButton.waitFor({ state: "visible", timeout: 15_000 });
+  await viewLessonButton.click();
+  const detailsDialog = page.locator('[role="dialog"]').last();
+  await detailsDialog.waitFor({ state: "visible", timeout: 8_000 });
+  await detailsDialog.getByRole("button", { name: "Les bewerken" }).click();
   const dialog = page.locator('[role="dialog"]').last();
   await dialog.waitFor({ state: "visible", timeout: 8_000 });
   await dialog.getByRole("heading", { name: "Les bewerken" }).waitFor({

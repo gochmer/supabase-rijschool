@@ -20,6 +20,39 @@ type ModuleGroup = {
 
 const instructorModuleGroups: ModuleGroup[] = [
   {
+    id: "operations",
+    label: "Regie",
+    routes: [
+      "/instructeur/regie",
+      "/instructeur/onboarding",
+      "/instructeur/documenten",
+      "/instructeur/voertuigen",
+      "/instructeur/instellingen",
+    ],
+    tabs: [
+      {
+        href: "/instructeur/regie",
+        label: "Vandaag",
+        description: "Wat vraagt nu aandacht?",
+      },
+      {
+        href: "/instructeur/onboarding",
+        label: "Onboarding",
+        description: "Welke basis mist nog?",
+      },
+      {
+        href: "/instructeur/documenten",
+        label: "Documenten",
+        description: "Welke bewijzen zijn klaar?",
+      },
+      {
+        href: "/instructeur/voertuigen",
+        label: "Voertuigen",
+        description: "Welke auto is inzetbaar?",
+      },
+    ],
+  },
+  {
     id: "profile",
     label: "Profiel",
     routes: ["/instructeur/profiel", "/instructeur/reviews"],
@@ -115,7 +148,7 @@ export function InstructorModuleTabs() {
           className={cn(
             "min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             hasTabDescriptions
-              ? "grid gap-2 sm:grid-cols-3 xl:w-[42rem]"
+              ? "grid gap-2 sm:grid-cols-2 xl:w-[50rem] xl:grid-cols-4"
               : "flex gap-2",
           )}
         >

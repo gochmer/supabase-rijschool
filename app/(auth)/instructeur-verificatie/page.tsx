@@ -17,7 +17,7 @@ export default async function InstructeurVerificatiePage() {
   const instructor = await getCurrentInstructeurRecord();
 
   if (instructor?.profiel_status === "goedgekeurd") {
-    redirect("/instructeur/dashboard");
+    redirect("/instructeur/regie");
   }
 
   return (

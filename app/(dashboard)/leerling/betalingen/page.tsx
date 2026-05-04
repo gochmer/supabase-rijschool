@@ -7,10 +7,13 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { startStudentCheckoutFormAction } from "@/lib/actions/learner-experience";
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
+import { ExperienceCallout } from "@/components/dashboard/experience-callout";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentStudentPackageOverview } from "@/lib/data/packages";
 
@@ -32,7 +35,12 @@ function getPackageDescription(pkg: unknown) {
   return "Geschikt om aan je leerlingprofiel en betaaloverzicht te koppelen.";
 }
 
-export default async function LeerlingBetalingenPage() {
+export default async function LeerlingBetalingenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string; factuur?: string }>;
+}) {
+  const params = await searchParams;
   const overview = await getCurrentStudentPackageOverview();
   const paidCount = overview.payments.filter(
     (payment) => payment.status === "betaald"
@@ -79,7 +87,7 @@ export default async function LeerlingBetalingenPage() {
         tone="urban"
         eyebrow="Betalingen"
         title="Betalingen en pakketten"
-        description="Je pakket, betaalstatus en beschikbare trajecten staan nu in een compactere omgeving met duidelijke tabs."
+        description="Bekijk je pakket, open betalingen en beschikbare trajecten zonder te zoeken."
         actions={
           <>
             <Button
@@ -100,6 +108,20 @@ export default async function LeerlingBetalingenPage() {
       />
 
       <Tabs defaultValue="pakket" className="space-y-4">
+        {params.checkout ? (
+          <div className="rounded-xl border border-sky-300/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-100">
+            {params.checkout === "success"
+              ? "Betaling afgerond. De bevestiging kan heel even duren; daarna werken we je status automatisch bij."
+              : "Betaling geannuleerd. Er is niets afgeschreven via deze poging en je kunt later opnieuw betalen."}
+          </div>
+        ) : null}
+
+        <ExperienceCallout
+          icon={CreditCard}
+          title="Rustig betalen"
+          description="Bij betalen sturen we je door naar de checkout-provider. Kom je terug op deze pagina, dan blijft je betaalstatus hier zichtbaar."
+        />
+
         <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="pakket" className={`${tabTriggerClassName} data-active:bg-emerald-200`}>
             Pakket
@@ -165,7 +187,7 @@ export default async function LeerlingBetalingenPage() {
                   Beschikbare trajecten
                 </h2>
                 <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-300">
-                  Open een pakket alleen als je details wilt lezen; de prijs en omvang staan direct zichtbaar.
+                  Vergelijk rustig. Je kiest pas iets zodra er echt een passend pakket aan je traject wordt gekoppeld.
                 </p>
               </div>
               <Badge variant="info">
@@ -225,13 +247,13 @@ export default async function LeerlingBetalingenPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.22em] text-slate-300 uppercase">
-                  Payment history
+                  Betaaloverzicht
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-white">
                   Betalingsgeschiedenis
                 </h2>
                 <p className="mt-1 max-w-2xl text-sm leading-7 text-slate-300">
-                  Openstaande en afgeronde betalingen blijven compact onder elkaar.
+                  Openstaande en afgeronde betalingen staan bij elkaar, met de belangrijkste actie rechts.
                 </p>
               </div>
               <Badge variant={openCount > 0 ? "warning" : "success"}>
@@ -274,6 +296,21 @@ export default async function LeerlingBetalingenPage() {
                       >
                         {payment.status}
                       </Badge>
+                      {payment.status !== "betaald" ? (
+                        <form action={startStudentCheckoutFormAction}>
+                          <input
+                            name="payment_id"
+                            type="hidden"
+                            value={payment.id}
+                          />
+                          <PendingSubmitButton
+                            pendingLabel="Doorsturen..."
+                            size="sm"
+                          >
+                            Betaal nu
+                          </PendingSubmitButton>
+                        </form>
+                      ) : null}
                     </div>
                   </div>
                 ))
@@ -283,7 +320,8 @@ export default async function LeerlingBetalingenPage() {
                     Nog geen betalingen
                   </h3>
                   <p className="mt-2 text-sm leading-7 text-slate-300">
-                    Hier verschijnen automatisch nieuwe pakketbetalingen en losse lesbetalingen.
+                    Zodra er een pakketbetaling of losse lesbetaling klaarstaat,
+                    verschijnt die hier automatisch.
                   </p>
                 </div>
               )}

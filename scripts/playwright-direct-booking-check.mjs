@@ -187,37 +187,45 @@ async function createLearnerRecord(profileId) {
 }
 
 async function createInstructorRecord(profileId) {
+  const slug = createSlug("direct-booking");
+  const payload = {
+    profile_id: profileId,
+    slug,
+    bio: "Test instructeur voor directe boekingscheck",
+    werkgebied: ["Amsterdam"],
+    profiel_status: "goedgekeurd",
+    prijs_per_les: 67,
+    transmissie: "beide",
+    specialisaties: ["Examentraining", "Stadsverkeer"],
+    online_boeken_actief: true,
+    standaard_pakketles_duur_minuten: 60,
+  };
   const response = await adminFetch("/rest/v1/instructeurs", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Prefer: "return=representation",
     },
-    body: JSON.stringify({
-      profile_id: profileId,
-      slug: createSlug("direct-booking"),
-      bio: "Test instructeur voor directe boekingscheck",
-      werkgebied: ["Amsterdam"],
-      profiel_status: "goedgekeurd",
-      prijs_per_les: 67,
-      transmissie: "beide",
-      specialisaties: ["Examentraining", "Stadsverkeer"],
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (response.status === 409) {
     const existingResponse = await adminFetch(
-      `/rest/v1/instructeurs?profile_id=eq.${profileId}&select=id,profile_id,slug`,
+      `/rest/v1/instructeurs?profile_id=eq.${profileId}`,
       {
+        method: "PATCH",
         headers: {
+          "Content-Type": "application/json",
           Prefer: "return=representation",
         },
+        body: JSON.stringify(payload),
       }
     );
 
     if (!existingResponse.ok) {
+      const errorText = await existingResponse.text();
       throw new Error(
-        `Kon bestaand instructeurrecord niet ophalen (${existingResponse.status})`
+        `Kon bestaand instructeurrecord niet bijwerken (${existingResponse.status}): ${errorText}`
       );
     }
 
@@ -232,6 +240,55 @@ async function createInstructorRecord(profileId) {
 
   const rows = await response.json();
   return rows[0];
+}
+
+async function createPackage({ instructeurId }) {
+  const response = await adminFetch("/rest/v1/pakketten", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({
+      naam: "Direct boeken testpakket",
+      prijs: 1200,
+      beschrijving: "Testpakket voor directe boekingscheck",
+      aantal_lessen: 20,
+      les_type: "auto",
+      actief: true,
+      instructeur_id: instructeurId,
+      badge: "Test",
+      sort_order: 1,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Kon pakket niet aanmaken (${response.status}): ${errorText}`);
+  }
+
+  const rows = await response.json();
+  return rows[0];
+}
+
+async function assignPackageToLearner({ leerlingId, pakketId }) {
+  const response = await adminFetch(`/rest/v1/leerlingen?id=eq.${leerlingId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({
+      pakket_id: pakketId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Kon pakket niet koppelen aan leerling (${response.status}): ${errorText}`
+    );
+  }
 }
 
 async function createLesson({
@@ -377,7 +434,7 @@ async function loginUser(page, email, redirectPath) {
   await gotoStable(page, `/inloggen?redirect=${encodeURIComponent(redirectPath)}`);
   await page.getByLabel("E-mailadres").fill(email);
   await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Inloggen" }).click();
+  await page.getByRole("button", { name: "Inloggen", exact: true }).click();
   await page.waitForURL(`**${redirectPath}`, { timeout: 30_000 });
   await page.waitForTimeout(1500);
 }
@@ -394,7 +451,7 @@ async function deleteAuthUsers(userIds) {
   }
 }
 
-async function cleanupRows({ learnerId, instructorId }) {
+async function cleanupRows({ learnerId, instructorId, packageIds = [] }) {
   if (learnerId && instructorId) {
     await adminFetch(
       `/rest/v1/lessen?leerling_id=eq.${learnerId}&instructeur_id=eq.${instructorId}`,
@@ -426,6 +483,12 @@ async function cleanupRows({ learnerId, instructorId }) {
   }
 
   if (instructorId) {
+    if (packageIds.length) {
+      await adminFetch(`/rest/v1/pakketten?id=in.(${packageIds.join(",")})`, {
+        method: "DELETE",
+      });
+    }
+
     await adminFetch(`/rest/v1/instructeurs?id=eq.${instructorId}`, {
       method: "DELETE",
     });
@@ -440,6 +503,7 @@ async function cleanupRows({ learnerId, instructorId }) {
 
 async function run() {
   const createdUserIds = [];
+  const packageIds = [];
   let learner = null;
   let instructor = null;
   const browser = await chromium.launch({ headless: true });
@@ -470,6 +534,12 @@ async function run() {
       displayName: "Codex Direct Booking Instructor",
     });
     instructor = await createInstructorRecord(instructorIdentity.userId);
+    const packageRecord = await createPackage({ instructeurId: instructor.id });
+    packageIds.push(packageRecord.id);
+    await assignPackageToLearner({
+      leerlingId: learner.id,
+      pakketId: packageRecord.id,
+    });
 
     await createLesson({
       leerlingId: learner.id,
@@ -498,9 +568,20 @@ async function run() {
     const expectedDurationMinutes = 60;
     await loginUser(page, learnerIdentity.email, directBookingPath);
 
-    await page.getByRole("heading", { name: /Plan zelf een moment bij/i }).waitFor({
-      timeout: 15_000,
-    });
+    try {
+      await page.getByRole("heading", { name: /Plan zelf een moment bij/i }).waitFor({
+        timeout: 15_000,
+      });
+    } catch (error) {
+      const pageText = await page.locator("body").innerText().catch(() => "");
+      throw new Error(
+        `Directe planner is niet zichtbaar op ${page.url()}.\n\n${pageText.slice(
+          0,
+          1800
+        )}`,
+        { cause: error }
+      );
+    }
 
     const plannerButton = page.getByRole("button", { name: "Boek dit moment" }).first();
     await plannerButton.click();
@@ -524,19 +605,31 @@ async function run() {
     await dialog.getByLabel("Opmerking").fill(
       "Playwright directe boekingscheck voor echt boekbaar moment."
     );
-    await dialog.locator("form").evaluate((form) => form.requestSubmit());
+    await dialog.getByRole("button", { name: "Direct inplannen" }).click();
     await page.waitForTimeout(3000);
 
-    const matchingRequests = await waitForRows(
-      `/rest/v1/lesaanvragen?leerling_id=eq.${learner.id}&instructeur_id=eq.${instructor.id}&select=id,status,voorkeursdatum,tijdvak,bericht,created_at&order=created_at.desc`,
-      (rows) =>
-        rows.some(
-          (row) =>
-            row.status === "ingepland" &&
-            row.voorkeursdatum === "2026-05-19" &&
-            row.tijdvak === expectedBookedTimeSlot
-        )
-    );
+    let matchingRequests;
+    try {
+      matchingRequests = await waitForRows(
+        `/rest/v1/lesaanvragen?leerling_id=eq.${learner.id}&instructeur_id=eq.${instructor.id}&select=id,status,voorkeursdatum,tijdvak,bericht,created_at&order=created_at.desc`,
+        (rows) =>
+          rows.some(
+            (row) =>
+              row.status === "ingepland" &&
+              row.voorkeursdatum === "2026-05-19" &&
+              row.tijdvak === expectedBookedTimeSlot
+          )
+      );
+    } catch (error) {
+      const pageText = await page.locator("body").innerText().catch(() => "");
+      throw new Error(
+        `Directe boeking heeft geen lesaanvraag opgeslagen.\n\n${pageText.slice(
+          0,
+          1800
+        )}`,
+        { cause: error }
+      );
+    }
 
     const directRequest = matchingRequests.find(
       (row) =>
@@ -588,6 +681,7 @@ async function run() {
     await cleanupRows({
       learnerId: learner?.id ?? null,
       instructorId: instructor?.id ?? null,
+      packageIds,
     }).catch(() => {});
     await deleteAuthUsers(createdUserIds).catch(() => {});
   }

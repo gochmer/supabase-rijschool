@@ -3,6 +3,7 @@ import "server-only";
 import { parseRequestWindow } from "@/lib/booking-availability";
 import { getPublicInstructorAvailabilityMap } from "@/lib/data/instructors";
 import { getCurrentLeerlingRecord } from "@/lib/data/profiles";
+import { getLearnerTrialLessonState } from "@/lib/data/trial-lessons";
 import { extractLessonRequestReference } from "@/lib/lesson-request-flow";
 import {
   addBookedMinutesForWeek,
@@ -175,35 +176,12 @@ export async function hasLearnerUsedTrialLesson(params: {
   supabase: Awaited<ReturnType<typeof createServerClient>>;
   leerlingId: string;
 }) {
-  const lessonRequestTable = params.supabase.from("lesaanvragen" as never) as unknown as {
-    select: (columns: string) => {
-      eq: (column: string, value: string) => {
-        eq: (column: string, value: string) => {
-          limit: (count: number) => Promise<{
-            data: Array<{ id: string }> | null;
-          }>;
-        };
-      };
-    };
-  };
+  const trialState = await getLearnerTrialLessonState({
+    supabase: params.supabase,
+    leerlingId: params.leerlingId,
+  });
 
-  const [requestResult, lessonResult] = await Promise.all([
-    lessonRequestTable
-      .select("id")
-      .eq("leerling_id", params.leerlingId)
-      .eq("aanvraag_type", "proefles")
-      .limit(1),
-    (params.supabase
-      .from("lessen")
-      .select("id")
-      .eq("leerling_id", params.leerlingId)
-      .ilike("titel", "%proefles%")
-      .limit(1)) as unknown as Promise<{
-      data: Array<{ id: string }> | null;
-    }>,
-  ]);
-
-  return Boolean(requestResult.data?.length || lessonResult.data?.length);
+  return !trialState.available;
 }
 
 async function getLearnerBookingLimitSnapshotsForInstructorIds(params: {

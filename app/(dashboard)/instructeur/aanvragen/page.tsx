@@ -1,5 +1,5 @@
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
-import { InstructorRequestsBoard } from "@/components/dashboard/instructor-requests-board";
+import { InstructorRequestsBoard } from "@/components/requests/instructor-requests-board";
 import { getInstructeurLessonRequests } from "@/lib/data/lesson-requests";
 import { getLocationOptions } from "@/lib/data/locations";
 import {

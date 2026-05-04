@@ -9,7 +9,6 @@ import {
   Gauge,
   MessageSquare,
   Search,
-  Star,
   Target,
   UserRound,
 } from "lucide-react";
@@ -23,15 +22,15 @@ import {
   DashboardFocusPanel,
   type DashboardFocusItem,
 } from "@/components/dashboard/dashboard-focus-panel";
-import { LessonCheckinPanel } from "@/components/dashboard/lesson-checkin-board";
-import { LearnerRequestOverview } from "@/components/dashboard/learner-request-overview";
+import { LessonCheckinPanel } from "@/components/lessons/lesson-checkin-board";
+import { LearnerRequestOverview } from "@/components/learners/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
-import { SharedLessonCompass } from "@/components/dashboard/shared-lesson-compass";
+import { SharedLessonCompass } from "@/components/lessons/shared-lesson-compass";
 import {
   formatTrajectoryDate,
   TrajectoryRelationshipCard,
-} from "@/components/dashboard/trajectory-relationship-card";
+} from "@/components/learners/trajectory-relationship-card";
 import {
   OnboardingPanel,
   type OnboardingStep,
@@ -177,6 +176,18 @@ export default async function LeerlingDashboardPage() {
   const acceptedRequests = requests.filter((item) =>
     ["geaccepteerd", "ingepland"].includes(item.status)
   );
+  const activeTrialStatuses = ["aangevraagd", "geaccepteerd", "ingepland", "afgerond"];
+  const trialLessonUnavailable =
+    requests.some(
+      (request) =>
+        request.aanvraag_type === "proefles" &&
+        activeTrialStatuses.includes(request.status),
+    ) ||
+    lessons.some(
+      (lesson) =>
+        lesson.titel.toLowerCase().includes("proefles") &&
+        activeTrialStatuses.includes(lesson.status),
+    );
   const unreadNotifications = notifications.filter((item) => item.ongelezen);
   const profileComplete = Boolean(
     profile?.volledige_naam?.trim() && profile.telefoon?.trim()
@@ -290,7 +301,9 @@ export default async function LeerlingDashboardPage() {
       value: `${pendingRequests.length}`,
       description: latestPendingRequest
         ? `${latestPendingRequest.instructeur_naam} - ${latestPendingRequest.voorkeursdatum}, ${latestPendingRequest.tijdvak}`
-        : "Je kunt rustig een nieuwe proefles of pakket aanvragen wanneer je klaar bent.",
+        : trialLessonUnavailable
+          ? "Je proefles is al gebruikt of staat gepland. De volgende stap loopt via pakket of vervolglessen."
+          : "Je kunt rustig een nieuwe proefles of pakket aanvragen wanneer je klaar bent.",
       href: "/leerling/boekingen",
       ctaLabel: "Open aanvragen",
       icon: ClipboardList,
@@ -327,18 +340,20 @@ export default async function LeerlingDashboardPage() {
       label: "Stap 2",
       title: "Instructeur kiezen",
       description:
-        "Vergelijk instructeurs op regio, prijs, transmissie, reviews en lesstijl.",
+        "Kies iemand die past bij je regio, lesstijl, transmissie en tempo.",
       href: "/instructeurs",
       ctaLabel: hasChosenInstructor ? "Vergelijk verder" : "Kies instructeur",
       complete: hasChosenInstructor,
       icon: Search,
-      meta: hasChosenInstructor ? "Je hebt al een trajectsignaal" : "Nog geen keuze gemaakt",
+      meta: hasChosenInstructor ? "Eerste koppeling bekend" : "Nog geen keuze gemaakt",
     },
     {
       label: "Stap 3",
-      title: "Proefles of pakket aanvragen",
+      title: trialLessonUnavailable ? "Pakket of vervolgles aanvragen" : "Proefles of pakket aanvragen",
       description:
-        "Start je traject met een concrete aanvraag zodat de instructeur kan reageren of plannen.",
+        trialLessonUnavailable
+          ? "Je proefles is al gebruikt of staat gepland. De volgende stap is een pakket of vervolgles."
+          : "Start met een concrete aanvraag. Daarna kan de instructeur reageren of meteen plannen.",
       href: "/leerling/boekingen",
       ctaLabel: hasStartedRequest ? "Aanvragen bekijken" : "Start aanvraag",
       complete: hasStartedRequest,
@@ -400,14 +415,6 @@ export default async function LeerlingDashboardPage() {
       tone: "slate",
       meta: "Financieel",
     },
-    {
-      title: "Reviews",
-      description: "Ervaringen bekijken of feedback plaatsen.",
-      href: "/leerling/reviews",
-      icon: Star,
-      tone: "amber",
-      meta: "Vertrouwen",
-    },
   ];
   const cockpitCards: LearnerCockpitCard[] = [
     {
@@ -415,8 +422,8 @@ export default async function LeerlingDashboardPage() {
       description:
         progressSummary.beoordeeldCount > 0
           ? `${progressSummary.zelfstandigCount} onderdelen zelfstandig, ${progressSummary.aandachtCount} vragen aandacht.`
-          : "Je voortgang wordt gevuld zodra je instructeur onderdelen beoordeelt.",
-      href: "/leerling/profiel#voortgang",
+          : "Nog geen beoordeling nodig om te starten. Na je lessen vult je instructeur dit aan.",
+      href: "/leerling/voortgang",
       icon: Gauge,
       label: "Voortgang",
       meta: `${progressSummary.beoordeeldCount} beoordeeld`,
@@ -427,7 +434,7 @@ export default async function LeerlingDashboardPage() {
       accentClassName: "from-emerald-400/22 via-teal-300/12 to-white/5",
       description: nextLesson
         ? `${nextLesson.tijd} met ${nextLesson.instructeur_naam}. Locatie: ${nextLesson.locatie}.`
-        : "Nog geen geplande les. Zodra er een les staat, komt hij hier bovenaan.",
+        : "Nog geen geplande les. Als er een moment staat, zie je hier meteen tijd en locatie.",
       href: "/leerling/boekingen",
       icon: CalendarClock,
       label: "Volgende les",
@@ -439,8 +446,8 @@ export default async function LeerlingDashboardPage() {
       accentClassName: "from-violet-400/22 via-fuchsia-300/12 to-white/5",
       description: focusStatusMeta
         ? `${primaryFocusSkill?.sectionLabel} staat nu op ${focusStatusMeta.label.toLowerCase()}. Pak dit bewust mee in je volgende les.`
-        : "Er is nog geen zwakke skill gekozen. De kaart vult automatisch na beoordelingen.",
-      href: "/leerling/profiel#voortgang",
+        : "Zodra er feedback is, kiest het systeem hier een aandachtige focus voor je volgende les.",
+      href: "/leerling/voortgang",
       icon: Brain,
       label: "Focus skill",
       meta: focusStatusMeta?.label ?? "Nog open",
@@ -450,7 +457,7 @@ export default async function LeerlingDashboardPage() {
     {
       accentClassName: "from-amber-400/24 via-orange-300/12 to-white/5",
       description: attentionPoint,
-      href: "/leerling/profiel#voortgang",
+      href: "/leerling/voortgang",
       icon: CircleAlert,
       label: "Aandachtspunt",
       meta: latestLessonNote ? "Feedback" : "Nog leeg",
@@ -467,8 +474,8 @@ export default async function LeerlingDashboardPage() {
     <>
       <PageHeader
         tone="urban"
-        title="Leerling dashboard"
-        description="Volg je aanvragen, geplande lessen, voortgang en meldingen vanuit een rustig overzicht."
+        title="Mijn rijlesoverzicht"
+        description="Alles wat je vandaag nodig hebt: je volgende stap, planning, voortgang en open meldingen."
         actions={
           <>
             <RealtimeDashboardSync profileLabel="leerling-dashboard" />
@@ -492,8 +499,8 @@ export default async function LeerlingDashboardPage() {
               Waar sta je nu en wat is je volgende stap?
             </h2>
             <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-300">
-              Je dashboard vertaalt lesdata en feedback naar directe actie:
-              voortgang, planning, focus en aandachtspunt.
+              Je dashboard laat vooral zien wat nu belangrijk is, zodat je niet
+              hoeft te zoeken naar de volgende stap.
             </p>
           </div>
           <Button
@@ -501,7 +508,7 @@ export default async function LeerlingDashboardPage() {
             variant="outline"
             className="h-10 rounded-full border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 lg:shrink-0"
           >
-            <Link href="/leerling/profiel#voortgang">
+            <Link href="/leerling/voortgang">
               Bekijk voortgang
               <Target className="size-4" />
             </Link>
@@ -517,7 +524,7 @@ export default async function LeerlingDashboardPage() {
       <DashboardActionHub
         compact
         title="Waar wil je meteen naartoe?"
-        description="Je belangrijkste leerlingzaken staan als simpele tegels bovenaan, zodat je niet door het dashboard hoeft te zoeken."
+        description="De meest gebruikte acties staan bovenaan. Minder zoeken, sneller verder."
         primaryHref={nextLesson ? "/leerling/boekingen" : "/instructeurs"}
         primaryLabel={nextLesson ? "Open volgende les" : "Zoek instructeur"}
         items={learnerActionItems}
@@ -557,15 +564,15 @@ export default async function LeerlingDashboardPage() {
         agreements={[
           "Voorbereid naar de les",
           "Wijzigingen via boekingen",
-          "Privacy blijft opt-in",
+          "Alleen delen wat nodig is",
         ]}
       />
 
       <DashboardFocusPanel
         compact
-        eyebrow="Next Action Engine"
-        title="Je rijlestraject in een oogopslag"
-        description={`Regel: ${nextAction.ruleLabel}. ${nextAction.reason}`}
+        eyebrow="Volgende stap"
+        title="Wat is nu logisch om te doen?"
+        description={`${nextAction.reason} Daarom tonen we deze actie bovenaan.`}
         primary={learnerNextStep}
         items={learnerFocusItems}
       />
@@ -591,7 +598,7 @@ export default async function LeerlingDashboardPage() {
         compact
         eyebrow="Nieuwe leerling"
         title="Van registratie naar je eerste rijles"
-        description="Deze checklist houdt de start simpel: eerst je profiel op orde, dan de juiste instructeur kiezen en je eerste aanvraag afronden."
+        description="Een rustige start in vier stappen: profiel, instructeur, aanvraag en eerste les."
         steps={learnerOnboardingSteps}
         hideWhenComplete
       />
@@ -616,7 +623,7 @@ export default async function LeerlingDashboardPage() {
           <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
             <DataTableCard
               title="Komende lessen"
-              description="Je eerstvolgende lessen en geplande afspraken."
+              description="Alleen je eerstvolgende momenten, zodat de planning overzichtelijk blijft."
               headers={["Les", "Datum", "Instructeur", "Locatie", "Status"]}
               rows={upcomingLessons.map((lesson) => [
                 lesson.titel,
@@ -631,7 +638,7 @@ export default async function LeerlingDashboardPage() {
             />
             <LearnerRequestOverview
               title="Je lesaanvragen"
-              description="Compact overzicht van je aanvragen. Open alleen details wanneer je statusflow of acties nodig hebt."
+              description="Zie direct welke aanvragen nog wachten, lopen of al klaar zijn."
               requests={requests}
               emptyTitle="Nog geen aanvragen"
               emptyDescription="Start met vergelijken en vraag direct een proefles of pakket aan bij een instructeur."

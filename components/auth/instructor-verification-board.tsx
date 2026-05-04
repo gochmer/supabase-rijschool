@@ -85,13 +85,11 @@ function buildInitialForm(
     email: initialValues?.email ?? "",
     phone: initialValues?.phone ?? "",
     wrmNumber: "",
-    wrmCategory: "B",
+    wrmCategory: "",
     wrmValidUntil: "",
     school: "",
     functionRole: "",
-    specializations: specializations.length
-      ? specializations
-      : ["Personenauto (B)"],
+    specializations,
     extraInfo: initialValues?.bio ?? "",
   };
 }
@@ -208,12 +206,14 @@ function SelectField({
   value,
   options,
   onChange,
+  placeholder,
 }: {
   id: string;
   label: string;
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -227,6 +227,11 @@ function SelectField({
           onChange={(event) => onChange(event.target.value)}
           className="h-11 w-full appearance-none rounded-md border border-slate-700/80 bg-slate-900/70 px-4 pr-10 text-sm font-medium text-white outline-none transition focus:border-violet-400/60 focus:ring-3 focus:ring-violet-400/20"
         >
+          {placeholder ? (
+            <option value="" disabled className="bg-slate-950 text-slate-500">
+              {placeholder}
+            </option>
+          ) : null}
           {options.map((option) => (
             <option key={option} value={option} className="bg-slate-950 text-white">
               {option}
@@ -616,6 +621,7 @@ export function InstructorVerificationBoard({
                   label="Categorie"
                   value={form.wrmCategory}
                   options={wrmCategoryOptions}
+                  placeholder="Kies categorie"
                   onChange={(value) => update("wrmCategory", value)}
                 />
                 <Field

@@ -9,6 +9,7 @@ import {
   ensureCurrentUserContext,
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
+import { getLearnerTrialLessonState } from "@/lib/data/trial-lessons";
 import { getLessonDurationForKind } from "@/lib/lesson-durations";
 import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import {
@@ -147,6 +148,22 @@ async function ensureLessonForAcceptedRequest(
 
   if (existingLesson) {
     return { success: true };
+  }
+
+  if (request.aanvraag_type === "proefles") {
+    const trialState = await getLearnerTrialLessonState({
+      actor: "instructor",
+      excludeRequestId: request.id,
+      supabase,
+      leerlingId: request.leerling_id,
+    });
+
+    if (!trialState.available) {
+      return {
+        success: false,
+        message: trialState.message,
+      };
+    }
   }
 
   const schedulingConflict = await findSchedulingConflict({
