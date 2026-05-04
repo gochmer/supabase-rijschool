@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarDays,
+  Gauge,
   Heart,
   Package,
   Phone,
@@ -26,6 +27,8 @@ import {
   getCurrentProfile,
 } from "@/lib/data/profiles";
 import { getCurrentLeerlingProgressWorkspace } from "@/lib/data/student-progress";
+import { resolveDriverJourneyState } from "@/lib/driver-journey";
+import { getStudentExamReadiness } from "@/lib/student-progress";
 
 const shellCardClassName =
   "rounded-xl border border-white/10 bg-white/[0.055] shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]";
@@ -41,11 +44,13 @@ export default async function LeerlingProfielPage() {
       getCurrentLeerlingProgressWorkspace(),
     ]);
 
+  const renderDate = new Date();
+  const renderTime = renderDate.getTime();
   const today = new Intl.DateTimeFormat("nl-NL", {
     weekday: "long",
     day: "numeric",
     month: "long",
-  }).format(new Date());
+  }).format(renderDate);
 
   const nextLesson = lessons.find((lesson) =>
     ["ingepland", "geaccepteerd"].includes(lesson.status)
@@ -61,6 +66,38 @@ export default async function LeerlingProfielPage() {
     acceptedRequestItems[0] ?? pendingRequestItems[0] ?? requests[0] ?? null;
   const progressValue = leerling?.voortgang_percentage ?? 0;
   const favoriteCount = leerling?.favoriete_instructeurs?.length ?? 0;
+  const hasProfileName = Boolean(profile?.volledige_naam.trim());
+  const hasProfilePhone = Boolean(profile?.telefoon.trim());
+  const examReadiness = getStudentExamReadiness(
+    progressWorkspace.assessments,
+    progressWorkspace.notes,
+  );
+  const hasExamLessonPlanned = lessons.some((lesson) => {
+    const title = (lesson.titel ?? "").toLowerCase();
+    const startDate = lesson.start_at
+      ? new Date(lesson.start_at)
+      : new Date(`${lesson.datum}T12:00:00`);
+
+    return (
+      !Number.isNaN(startDate.getTime()) &&
+      startDate.getTime() >= renderTime &&
+      ["geaccepteerd", "ingepland"].includes(lesson.status) &&
+      (title.includes("examen") || title.includes("proefexamen"))
+    );
+  });
+  const journeyState = resolveDriverJourneyState({
+    completedLessons: lessons.filter((lesson) => lesson.status === "afgerond")
+      .length,
+    currentStatus: leerling?.student_status,
+    examReadinessScore: examReadiness.score,
+    hasExamLessonPlanned,
+    hasPackage: Boolean(leerling?.pakket_id),
+    hasPlannedLessons: lessons.some((lesson) =>
+      ["geaccepteerd", "ingepland"].includes(lesson.status),
+    ),
+    hasRequest: requests.length > 0,
+    profileComplete: hasProfileName && hasProfilePhone,
+  });
   const packageLabel =
     packageOverview.assignedPackage?.naam ?? "Nog geen pakket gekoppeld";
   const packageUsage = packageOverview.lessonUsage;
@@ -70,8 +107,6 @@ export default async function LeerlingProfielPage() {
       : packageOverview.assignedPackage
         ? `${packageUsage.usedLessons} gevolgd, ${packageUsage.plannedLessons} gepland`
         : null;
-  const hasProfileName = Boolean(profile?.volledige_naam.trim());
-  const hasProfilePhone = Boolean(profile?.telefoon.trim());
   const profileIntegrity = [
     hasProfileName,
     hasProfilePhone,
@@ -221,6 +256,10 @@ export default async function LeerlingProfielPage() {
   const NextProfileStepIcon = nextProfileStep.icon;
   const heroChips = [
     {
+      label: journeyState.label,
+      className: "border-emerald-300/18 bg-emerald-400/12 text-emerald-100",
+    },
+    {
       label: `${progressValue}% voortgang`,
       className: "border-sky-300/18 bg-sky-400/12 text-sky-100",
     },
@@ -305,11 +344,30 @@ export default async function LeerlingProfielPage() {
                 </h2>
               </div>
               <div className="rounded-full border border-emerald-400/18 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold tracking-[0.14em] text-emerald-200 uppercase">
-                Actief
+                {journeyState.shortLabel}
               </div>
             </div>
 
             <div className="mt-5 space-y-4">
+              <div className="rounded-lg border border-emerald-300/14 bg-emerald-400/8 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300/18 bg-emerald-400/12 text-emerald-100">
+                    <Gauge className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-300 uppercase">
+                      Driver journey
+                    </p>
+                    <h3 className="mt-1 text-base font-semibold text-white">
+                      {journeyState.label}
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-300">
+                      {journeyState.nextAction}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-lg border border-white/8 bg-black/12 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-slate-200">

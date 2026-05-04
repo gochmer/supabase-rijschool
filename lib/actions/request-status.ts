@@ -10,6 +10,7 @@ import {
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
 import { getLessonDurationForKind } from "@/lib/lesson-durations";
+import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import {
   appendRequestUpdateMessage,
   buildLessonRequestReference,
@@ -324,6 +325,8 @@ export async function updateLessonRequestStatusAction(
     aanvraagType: request.aanvraag_type,
     reason: input.reason,
   });
+
+  await syncStudentDriverJourneyStatus(request.leerling_id);
 
   revalidatePath("/instructeur/aanvragen");
   revalidatePath("/instructeur/dashboard");

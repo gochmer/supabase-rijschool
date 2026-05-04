@@ -56,10 +56,12 @@ export function getStudentAttentionCount(
 }
 
 export function getSelectedLessonNote({
+  lesId,
   notes,
   selectedDate,
   selectedStudent,
 }: {
+  lesId?: string | null;
   notes: StudentProgressLessonNote[];
   selectedDate: string;
   selectedStudent: InstructorStudentProgressRow | null;
@@ -68,10 +70,23 @@ export function getSelectedLessonNote({
     return null;
   }
 
+  if (lesId) {
+    const noteForLesson = notes.find(
+      (note) =>
+        note.leerling_id === selectedStudent.id && note.les_id === lesId
+    );
+
+    if (noteForLesson) {
+      return noteForLesson;
+    }
+  }
+
   return (
     notes.find(
       (note) =>
-        note.leerling_id === selectedStudent.id && note.lesdatum === selectedDate
+        note.leerling_id === selectedStudent.id &&
+        note.lesdatum === selectedDate &&
+        (!lesId || !note.les_id)
     ) ?? null
   );
 }

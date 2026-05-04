@@ -1,12 +1,12 @@
 import "server-only";
 
 import { MANUAL_LEARNER_INTAKE_ITEMS } from "@/lib/manual-learner-intake";
-import { berichten } from "@/lib/mock-data";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   ensureCurrentUserContext,
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import { getInstructorGrowthInsights } from "@/lib/data/instructor-growth-insights";
 import { getInstructeurStudentsWorkspace } from "@/lib/data/student-progress";
 
@@ -104,7 +104,7 @@ export async function getCurrentMessageInbox() {
   const context = await ensureCurrentUserContext();
 
   if (!context) {
-    return berichten;
+    return [];
   }
 
   const supabase = await createServerClient();
@@ -116,6 +116,9 @@ export async function getCurrentMessageInbox() {
     .limit(20);
 
   if (error) {
+    logSupabaseDataError("messages.inbox", error, {
+      profileId: context.user.id,
+    });
     return [];
   }
 
@@ -165,7 +168,14 @@ export async function getCurrentOutgoingMessageLog(): Promise<
     .order("created_at", { ascending: false })
     .limit(8);
 
-  if (error || !rows?.length) {
+  if (error) {
+    logSupabaseDataError("messages.outgoingLog", error, {
+      profileId: context.user.id,
+    });
+    return [];
+  }
+
+  if (!rows?.length) {
     return [];
   }
 

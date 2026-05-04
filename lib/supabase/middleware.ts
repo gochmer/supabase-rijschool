@@ -59,7 +59,7 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  if (!isProtected && !isGuestOnlyRoute) {
+  if (isProtected || !isGuestOnlyRoute) {
     return response;
   }
 
@@ -92,46 +92,12 @@ export async function updateSession(request: NextRequest) {
     typeof claimsData?.claims?.sub === "string" ? claimsData.claims.sub : null;
   const user = userId ? { id: userId } : null;
 
-  if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/inloggen";
-    url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
-  }
-
   const resolvedRole = user ? await resolveRole(supabase, user) : null;
 
   if (user && isGuestOnlyRoute) {
     if (resolvedRole) {
       return redirectToRoleDashboard(request, resolvedRole);
     }
-  }
-
-  if (
-    user &&
-    resolvedRole &&
-    matchesRoutePrefix(pathname, "/leerling") &&
-    resolvedRole !== "leerling"
-  ) {
-    return redirectToRoleDashboard(request, resolvedRole, pathname);
-  }
-
-  if (
-    user &&
-    resolvedRole &&
-    matchesRoutePrefix(pathname, "/instructeur") &&
-    resolvedRole !== "instructeur"
-  ) {
-    return redirectToRoleDashboard(request, resolvedRole, pathname);
-  }
-
-  if (
-    user &&
-    resolvedRole &&
-    matchesRoutePrefix(pathname, "/admin") &&
-    resolvedRole !== "admin"
-  ) {
-    return redirectToRoleDashboard(request, resolvedRole, pathname);
   }
 
   return response;

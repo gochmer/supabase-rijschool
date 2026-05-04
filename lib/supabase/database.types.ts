@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -266,77 +266,395 @@ export type Database = {
           },
         ]
       }
-        instructeurs: {
-          Row: {
-            avatar_url: string | null
-            beoordeling: number
-            bio: string | null
-            created_at: string
-            ervaring_jaren: number
-            id: string
-            leerling_annuleren_tot_uren_voor_les: number | null
-            online_boeken_actief: boolean
-            standaard_examenrit_duur_minuten: number
-            standaard_pakketles_duur_minuten: number
-            standaard_proefles_duur_minuten: number
-            standaard_rijles_duur_minuten: number
-            prijs_per_les: number
-            profiel_compleetheid: number
-            profiel_status: string
-            profielfoto_kleur: string
-            profile_id: string
+      instructeur_inkomsten_transacties: {
+        Row: {
+          bedrag: number
+          betaald_at: string | null
+          betaling_id: string | null
+          btw_bedrag: number
+          created_at: string
+          factuurnummer: string | null
+          herinnering_verstuurd_at: string | null
+          id: string
+          instructeur_id: string
+          leerling_id: string | null
+          les_id: string | null
+          metadata: Json
+          netto_bedrag: number | null
+          omschrijving: string
+          pakket_id: string | null
+          platform_fee: number
+          status: string
+          type: string
+          updated_at: string
+          vervaldatum: string | null
+        }
+        Insert: {
+          bedrag?: number
+          betaald_at?: string | null
+          betaling_id?: string | null
+          btw_bedrag?: number
+          created_at?: string
+          factuurnummer?: string | null
+          herinnering_verstuurd_at?: string | null
+          id?: string
+          instructeur_id: string
+          leerling_id?: string | null
+          les_id?: string | null
+          metadata?: Json
+          netto_bedrag?: number | null
+          omschrijving?: string
+          pakket_id?: string | null
+          platform_fee?: number
+          status?: string
+          type?: string
+          updated_at?: string
+          vervaldatum?: string | null
+        }
+        Update: {
+          bedrag?: number
+          betaald_at?: string | null
+          betaling_id?: string | null
+          btw_bedrag?: number
+          created_at?: string
+          factuurnummer?: string | null
+          herinnering_verstuurd_at?: string | null
+          id?: string
+          instructeur_id?: string
+          leerling_id?: string | null
+          les_id?: string | null
+          metadata?: Json
+          netto_bedrag?: number | null
+          omschrijving?: string
+          pakket_id?: string | null
+          platform_fee?: number
+          status?: string
+          type?: string
+          updated_at?: string
+          vervaldatum?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructeur_inkomsten_transacties_betaling_id_fkey"
+            columns: ["betaling_id"]
+            isOneToOne: false
+            referencedRelation: "betalingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructeur_inkomsten_transacties_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructeur_inkomsten_transacties_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructeur_inkomsten_transacties_les_id_fkey"
+            columns: ["les_id"]
+            isOneToOne: false
+            referencedRelation: "lessen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructeur_inkomsten_transacties_pakket_id_fkey"
+            columns: ["pakket_id"]
+            isOneToOne: false
+            referencedRelation: "pakketten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructeur_kostenbonnen: {
+        Row: {
+          bedrag: number
+          bestand_grootte: number | null
+          bestand_naam: string | null
+          bestand_pad: string | null
+          bestand_type: string | null
+          btw_bedrag: number
+          categorie: string
+          created_at: string
+          id: string
+          instructeur_id: string
+          leverancier: string | null
+          metadata: Json
+          omschrijving: string
+          uitgegeven_op: string
+          updated_at: string
+        }
+        Insert: {
+          bedrag?: number
+          bestand_grootte?: number | null
+          bestand_naam?: string | null
+          bestand_pad?: string | null
+          bestand_type?: string | null
+          btw_bedrag?: number
+          categorie?: string
+          created_at?: string
+          id?: string
+          instructeur_id: string
+          leverancier?: string | null
+          metadata?: Json
+          omschrijving?: string
+          uitgegeven_op?: string
+          updated_at?: string
+        }
+        Update: {
+          bedrag?: number
+          bestand_grootte?: number | null
+          bestand_naam?: string | null
+          bestand_pad?: string | null
+          bestand_type?: string | null
+          btw_bedrag?: number
+          categorie?: string
+          created_at?: string
+          id?: string
+          instructeur_id?: string
+          leverancier?: string | null
+          metadata?: Json
+          omschrijving?: string
+          uitgegeven_op?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructeur_kostenbonnen_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructeur_leerling_koppelingen: {
+        Row: {
+          bron: string
+          created_at: string
+          id: string
+          instructeur_id: string
+          intake_checklist_keys: string[]
+          leerling_id: string
+          onboarding_notitie: string | null
+          updated_at: string
+        }
+        Insert: {
+          bron?: string
+          created_at?: string
+          id?: string
+          instructeur_id: string
+          intake_checklist_keys?: string[]
+          leerling_id: string
+          onboarding_notitie?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bron?: string
+          created_at?: string
+          id?: string
+          instructeur_id?: string
+          intake_checklist_keys?: string[]
+          leerling_id?: string
+          onboarding_notitie?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructeur_leerling_koppelingen_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructeur_leerling_koppelingen_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructeur_uitbetalingen: {
+        Row: {
+          bruto_bedrag: number
+          created_at: string
+          id: string
+          instructeur_id: string
+          netto_bedrag: number | null
+          periode_eind: string
+          periode_start: string
+          platform_fee: number
+          referentie: string | null
+          status: string
+          uitbetaald_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          bruto_bedrag?: number
+          created_at?: string
+          id?: string
+          instructeur_id: string
+          netto_bedrag?: number | null
+          periode_eind: string
+          periode_start: string
+          platform_fee?: number
+          referentie?: string | null
+          status?: string
+          uitbetaald_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bruto_bedrag?: number
+          created_at?: string
+          id?: string
+          instructeur_id?: string
+          netto_bedrag?: number | null
+          periode_eind?: string
+          periode_start?: string
+          platform_fee?: number
+          referentie?: string | null
+          status?: string
+          uitbetaald_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructeur_uitbetalingen_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructeur_verificatie_aanvragen: {
+        Row: {
+          functie_rol: string | null
+          id: string
+          instructeur_id: string
+          rijschool_organisatie: string | null
+          specialisaties: string[]
+          status: string
+          submitted_at: string
+          updated_at: string
+          wrm_categorie: string
+          wrm_geldig_tot: string
+          wrm_pasnummer: string
+        }
+        Insert: {
+          functie_rol?: string | null
+          id?: string
+          instructeur_id: string
+          rijschool_organisatie?: string | null
+          specialisaties?: string[]
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          wrm_categorie: string
+          wrm_geldig_tot: string
+          wrm_pasnummer: string
+        }
+        Update: {
+          functie_rol?: string | null
+          id?: string
+          instructeur_id?: string
+          rijschool_organisatie?: string | null
+          specialisaties?: string[]
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          wrm_categorie?: string
+          wrm_geldig_tot?: string
+          wrm_pasnummer?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructeur_verificatie_aanvragen_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: true
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructeurs: {
+        Row: {
+          avatar_url: string | null
+          beoordeling: number
+          bio: string | null
+          created_at: string
+          ervaring_jaren: number
+          id: string
+          leerling_annuleren_tot_uren_voor_les: number | null
+          online_boeken_actief: boolean
+          prijs_per_les: number
+          profiel_compleetheid: number
+          profiel_status: string
+          profielfoto_kleur: string
+          profile_id: string
           slug: string
           specialisaties: string[]
+          standaard_examenrit_duur_minuten: number
+          standaard_pakketles_duur_minuten: number
+          standaard_proefles_duur_minuten: number
+          standaard_rijles_duur_minuten: number
           transmissie: Database["public"]["Enums"]["transmissie_type"]
           updated_at: string
           volledige_naam: string
           werkgebied: string[]
         }
-          Insert: {
-            avatar_url?: string | null
-            beoordeling?: number
-            bio?: string | null
-            created_at?: string
-            ervaring_jaren?: number
-            id?: string
-            leerling_annuleren_tot_uren_voor_les?: number | null
-            online_boeken_actief?: boolean
-            standaard_examenrit_duur_minuten?: number
-            standaard_pakketles_duur_minuten?: number
-            standaard_proefles_duur_minuten?: number
-            standaard_rijles_duur_minuten?: number
-            prijs_per_les?: number
-            profiel_compleetheid?: number
-            profiel_status?: string
-            profielfoto_kleur?: string
-            profile_id: string
+        Insert: {
+          avatar_url?: string | null
+          beoordeling?: number
+          bio?: string | null
+          created_at?: string
+          ervaring_jaren?: number
+          id?: string
+          leerling_annuleren_tot_uren_voor_les?: number | null
+          online_boeken_actief?: boolean
+          prijs_per_les?: number
+          profiel_compleetheid?: number
+          profiel_status?: string
+          profielfoto_kleur?: string
+          profile_id: string
           slug: string
           specialisaties?: string[]
+          standaard_examenrit_duur_minuten?: number
+          standaard_pakketles_duur_minuten?: number
+          standaard_proefles_duur_minuten?: number
+          standaard_rijles_duur_minuten?: number
           transmissie?: Database["public"]["Enums"]["transmissie_type"]
           updated_at?: string
           volledige_naam?: string
           werkgebied?: string[]
         }
-          Update: {
-            avatar_url?: string | null
-            beoordeling?: number
-            bio?: string | null
-            created_at?: string
-            ervaring_jaren?: number
-            id?: string
-            leerling_annuleren_tot_uren_voor_les?: number | null
-            online_boeken_actief?: boolean
-            standaard_examenrit_duur_minuten?: number
-            standaard_pakketles_duur_minuten?: number
-            standaard_proefles_duur_minuten?: number
-            standaard_rijles_duur_minuten?: number
-            prijs_per_les?: number
-            profiel_compleetheid?: number
-            profiel_status?: string
-            profielfoto_kleur?: string
-            profile_id?: string
+        Update: {
+          avatar_url?: string | null
+          beoordeling?: number
+          bio?: string | null
+          created_at?: string
+          ervaring_jaren?: number
+          id?: string
+          leerling_annuleren_tot_uren_voor_les?: number | null
+          online_boeken_actief?: boolean
+          prijs_per_les?: number
+          profiel_compleetheid?: number
+          profiel_status?: string
+          profielfoto_kleur?: string
+          profile_id?: string
           slug?: string
           specialisaties?: string[]
+          standaard_examenrit_duur_minuten?: number
+          standaard_pakketles_duur_minuten?: number
+          standaard_proefles_duur_minuten?: number
+          standaard_rijles_duur_minuten?: number
           transmissie?: Database["public"]["Enums"]["transmissie_type"]
           updated_at?: string
           volledige_naam?: string
@@ -352,82 +670,50 @@ export type Database = {
           },
         ]
       }
-      leerlingen: {
+      leerling_planningsrechten: {
         Row: {
-          created_at: string
-          favoriete_instructeurs: string[] | null
-          id: string
-          pakket_id: string | null
-          profile_id: string
-          voortgang_percentage: number
-        }
-        Insert: {
-          created_at?: string
-          favoriete_instructeurs?: string[] | null
-          id?: string
-          pakket_id?: string | null
-          profile_id: string
-          voortgang_percentage?: number
-        }
-        Update: {
-          created_at?: string
-          favoriete_instructeurs?: string[] | null
-          id?: string
-          pakket_id?: string | null
-          profile_id?: string
-          voortgang_percentage?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leerlingen_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lesaanvragen: {
-        Row: {
-          bericht: string | null
           created_at: string
           id: string
           instructeur_id: string
           leerling_id: string
-          status: Database["public"]["Enums"]["les_status"]
-          tijdvak: string | null
-          voorkeursdatum: string | null
+          updated_at: string
+          vrijgegeven_at: string | null
+          zelf_inplannen_limiet_is_handmatig: boolean
+          zelf_inplannen_limiet_minuten_per_week: number | null
+          zelf_inplannen_toegestaan: boolean
         }
         Insert: {
-          bericht?: string | null
           created_at?: string
           id?: string
           instructeur_id: string
           leerling_id: string
-          status?: Database["public"]["Enums"]["les_status"]
-          tijdvak?: string | null
-          voorkeursdatum?: string | null
+          updated_at?: string
+          vrijgegeven_at?: string | null
+          zelf_inplannen_limiet_is_handmatig?: boolean
+          zelf_inplannen_limiet_minuten_per_week?: number | null
+          zelf_inplannen_toegestaan?: boolean
         }
         Update: {
-          bericht?: string | null
           created_at?: string
           id?: string
           instructeur_id?: string
           leerling_id?: string
-          status?: Database["public"]["Enums"]["les_status"]
-          tijdvak?: string | null
-          voorkeursdatum?: string | null
+          updated_at?: string
+          vrijgegeven_at?: string | null
+          zelf_inplannen_limiet_is_handmatig?: boolean
+          zelf_inplannen_limiet_minuten_per_week?: number | null
+          zelf_inplannen_toegestaan?: boolean
         }
         Relationships: [
           {
-            foreignKeyName: "lesaanvragen_instructeur_id_fkey"
+            foreignKeyName: "leerling_planningsrechten_instructeur_id_fkey"
             columns: ["instructeur_id"]
             isOneToOne: false
             referencedRelation: "instructeurs"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lesaanvragen_leerling_id_fkey"
+            foreignKeyName: "leerling_planningsrechten_leerling_id_fkey"
             columns: ["leerling_id"]
             isOneToOne: false
             referencedRelation: "leerlingen"
@@ -442,6 +728,7 @@ export type Database = {
           id: string
           instructeur_id: string
           leerling_id: string
+          les_id: string | null
           notitie: string | null
           status: string
           vaardigheid_key: string
@@ -452,6 +739,7 @@ export type Database = {
           id?: string
           instructeur_id: string
           leerling_id: string
+          les_id?: string | null
           notitie?: string | null
           status: string
           vaardigheid_key: string
@@ -462,6 +750,7 @@ export type Database = {
           id?: string
           instructeur_id?: string
           leerling_id?: string
+          les_id?: string | null
           notitie?: string | null
           status?: string
           vaardigheid_key?: string
@@ -481,6 +770,13 @@ export type Database = {
             referencedRelation: "leerlingen"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "leerling_voortgang_beoordelingen_les_id_fkey"
+            columns: ["les_id"]
+            isOneToOne: false
+            referencedRelation: "lessen"
+            referencedColumns: ["id"]
+          },
         ]
       }
       leerling_voortgang_lesnotities: {
@@ -489,8 +785,9 @@ export type Database = {
           focus_volgende_les: string | null
           id: string
           instructeur_id: string
-          lesdatum: string
           leerling_id: string
+          les_id: string | null
+          lesdatum: string
           samenvatting: string | null
           sterk_punt: string | null
           updated_at: string
@@ -500,8 +797,9 @@ export type Database = {
           focus_volgende_les?: string | null
           id?: string
           instructeur_id: string
-          lesdatum: string
           leerling_id: string
+          les_id?: string | null
+          lesdatum: string
           samenvatting?: string | null
           sterk_punt?: string | null
           updated_at?: string
@@ -511,8 +809,9 @@ export type Database = {
           focus_volgende_les?: string | null
           id?: string
           instructeur_id?: string
-          lesdatum?: string
           leerling_id?: string
+          les_id?: string | null
+          lesdatum?: string
           samenvatting?: string | null
           sterk_punt?: string | null
           updated_at?: string
@@ -530,6 +829,191 @@ export type Database = {
             columns: ["leerling_id"]
             isOneToOne: false
             referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leerling_voortgang_lesnotities_les_id_fkey"
+            columns: ["les_id"]
+            isOneToOne: false
+            referencedRelation: "lessen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leerlingen: {
+        Row: {
+          created_at: string
+          favoriete_instructeurs: string[] | null
+          id: string
+          pakket_id: string | null
+          profile_id: string
+          student_status: string
+          student_status_reason: string | null
+          student_status_updated_at: string
+          voortgang_percentage: number
+        }
+        Insert: {
+          created_at?: string
+          favoriete_instructeurs?: string[] | null
+          id?: string
+          pakket_id?: string | null
+          profile_id: string
+          student_status?: string
+          student_status_reason?: string | null
+          student_status_updated_at?: string
+          voortgang_percentage?: number
+        }
+        Update: {
+          created_at?: string
+          favoriete_instructeurs?: string[] | null
+          id?: string
+          pakket_id?: string | null
+          profile_id?: string
+          student_status?: string
+          student_status_reason?: string | null
+          student_status_updated_at?: string
+          voortgang_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leerlingen_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      les_checkins: {
+        Row: {
+          arrival_mode: string | null
+          confidence_level: number | null
+          created_at: string
+          id: string
+          instructeur_id: string
+          instructor_focus: string | null
+          instructor_updated_at: string | null
+          learner_updated_at: string | null
+          leerling_id: string
+          les_id: string
+          support_request: string | null
+          updated_at: string
+        }
+        Insert: {
+          arrival_mode?: string | null
+          confidence_level?: number | null
+          created_at?: string
+          id?: string
+          instructeur_id: string
+          instructor_focus?: string | null
+          instructor_updated_at?: string | null
+          learner_updated_at?: string | null
+          leerling_id: string
+          les_id: string
+          support_request?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arrival_mode?: string | null
+          confidence_level?: number | null
+          created_at?: string
+          id?: string
+          instructeur_id?: string
+          instructor_focus?: string | null
+          instructor_updated_at?: string | null
+          learner_updated_at?: string | null
+          leerling_id?: string
+          les_id?: string
+          support_request?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "les_checkins_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "les_checkins_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "les_checkins_les_id_fkey"
+            columns: ["les_id"]
+            isOneToOne: true
+            referencedRelation: "lessen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesaanvragen: {
+        Row: {
+          aanvraag_type: string
+          bericht: string | null
+          created_at: string
+          id: string
+          instructeur_id: string
+          leerling_id: string
+          les_type: string | null
+          pakket_id: string | null
+          pakket_naam_snapshot: string | null
+          status: Database["public"]["Enums"]["les_status"]
+          tijdvak: string | null
+          voorkeursdatum: string | null
+        }
+        Insert: {
+          aanvraag_type?: string
+          bericht?: string | null
+          created_at?: string
+          id?: string
+          instructeur_id: string
+          leerling_id: string
+          les_type?: string | null
+          pakket_id?: string | null
+          pakket_naam_snapshot?: string | null
+          status?: Database["public"]["Enums"]["les_status"]
+          tijdvak?: string | null
+          voorkeursdatum?: string | null
+        }
+        Update: {
+          aanvraag_type?: string
+          bericht?: string | null
+          created_at?: string
+          id?: string
+          instructeur_id?: string
+          leerling_id?: string
+          les_type?: string | null
+          pakket_id?: string | null
+          pakket_naam_snapshot?: string | null
+          status?: Database["public"]["Enums"]["les_status"]
+          tijdvak?: string | null
+          voorkeursdatum?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesaanvragen_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesaanvragen_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesaanvragen_pakket_id_fkey"
+            columns: ["pakket_id"]
+            isOneToOne: false
+            referencedRelation: "pakketten"
             referencedColumns: ["id"]
           },
         ]
@@ -590,18 +1074,16 @@ export type Database = {
       }
       lessen: {
         Row: {
-          afwezigheids_reden: string | null
           aanwezigheid_bevestigd_at: string | null
-          aanwezigheid_status:
-            | Database["public"]["Enums"]["les_aanwezigheid_status"]
-            | null
+          aanwezigheid_status: Database["public"]["Enums"]["les_aanwezigheid_status"]
+          afwezigheids_reden: string | null
           created_at: string
           duur_minuten: number
           herinnering_24h_verstuurd_at: string | null
           id: string
           instructeur_id: string | null
-          lesnotitie: string | null
           leerling_id: string | null
+          lesnotitie: string | null
           locatie_id: string | null
           notities: string | null
           pakket_id: string | null
@@ -610,18 +1092,16 @@ export type Database = {
           titel: string
         }
         Insert: {
-          afwezigheids_reden?: string | null
           aanwezigheid_bevestigd_at?: string | null
-          aanwezigheid_status?:
-            | Database["public"]["Enums"]["les_aanwezigheid_status"]
-            | null
+          aanwezigheid_status?: Database["public"]["Enums"]["les_aanwezigheid_status"]
+          afwezigheids_reden?: string | null
           created_at?: string
           duur_minuten?: number
           herinnering_24h_verstuurd_at?: string | null
           id?: string
           instructeur_id?: string | null
-          lesnotitie?: string | null
           leerling_id?: string | null
+          lesnotitie?: string | null
           locatie_id?: string | null
           notities?: string | null
           pakket_id?: string | null
@@ -630,18 +1110,16 @@ export type Database = {
           titel: string
         }
         Update: {
-          afwezigheids_reden?: string | null
           aanwezigheid_bevestigd_at?: string | null
-          aanwezigheid_status?:
-            | Database["public"]["Enums"]["les_aanwezigheid_status"]
-            | null
+          aanwezigheid_status?: Database["public"]["Enums"]["les_aanwezigheid_status"]
+          afwezigheids_reden?: string | null
           created_at?: string
           duur_minuten?: number
           herinnering_24h_verstuurd_at?: string | null
           id?: string
           instructeur_id?: string | null
-          lesnotitie?: string | null
           leerling_id?: string | null
+          lesnotitie?: string | null
           locatie_id?: string | null
           notities?: string | null
           pakket_id?: string | null
@@ -749,14 +1227,18 @@ export type Database = {
           cover_path: string | null
           cover_position: string
           created_at: string
-          id: string
           icon_key: string
+          id: string
           instructeur_id: string | null
+          labels: string[]
+          les_type: string
           naam: string
+          praktijk_examen_prijs: number | null
           prijs: number
           sort_order: number
           uitgelicht: boolean
           visual_theme: string
+          zelf_inplannen_limiet_minuten_per_week: number | null
         }
         Insert: {
           aantal_lessen?: number
@@ -768,14 +1250,18 @@ export type Database = {
           cover_path?: string | null
           cover_position?: string
           created_at?: string
-          id?: string
           icon_key?: string
+          id?: string
           instructeur_id?: string | null
+          labels?: string[]
+          les_type?: string
           naam: string
+          praktijk_examen_prijs?: number | null
           prijs?: number
           sort_order?: number
           uitgelicht?: boolean
           visual_theme?: string
+          zelf_inplannen_limiet_minuten_per_week?: number | null
         }
         Update: {
           aantal_lessen?: number
@@ -787,14 +1273,18 @@ export type Database = {
           cover_path?: string | null
           cover_position?: string
           created_at?: string
-          id?: string
           icon_key?: string
+          id?: string
           instructeur_id?: string | null
+          labels?: string[]
+          les_type?: string
           naam?: string
+          praktijk_examen_prijs?: number | null
           prijs?: number
           sort_order?: number
           uitgelicht?: boolean
           visual_theme?: string
+          zelf_inplannen_limiet_minuten_per_week?: number | null
         }
         Relationships: [
           {
@@ -838,6 +1328,61 @@ export type Database = {
           volledige_naam?: string
         }
         Relationships: []
+      }
+      review_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reden: string
+          reporter_profile_id: string
+          review_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reden: string
+          reporter_profile_id: string
+          review_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reden?: string
+          reporter_profile_id?: string
+          review_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_reports_reporter_profile_id_fkey"
+            columns: ["reporter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -935,61 +1480,6 @@ export type Database = {
           },
         ]
       }
-      review_reports: {
-        Row: {
-          created_at: string
-          id: string
-          reden: string
-          reporter_profile_id: string
-          review_id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          reden: string
-          reporter_profile_id: string
-          review_id: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          reden?: string
-          reporter_profile_id?: string
-          review_id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "review_reports_reporter_profile_id_fkey"
-            columns: ["reporter_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "review_reports_review_id_fkey"
-            columns: ["review_id"]
-            isOneToOne: false
-            referencedRelation: "reviews"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "review_reports_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       support_tickets: {
         Row: {
           created_at: string
@@ -1072,20 +1562,20 @@ export type Database = {
     }
     Functions: {
       claim_due_lesson_reminders: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
-          instructeur_email: string | null
-          instructeur_naam: string | null
-          instructeur_profiel_id: string | null
-          leerling_email: string | null
-          leerling_naam: string | null
-          leerling_profiel_id: string | null
-          les_datum: string | null
-          les_tijd: string | null
-          les_titel: string | null
-          lesson_id: string | null
-          locatie: string | null
-          start_at: string | null
+          instructeur_email: string
+          instructeur_naam: string
+          instructeur_profiel_id: string
+          leerling_email: string
+          leerling_naam: string
+          leerling_profiel_id: string
+          les_datum: string
+          les_tijd: string
+          les_titel: string
+          lesson_id: string
+          locatie: string
+          start_at: string
         }[]
       }
     }

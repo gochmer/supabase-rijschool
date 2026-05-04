@@ -13,6 +13,7 @@ import {
 import { buildRecurringAvailabilitySlots } from "@/lib/availability-week-rules";
 import { formatCurrency } from "@/lib/format";
 import { getInstructorGrowthInsights } from "@/lib/data/instructor-growth-insights";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import {
   getInstructeurLessonRequests,
   getInstructeurLessons,
@@ -524,9 +525,11 @@ function buildStudentPackageHealth(
 export async function getCurrentInstructorAvailability({
   concreteLimit,
   from,
+  recurringWeeks,
 }: {
   concreteLimit?: number;
   from?: string;
+  recurringWeeks?: number;
 } = {}): Promise<BeschikbaarheidSlot[]> {
   const instructeur = await getCurrentInstructeurRecord();
 
@@ -561,6 +564,11 @@ export async function getCurrentInstructorAvailability({
   ]);
 
   if (error) {
+    logSupabaseDataError("instructorAccount.availabilitySlots", error, {
+      instructeurId: instructeur.id,
+      from: from ?? null,
+      concreteLimit: concreteLimit ?? null,
+    });
     return [];
   }
 
@@ -578,11 +586,67 @@ export async function getCurrentInstructorAvailability({
   const recurringSlots = buildRecurringAvailabilitySlots({
     rules: (ruleRows ?? []) as BeschikbaarheidWeekrooster[],
     concreteSlots,
+    weeks: recurringWeeks,
   });
 
   return [...concreteSlots, ...recurringSlots].sort((left, right) =>
     (left.start_at ?? "").localeCompare(right.start_at ?? "")
   );
+}
+
+const weekdayLabels: Record<1 | 2 | 3 | 4 | 5 | 6 | 7, string> = {
+  1: "Maandag",
+  2: "Dinsdag",
+  3: "Woensdag",
+  4: "Donderdag",
+  5: "Vrijdag",
+  6: "Zaterdag",
+  7: "Zondag",
+};
+
+function formatTimeValue(value: string | null | undefined) {
+  if (!value) {
+    return "--:--";
+  }
+
+  return value.slice(0, 5);
+}
+
+export async function getCurrentInstructorAvailabilityPreview() {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return {
+      activeSlotCount: 0,
+      rows: [],
+    };
+  }
+
+  const supabase = await createServerClient();
+  const { data: ruleRows } = await supabase
+    .from("beschikbaarheid_weekroosters")
+    .select("id, weekdag, start_tijd, eind_tijd, beschikbaar")
+    .eq("instructeur_id", instructeur.id)
+    .eq("actief", true)
+    .order("weekdag", { ascending: true })
+    .limit(7);
+
+  const activeRows = ((ruleRows ?? []) as Array<{
+    id: string;
+    weekdag: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+    start_tijd: string | null;
+    eind_tijd: string | null;
+    beschikbaar: boolean | null;
+  }>).filter((row) => row.beschikbaar !== false);
+
+  return {
+    activeSlotCount: activeRows.length,
+    rows: activeRows.slice(0, 6).map((row) => ({
+      day: weekdayLabels[row.weekdag] ?? "Weekdag",
+      label: "Beschikbaar",
+      window: `${formatTimeValue(row.start_tijd)} - ${formatTimeValue(row.eind_tijd)}`,
+    })),
+  };
 }
 
 export async function getCurrentInstructorIncomeRows() {
@@ -600,7 +664,14 @@ export async function getCurrentInstructorIncomeRows() {
     .in("status", ["geaccepteerd", "ingepland", "afgerond"])
     .order("start_at", { ascending: false });
 
-  if (error || !rows?.length) {
+  if (error) {
+    logSupabaseDataError("instructorAccount.incomeRows", error, {
+      instructeurId: instructeur.id,
+    });
+    return [];
+  }
+
+  if (!rows?.length) {
     return [];
   }
 

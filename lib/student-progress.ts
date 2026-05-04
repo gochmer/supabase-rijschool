@@ -600,6 +600,36 @@ export function getStudentExamReadiness(
   const focusItems = getStudentProgressFocusItems(assessments, 3);
   const strongestItems = getStudentProgressStrongestItems(assessments, 2);
   const momentum = getStudentProgressMomentum(assessments, notes);
+  const lessonLinkedAssessmentCount = assessments.filter(
+    (assessment) => assessment.les_id,
+  ).length;
+  const lessonLinkedNoteCount = notes.filter((note) => note.les_id).length;
+  const examFocusedNoteCount = notes.filter((note) =>
+    [note.samenvatting, note.sterk_punt, note.focus_volgende_les]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .match(/examen|proefexamen|zelfstandig|route|kijkgedrag/),
+  ).length;
+  const concernNoteCount = notes.filter((note) =>
+    [note.samenvatting, note.sterk_punt, note.focus_volgende_les]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .match(/herhaling|onzeker|spanning|twijfel|aandacht|moeilijk/),
+  ).length;
+  const hasLessonEvidence =
+    lessonLinkedAssessmentCount >= 8 || lessonLinkedNoteCount >= 2;
+  const lessonEvidenceCheck = {
+    label: "Lesbewijs",
+    value: `${lessonLinkedAssessmentCount} skills / ${lessonLinkedNoteCount} notities`,
+    badge:
+      lessonLinkedAssessmentCount >= 8 && lessonLinkedNoteCount >= 2
+        ? ("success" as const)
+        : lessonLinkedAssessmentCount >= 4 || lessonLinkedNoteCount >= 1
+          ? ("info" as const)
+          : ("warning" as const),
+  };
   const examSection =
     sections.find((section) => section.key === "examengericht") ?? null;
   const weakestSection =
@@ -613,8 +643,11 @@ export function getStudentExamReadiness(
   );
 
   score += Math.min(10, strongestItems.length * 4);
+  score += Math.min(8, examFocusedNoteCount * 3);
+  score += hasLessonEvidence ? 6 : 0;
   score -= summary.aandachtCount * 4;
   score -= Math.min(12, summary.nogOpenCount * 2);
+  score -= Math.min(8, concernNoteCount * 2);
 
   if (summary.beoordeeldCount < 6) {
     score = Math.min(score, 42);
@@ -622,6 +655,10 @@ export function getStudentExamReadiness(
 
   if ((examSection?.percentage ?? 0) >= 80) {
     score += 8;
+  }
+
+  if (!hasLessonEvidence && score > 72) {
+    score = 72;
   }
 
   score = clampProgressValue(score);
@@ -656,6 +693,7 @@ export function getStudentExamReadiness(
           value: `${summary.aandachtCount} onderdelen`,
           badge: summary.aandachtCount === 0 ? "success" : "info",
         },
+        lessonEvidenceCheck,
       ],
     };
   }
@@ -687,6 +725,7 @@ export function getStudentExamReadiness(
           value: `${summary.nogOpenCount} onderdelen`,
           badge: summary.nogOpenCount <= 4 ? "info" : "warning",
         },
+        lessonEvidenceCheck,
       ],
     };
   }
@@ -717,6 +756,7 @@ export function getStudentExamReadiness(
           value: `${summary.aandachtCount} onderdelen`,
           badge: "warning",
         },
+        lessonEvidenceCheck,
       ],
     };
   }
@@ -747,6 +787,7 @@ export function getStudentExamReadiness(
         value: `${examSection?.percentage ?? 0}%`,
         badge: "danger",
       },
+      lessonEvidenceCheck,
     ],
   };
 }

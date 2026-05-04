@@ -2,7 +2,7 @@ import { cache, Suspense } from "react";
 import { BellRing, Sparkles, Zap } from "lucide-react";
 
 import { getAdminActivityFeed } from "@/lib/data/admin";
-import { getCurrentNotifications } from "@/lib/data/notifications";
+import { getCurrentNotificationPreview } from "@/lib/data/notifications";
 import { dashboardNavigation } from "@/lib/navigation";
 import type { GebruikersRol } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 const getDashboardShellData = cache(async (role: GebruikersRol) => {
   const [notifications, adminActivity] = await Promise.all([
-    getCurrentNotifications(),
+    getCurrentNotificationPreview(),
     role === "admin" ? getAdminActivityFeed() : Promise.resolve([]),
   ]);
 

@@ -14,6 +14,7 @@ import {
   parseWeekRuleSlotId,
 } from "@/lib/availability-week-rules";
 import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
+import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import {
   getLearnerInstructorBookingLimitSnapshot,
   getLearnerInstructorSchedulingAccess,
@@ -977,6 +978,8 @@ export async function createLessonRequestAction(input: CreateLessonRequestInput)
     bericht: input.bericht?.trim() || null,
   });
 
+  await syncStudentDriverJourneyStatus(leerling.id);
+
   revalidateLessonRequestPaths(input.instructorSlug);
 
   return {
@@ -1307,6 +1310,8 @@ export async function createDirectLessonBookingAction(
     lesType: selectedPackage?.les_type ?? null,
     bericht: input.bericht?.trim() || null,
   });
+
+  await syncStudentDriverJourneyStatus(leerling.id);
 
   revalidateLessonRequestPaths(input.instructorSlug);
 

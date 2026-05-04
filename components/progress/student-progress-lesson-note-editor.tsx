@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function StudentProgressLessonNoteEditor({
   leerlingId,
+  lesId = null,
   lesdatum,
   note,
   title = "Coachnotitie",
@@ -19,6 +20,7 @@ export function StudentProgressLessonNoteEditor({
   onSaved,
 }: {
   leerlingId: string;
+  lesId?: string | null;
   lesdatum: string;
   note?: StudentProgressLessonNote | null;
   title?: string;
@@ -36,6 +38,7 @@ export function StudentProgressLessonNoteEditor({
     startTransition(async () => {
       const result = await saveStudentProgressLessonNoteAction({
         leerlingId,
+        lesId,
         lesdatum,
         samenvatting,
         sterkPunt,
@@ -53,6 +56,7 @@ export function StudentProgressLessonNoteEditor({
               id: note?.id ?? `local-note-${leerlingId}-${lesdatum}`,
               leerling_id: leerlingId,
               instructeur_id: note?.instructeur_id ?? "local",
+              les_id: lesId,
               lesdatum,
               samenvatting: samenvatting || null,
               sterk_punt: sterkPunt || null,

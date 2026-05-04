@@ -35,6 +35,7 @@ import type { InstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import { buildCancellationRecoveryPlans } from "@/lib/lesson-reschedule-proposals";
 import type {
   BeschikbaarheidSlot,
+  InstructorDashboardProgressSignals,
   InstructorStudentProgressRow,
   Les,
   LesAanvraag,
@@ -59,6 +60,7 @@ type InstructorCommandCenterProps = {
   packages: Pakket[];
   availabilitySlots: BeschikbaarheidSlot[];
   students: InstructorStudentProgressRow[];
+  progressSignals?: InstructorDashboardProgressSignals;
   locationOptions: LocationOption[];
   lessonDurationDefaults: InstructorLessonDurationDefaults;
   realtime?: ReactNode;
@@ -497,6 +499,17 @@ function getOperationToneClass(tone: InstructorOperationsTone) {
   }[tone];
 }
 
+function getJourneyToneClass(
+  tone: InstructorStudentProgressRow["journeyTone"],
+) {
+  return {
+    danger: "border-rose-400/24 bg-rose-500/12 text-rose-200",
+    info: "border-sky-400/24 bg-sky-500/12 text-sky-200",
+    success: "border-emerald-400/24 bg-emerald-500/12 text-emerald-200",
+    warning: "border-amber-400/24 bg-amber-500/12 text-amber-200",
+  }[tone ?? "info"];
+}
+
 function OperationMetricCard({
   detail,
   icon: Icon,
@@ -532,6 +545,48 @@ function OperationMetricCard({
         {value}
       </p>
       <p className="mt-1.5 text-[12px] leading-5 text-slate-400">{detail}</p>
+    </div>
+  );
+}
+
+function ProgressSignalList({
+  emptyText,
+  items,
+  tone,
+}: {
+  emptyText: string;
+  items: InstructorDashboardProgressSignals["behindStudents"];
+  tone: InstructorOperationsTone;
+}) {
+  return (
+    <div className="mt-3 space-y-2">
+      {items.length ? (
+        items.map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            className="block rounded-lg border border-white/8 bg-white/[0.035] p-3 transition hover:border-white/16 hover:bg-white/[0.07]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">
+                  {item.naam}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-slate-400">
+                  {item.detail}
+                </p>
+              </div>
+              {item.score != null ? (
+                <Badge variant={tone} className="shrink-0">
+                  {item.score}%
+                </Badge>
+              ) : null}
+            </div>
+          </Link>
+        ))
+      ) : (
+        <EmptyState text={emptyText} />
+      )}
     </div>
   );
 }
@@ -720,6 +775,11 @@ export function InstructorCommandCenter({
   packages,
   availabilitySlots,
   students,
+  progressSignals = {
+    behindStudents: [],
+    examReadyStudents: [],
+    packageActionStudents: [],
+  },
   locationOptions,
   lessonDurationDefaults,
   realtime,
@@ -868,6 +928,59 @@ export function InstructorCommandCenter({
     tone: InstructorOperationsTone;
     value: string;
   }>;
+  const journeyGroups = [
+    "onboarding",
+    "pakket_kiezen",
+    "lessen",
+    "examen_klaar",
+    "examen_gepland",
+    "geslaagd",
+  ].map((status) => {
+    const statusStudents = students.filter(
+      (student) => (student.journeyStatus ?? "onboarding") === status,
+    );
+    const firstStudent = statusStudents[0];
+
+    return {
+      count: statusStudents.length,
+      label:
+        firstStudent?.journeyLabel ??
+        (status === "pakket_kiezen"
+          ? "Pakket kiezen"
+          : status === "examen_klaar"
+            ? "Klaar voor examen"
+            : status === "examen_gepland"
+              ? "Examen gepland"
+              : status === "geslaagd"
+                ? "Geslaagd"
+                : status === "lessen"
+                  ? "Bezig met lessen"
+                  : "Onboarding"),
+      nextAction:
+        firstStudent?.journeyNextAction ?? "Wacht op de volgende concrete stap.",
+      status,
+      tone: firstStudent?.journeyTone ?? ("info" as const),
+    };
+  });
+  const nextJourneyActions = students
+    .filter((student) => student.journeyNextAction)
+    .sort((left, right) => {
+      const leftPriority =
+        left.journeyStatus === "pakket_kiezen"
+          ? 0
+          : left.journeyStatus === "examen_klaar"
+            ? 1
+            : 2;
+      const rightPriority =
+        right.journeyStatus === "pakket_kiezen"
+          ? 0
+          : right.journeyStatus === "examen_klaar"
+            ? 1
+            : 2;
+
+      return leftPriority - rightPriority || right.voortgang - left.voortgang;
+    })
+    .slice(0, 3);
 
   return (
     <div className="space-y-4 text-white 2xl:space-y-7">
@@ -983,6 +1096,166 @@ export function InstructorCommandCenter({
               value={metric.value}
             />
           ))}
+        </div>
+
+        <div className="mt-4 rounded-lg border border-sky-300/14 bg-[linear-gradient(135deg,rgba(14,165,233,0.11),rgba(15,23,42,0.24),rgba(16,185,129,0.08))] p-3 2xl:rounded-xl 2xl:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/18 bg-sky-400/10 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] text-sky-100 uppercase">
+                <Gauge className="size-3.5" />
+                Driver journey
+              </div>
+              <h3 className="mt-3 text-lg font-semibold text-white">
+                Centrale leerlingstatus
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
+                Iedere leerling zit nu in een vaste fase, zodat planning,
+                pakketkeuze, voortgang en examenacties dezelfde taal spreken.
+              </p>
+            </div>
+            <Button
+              asChild
+              variant="outline"
+              className="h-10 rounded-lg border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 lg:shrink-0"
+            >
+              <Link href="/instructeur/leerlingen">
+                Leerlingen openen
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+            {journeyGroups.map((group) => (
+              <div
+                key={group.status}
+                className="rounded-lg border border-white/10 bg-white/[0.035] p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={cn(
+                      "rounded-md border px-2 py-0.5 text-[10px] font-semibold",
+                      getJourneyToneClass(group.tone),
+                    )}
+                  >
+                    {group.label}
+                  </span>
+                  <span className="text-lg font-semibold text-white">
+                    {group.count}
+                  </span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-slate-400">
+                  {group.nextAction}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 grid gap-2 lg:grid-cols-3">
+            {nextJourneyActions.length ? (
+              nextJourneyActions.map((student) => (
+                <Link
+                  key={student.id}
+                  href={getStudentDashboardHref(student)}
+                  className="rounded-lg border border-white/8 bg-slate-950/22 p-3 transition hover:border-white/16 hover:bg-white/[0.07]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {student.naam}
+                      </p>
+                      <p className="mt-1 text-[12px] leading-5 text-slate-400">
+                        {student.journeyNextAction}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={student.journeyTone ?? "info"}
+                      className="shrink-0"
+                    >
+                      {student.journeyLabel ?? "Onboarding"}
+                    </Badge>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="lg:col-span-3">
+                <EmptyState text="Nog geen journey-acties. Zodra leerlingen starten, plannen of examenrijp worden, verschijnen ze hier." />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-3 2xl:gap-4">
+          <div className="rounded-lg border border-rose-400/16 bg-rose-500/8 p-3 2xl:rounded-xl 2xl:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="size-4 text-rose-200" />
+                <h3 className="text-sm font-semibold text-white">
+                  Leerling loopt achter
+                </h3>
+              </div>
+              <Badge
+                variant={
+                  progressSignals.behindStudents.length ? "danger" : "success"
+                }
+              >
+                {progressSignals.behindStudents.length}
+              </Badge>
+            </div>
+            <ProgressSignalList
+              emptyText="Geen achterstandssignalen uit voortgang, ritme en lesdata."
+              items={progressSignals.behindStudents}
+              tone="danger"
+            />
+          </div>
+
+          <div className="rounded-lg border border-emerald-400/16 bg-emerald-500/8 p-3 2xl:rounded-xl 2xl:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Gauge className="size-4 text-emerald-200" />
+                <h3 className="text-sm font-semibold text-white">
+                  Bijna examenrijp
+                </h3>
+              </div>
+              <Badge
+                variant={
+                  progressSignals.examReadyStudents.length ? "success" : "info"
+                }
+              >
+                {progressSignals.examReadyStudents.length}
+              </Badge>
+            </div>
+            <ProgressSignalList
+              emptyText="Nog geen leerling met genoeg skill- en feedbackbewijs richting examen."
+              items={progressSignals.examReadyStudents}
+              tone="success"
+            />
+          </div>
+
+          <div className="rounded-lg border border-amber-400/16 bg-amber-500/8 p-3 2xl:rounded-xl 2xl:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <PackageCheck className="size-4 text-amber-200" />
+                <h3 className="text-sm font-semibold text-white">
+                  Extra pakket nodig
+                </h3>
+              </div>
+              <Badge
+                variant={
+                  progressSignals.packageActionStudents.length
+                    ? "warning"
+                    : "info"
+                }
+              >
+                {progressSignals.packageActionStudents.length}
+              </Badge>
+            </div>
+            <ProgressSignalList
+              emptyText="Geen pakketblokkades of bijna lege pakketten zichtbaar."
+              items={progressSignals.packageActionStudents}
+              tone="warning"
+            />
+          </div>
         </div>
 
         <div className="mt-4 rounded-lg border border-violet-300/14 bg-[linear-gradient(135deg,rgba(139,92,246,0.13),rgba(15,23,42,0.26),rgba(14,165,233,0.08))] p-3 2xl:rounded-xl 2xl:p-4">

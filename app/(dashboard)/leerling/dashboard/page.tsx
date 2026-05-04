@@ -1,9 +1,12 @@
 import Link from "next/link";
 import {
   Bell,
+  Brain,
   CalendarClock,
+  CircleAlert,
   ClipboardList,
   CreditCard,
+  Gauge,
   MessageSquare,
   Search,
   Star,
@@ -44,25 +47,125 @@ import {
   getLeerlingLessons,
 } from "@/lib/data/lesson-requests";
 import { getCurrentNotifications } from "@/lib/data/notifications";
-import { getCurrentProfile } from "@/lib/data/profiles";
+import {
+  getCurrentLeerlingRecord,
+  getCurrentProfile,
+} from "@/lib/data/profiles";
+import { getCurrentLeerlingProgressWorkspace } from "@/lib/data/student-progress";
+import {
+  resolveLearnerNextAction,
+  type NextActionCategory,
+  type NextActionTone,
+} from "@/lib/next-action-engine";
+import {
+  getStudentProgressFocusItems,
+  getStudentProgressStatusMeta,
+  getStudentProgressSummary,
+} from "@/lib/student-progress";
+import { cn } from "@/lib/utils";
+
+type LearnerCockpitCard = {
+  accentClassName: string;
+  description: string;
+  href: string;
+  icon: typeof Gauge;
+  label: string;
+  meta: string;
+  title: string;
+  value: string;
+};
+
+function getNextActionIcon(category: NextActionCategory) {
+  switch (category) {
+    case "exam":
+      return Target;
+    case "feedback":
+      return MessageSquare;
+    case "onboarding":
+      return UserRound;
+    case "package":
+      return CreditCard;
+    case "skill":
+      return Brain;
+    case "planning":
+    default:
+      return CalendarClock;
+  }
+}
+
+function getNextActionSignalClass(tone: NextActionTone) {
+  switch (tone) {
+    case "danger":
+      return "border-rose-300/18 bg-rose-500/10 text-rose-100";
+    case "success":
+      return "border-emerald-300/18 bg-emerald-500/10 text-emerald-100";
+    case "warning":
+      return "border-amber-300/18 bg-amber-500/10 text-amber-100";
+    case "default":
+    default:
+      return "border-sky-300/18 bg-sky-500/10 text-sky-100";
+  }
+}
+
+function LearnerCockpitCard({ card }: { card: LearnerCockpitCard }) {
+  return (
+    <Link
+      href={card.href}
+      className="group relative min-h-[12rem] overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.075),rgba(15,23,42,0.38))] p-4 shadow-[0_22px_70px_-52px_rgba(0,0,0,0.95)] transition hover:border-white/18 hover:bg-white/[0.08]"
+    >
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-90",
+          card.accentClassName,
+        )}
+      />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white">
+          <card.icon className="size-5" />
+        </div>
+        <span className="max-w-[8rem] truncate rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] text-slate-200 uppercase">
+          {card.meta}
+        </span>
+      </div>
+      <p className="relative mt-4 text-[10px] font-semibold tracking-[0.2em] text-slate-300 uppercase">
+        {card.label}
+      </p>
+      <div className="relative mt-2 flex items-end gap-2">
+        <p className="text-2xl font-semibold tracking-tight text-white">
+          {card.value}
+        </p>
+      </div>
+      <h3 className="relative mt-2 line-clamp-1 text-base font-semibold text-white">
+        {card.title}
+      </h3>
+      <p className="relative mt-1.5 line-clamp-2 text-[13px] leading-6 text-slate-300">
+        {card.description}
+      </p>
+    </Link>
+  );
+}
 
 export default async function LeerlingDashboardPage() {
   const [
     metrics,
+    leerling,
     lessons,
     requests,
     notifications,
     lessonCompassBoards,
     lessonCheckinBoards,
+    progressWorkspace,
     profile,
   ] =
     await Promise.all([
       getLeerlingDashboardMetrics(),
+      getCurrentLeerlingRecord(),
       getLeerlingLessons(),
       getLeerlingLessonRequests(),
       getCurrentNotifications(),
       getCurrentLearnerLessonCompassBoards(),
       getCurrentLearnerLessonCheckinBoards(),
+      getCurrentLeerlingProgressWorkspace(),
       getCurrentProfile(),
     ]);
 
@@ -86,6 +189,43 @@ export default async function LeerlingDashboardPage() {
   const latestPendingRequest = pendingRequests[0] ?? null;
   const primaryRequest =
     acceptedRequests[0] ?? latestPendingRequest ?? requests[0] ?? null;
+  const progressSummary = getStudentProgressSummary(
+    progressWorkspace.assessments,
+  );
+  const progressValue =
+    progressSummary.beoordeeldCount > 0
+      ? progressSummary.percentage
+      : leerling?.voortgang_percentage ?? metrics[0]?.waarde?.replace("%", "") ?? 0;
+  const progressNumber = Number(progressValue);
+  const primaryFocusSkill =
+    getStudentProgressFocusItems(progressWorkspace.assessments, 1)[0] ?? null;
+  const focusStatusMeta = primaryFocusSkill?.latest?.status
+    ? getStudentProgressStatusMeta(primaryFocusSkill.latest.status)
+    : null;
+  const latestLessonNote =
+    [...progressWorkspace.notes].sort((left, right) => {
+      if (left.lesdatum !== right.lesdatum) {
+        return right.lesdatum.localeCompare(left.lesdatum);
+      }
+
+      return right.updated_at.localeCompare(left.updated_at);
+    })[0] ?? null;
+  const attentionPoint =
+    latestLessonNote?.focus_volgende_les ||
+    latestLessonNote?.samenvatting ||
+    (primaryFocusSkill
+      ? `${primaryFocusSkill.label} vraagt nog aandacht.`
+      : "Zodra je instructeur feedback invult, verschijnt je aandachtspunt hier.");
+  const nextAction = resolveLearnerNextAction({
+    assessments: progressWorkspace.assessments,
+    hasPackage: Boolean(leerling?.pakket_id),
+    journeyStatus: leerling?.student_status,
+    lessons,
+    notes: progressWorkspace.notes,
+    profileComplete,
+    requests,
+  });
+  const NextActionIcon = getNextActionIcon(nextAction.category);
   const trajectoryInstructorName =
     nextLesson?.instructeur_naam ??
     primaryRequest?.instructeur_naam ??
@@ -118,40 +258,16 @@ export default async function LeerlingDashboardPage() {
     primaryRequest?.tijdvak ?? "Lestijd afstemmen",
     unreadNotifications.length ? "Bericht open" : "Afstemming via berichten",
   ];
-  const learnerNextStep: DashboardFocusItem = nextLesson
-    ? {
-        label: "Wat moet ik nu doen?",
-        title: "Bereid je volgende les voor",
-        value: "Nu handig",
-        description:
-          "Bekijk je lesmoment, locatie en voortgang zodat je precies weet waar je aan toe bent.",
-        href: "/leerling/boekingen",
-        ctaLabel: "Open boekingen",
-        icon: Target,
-        tone: "success",
-      }
-    : latestPendingRequest
-      ? {
-          label: "Wat moet ik nu doen?",
-          title: "Houd je aanvraag in beeld",
-          value: "Wacht op reactie",
-          description: `Je aanvraag bij ${latestPendingRequest.instructeur_naam} staat open. Check meldingen of vergelijk alvast een alternatief.`,
-          href: "/leerling/boekingen",
-          ctaLabel: "Open aanvragen",
-          icon: ClipboardList,
-          tone: "warning",
-        }
-      : {
-          label: "Wat moet ik nu doen?",
-          title: "Start met een proefles",
-          value: "Begin hier",
-          description:
-            "Vergelijk instructeurs en vraag direct een proefles of passend pakket aan.",
-          href: "/instructeurs",
-          ctaLabel: "Zoek instructeur",
-          icon: Search,
-          tone: "default",
-        };
+  const learnerNextStep: DashboardFocusItem = {
+    label: nextAction.label,
+    title: nextAction.title,
+    value: nextAction.value,
+    description: nextAction.description,
+    href: nextAction.href,
+    ctaLabel: nextAction.ctaLabel,
+    icon: NextActionIcon,
+    tone: nextAction.tone,
+  };
 
   const learnerFocusItems: DashboardFocusItem[] = [
     {
@@ -293,6 +409,59 @@ export default async function LeerlingDashboardPage() {
       meta: "Vertrouwen",
     },
   ];
+  const cockpitCards: LearnerCockpitCard[] = [
+    {
+      accentClassName: "from-sky-400/22 via-cyan-300/12 to-white/5",
+      description:
+        progressSummary.beoordeeldCount > 0
+          ? `${progressSummary.zelfstandigCount} onderdelen zelfstandig, ${progressSummary.aandachtCount} vragen aandacht.`
+          : "Je voortgang wordt gevuld zodra je instructeur onderdelen beoordeelt.",
+      href: "/leerling/profiel#voortgang",
+      icon: Gauge,
+      label: "Voortgang",
+      meta: `${progressSummary.beoordeeldCount} beoordeeld`,
+      title: "Richting zelfstandig rijden",
+      value: `${Number.isFinite(progressNumber) ? Math.round(progressNumber) : 0}%`,
+    },
+    {
+      accentClassName: "from-emerald-400/22 via-teal-300/12 to-white/5",
+      description: nextLesson
+        ? `${nextLesson.tijd} met ${nextLesson.instructeur_naam}. Locatie: ${nextLesson.locatie}.`
+        : "Nog geen geplande les. Zodra er een les staat, komt hij hier bovenaan.",
+      href: "/leerling/boekingen",
+      icon: CalendarClock,
+      label: "Volgende les",
+      meta: nextLesson ? nextLesson.status : "Planning",
+      title: nextLesson ? nextLesson.titel : "Nog niet ingepland",
+      value: nextLesson ? nextLesson.datum : "Geen les",
+    },
+    {
+      accentClassName: "from-violet-400/22 via-fuchsia-300/12 to-white/5",
+      description: focusStatusMeta
+        ? `${primaryFocusSkill?.sectionLabel} staat nu op ${focusStatusMeta.label.toLowerCase()}. Pak dit bewust mee in je volgende les.`
+        : "Er is nog geen zwakke skill gekozen. De kaart vult automatisch na beoordelingen.",
+      href: "/leerling/profiel#voortgang",
+      icon: Brain,
+      label: "Focus skill",
+      meta: focusStatusMeta?.label ?? "Nog open",
+      title: primaryFocusSkill?.label ?? "Nog geen focus skill",
+      value: primaryFocusSkill ? "Focus" : "Start",
+    },
+    {
+      accentClassName: "from-amber-400/24 via-orange-300/12 to-white/5",
+      description: attentionPoint,
+      href: "/leerling/profiel#voortgang",
+      icon: CircleAlert,
+      label: "Aandachtspunt",
+      meta: latestLessonNote ? "Feedback" : "Nog leeg",
+      title: latestLessonNote?.focus_volgende_les
+        ? "Volgende les"
+        : primaryFocusSkill
+          ? primaryFocusSkill.label
+          : "Wacht op feedback",
+      value: latestLessonNote ? "Actie" : "Open",
+    },
+  ];
 
   return (
     <>
@@ -312,6 +481,38 @@ export default async function LeerlingDashboardPage() {
           </>
         }
       />
+
+      <section className="rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.84),rgba(30,41,59,0.48),rgba(14,165,233,0.09))] p-4 text-white shadow-[0_24px_80px_-54px_rgba(0,0,0,0.95)]">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-sky-200 uppercase">
+              Leerling cockpit
+            </p>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+              Waar sta je nu en wat is je volgende stap?
+            </h2>
+            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-300">
+              Je dashboard vertaalt lesdata en feedback naar directe actie:
+              voortgang, planning, focus en aandachtspunt.
+            </p>
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            className="h-10 rounded-full border-white/10 bg-white/7 px-4 text-sm font-semibold text-white hover:bg-white/12 lg:shrink-0"
+          >
+            <Link href="/leerling/profiel#voortgang">
+              Bekijk voortgang
+              <Target className="size-4" />
+            </Link>
+          </Button>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {cockpitCards.map((card) => (
+            <LearnerCockpitCard key={card.label} card={card} />
+          ))}
+        </div>
+      </section>
 
       <DashboardActionHub
         compact
@@ -362,12 +563,29 @@ export default async function LeerlingDashboardPage() {
 
       <DashboardFocusPanel
         compact
-        eyebrow="Vandaag belangrijk"
+        eyebrow="Next Action Engine"
         title="Je rijlestraject in een oogopslag"
-        description="Bovenaan staat meteen wat nu telt: je volgende les, open aanvragen en de slimste vervolgstap."
+        description={`Regel: ${nextAction.ruleLabel}. ${nextAction.reason}`}
         primary={learnerNextStep}
         items={learnerFocusItems}
       />
+
+      <section className="grid gap-3 md:grid-cols-3">
+        {nextAction.signals.map((signal) => (
+          <div
+            key={signal.label}
+            className={cn(
+              "rounded-lg border px-4 py-3 shadow-[0_18px_45px_-38px_rgba(0,0,0,0.9)]",
+              getNextActionSignalClass(signal.tone),
+            )}
+          >
+            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase opacity-75">
+              {signal.label}
+            </p>
+            <p className="mt-1 text-base font-semibold">{signal.value}</p>
+          </div>
+        ))}
+      </section>
 
       <OnboardingPanel
         compact

@@ -7,15 +7,24 @@ import {
 } from "@/lib/data/lesson-requests";
 import { getLocationOptions } from "@/lib/data/locations";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
-import { getInstructeurLessonPlannerStudents } from "@/lib/data/student-progress";
+import { getInstructeurDashboardStudents } from "@/lib/data/student-progress";
 import { resolveInstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import {
   timedDashboardData,
   timedDashboardRoute,
 } from "@/lib/performance/dashboard";
+import { Suspense } from "react";
+import InstructeurBeschikbaarheidLoading from "./loading";
 
 const ROUTE = "/instructeur/beschikbaarheid";
 const LESSON_HISTORY_WINDOW_DAYS = 120;
+const LESSON_LOOKAHEAD_DAYS = 45;
+const AVAILABILITY_PAGE_LESSON_LIMIT = 180;
+const AVAILABILITY_PAGE_REQUEST_LIMIT = 80;
+const AVAILABILITY_PAGE_CONCRETE_LIMIT = 120;
+const AVAILABILITY_PAGE_RECURRING_WEEKS = 5;
+const AVAILABILITY_PAGE_LOCATION_LIMIT = 80;
+const AVAILABILITY_PAGE_STUDENT_LESSON_LIMIT = 260;
 
 function getLessonWindowStartIso() {
   return new Date(
@@ -23,7 +32,21 @@ function getLessonWindowStartIso() {
   ).toISOString();
 }
 
-export default async function BeschikbaarheidPage() {
+function getLessonWindowEndIso() {
+  return new Date(
+    Date.now() + LESSON_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+}
+
+export default function BeschikbaarheidPage() {
+  return (
+    <Suspense fallback={<InstructeurBeschikbaarheidLoading />}>
+      <BeschikbaarheidContent />
+    </Suspense>
+  );
+}
+
+async function BeschikbaarheidContent() {
   const [
     slots,
     instructeur,
@@ -34,32 +57,40 @@ export default async function BeschikbaarheidPage() {
   ] = await timedDashboardRoute(ROUTE, async () => {
     const nowIso = new Date().toISOString();
     const lessonWindowStart = getLessonWindowStartIso();
+    const lessonWindowEnd = getLessonWindowEndIso();
 
     return Promise.all([
       timedDashboardData(ROUTE, "availability", () =>
         getCurrentInstructorAvailability({
-          concreteLimit: 240,
+          concreteLimit: AVAILABILITY_PAGE_CONCRETE_LIMIT,
           from: nowIso,
+          recurringWeeks: AVAILABILITY_PAGE_RECURRING_WEEKS,
         }),
       ),
       timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
       timedDashboardData(ROUTE, "lessons", () =>
         getInstructeurLessons({
           from: lessonWindowStart,
-          limit: 240,
+          to: lessonWindowEnd,
+          limit: AVAILABILITY_PAGE_LESSON_LIMIT,
         }),
       ),
       timedDashboardData(ROUTE, "requests", () =>
         getInstructeurLessonRequests({
-          limit: 120,
+          limit: AVAILABILITY_PAGE_REQUEST_LIMIT,
         }),
       ),
       timedDashboardData(
         ROUTE,
         "planner-students",
-        getInstructeurLessonPlannerStudents,
+        () =>
+          getInstructeurDashboardStudents({
+            lessonLimit: AVAILABILITY_PAGE_STUDENT_LESSON_LIMIT,
+          }),
       ),
-      timedDashboardData(ROUTE, "locations", getLocationOptions),
+      timedDashboardData(ROUTE, "locations", () =>
+        getLocationOptions({ limit: AVAILABILITY_PAGE_LOCATION_LIMIT }),
+      ),
     ]);
   });
   const durationDefaults = resolveInstructorLessonDurationDefaults(instructeur);

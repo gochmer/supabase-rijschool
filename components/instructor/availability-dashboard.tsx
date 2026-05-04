@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -52,9 +53,6 @@ import {
   PlanningWeekView,
   type PlanningWeekItem,
 } from "@/components/calendar/planning-week-view";
-import { LessonCalendarEditDialog } from "@/components/instructor/lesson-calendar-edit-dialog";
-import { PlanningRequestDialog } from "@/components/instructor/planning-request-dialog";
-import { ScheduleLessonFromSlotDialog } from "@/components/instructor/schedule-lesson-from-slot-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +64,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const LessonCalendarEditDialog = dynamic(() =>
+  import("@/components/instructor/lesson-calendar-edit-dialog").then(
+    (module) => module.LessonCalendarEditDialog,
+  ),
+);
+const PlanningRequestDialog = dynamic(() =>
+  import("@/components/instructor/planning-request-dialog").then(
+    (module) => module.PlanningRequestDialog,
+  ),
+);
+const ScheduleLessonFromSlotDialog = dynamic(() =>
+  import("@/components/instructor/schedule-lesson-from-slot-dialog").then(
+    (module) => module.ScheduleLessonFromSlotDialog,
+  ),
+);
 
 type QuickAction =
   | "moment"
@@ -839,42 +853,48 @@ export function AvailabilityDashboard({
 
   return (
     <div className="space-y-4 text-slate-100 2xl:space-y-7">
-      <ScheduleLessonFromSlotDialog
-        key={planningSlot?.id ?? "empty-planning-slot"}
-        open={Boolean(planningSlot)}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            setPlanningSlot(null);
-          }
-        }}
-        slot={planningSlot}
-        students={students}
-        locationOptions={locationOptions}
-        busyWindows={planningBusyWindows}
-        durationDefaults={durationDefaults}
-      />
-      <LessonCalendarEditDialog
-        open={Boolean(editingLesson)}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            setEditingLesson(null);
-          }
-        }}
-        lesson={editingLesson}
-        students={students}
-        locationOptions={locationOptions}
-        slots={slots}
-        busyWindows={planningBusyWindows}
-      />
-      <PlanningRequestDialog
-        request={selectedRequest}
-        locationOptions={locationOptions}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            setSelectedRequest(null);
-          }
-        }}
-      />
+      {planningSlot ? (
+        <ScheduleLessonFromSlotDialog
+          key={planningSlot.id}
+          open={Boolean(planningSlot)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setPlanningSlot(null);
+            }
+          }}
+          slot={planningSlot}
+          students={students}
+          locationOptions={locationOptions}
+          busyWindows={planningBusyWindows}
+          durationDefaults={durationDefaults}
+        />
+      ) : null}
+      {editingLesson ? (
+        <LessonCalendarEditDialog
+          open={Boolean(editingLesson)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setEditingLesson(null);
+            }
+          }}
+          lesson={editingLesson}
+          students={students}
+          locationOptions={locationOptions}
+          slots={slots}
+          busyWindows={planningBusyWindows}
+        />
+      ) : null}
+      {selectedRequest ? (
+        <PlanningRequestDialog
+          request={selectedRequest}
+          locationOptions={locationOptions}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setSelectedRequest(null);
+            }
+          }}
+        />
+      ) : null}
 
       <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
         <div>

@@ -1,12 +1,5 @@
 import "server-only";
 
-import { cache } from "react";
-import {
-  aanvragen,
-  komendeLessen,
-  leerlingMetrics,
-  instructeurMetrics,
-} from "@/lib/mock-data";
 import type { DashboardMetric, Les, LesAanvraag } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase/server";
 import {
@@ -14,6 +7,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import { getLearnerLessonCancellationAvailability } from "@/lib/lesson-cancellation";
 import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
 import { formatCurrency } from "@/lib/format";
@@ -30,6 +24,42 @@ type LessonRequestRow = {
   aanvraag_type: LesAanvraag["aanvraag_type"];
   pakket_naam_snapshot: string | null;
   les_type: string | null;
+};
+
+type DashboardLessonRow = {
+  id: string;
+  titel: string;
+  start_at: string | null;
+  duur_minuten: number | null;
+  status: Les["status"];
+  locatie_id: string | null;
+  leerling_id: string | null;
+};
+
+type DashboardEmbeddedProfile = {
+  volledige_naam: string | null;
+  email?: string | null;
+};
+
+type DashboardEmbeddedStudent = {
+  id: string;
+  profile: DashboardEmbeddedProfile | null;
+};
+
+type DashboardLessonWithStudentRow = DashboardLessonRow & {
+  leerling: DashboardEmbeddedStudent | null;
+};
+
+type InstructorLessonWithStudentRow = DashboardLessonWithStudentRow & {
+  aanwezigheid_status: Les["attendance_status"] | null;
+  aanwezigheid_bevestigd_at: string | null;
+  afwezigheids_reden: string | null;
+  lesnotitie: string | null;
+  herinnering_24h_verstuurd_at: string | null;
+};
+
+type DashboardRequestWithStudentRow = LessonRequestRow & {
+  leerling: DashboardEmbeddedStudent | null;
 };
 
 function formatDate(dateString: string) {
@@ -92,32 +122,11 @@ function parseRequestDateTime(
   };
 }
 
-const getInstructorScopeIds = cache(async function getInstructorScopeIds(
-  profileId: string,
-  fallbackInstructorId: string,
-) {
-  const supabase = await createServerClient();
-  const { data: rows } = await supabase
-    .from("instructeurs")
-    .select("id")
-    .eq("profile_id", profileId);
-
-  const scopedIds = (rows ?? [])
-    .map((row) => row.id)
-    .filter((value): value is string => Boolean(value));
-
-  if (!scopedIds.length) {
-    return [fallbackInstructorId];
-  }
-
-  return Array.from(new Set([fallbackInstructorId, ...scopedIds]));
-});
-
 export async function getLeerlingLessonRequests(): Promise<LesAanvraag[]> {
   const leerling = await getCurrentLeerlingRecord();
 
   if (!leerling) {
-    return aanvragen;
+    return [];
   }
 
   const supabase = await createServerClient();
@@ -133,6 +142,9 @@ export async function getLeerlingLessonRequests(): Promise<LesAanvraag[]> {
   };
 
   if (error) {
+    logSupabaseDataError("leerling.lessonRequests", error, {
+      leerlingId: leerling.id,
+    });
     return [];
   }
 
@@ -199,20 +211,16 @@ export async function getInstructeurLessonRequests({
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
-    return aanvragen;
+    return [];
   }
 
   const supabase = await createServerClient();
-  const instructorIds = await getInstructorScopeIds(
-    instructeur.profile_id,
-    instructeur.id,
-  );
   let requestQuery = supabase
     .from("lesaanvragen")
     .select(
-      "id, leerling_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type",
+      "id, leerling_id, voorkeursdatum, tijdvak, status, bericht, pakket_naam_snapshot, les_type, aanvraag_type, leerling:leerlingen!lesaanvragen_leerling_id_fkey(id, profile:profiles!leerlingen_profile_id_fkey(volledige_naam, email))",
     )
-    .in("instructeur_id", instructorIds)
+    .eq("instructeur_id", instructeur.id)
     .order("created_at", { ascending: false });
 
   if (limit && limit > 0) {
@@ -220,11 +228,14 @@ export async function getInstructeurLessonRequests({
   }
 
   const { data: rows, error } = (await requestQuery) as unknown as {
-    data: LessonRequestRow[] | null;
+    data: DashboardRequestWithStudentRow[] | null;
     error: unknown;
   };
 
   if (error) {
+    logSupabaseDataError("instructeur.lessonRequests", error, {
+      instructeurId: instructeur.id,
+    });
     return [];
   }
 
@@ -232,52 +243,19 @@ export async function getInstructeurLessonRequests({
     return [];
   }
 
-  const leerlingIds = rows
-    .map((row) => row.leerling_id)
-    .filter((value): value is string => Boolean(value));
-  const { data: leerlingen } = await supabase
-    .from("leerlingen")
-    .select("id, profile_id")
-    .in("id", leerlingIds);
-
-  const profileIds = (leerlingen ?? []).map((row) => row.profile_id);
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, volledige_naam, email")
-    .in("id", profileIds);
-
-  const leerlingMap = new Map(
-    (leerlingen ?? []).map((row) => [row.id, row.profile_id]),
-  );
-  const profileMap = new Map(
-    (profiles ?? []).map((row) => [
-      row.id,
-      {
-        email: row.email,
-        name: row.volledige_naam,
-      },
-    ]),
-  );
-
   return rows.map((row) => {
     const requestDateTime = parseRequestDateTime(
       row.voorkeursdatum,
       row.tijdvak,
     );
-    const studentProfileId = row.leerling_id
-      ? leerlingMap.get(row.leerling_id)
-      : undefined;
+    const studentProfile = row.leerling?.profile ?? null;
 
     return {
       start_at: requestDateTime.startAt,
       end_at: requestDateTime.endAt,
       id: row.id,
-      leerling_naam:
-        (studentProfileId ? profileMap.get(studentProfileId)?.name : null) ??
-        "Leerling",
-      leerling_email:
-        (studentProfileId ? profileMap.get(studentProfileId)?.email : null) ??
-        null,
+      leerling_naam: studentProfile?.volledige_naam ?? "Leerling",
+      leerling_email: studentProfile?.email ?? null,
       instructeur_naam: "",
       voorkeursdatum: row.voorkeursdatum
         ? formatDate(row.voorkeursdatum)
@@ -292,11 +270,86 @@ export async function getInstructeurLessonRequests({
   });
 }
 
+export async function getInstructeurDashboardLessonRequests({
+  limit,
+  status,
+}: {
+  limit?: number;
+  status?: LesAanvraag["status"];
+} = {}): Promise<LesAanvraag[]> {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return [];
+  }
+
+  const supabase = await createServerClient();
+  let requestQuery = supabase
+    .from("lesaanvragen")
+    .select(
+      "id, leerling_id, voorkeursdatum, tijdvak, status, pakket_naam_snapshot, les_type, aanvraag_type, leerling:leerlingen!lesaanvragen_leerling_id_fkey(id, profile:profiles!leerlingen_profile_id_fkey(volledige_naam))",
+    )
+    .eq("instructeur_id", instructeur.id);
+
+  if (status) {
+    requestQuery = requestQuery.eq("status", status);
+  }
+
+  requestQuery = requestQuery.order("created_at", { ascending: false });
+
+  if (limit && limit > 0) {
+    requestQuery = requestQuery.limit(limit);
+  }
+
+  const { data: rows, error } = (await requestQuery) as unknown as {
+    data: DashboardRequestWithStudentRow[] | null;
+    error: unknown;
+  };
+
+  if (error) {
+    logSupabaseDataError("instructeur.dashboardLessonRequests", error, {
+      instructeurId: instructeur.id,
+      status: status ?? null,
+    });
+    return [];
+  }
+
+  if (!rows?.length) {
+    return [];
+  }
+
+  return rows.map((row) => {
+    const requestDateTime = parseRequestDateTime(
+      row.voorkeursdatum,
+      row.tijdvak,
+    );
+    const studentName = row.leerling?.profile?.volledige_naam ?? null;
+
+    return {
+      start_at: requestDateTime.startAt,
+      end_at: requestDateTime.endAt,
+      id: row.id,
+      leerling_naam: studentName ?? "Leerling",
+      leerling_email: null,
+      instructeur_naam: "",
+      voorkeursdatum: row.voorkeursdatum
+        ? formatDate(row.voorkeursdatum)
+        : "Nog niet gekozen",
+      tijdvak: row.tijdvak ?? "-",
+      status: row.status,
+      bericht: "",
+      aanvraag_type: row.aanvraag_type ?? "algemeen",
+      pakket_naam: row.pakket_naam_snapshot,
+      les_type: row.les_type ? getRijlesType(row.les_type) : null,
+    };
+  });
+}
+
 export async function getLeerlingLessons(): Promise<Les[]> {
   const leerling = await getCurrentLeerlingRecord();
 
   if (!leerling) {
-    return komendeLessen;
+    return [];
   }
 
   const supabase = await createServerClient();
@@ -309,6 +362,9 @@ export async function getLeerlingLessons(): Promise<Les[]> {
     .order("start_at", { ascending: true });
 
   if (error) {
+    logSupabaseDataError("leerling.lessons", error, {
+      leerlingId: leerling.id,
+    });
     return [];
   }
 
@@ -404,31 +460,33 @@ export async function getLeerlingLessons(): Promise<Les[]> {
 
 export async function getInstructeurLessons({
   from,
+  to,
   limit,
 }: {
   from?: string;
+  to?: string;
   limit?: number;
 } = {}): Promise<Les[]> {
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
-    return komendeLessen;
+    return [];
   }
 
   const supabase = await createServerClient();
-  const instructorIds = await getInstructorScopeIds(
-    instructeur.profile_id,
-    instructeur.id,
-  );
   let lessonQuery = supabase
     .from("lessen")
     .select(
-      "id, titel, start_at, duur_minuten, status, locatie_id, leerling_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at",
+      "id, titel, start_at, duur_minuten, status, locatie_id, leerling_id, aanwezigheid_status, aanwezigheid_bevestigd_at, afwezigheids_reden, lesnotitie, herinnering_24h_verstuurd_at, leerling:leerlingen!lessen_leerling_id_fkey(id, profile:profiles!leerlingen_profile_id_fkey(volledige_naam, email))",
     )
-    .in("instructeur_id", instructorIds);
+    .eq("instructeur_id", instructeur.id);
 
   if (from) {
     lessonQuery = lessonQuery.gte("start_at", from);
+  }
+
+  if (to) {
+    lessonQuery = lessonQuery.lte("start_at", to);
   }
 
   lessonQuery = lessonQuery.order("start_at", { ascending: false });
@@ -437,9 +495,18 @@ export async function getInstructeurLessons({
     lessonQuery = lessonQuery.limit(limit);
   }
 
-  const { data: rows, error } = await lessonQuery;
+  const { data: rows, error } = (await lessonQuery) as unknown as {
+    data: InstructorLessonWithStudentRow[] | null;
+    error: unknown;
+  };
 
   if (error) {
+    logSupabaseDataError("instructeur.lessons", error, {
+      instructeurId: instructeur.id,
+      from: from ?? null,
+      to: to ?? null,
+      limit: limit ?? null,
+    });
     return [];
   }
 
@@ -447,45 +514,13 @@ export async function getInstructeurLessons({
     return [];
   }
 
-  const leerlingIds = rows
-    .map((row) => row.leerling_id)
-    .filter((value): value is string => Boolean(value));
   const locatieIds = rows
     .map((row) => row.locatie_id)
     .filter((value): value is string => Boolean(value));
 
-  const [{ data: leerlingen }, { data: locaties }] = await Promise.all([
-    leerlingIds.length
-      ? supabase
-          .from("leerlingen")
-          .select("id, profile_id")
-          .in("id", leerlingIds)
-      : Promise.resolve({ data: [] }),
-    locatieIds.length
-      ? supabase.from("locaties").select("id, naam, stad").in("id", locatieIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const profileIds = (leerlingen ?? []).map((row) => row.profile_id);
-  const { data: profiles } = profileIds.length
-    ? await supabase
-        .from("profiles")
-        .select("id, volledige_naam, email")
-        .in("id", profileIds)
+  const { data: locaties } = locatieIds.length
+    ? await supabase.from("locaties").select("id, naam, stad").in("id", locatieIds)
     : { data: [] };
-
-  const leerlingMap = new Map(
-    (leerlingen ?? []).map((row) => [row.id, row.profile_id]),
-  );
-  const profileMap = new Map(
-    (profiles ?? []).map((row) => [
-      row.id,
-      {
-        email: row.email,
-        name: row.volledige_naam,
-      },
-    ]),
-  );
   const locatieMap = new Map(
     (locaties ?? []).map((row) => [
       row.id,
@@ -514,15 +549,155 @@ export async function getInstructeurLessons({
       : "Nog onbekend",
     locatie_id: row.locatie_id,
     leerling_id: row.leerling_id,
-    leerling_naam: row.leerling_id
-      ? (profileMap.get(leerlingMap.get(row.leerling_id) ?? "")?.name ??
-        "Leerling")
-      : "Leerling",
-    leerling_email: row.leerling_id
-      ? (profileMap.get(leerlingMap.get(row.leerling_id) ?? "")?.email ?? null)
-      : null,
+    leerling_naam: row.leerling?.profile?.volledige_naam ?? "Leerling",
+    leerling_email: row.leerling?.profile?.email ?? null,
       instructeur_naam: "",
     }));
+}
+
+export async function getInstructeurDashboardLessons({
+  from,
+  to,
+  limit,
+}: {
+  from?: string;
+  to?: string;
+  limit?: number;
+} = {}): Promise<Les[]> {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return [];
+  }
+
+  const supabase = await createServerClient();
+  let lessonQuery = supabase
+    .from("lessen")
+    .select(
+      "id, titel, start_at, duur_minuten, status, locatie_id, leerling_id, leerling:leerlingen!lessen_leerling_id_fkey(id, profile:profiles!leerlingen_profile_id_fkey(volledige_naam))",
+    )
+    .eq("instructeur_id", instructeur.id);
+
+  if (from) {
+    lessonQuery = lessonQuery.gte("start_at", from);
+  }
+
+  if (to) {
+    lessonQuery = lessonQuery.lte("start_at", to);
+  }
+
+  lessonQuery = lessonQuery.order("start_at", { ascending: false });
+
+  if (limit && limit > 0) {
+    lessonQuery = lessonQuery.limit(limit);
+  }
+
+  const { data: rows, error } = (await lessonQuery) as unknown as {
+    data: DashboardLessonWithStudentRow[] | null;
+    error: unknown;
+  };
+
+  if (error) {
+    logSupabaseDataError("instructeur.dashboardLessons", error, {
+      instructeurId: instructeur.id,
+      from: from ?? null,
+      to: to ?? null,
+      limit: limit ?? null,
+    });
+    return [];
+  }
+
+  if (!rows?.length) {
+    return [];
+  }
+
+  return [...rows]
+    .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
+    .map((row) => ({
+      id: row.id,
+      titel: row.titel,
+      datum: row.start_at ? formatDate(row.start_at) : "Nog niet gepland",
+      tijd: row.start_at ? formatTime(row.start_at) : "--:--",
+      start_at: row.start_at,
+      end_at: getEndAt(row.start_at, row.duur_minuten),
+      duur_minuten: row.duur_minuten ?? 60,
+      status: row.status,
+      locatie: "Nog onbekend",
+      locatie_id: row.locatie_id,
+      leerling_id: row.leerling_id,
+      leerling_naam: row.leerling?.profile?.volledige_naam ?? "Leerling",
+      instructeur_naam: "",
+    }));
+}
+
+export async function getInstructeurProfileLessonStats({
+  from,
+  limit = 240,
+}: {
+  from?: string;
+  limit?: number;
+} = {}) {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return {
+      active: 0,
+      completed: 0,
+      successRate: 0,
+      total: 0,
+    };
+  }
+
+  const supabase = await createServerClient();
+  let query = supabase
+    .from("lessen")
+    .select("id, status")
+    .eq("instructeur_id", instructeur.id);
+
+  if (from) {
+    query = query.gte("start_at", from);
+  }
+
+  if (limit > 0) {
+    query = query.limit(limit);
+  }
+
+  const { data: rows, error } = await query;
+
+  if (error) {
+    logSupabaseDataError("instructeur.profileLessonStats", error, {
+      instructeurId: instructeur.id,
+      from: from ?? null,
+      limit,
+    });
+    return {
+      active: 0,
+      completed: 0,
+      successRate: 0,
+      total: 0,
+    };
+  }
+
+  if (!rows?.length) {
+    return {
+      active: 0,
+      completed: 0,
+      successRate: 0,
+      total: 0,
+    };
+  }
+
+  const completed = rows.filter((lesson) => lesson.status === "afgerond").length;
+  const active = rows.filter((lesson) =>
+    ["ingepland", "geaccepteerd"].includes(lesson.status ?? ""),
+  ).length;
+
+  return {
+    active,
+    completed,
+    successRate: Math.round((completed / rows.length) * 100),
+    total: rows.length,
+  };
 }
 
 export async function getLeerlingDashboardMetrics(): Promise<
@@ -532,7 +707,28 @@ export async function getLeerlingDashboardMetrics(): Promise<
   const leerling = await getCurrentLeerlingRecord();
 
   if (!context || !leerling) {
-    return leerlingMetrics;
+    return [
+      {
+        label: "Volgende les",
+        waarde: "Nog geen les",
+        context: "Log in als leerling om je planning te zien",
+      },
+      {
+        label: "Voortgang",
+        waarde: "0%",
+        context: "Nog geen leerlingprofiel gekoppeld",
+      },
+      {
+        label: "Open aanvragen",
+        waarde: "0",
+        context: "Geen aanvragen geladen",
+      },
+      {
+        label: "Favoriete instructeurs",
+        waarde: "0",
+        context: "Geen favorieten geladen",
+      },
+    ];
   }
 
   const [lessons, requests] = await Promise.all([
@@ -579,7 +775,43 @@ export async function getInstructeurDashboardMetrics(): Promise<
   const instructeur = await getCurrentInstructeurRecord();
 
   if (!instructeur) {
-    return instructeurMetrics;
+    return [
+      {
+        label: "Lessen vandaag",
+        waarde: "0",
+        context: "Log in als instructeur om je planning te zien",
+      },
+      {
+        label: "Open aanvragen",
+        waarde: "0",
+        context: "Geen aanvragen geladen",
+      },
+      {
+        label: "PotentiÃ«le omzet",
+        waarde: formatCurrency(0),
+        context: "Geen geplande lessen geladen",
+      },
+      {
+        label: "Reviewscore",
+        waarde: "Nog geen reviews",
+        context: "Geen reviewdata geladen",
+      },
+      {
+        label: "Reviews",
+        waarde: "0",
+        context: "Geen zichtbare reviews geladen",
+      },
+      {
+        label: "Reactiegraad",
+        waarde: "0%",
+        context: "Geen reviewreacties geladen",
+      },
+      {
+        label: "Laatste 30 dagen",
+        waarde: "0",
+        context: "Geen recente reviewactiviteit geladen",
+      },
+    ];
   }
 
   const [lessons, requests, reviewSummary] = await Promise.all([

@@ -18,8 +18,10 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
+import { InstructorProfileSkeleton } from "@/components/profile/instructor-profile-skeleton";
 import {
   AvatarQuickUploadButton,
   AvatarUploadCard,
@@ -32,14 +34,10 @@ import {
 import { InstructorReviewReplyDialog } from "@/components/reviews/instructor-review-reply-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
-import { getInstructorReviews } from "@/lib/data/instructors";
-import { getInstructeurLessons } from "@/lib/data/lesson-requests";
-import {
-  getCurrentInstructeurRecord,
-  getCurrentProfile,
-} from "@/lib/data/profiles";
-import { getCurrentInstructorReviewSummary } from "@/lib/data/reviews";
+import { getCurrentInstructorAvailabilityPreview } from "@/lib/data/instructor-account";
+import { getInstructeurProfileLessonStats } from "@/lib/data/lesson-requests";
+import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import { getCurrentInstructorProfileReviewData } from "@/lib/data/reviews";
 import { getInstructorStudentCount } from "@/lib/data/student-progress";
 import { formatStars, getInitials } from "@/lib/format";
 import { instructorColorOptions } from "@/lib/instructor-profile";
@@ -50,7 +48,9 @@ import {
 import { cn } from "@/lib/utils";
 
 const ROUTE = "/instructeur/profiel";
-const LESSON_HISTORY_WINDOW_DAYS = 180;
+const LESSON_HISTORY_WINDOW_DAYS = 120;
+const PROFILE_REVIEW_LIMIT = 4;
+const PROFILE_LESSON_STATS_LIMIT = 160;
 
 function getLessonWindowStartIso() {
   return new Date(
@@ -112,25 +112,7 @@ function getWorkAreaMap(area: string | null | undefined) {
   };
 }
 
-function getAvailabilityPreview(
-  slots: Awaited<ReturnType<typeof getCurrentInstructorAvailability>>
-) {
-  const active = slots.filter((slot) => slot.beschikbaar && slot.start_at);
-  const grouped = new Map<string, string>();
-
-  for (const slot of active) {
-    if (!slot.dag || grouped.has(slot.dag)) continue;
-    grouped.set(slot.dag, slot.tijdvak);
-  }
-
-  const rows = Array.from(grouped.entries()).slice(0, 6).map(([day, window]) => ({
-    day,
-    window,
-    label: "Beschikbaar",
-  }));
-
-  if (rows.length) return rows;
-
+function getFallbackAvailabilityPreview() {
   return [
     { day: "Maandag", window: "Nog niet ingesteld", label: "Aanvullen" },
     { day: "Dinsdag", window: "Nog niet ingesteld", label: "Aanvullen" },
@@ -176,61 +158,64 @@ function SectionTitle({
   );
 }
 
-export default async function InstructeurProfielPage() {
+export default function InstructeurProfielPage() {
+  return (
+    <Suspense fallback={<InstructorProfileSkeleton />}>
+      <InstructeurProfielContent />
+    </Suspense>
+  );
+}
+
+async function InstructeurProfielContent() {
   const {
-    availability,
+    availabilityPreviewData,
     instructor,
-    lessons,
+    lessonStats,
     profile,
-    publicReviews,
-    reviewSummary,
+    reviewData,
     studentCount,
   } = await timedDashboardRoute(ROUTE, async () => {
     const lessonWindowStart = getLessonWindowStartIso();
-    const nowIso = new Date().toISOString();
-    const [profile, instructor, reviewSummary, lessons, availability] =
+    const [
+      instructor,
+      reviewData,
+      lessonStats,
+      availabilityPreviewData,
+      studentCount,
+    ] =
       await Promise.all([
-        timedDashboardData(ROUTE, "profile", getCurrentProfile),
         timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
+        timedDashboardData(ROUTE, "profile-reviews", () =>
+          getCurrentInstructorProfileReviewData({
+            latestLimit: PROFILE_REVIEW_LIMIT,
+          }),
+        ),
+        timedDashboardData(ROUTE, "lesson-stats", () =>
+          getInstructeurProfileLessonStats({
+            from: lessonWindowStart,
+            limit: PROFILE_LESSON_STATS_LIMIT,
+          }),
+        ),
         timedDashboardData(
           ROUTE,
-          "review-summary",
-          getCurrentInstructorReviewSummary,
+          "availability-preview",
+          getCurrentInstructorAvailabilityPreview,
         ),
-        timedDashboardData(ROUTE, "lessons", () =>
-          getInstructeurLessons({
-            from: lessonWindowStart,
-            limit: 240,
-          }),
-        ),
-        timedDashboardData(ROUTE, "availability", () =>
-          getCurrentInstructorAvailability({
-            concreteLimit: 120,
-            from: nowIso,
-          }),
-        ),
+        timedDashboardData(ROUTE, "student-count", async () => {
+          const currentInstructor = await getCurrentInstructeurRecord();
+
+          return currentInstructor
+            ? getInstructorStudentCount(currentInstructor.id)
+            : 0;
+        }),
       ]);
 
-    const [publicReviews, studentCount] = await Promise.all([
-      instructor?.slug
-        ? timedDashboardData(ROUTE, "public-reviews", () =>
-            getInstructorReviews(instructor.slug),
-          )
-        : Promise.resolve([]),
-      instructor?.id
-        ? timedDashboardData(ROUTE, "student-count", () =>
-            getInstructorStudentCount(instructor.id),
-          )
-        : Promise.resolve(0),
-    ]);
-
     return {
-      availability,
+      availabilityPreviewData,
       instructor,
-      lessons,
-      profile,
-      publicReviews,
-      reviewSummary,
+      lessonStats,
+      profile: instructor?.profiel ?? null,
+      reviewData,
       studentCount,
     };
   });
@@ -241,21 +226,17 @@ export default async function InstructeurProfielPage() {
     instructor?.profielfoto_kleur ?? instructorColorOptions[0].value;
   const workArea = instructor?.werkgebied ?? [];
   const specialisaties = instructor?.specialisaties ?? [];
-  const completedLessons = lessons.filter((lesson) => lesson.status === "afgerond");
-  const activeLessons = lessons.filter((lesson) =>
-    ["ingepland", "geaccepteerd"].includes(lesson.status)
-  );
-  const successRate = lessons.length
-    ? Math.round((completedLessons.length / lessons.length) * 100)
-    : 0;
-  const averageScore = reviewSummary.reviewCount
-    ? formatStars(reviewSummary.averageScore)
+  const publicReviews = reviewData.latestReviews;
+  const averageScore = reviewData.reviewCount
+    ? formatStars(reviewData.averageScore)
     : "Nog geen score";
   const publicProfilePath = instructor?.slug
     ? `/instructeurs/${instructor.slug}`
     : "/instructeurs";
-  const availabilityPreview = getAvailabilityPreview(availability);
-  const activeSlotCount = availability.filter((slot) => slot.beschikbaar).length;
+  const availabilityPreview = availabilityPreviewData.rows.length
+    ? availabilityPreviewData.rows
+    : getFallbackAvailabilityPreview();
+  const activeSlotCount = availabilityPreviewData.activeSlotCount;
   const map = getWorkAreaMap(workArea[0]);
   const certificateRows = [
     {
@@ -281,8 +262,8 @@ export default async function InstructeurProfielPage() {
     {
       icon: Award,
       title: "Reviewkwaliteit",
-      detail: reviewSummary.reviewCount
-        ? `${reviewSummary.replyRate}% reactiegraad`
+      detail: reviewData.reviewCount
+        ? `${reviewData.replyRate}% reactiegraad`
         : "Nog geen reviews",
       tone: "amber",
     },
@@ -363,28 +344,32 @@ export default async function InstructeurProfielPage() {
       icon: UsersRound,
       value: `${studentCount}`,
       label: "Totale leerlingen",
-      detail: activeLessons.length ? `${activeLessons.length} actieve lessen` : "Nog geen actieve lessen",
+      detail: lessonStats.active
+        ? `${lessonStats.active} actieve lessen`
+        : "Nog geen actieve lessen",
       tone: "from-violet-500 to-purple-700",
     },
     {
       icon: CalendarDays,
-      value: `${lessons.length}`,
+      value: `${lessonStats.total}`,
       label: "Totale lessen",
-      detail: completedLessons.length ? `${completedLessons.length} afgerond` : "Start je eerste les",
+      detail: lessonStats.completed
+        ? `${lessonStats.completed} afgerond`
+        : "Start je eerste les",
       tone: "from-emerald-500 to-green-700",
     },
     {
       icon: Star,
-      value: reviewSummary.reviewCount ? reviewSummary.averageScore.toFixed(1) : "0.0",
+      value: reviewData.reviewCount ? reviewData.averageScore.toFixed(1) : "0.0",
       label: "Gemiddelde beoordeling",
-      detail: `${reviewSummary.reviewCount} review${reviewSummary.reviewCount === 1 ? "" : "s"}`,
+      detail: `${reviewData.reviewCount} review${reviewData.reviewCount === 1 ? "" : "s"}`,
       tone: "from-blue-500 to-sky-700",
     },
     {
       icon: Trophy,
-      value: `${successRate}%`,
+      value: `${lessonStats.successRate}%`,
       label: "Afgerond",
-      detail: lessons.length ? "Op basis van leshistorie" : "Nog geen historie",
+      detail: lessonStats.total ? "Op basis van leshistorie" : "Nog geen historie",
       tone: "from-orange-500 to-amber-700",
     },
     {
@@ -498,7 +483,7 @@ export default async function InstructeurProfielPage() {
                   {averageScore}
                 </span>
                 <span className="text-sm text-slate-300">
-                  ({reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? "" : "s"})
+                  ({reviewData.reviewCount} review{reviewData.reviewCount === 1 ? "" : "s"})
                 </span>
               </div>
               <ProfileQuickEditDialog

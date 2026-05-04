@@ -61,8 +61,20 @@ export function LessonAttendanceActions({
         return;
       }
 
-      toast.success(result.message);
+      const progressHref =
+        "progressHref" in result ? result.progressHref : null;
+
+      toast.success(
+        progressHref
+          ? "Les afgerond. Ik open de voortgangskaart voor feedback."
+          : result.message,
+      );
       setCurrentAttendanceStatus(attendanceStatus);
+      if (progressHref) {
+        router.push(progressHref);
+        return;
+      }
+
       router.refresh();
       if (attendanceStatus === "afwezig") {
         setShowAbsentReason(false);

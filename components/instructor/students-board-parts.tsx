@@ -120,6 +120,7 @@ export function buildNextAssessmentsState(
   current: StudentProgressAssessment[],
   payload: {
     leerlingId: string;
+    lesId?: string | null;
     vaardigheidKey: string;
     beoordelingsDatum: string;
     status: StudentProgressStatus | null;
@@ -130,7 +131,10 @@ export function buildNextAssessmentsState(
       !(
         assessment.leerling_id === payload.leerlingId &&
         assessment.vaardigheid_key === payload.vaardigheidKey &&
-        assessment.beoordelings_datum === payload.beoordelingsDatum
+        (payload.lesId
+          ? assessment.les_id === payload.lesId
+          : assessment.beoordelings_datum === payload.beoordelingsDatum &&
+            !assessment.les_id)
       )
   );
 
@@ -139,6 +143,7 @@ export function buildNextAssessmentsState(
       id: `local-${payload.leerlingId}-${payload.vaardigheidKey}-${payload.beoordelingsDatum}`,
       leerling_id: payload.leerlingId,
       instructeur_id: "local",
+      les_id: payload.lesId ?? null,
       vaardigheid_key: payload.vaardigheidKey,
       beoordelings_datum: payload.beoordelingsDatum,
       status: payload.status,

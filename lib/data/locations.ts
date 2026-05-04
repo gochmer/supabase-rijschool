@@ -2,17 +2,35 @@ import "server-only";
 
 import { cache } from "react";
 import type { LocationOption } from "@/lib/types";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import { createServerClient } from "@/lib/supabase/server";
 
-export const getLocationOptions = cache(async function getLocationOptions(): Promise<LocationOption[]> {
+export const getLocationOptions = cache(async function getLocationOptions({
+  limit,
+}: {
+  limit?: number;
+} = {}): Promise<LocationOption[]> {
   const supabase = await createServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("locaties")
     .select("id, naam, stad, adres")
     .order("stad", { ascending: true })
     .order("naam", { ascending: true });
 
-  if (error || !data) {
+  if (limit && limit > 0) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    logSupabaseDataError("locations.options", error, {
+      limit: limit ?? null,
+    });
+    return [];
+  }
+
+  if (!data) {
     return [];
   }
 

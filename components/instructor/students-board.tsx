@@ -27,7 +27,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { toggleInstructorLearnerChecklistAction } from "@/lib/actions/instructor-learners";
+import {
+  toggleInstructorLearnerChecklistAction,
+  updateInstructorLearnerJourneyStatusAction,
+} from "@/lib/actions/instructor-learners";
 import {
   clearStudentProgressAssessmentAction,
   saveStudentProgressAssessmentAction,
@@ -36,11 +39,16 @@ import {
   updateStudentSelfSchedulingAccessAction,
   updateStudentWeeklyBookingLimitAction,
 } from "@/lib/actions/student-scheduling";
+import {
+  getDriverJourneyStateMeta,
+  type DriverJourneyStatus,
+} from "@/lib/driver-journey";
 import type { InstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import { MANUAL_LEARNER_INTAKE_ITEMS } from "@/lib/manual-learner-intake";
 import { getFirstLessonTemplateForPackage } from "@/lib/package-first-lesson-template";
 import type {
   InstructorStudentProgressRow,
+  Les,
   LocationOption,
   Pakket,
   StudentProgressAssessment,
@@ -108,6 +116,10 @@ import { Input } from "@/components/ui/input";
 import { getInitials } from "@/lib/format";
 
 type StudentFilter = "all" | "active" | "inactive" | "dropped";
+type ManualJourneyStatus = Extract<
+  DriverJourneyStatus,
+  "examen_gepland" | "geslaagd"
+>;
 type StudentStatusGroup = Exclude<StudentFilter, "all">;
 type StudentSort = "newest" | "progress" | "name" | "attention";
 
@@ -176,6 +188,20 @@ function getStudentStatusPill(student: InstructorStudentProgressRow) {
     className: "border-emerald-400/25 bg-emerald-500/14 text-emerald-300",
     label: "Actief",
   };
+}
+
+function getJourneyPillClass(student: InstructorStudentProgressRow) {
+  switch (student.journeyTone) {
+    case "danger":
+      return "border-red-400/28 bg-red-500/12 text-red-200";
+    case "success":
+      return "border-emerald-400/25 bg-emerald-500/14 text-emerald-200";
+    case "warning":
+      return "border-amber-400/35 bg-amber-400/12 text-amber-200";
+    case "info":
+    default:
+      return "border-sky-400/25 bg-sky-500/12 text-sky-200";
+  }
 }
 
 function getProgressFillClass(value: number) {
@@ -317,6 +343,22 @@ function formatPaperDateValue(value?: string | null) {
   }).format(date);
 }
 
+function getLessonDateValue(lesson: Les) {
+  return lesson.start_at?.slice(0, 10) ?? null;
+}
+
+function formatLessonAuditLabel(lesson: Les | null) {
+  if (!lesson?.start_at) {
+    return "Datumkaart";
+  }
+
+  return new Intl.DateTimeFormat("nl-NL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date(lesson.start_at));
+}
+
 function PaperProgressLegendButton({
   active,
   children,
@@ -392,6 +434,7 @@ function StudentProgressPaperCard({
 
   return (
     <Panel
+      id="voortgang"
       data-progress-matrix-root
       data-progress-print-root
       className="mx-auto w-full max-w-[1280px] overflow-hidden border-black/20 bg-white p-[clamp(0.35rem,0.35vw,0.9rem)] text-black shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)]"
@@ -666,23 +709,29 @@ export function StudentsBoard({
   students,
   assessments,
   notes,
+  lessons = [],
   instructorName = "Instructeur",
   locationOptions = [],
   availabilitySlots = [],
   busyWindows = [],
   packages = [],
   lessonDurationDefaults,
+  initialDate = null,
+  initialLessonId = null,
   initialStudentId = null,
 }: {
   students: InstructorStudentProgressRow[];
   assessments: StudentProgressAssessment[];
   notes: StudentProgressLessonNote[];
+  lessons?: Les[];
   instructorName?: string;
   locationOptions?: LocationOption[];
   availabilitySlots?: LessonPlanningAvailabilitySlot[];
   busyWindows?: LessonPlanningBusyWindow[];
   packages?: Pakket[];
   lessonDurationDefaults: InstructorLessonDurationDefaults;
+  initialDate?: string | null;
+  initialLessonId?: string | null;
   initialStudentId?: string | null;
 }) {
   const initialStudent =
@@ -698,7 +747,13 @@ export function StudentsBoard({
   const [selectedStudentId, setSelectedStudentId] = useState(
     initialStudent?.id ?? "",
   );
-  const [selectedDate, setSelectedDate] = useState(getTodayInputValue());
+  const initialSelectedDate =
+    initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)
+      ? initialDate
+      : initialLessonId
+        ? (lessons.find((lesson) => lesson.id === initialLessonId)?.start_at?.slice(0, 10) ?? getTodayInputValue())
+        : getTodayInputValue();
+  const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const [activeMarkMode, setActiveMarkMode] =
     useState<ActiveMarkMode>("zelfstandig");
   const [localStudents, setLocalStudents] = useState(students);
@@ -903,16 +958,38 @@ export function StudentsBoard({
         selectedStudent?.id,
         localAssessments,
         selectedDate,
-      ),
+    ),
     [localAssessments, selectedDate, selectedStudent?.id],
   );
+  const selectedProgressLesson = useMemo(() => {
+    if (!selectedStudent) {
+      return null;
+    }
+
+    const studentLessonsForDate = lessons
+      .filter(
+        (lesson) =>
+          lesson.leerling_id === selectedStudent.id &&
+          getLessonDateValue(lesson) === selectedDate,
+      )
+      .sort((left, right) =>
+        (left.start_at ?? "").localeCompare(right.start_at ?? ""),
+      );
+
+    return (
+      studentLessonsForDate.find((lesson) => lesson.id === initialLessonId) ??
+      studentLessonsForDate[0] ??
+      null
+    );
+  }, [initialLessonId, lessons, selectedDate, selectedStudent]);
   const selectedLessonNote = useMemo(() => {
     return getSelectedLessonNote({
+      lesId: selectedProgressLesson?.id ?? null,
       notes: selectedStudentNotes,
       selectedDate,
       selectedStudent,
     });
-  }, [selectedDate, selectedStudent, selectedStudentNotes]);
+  }, [selectedDate, selectedProgressLesson?.id, selectedStudent, selectedStudentNotes]);
   const recentNotes = useMemo(() => {
     return getRecentStudentNotes(selectedStudentNotes);
   }, [selectedStudentNotes]);
@@ -1000,6 +1077,7 @@ export function StudentsBoard({
     const previousAssessments = localAssessments;
     const nextAssessments = buildNextAssessmentsState(previousAssessments, {
       leerlingId: selectedStudent.id,
+      lesId: selectedProgressLesson?.id ?? null,
       vaardigheidKey,
       beoordelingsDatum: selectedDate,
       status: activeMarkMode === "clear" ? null : activeMarkMode,
@@ -1013,11 +1091,13 @@ export function StudentsBoard({
         activeMarkMode === "clear"
           ? await clearStudentProgressAssessmentAction({
               leerlingId: selectedStudent.id,
+              lesId: selectedProgressLesson?.id ?? null,
               vaardigheidKey,
               beoordelingsDatum: selectedDate,
             })
           : await saveStudentProgressAssessmentAction({
               leerlingId: selectedStudent.id,
+              lesId: selectedProgressLesson?.id ?? null,
               vaardigheidKey,
               beoordelingsDatum: selectedDate,
               status: activeMarkMode,
@@ -1047,7 +1127,9 @@ export function StudentsBoard({
         (note) =>
           !(
             note.leerling_id === selectedStudent.id &&
-            note.lesdatum === selectedDate
+            (selectedProgressLesson
+              ? note.les_id === selectedProgressLesson.id
+              : note.lesdatum === selectedDate && !note.les_id)
           ),
       );
 
@@ -1222,6 +1304,59 @@ export function StudentsBoard({
     });
   }
 
+  function handleJourneyStatusChange(nextStatus: ManualJourneyStatus) {
+    if (!selectedStudent) {
+      return;
+    }
+
+    const previousStudents = localStudents;
+    const journey = getDriverJourneyStateMeta(nextStatus);
+
+    setLocalStudents((current) =>
+      current.map((student) =>
+        student.id === selectedStudent.id
+          ? {
+              ...student,
+              journeyLabel: journey.label,
+              journeyNextAction: journey.nextAction,
+              journeyStatus: journey.status,
+              journeyTone: journey.tone,
+            }
+          : student,
+      ),
+    );
+
+    startTransition(async () => {
+      const result = await updateInstructorLearnerJourneyStatusAction({
+        leerlingId: selectedStudent.id,
+        status: nextStatus,
+      });
+
+      if (!result.success) {
+        setLocalStudents(previousStudents);
+        toast.error(result.message);
+        return;
+      }
+
+      const nextState = result.state ?? journey;
+
+      setLocalStudents((current) =>
+        current.map((student) =>
+          student.id === selectedStudent.id
+            ? {
+                ...student,
+                journeyLabel: nextState.label,
+                journeyNextAction: nextState.nextAction,
+                journeyStatus: nextState.status,
+                journeyTone: nextState.tone,
+              }
+            : student,
+        ),
+      );
+      toast.success(result.message);
+    });
+  }
+
   const filters = [
     { label: "Alle", value: "all" },
     { label: "Actief", value: "active" },
@@ -1390,14 +1525,26 @@ export function StudentsBoard({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-md border px-2.5 py-1 text-xs font-semibold",
-                            statusPill.className,
-                          )}
-                        >
-                          {statusPill.label}
-                        </span>
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span
+                            className={cn(
+                              "inline-flex rounded-md border px-2.5 py-1 text-xs font-semibold",
+                              statusPill.className,
+                            )}
+                          >
+                            {statusPill.label}
+                          </span>
+                          <span
+                            className={cn(
+                              "inline-flex max-w-36 rounded-md border px-2.5 py-1 text-[11px] font-semibold",
+                              getJourneyPillClass(student),
+                            )}
+                          >
+                            <span className="truncate">
+                              {student.journeyLabel ?? "Onboarding"}
+                            </span>
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-slate-300">
                         {formatCompactDate(student.gekoppeldSinds)}
@@ -1656,6 +1803,58 @@ export function StudentsBoard({
                 <div className="flex items-center gap-2">
                   <CalendarDays className="size-4 text-slate-500" />
                   {selectedStudent.pakket}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-sky-300/16 bg-sky-500/8 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
+                      Driver journey
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {selectedStudent.journeyLabel ?? "Onboarding"}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-md border px-2.5 py-1 text-[11px] font-semibold",
+                      getJourneyPillClass(selectedStudent),
+                    )}
+                  >
+                    {selectedStudent.journeyStatus ?? "onboarding"}
+                  </span>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-slate-300">
+                  {selectedStudent.journeyNextAction ??
+                    "Maak profiel, proefles of intake compleet."}
+                </p>
+                <div className="mt-3 grid gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      isPending ||
+                      selectedStudent.journeyStatus === "examen_gepland"
+                    }
+                    onClick={() => handleJourneyStatusChange("examen_gepland")}
+                    className="h-9 justify-start rounded-full border-sky-300/18 bg-sky-500/10 px-3 text-[12px] font-semibold text-sky-100 hover:bg-sky-500/16 disabled:opacity-55"
+                  >
+                    <CalendarDays className="size-4" />
+                    Markeer examen gepland
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      isPending || selectedStudent.journeyStatus === "geslaagd"
+                    }
+                    onClick={() => handleJourneyStatusChange("geslaagd")}
+                    className="h-9 justify-start rounded-full border-emerald-300/18 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-100 hover:bg-emerald-500/16 disabled:opacity-55"
+                  >
+                    <Award className="size-4" />
+                    Markeer geslaagd
+                  </Button>
                 </div>
               </div>
 
@@ -1991,20 +2190,28 @@ export function StudentsBoard({
                 <SectionTitle
                   title="Lesnotities / reflecties"
                   action={
-                    <details className="relative">
-                      <summary className="cursor-pointer rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-200 marker:hidden">
-                        Nieuwe notitie
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-2 w-[24rem] rounded-xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
-                        <StudentProgressLessonNoteEditor
-                          key={`${selectedStudent.id}-${selectedDate}-${selectedLessonNote?.updated_at ?? "new"}`}
-                          leerlingId={selectedStudent.id}
-                          lesdatum={selectedDate}
-                          note={selectedLessonNote}
-                          onSaved={handleLessonNoteSaved}
-                        />
-                      </div>
-                    </details>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={selectedProgressLesson ? "info" : "warning"}>
+                        {selectedProgressLesson
+                          ? `Les ${formatLessonAuditLabel(selectedProgressLesson)}`
+                          : "Datumkaart"}
+                      </Badge>
+                      <details className="relative">
+                        <summary className="cursor-pointer rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-200 marker:hidden">
+                          Nieuwe notitie
+                        </summary>
+                        <div className="absolute right-0 z-20 mt-2 w-[24rem] rounded-xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
+                          <StudentProgressLessonNoteEditor
+                            key={`${selectedStudent.id}-${selectedDate}-${selectedProgressLesson?.id ?? "date"}-${selectedLessonNote?.updated_at ?? "new"}`}
+                            leerlingId={selectedStudent.id}
+                            lesId={selectedProgressLesson?.id ?? null}
+                            lesdatum={selectedDate}
+                            note={selectedLessonNote}
+                            onSaved={handleLessonNoteSaved}
+                          />
+                        </div>
+                      </details>
+                    </div>
                   }
                 />
                 <div className="space-y-3">

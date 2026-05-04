@@ -811,8 +811,20 @@ export function LessonCalendarEditDialog({
         return;
       }
 
-      toast.success(result.message);
+      const progressHref =
+        "progressHref" in result ? result.progressHref : null;
+
+      toast.success(
+        progressHref
+          ? "Les afgerond. Ik open de voortgangskaart voor feedback."
+          : result.message,
+      );
       onOpenChange(false);
+      if (progressHref) {
+        router.push(progressHref);
+        return;
+      }
+
       router.refresh();
     });
   }

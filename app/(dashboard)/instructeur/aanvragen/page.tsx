@@ -6,24 +6,51 @@ import {
   timedDashboardData,
   timedDashboardRoute,
 } from "@/lib/performance/dashboard";
+import { Suspense } from "react";
+import InstructeurAanvragenLoading from "./loading";
 
 const ROUTE = "/instructeur/aanvragen";
+const REQUEST_PAGE_REQUEST_LIMIT = 120;
+const REQUEST_PAGE_LOCATION_LIMIT = 80;
 
-export default async function AanvragenPage({
+export default function AanvragenPage({
   searchParams,
 }: {
   searchParams: Promise<{ focus?: string; tab?: string }>;
 }) {
-  const params = await searchParams;
-  const [requests, locationOptions] = await timedDashboardRoute(ROUTE, () =>
-    Promise.all([
-      timedDashboardData(ROUTE, "requests", () =>
-        getInstructeurLessonRequests({
-          limit: 200,
-        }),
-      ),
-      timedDashboardData(ROUTE, "locations", getLocationOptions),
-    ]),
+  return (
+    <Suspense fallback={<InstructeurAanvragenLoading />}>
+      <AanvragenContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function AanvragenContent({
+  searchParams,
+}: {
+  searchParams: Promise<{ focus?: string; tab?: string }>;
+}) {
+  const { locationOptions, params, requests } = await timedDashboardRoute(
+    ROUTE,
+    async () => {
+      const params = await searchParams;
+      const [requests, locationOptions] = await Promise.all([
+        timedDashboardData(ROUTE, "requests", () =>
+          getInstructeurLessonRequests({
+            limit: REQUEST_PAGE_REQUEST_LIMIT,
+          }),
+        ),
+        timedDashboardData(ROUTE, "locations", () =>
+          getLocationOptions({ limit: REQUEST_PAGE_LOCATION_LIMIT }),
+        ),
+      ]);
+
+      return {
+        locationOptions,
+        params,
+        requests,
+      };
+    },
   );
   let initialTab: "all" | "pending" | "accepted" | "rejected" = "all";
 

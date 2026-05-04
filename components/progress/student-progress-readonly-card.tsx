@@ -60,6 +60,69 @@ function getVisibleDates(assessments: StudentProgressAssessment[]) {
     .sort((left, right) => left.localeCompare(right));
 }
 
+function getLessonLinkedMoments({
+  assessments,
+  notes,
+}: {
+  assessments: StudentProgressAssessment[];
+  notes: StudentProgressLessonNote[];
+}) {
+  const moments = new Map<
+    string,
+    {
+      assessmentCount: number;
+      date: string;
+      lesId: string;
+      note: StudentProgressLessonNote | null;
+      zelfstandigCount: number;
+    }
+  >();
+
+  for (const assessment of assessments) {
+    if (!assessment.les_id) {
+      continue;
+    }
+
+    const current = moments.get(assessment.les_id) ?? {
+      assessmentCount: 0,
+      date: assessment.beoordelings_datum,
+      lesId: assessment.les_id,
+      note: null,
+      zelfstandigCount: 0,
+    };
+
+    current.assessmentCount += 1;
+    current.zelfstandigCount += assessment.status === "zelfstandig" ? 1 : 0;
+    current.date =
+      assessment.beoordelings_datum > current.date
+        ? assessment.beoordelings_datum
+        : current.date;
+    moments.set(assessment.les_id, current);
+  }
+
+  for (const note of notes) {
+    if (!note.les_id) {
+      continue;
+    }
+
+    const current = moments.get(note.les_id) ?? {
+      assessmentCount: 0,
+      date: note.lesdatum,
+      lesId: note.les_id,
+      note: null,
+      zelfstandigCount: 0,
+    };
+
+    current.date = note.lesdatum > current.date ? note.lesdatum : current.date;
+    current.note = note;
+    moments.set(note.les_id, current);
+  }
+
+  return [...moments.values()]
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, 5);
+}
+
 const paperProgressColumnCount = 12;
 
 const paperStatusSymbols: Record<StudentProgressStatus, string> = {
@@ -398,6 +461,10 @@ export function StudentProgressReadOnlyCard({
       packageName: profile?.pakket ?? null,
     },
   });
+  const lessonLinkedMoments = getLessonLinkedMoments({ assessments, notes });
+  const lessonLinkedAssessmentCount = assessments.filter(
+    (assessment) => assessment.les_id,
+  ).length;
 
   return (
     <section
@@ -795,6 +862,81 @@ export function StudentProgressReadOnlyCard({
 
       {assessments.length || notes.length ? (
         <div className="mt-6 grid gap-6">
+          <div className="rounded-[1.55rem] border border-cyan-300/14 bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(15,23,42,0.34),rgba(16,185,129,0.09))] p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.18em] text-cyan-100 uppercase">
+                  Lesgekoppelde voortgang
+                </p>
+                <h3 className="mt-2 text-lg font-semibold text-white">
+                  Feedback per echte les
+                </h3>
+                <p className="mt-1.5 max-w-3xl text-[13px] leading-6 text-slate-300">
+                  Dit gebruikt dezelfde gegevens als de instructeur: skillmarkeringen
+                  en coachnotities die direct aan een lesmoment zijn gekoppeld.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[18rem]">
+                <div className="rounded-[1rem] border border-white/10 bg-black/12 px-3 py-2">
+                  <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                    Lesmomenten
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-white">
+                    {lessonLinkedMoments.length}
+                  </p>
+                </div>
+                <div className="rounded-[1rem] border border-white/10 bg-black/12 px-3 py-2">
+                  <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                    Skills gekoppeld
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-white">
+                    {lessonLinkedAssessmentCount}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {lessonLinkedMoments.length ? (
+                lessonLinkedMoments.map((moment) => (
+                  <div
+                    key={moment.lesId}
+                    className="rounded-[1.1rem] border border-white/10 bg-black/12 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                          {formatFullDate(moment.date)}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-white">
+                          {moment.assessmentCount} skillmarkering
+                          {moment.assessmentCount === 1 ? "" : "en"}
+                        </p>
+                      </div>
+                      <Badge variant="success">
+                        {moment.zelfstandigCount} zelfstandig
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-[12px] leading-5 text-slate-300">
+                      {moment.note?.samenvatting ||
+                        "Deze les heeft al skilldata; coachnotitie volgt nog."}
+                    </p>
+                    {moment.note?.focus_volgende_les ? (
+                      <p className="mt-2 rounded-[0.85rem] border border-sky-400/14 bg-sky-500/10 px-3 py-2 text-[12px] leading-5 text-sky-50">
+                        Focus: {moment.note.focus_volgende_les}
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1rem] border border-dashed border-white/10 bg-black/10 p-3 text-[13px] leading-6 text-slate-300 md:col-span-2 xl:col-span-3">
+                  Er zijn al voortgangsgegevens mogelijk, maar nog geen markeringen
+                  die aan een specifieke les zijn gekoppeld.
+                </div>
+              )}
+            </div>
+          </div>
+
           <StudentProgressPaperReadonlyCard
             assessments={assessments}
             laatsteInstructeurNaam={laatsteInstructeurNaam}

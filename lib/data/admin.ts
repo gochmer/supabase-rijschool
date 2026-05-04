@@ -1,12 +1,5 @@
 import "server-only";
 
-import {
-  adminMetrics,
-  betalingen,
-  pakketten,
-  reviewsPerInstructeur,
-  supportTickets,
-} from "@/lib/mock-data";
 import type { DashboardMetric } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
 import { getRijlesType } from "@/lib/lesson-types";
@@ -17,6 +10,7 @@ import {
 } from "@/lib/package-covers";
 import { normalizePackageLabels } from "@/lib/package-labels";
 import { getPackageIconKey, getPackageThemeKey } from "@/lib/package-visuals";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import { createServerClient } from "@/lib/supabase/server";
 
 type AdminPackageRow = {
@@ -58,17 +52,12 @@ export async function getAdminDashboardMetrics(): Promise<DashboardMetric[]> {
   const supabase = await createServerClient();
 
   const [
-    { count: totaalGebruikers },
-    { count: totaalLeerlingen },
-    { count: totaalInstructeurs },
-    { count: openGoedkeuringen },
-    { count: lessenDezeWeek },
-    { data: recenteBetalingen },
-    { count: openTickets },
+    usersResult,
+    approvalsResult,
+    lessonsResult,
+    paymentsResult,
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
-    supabase.from("leerlingen").select("id", { count: "exact", head: true }),
-    supabase.from("instructeurs").select("id", { count: "exact", head: true }),
     supabase
       .from("instructeurs")
       .select("id", { count: "exact", head: true })
@@ -85,28 +74,29 @@ export async function getAdminDashboardMetrics(): Promise<DashboardMetric[]> {
       .select("bedrag")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("support_tickets")
-      .select("id", { count: "exact", head: true })
-      .neq("status", "afgesloten"),
   ]);
+  const queryErrors = [
+    ["profiles", usersResult.error],
+    ["approvals", approvalsResult.error],
+    ["lessonsThisWeek", lessonsResult.error],
+    ["recentPayments", paymentsResult.error],
+  ] as const;
+
+  for (const [query, error] of queryErrors) {
+    if (error) {
+      logSupabaseDataError("admin.dashboardMetrics", error, { query });
+    }
+  }
+
+  const totaalGebruikers = usersResult.count;
+  const openGoedkeuringen = approvalsResult.count;
+  const lessenDezeWeek = lessonsResult.count;
+  const recenteBetalingen = paymentsResult.data;
 
   const omzet = (recenteBetalingen ?? []).reduce(
     (sum, item) => sum + Number(item.bedrag ?? 0),
     0
   );
-
-  if (
-    !totaalGebruikers &&
-    !totaalLeerlingen &&
-    !totaalInstructeurs &&
-    !openGoedkeuringen &&
-    !lessenDezeWeek &&
-    !openTickets &&
-    omzet === 0
-  ) {
-    return adminMetrics;
-  }
 
   return [
     {
@@ -134,11 +124,16 @@ export async function getAdminDashboardMetrics(): Promise<DashboardMetric[]> {
 
 export async function getAdminUsers() {
   const supabase = await createServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("id, volledige_naam, email, telefoon, rol, created_at, updated_at")
     .order("created_at", { ascending: false })
     .limit(50);
+
+  if (error) {
+    logSupabaseDataError("admin.users", error);
+    return [];
+  }
 
   return (
     data?.map((row) => ({
@@ -155,7 +150,7 @@ export async function getAdminUsers() {
 
 export async function getAdminInstructors() {
   const supabase = await createServerClient();
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("instructeurs")
     .select(
       "id, profile_id, werkgebied, profiel_status, profiel_compleetheid, prijs_per_les, transmissie, created_at"
@@ -163,20 +158,13 @@ export async function getAdminInstructors() {
     .order("created_at", { ascending: false })
     .limit(50);
 
+  if (error) {
+    logSupabaseDataError("admin.instructors", error);
+    return [];
+  }
+
   if (!rows?.length) {
-    return [
-      {
-        id: "fallback-instructor",
-        naam: "Sanne van Dijk",
-        email: "sanne@rijbasis.nl",
-        telefoon: "06 14 52 88 11",
-        werkgebied: "Amsterdam, Amstelveen, Diemen",
-        profiel: "96%",
-        status: "in_beoordeling",
-        prijs: formatCurrency(64),
-        transmissie: "beide",
-      },
-    ];
+    return [];
   }
 
   const profileIds = rows.map((row) => row.profile_id);
@@ -207,24 +195,19 @@ export async function getAdminInstructors() {
 
 export async function getAdminStudents() {
   const supabase = await createServerClient();
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("leerlingen")
     .select("id, profile_id, voortgang_percentage, pakket_id, created_at")
     .order("created_at", { ascending: false })
     .limit(50);
 
+  if (error) {
+    logSupabaseDataError("admin.students", error);
+    return [];
+  }
+
   if (!rows?.length) {
-    return [
-      {
-        id: "fallback-student",
-        naam: "Mila Jansen",
-        email: "mila@voorbeeld.nl",
-        telefoon: "06 11 22 33 44",
-        pakket: "Starterspakket",
-        voortgang: "74%",
-        status: "actief",
-      },
-    ];
+    return [];
   }
 
   const profileIds = rows.map((row) => row.profile_id);
@@ -267,13 +250,18 @@ export async function getAdminStudents() {
 
 export async function getAdminLessons() {
   const supabase = await createServerClient();
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("lessen")
     .select(
       "id, titel, status, start_at, leerling_id, instructeur_id, locatie_id, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(50);
+
+  if (error) {
+    logSupabaseDataError("admin.lessons", error);
+    return [];
+  }
 
   if (!rows?.length) {
     return [];
@@ -353,22 +341,19 @@ export async function getAdminLessons() {
 
 export async function getAdminPayments() {
   const supabase = await createServerClient();
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("betalingen")
     .select("id, profiel_id, bedrag, status, provider, betaald_at, created_at")
     .order("created_at", { ascending: false })
     .limit(50);
 
+  if (error) {
+    logSupabaseDataError("admin.payments", error);
+    return [];
+  }
+
   if (!rows?.length) {
-    return betalingen.map((payment) => ({
-      id: payment.id,
-      omschrijving: payment.omschrijving,
-      bedrag: formatCurrency(payment.bedrag),
-      datum: payment.datum,
-      status: payment.status,
-      gebruiker: "Mock leerling",
-      provider: "mock",
-    }));
+    return [];
   }
 
   const profileIds = rows.map((row) => row.profiel_id);
@@ -388,27 +373,25 @@ export async function getAdminPayments() {
     datum: formatDate(row.betaald_at || row.created_at),
     status: row.status,
     gebruiker: profileMap.get(row.profiel_id)?.volledige_naam ?? "Gebruiker",
-    provider: row.provider ?? "mock",
+    provider: row.provider ?? "onbekend",
   }));
 }
 
 export async function getAdminSupportTickets() {
   const supabase = await createServerClient();
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("support_tickets")
     .select("id, profiel_id, onderwerp, status, prioriteit, created_at")
     .order("created_at", { ascending: false })
     .limit(50);
 
+  if (error) {
+    logSupabaseDataError("admin.supportTickets", error);
+    return [];
+  }
+
   if (!rows?.length) {
-    return supportTickets.map((ticket) => ({
-      id: ticket.id,
-      onderwerp: ticket.onderwerp,
-      status: ticket.status,
-      prioriteit: ticket.prioriteit,
-      gebruiker: ticket.gebruiker,
-      datum: "Vandaag",
-    }));
+    return [];
   }
 
   const profileIds = rows.map((row) => row.profiel_id);
@@ -478,7 +461,7 @@ export async function getAdminApprovalQueue() {
 
 export async function getAdminReviews() {
   const supabase = await createServerClient();
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("reviews")
     .select(
       "id, leerling_id, instructeur_id, score, titel, tekst, created_at, moderatie_status, moderatie_notitie, verborgen, antwoord_tekst"
@@ -486,22 +469,13 @@ export async function getAdminReviews() {
     .order("created_at", { ascending: false })
     .limit(50);
 
+  if (error) {
+    logSupabaseDataError("admin.reviews", error);
+    return [];
+  }
+
   if (!rows?.length) {
-    return Object.values(reviewsPerInstructeur).flat().map((review) => ({
-      id: review.id,
-      leerling: review.leerling_naam,
-      instructeur: "Instructeur",
-      score: `${review.score}`,
-      titel: review.titel,
-      tekst: review.tekst,
-      datum: review.datum,
-      moderatieStatus: "zichtbaar",
-      moderatieNotitie: null,
-      antwoordTekst: null,
-      reportCount: 0,
-      latestReportReason: null,
-      latestReportStatus: null,
-    }));
+    return [];
   }
 
   const leerlingIds = rows.map((row) => row.leerling_id);
@@ -592,38 +566,21 @@ export async function getAdminReviews() {
 
 export async function getAdminPackages() {
   const supabase = await createServerClient();
-  const { data: rows } = (await supabase
+  const { data: rows, error } = (await supabase
     .from("pakketten")
     .select("id, naam, beschrijving, prijs, praktijk_examen_prijs, aantal_lessen, actief, badge, labels, instructeur_id, sort_order, uitgelicht, icon_key, visual_theme, cover_path, cover_position, cover_focus_x, cover_focus_y, les_type, created_at")
     .order("uitgelicht", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true })
-    .limit(50)) as unknown as { data: AdminPackageRow[] | null };
+    .limit(50)) as unknown as { data: AdminPackageRow[] | null; error?: unknown };
+
+  if (error) {
+    logSupabaseDataError("admin.packages", error);
+    return [];
+  }
 
   if (!rows?.length) {
-    return pakketten.map((pakket) => ({
-      id: pakket.id,
-      naam: pakket.naam,
-      beschrijving: pakket.beschrijving,
-      prijs: pakket.prijs,
-      prijsLabel: pakket.prijs ? formatCurrency(pakket.prijs) : "Op aanvraag",
-      lessen: pakket.lessen,
-      les_type: pakket.les_type,
-      badge: pakket.badge,
-      labels: pakket.labels ?? [],
-      praktijk_examen_prijs: pakket.praktijk_examen_prijs ?? null,
-      instructeur_id: pakket.instructeur_id ?? null,
-      uitgelicht: pakket.uitgelicht ?? false,
-      sort_order: pakket.sort_order ?? 0,
-      icon_key: getPackageIconKey(pakket.icon_key),
-      visual_theme: getPackageThemeKey(pakket.visual_theme),
-      cover_path: pakket.cover_path ?? null,
-      cover_url: pakket.cover_url ?? null,
-      cover_position: getPackageCoverPositionKey(pakket.cover_position),
-      cover_focus_x: parsePackageCoverFocusValue(pakket.cover_focus_x),
-      cover_focus_y: parsePackageCoverFocusValue(pakket.cover_focus_y),
-      status: "actief",
-    }));
+    return [];
   }
 
   return rows.map((row) => ({

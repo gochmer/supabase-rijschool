@@ -7,15 +7,24 @@ import {
   getInstructeurLessons,
 } from "@/lib/data/lesson-requests";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
-import { getInstructeurLessonPlannerStudents } from "@/lib/data/student-progress";
+import { getInstructeurDashboardStudents } from "@/lib/data/student-progress";
 import { resolveInstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import {
   timedDashboardData,
   timedDashboardRoute,
 } from "@/lib/performance/dashboard";
+import { Suspense } from "react";
+import InstructeurLessenLoading from "./loading";
 
-const LESSON_HISTORY_WINDOW_DAYS = 180;
 const ROUTE = "/instructeur/lessen";
+const LESSON_HISTORY_WINDOW_DAYS = 120;
+const LESSON_LOOKAHEAD_DAYS = 45;
+const LESSON_PAGE_LESSON_LIMIT = 180;
+const LESSON_PAGE_REQUEST_LIMIT = 80;
+const LESSON_PAGE_AVAILABILITY_LIMIT = 96;
+const LESSON_PAGE_RECURRING_AVAILABILITY_WEEKS = 4;
+const LESSON_PAGE_LOCATION_LIMIT = 80;
+const LESSON_PAGE_STUDENT_LESSON_LIMIT = 260;
 
 function getLessonWindowStartIso() {
   return new Date(
@@ -27,7 +36,25 @@ function getNowIso() {
   return new Date().toISOString();
 }
 
-export default async function InstructeurLessenPage({
+function getLessonWindowEndIso() {
+  return new Date(
+    Date.now() + LESSON_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+}
+
+export default function InstructeurLessenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ zoek?: string }>;
+}) {
+  return (
+    <Suspense fallback={<InstructeurLessenLoading />}>
+      <InstructeurLessenContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function InstructeurLessenContent({
   searchParams,
 }: {
   searchParams: Promise<{ zoek?: string }>;
@@ -43,6 +70,7 @@ export default async function InstructeurLessenPage({
   } = await timedDashboardRoute(ROUTE, async () => {
     const params = await searchParams;
     const lessonWindowStart = getLessonWindowStartIso();
+    const lessonWindowEnd = getLessonWindowEndIso();
     const nowIso = getNowIso();
     const [
       lessons,
@@ -55,25 +83,32 @@ export default async function InstructeurLessenPage({
       timedDashboardData(ROUTE, "lessons", () =>
         getInstructeurLessons({
           from: lessonWindowStart,
-          limit: 360,
+          to: lessonWindowEnd,
+          limit: LESSON_PAGE_LESSON_LIMIT,
         }),
       ),
       timedDashboardData(ROUTE, "requests", () =>
         getInstructeurLessonRequests({
-          limit: 160,
+          limit: LESSON_PAGE_REQUEST_LIMIT,
         }),
       ),
       timedDashboardData(ROUTE, "availability", () =>
         getCurrentInstructorAvailability({
-          concreteLimit: 240,
+          concreteLimit: LESSON_PAGE_AVAILABILITY_LIMIT,
           from: nowIso,
+          recurringWeeks: LESSON_PAGE_RECURRING_AVAILABILITY_WEEKS,
         }),
       ),
-      timedDashboardData(ROUTE, "locations", getLocationOptions),
+      timedDashboardData(ROUTE, "locations", () =>
+        getLocationOptions({ limit: LESSON_PAGE_LOCATION_LIMIT }),
+      ),
       timedDashboardData(
         ROUTE,
         "planner-students",
-        getInstructeurLessonPlannerStudents,
+        () =>
+          getInstructeurDashboardStudents({
+            lessonLimit: LESSON_PAGE_STUDENT_LESSON_LIMIT,
+          }),
       ),
       timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
     ]);

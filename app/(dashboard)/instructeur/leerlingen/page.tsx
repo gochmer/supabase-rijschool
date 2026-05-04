@@ -10,6 +10,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
+import { ProgressTrackingSystemPanel } from "@/components/instructor/progress-tracking-system-panel";
 import { StudentsBoard } from "@/components/instructor/students-board";
 import { StudentOnboardDialog } from "@/components/instructor/student-onboard-dialog";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
@@ -334,7 +335,7 @@ function StudentPrioritiesPanel({
 export default async function LeerlingenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ student?: string }>;
+  searchParams: Promise<{ date?: string; lesson?: string; student?: string }>;
 }) {
   const params = await searchParams;
   const [
@@ -360,6 +361,7 @@ export default async function LeerlingenPage({
         getCurrentInstructorAvailability({
           concreteLimit: 240,
           from: nowIso,
+          recurringWeeks: 8,
         }),
       ),
       timedDashboardData(ROUTE, "lessons", () =>
@@ -480,18 +482,27 @@ export default async function LeerlingenPage({
         studentsWithoutNextLesson={studentSummary.studentsWithoutNextLesson}
       />
 
+      <ProgressTrackingSystemPanel
+        assessments={workspace.assessments}
+        notes={workspace.notes}
+        students={workspace.students}
+      />
+
       <DashboardPerformanceMark route={ROUTE} label="StudentsBoard" />
 
       <StudentsBoard
         students={workspace.students}
         assessments={workspace.assessments}
         notes={workspace.notes}
+        lessons={lessons}
         instructorName={profile?.volledige_naam ?? "Instructeur"}
         locationOptions={locationOptions}
         availabilitySlots={planningAvailabilitySlots}
         busyWindows={busyWindows}
         packages={packages}
         lessonDurationDefaults={lessonDurationDefaults}
+        initialDate={params.date ?? null}
+        initialLessonId={params.lesson ?? null}
         initialStudentId={params.student ?? null}
       />
     </div>

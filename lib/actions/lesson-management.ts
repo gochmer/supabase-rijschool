@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getLessonEndAt } from "@/lib/booking-availability";
 import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
+import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import { getInstructeurLessons } from "@/lib/data/lesson-requests";
 import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
 import {
@@ -12,6 +13,7 @@ import {
   getCurrentInstructeurRecord,
 } from "@/lib/data/profiles";
 import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import {
   appendRequestUpdateMessage,
   extractLessonRequestReference,
@@ -117,6 +119,26 @@ function formatLessonDateAndTime(startAt: string | null | undefined) {
       timeZone: "Europe/Amsterdam",
     }).format(lessonDate),
   };
+}
+
+function getLessonProgressHref({
+  dateValue,
+  learnerId,
+  lessonId,
+}: {
+  dateValue: string;
+  learnerId: string | null | undefined;
+  lessonId: string;
+}) {
+  if (!learnerId) {
+    return null;
+  }
+
+  return `/instructeur/leerlingen?student=${encodeURIComponent(
+    learnerId,
+  )}&date=${encodeURIComponent(dateValue)}&lesson=${encodeURIComponent(
+    lessonId,
+  )}#voortgang`;
 }
 
 function revalidateLessonViews() {
@@ -575,6 +597,10 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     .eq("instructeur_id", instructeur.id);
 
   if (error) {
+    logSupabaseDataError("lessonManagement.updateLesson", error, {
+      lessonId: input.lessonId,
+      instructeurId: instructeur.id,
+    });
     return {
       success: false,
       message: "De les kon niet worden bijgewerkt.",
@@ -595,6 +621,11 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     );
 
     if (repeatError) {
+      logSupabaseDataError("lessonManagement.repeatLessons", repeatError, {
+        lessonId: input.lessonId,
+        instructeurId: instructeur.id,
+        repeatCount: repeatedLessons.length,
+      });
       return {
         success: false,
         message:
@@ -702,6 +733,12 @@ export async function updateLessonAction(input: UpdateLessonInput) {
     });
   }
 
+  await syncStudentDriverJourneyStatus(nextLearnerId);
+
+  if (learnerChanged) {
+    await syncStudentDriverJourneyStatus(lesson.leerling_id);
+  }
+
   revalidateLessonViews();
 
   return {
@@ -712,6 +749,14 @@ export async function updateLessonAction(input: UpdateLessonInput) {
         : repeatedLessons.length > 0
           ? `De les is bijgewerkt en ${repeatedLessons.length} volgende les${repeatedLessons.length === 1 ? "" : "sen"} zijn ingepland.`
         : "De les is bijgewerkt.",
+    progressHref:
+      input.status === "afgerond"
+        ? getLessonProgressHref({
+            dateValue: input.datum,
+            learnerId: nextLearnerId,
+            lessonId: input.lessonId,
+          })
+        : null,
   };
 }
 
@@ -765,6 +810,11 @@ export async function updateLessonAttendanceAction(input: {
     .eq("instructeur_id", instructeur.id);
 
   if (error) {
+    logSupabaseDataError("lessonManagement.updateAttendance", error, {
+      lessonId: input.lessonId,
+      instructeurId: instructeur.id,
+      attendanceStatus: input.attendanceStatus,
+    });
     return {
       success: false,
       message: "De aanwezigheid kon niet worden bijgewerkt.",
@@ -818,6 +868,7 @@ export async function updateLessonAttendanceAction(input: {
     instructeurId: instructeur.id,
     instructeurNaam: context.profile?.volledige_naam,
   });
+  await syncStudentDriverJourneyStatus(lesson.leerling_id);
 
   revalidateLessonViews();
 
@@ -827,6 +878,11 @@ export async function updateLessonAttendanceAction(input: {
       input.attendanceStatus === "aanwezig"
         ? "Les bevestigd als aanwezig en afgerond."
         : "Les bevestigd als afwezig en afgerond.",
+    progressHref: getLessonProgressHref({
+      dateValue: lesson.start_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+      learnerId: lesson.leerling_id,
+      lessonId: input.lessonId,
+    }),
   };
 }
 
@@ -872,6 +928,10 @@ export async function saveLessonMomentNoteAction(input: {
     .eq("instructeur_id", instructeur.id);
 
   if (error) {
+    logSupabaseDataError("lessonManagement.saveMomentNote", error, {
+      lessonId: input.lessonId,
+      instructeurId: instructeur.id,
+    });
     return {
       success: false,
       message: "De lesnotitie kon niet worden opgeslagen.",

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getLessonEndAt } from "@/lib/booking-availability";
 import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
 import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
+import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import {
   ensureCurrentUserContext,
   getCurrentInstructeurRecord,
@@ -15,6 +16,10 @@ import {
   normalizeManualLearnerIntakeKeys,
   type ManualLearnerIntakeKey,
 } from "@/lib/manual-learner-intake";
+import {
+  getDriverJourneyStateMeta,
+  type DriverJourneyStatus,
+} from "@/lib/driver-journey";
 import {
   notifyLearnerAboutLessonChange,
   notifyLearnerAboutManualOnboarding,
@@ -46,6 +51,16 @@ type ManagedPackageRow = {
   id: string;
   naam: string;
 };
+
+type ManualJourneyStatus = Extract<
+  DriverJourneyStatus,
+  "examen_gepland" | "geslaagd"
+>;
+
+const MANUAL_JOURNEY_STATUSES = [
+  "examen_gepland",
+  "geslaagd",
+] as const satisfies readonly ManualJourneyStatus[];
 
 type ManualLearnerLinkWriteBuilder = {
   select: (columns: string) => {
@@ -134,6 +149,7 @@ function revalidateInstructorLearnerSurfaces() {
     "/instructeur/lessen",
     "/leerling/dashboard",
     "/leerling/boekingen",
+    "/leerling/profiel",
   ].forEach((path) => revalidatePath(path));
 }
 
@@ -565,6 +581,8 @@ export async function createInstructorLearnerAction(input: {
     });
   }
 
+  await syncStudentDriverJourneyStatus(learner.id);
+
   revalidateInstructorLearnerSurfaces();
 
   return {
@@ -692,6 +710,8 @@ export async function updateInstructorLearnerPackageAction(input: {
     );
   }
 
+  await syncStudentDriverJourneyStatus(input.leerlingId);
+
   revalidateInstructorLearnerSurfaces();
 
   return {
@@ -699,6 +719,72 @@ export async function updateInstructorLearnerPackageAction(input: {
     message: selectedPackage
       ? `Pakket gekoppeld: ${selectedPackage.naam}.`
       : "Pakketkoppeling verwijderd.",
+  };
+}
+
+export async function updateInstructorLearnerJourneyStatusAction(input: {
+  leerlingId: string;
+  status: ManualJourneyStatus;
+}) {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return {
+      success: false,
+      message: "Alleen een ingelogde instructeur kan de trajectstatus aanpassen.",
+    };
+  }
+
+  if (!MANUAL_JOURNEY_STATUSES.includes(input.status)) {
+    return {
+      success: false,
+      message: "Deze trajectstatus kan niet handmatig worden gezet.",
+    };
+  }
+
+  const hasRelationship = await hasInstructorStudentPlanningRelationship(
+    instructeur.id,
+    input.leerlingId
+  );
+
+  if (!hasRelationship) {
+    return {
+      success: false,
+      message: "Deze leerling hoort niet bij jouw werkplek.",
+    };
+  }
+
+  const state = getDriverJourneyStateMeta(input.status);
+  const admin = await createAdminClient();
+  const { error } = await admin
+    .from("leerlingen" as never)
+    .update({
+      student_status: state.status,
+      student_status_reason:
+        state.status === "geslaagd"
+          ? "Handmatig door instructeur gemarkeerd als geslaagd."
+          : "Handmatig door instructeur gemarkeerd als examen gepland.",
+      student_status_updated_at: new Date().toISOString(),
+    } as never)
+    .eq("id", input.leerlingId);
+
+  if (error) {
+    return {
+      success: false,
+      message: "De trajectstatus kon niet worden bijgewerkt.",
+    };
+  }
+
+  revalidateInstructorLearnerSurfaces();
+  revalidatePath("/leerling/profiel");
+
+  return {
+    success: true,
+    message:
+      state.status === "geslaagd"
+        ? "Leerling staat nu op geslaagd."
+        : "Leerling staat nu op examen gepland.",
+    state,
   };
 }
 
@@ -926,6 +1012,8 @@ export async function createInstructorLessonForLearnerAction(input: LocationSele
     ),
     status: "ingepland",
   });
+
+  await syncStudentDriverJourneyStatus(input.leerlingId);
 
   revalidateInstructorLearnerSurfaces();
 

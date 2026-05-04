@@ -230,6 +230,7 @@ export interface StudentProgressAssessment {
   id: string;
   leerling_id: string;
   instructeur_id: string;
+  les_id?: string | null;
   vaardigheid_key: string;
   beoordelings_datum: string;
   status: StudentProgressStatus;
@@ -241,6 +242,7 @@ export interface StudentProgressLessonNote {
   id: string;
   leerling_id: string;
   instructeur_id: string;
+  les_id?: string | null;
   lesdatum: string;
   samenvatting?: string | null;
   sterk_punt?: string | null;
@@ -284,6 +286,24 @@ export interface InstructorStudentProgressRow {
   intakeChecklistKeys?: string[];
   accountStatus?: "uitgenodigd" | "actief";
   lastSignInAt?: string | null;
+  journeyStatus?: import("@/lib/driver-journey").DriverJourneyStatus;
+  journeyLabel?: string;
+  journeyNextAction?: string;
+  journeyTone?: import("@/lib/driver-journey").DriverJourneyTone;
+}
+
+export interface InstructorDashboardProgressSignalStudent {
+  id: string;
+  naam: string;
+  detail: string;
+  href: string;
+  score?: number;
+}
+
+export interface InstructorDashboardProgressSignals {
+  behindStudents: InstructorDashboardProgressSignalStudent[];
+  examReadyStudents: InstructorDashboardProgressSignalStudent[];
+  packageActionStudents: InstructorDashboardProgressSignalStudent[];
 }
 
 export interface SharedLessonCompassBoard {

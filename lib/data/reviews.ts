@@ -5,6 +5,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import { createServerClient } from "@/lib/supabase/server";
 
 type ReviewStatRow = {
@@ -310,6 +311,63 @@ export async function getCurrentInstructorReviewSummary(): Promise<InstructorRev
   };
 }
 
+export async function getCurrentInstructorProfileReviewData({
+  fallbackAverageScore,
+  latestLimit = 6,
+}: {
+  fallbackAverageScore?: number | string | null;
+  latestLimit?: number;
+} = {}) {
+  const instructeur = await getCurrentInstructeurRecord();
+
+  if (!instructeur) {
+    return {
+      averageScore: 0,
+      latestReviews: [] as Review[],
+      recentThirtyDayCount: 0,
+      repliedCount: 0,
+      replyRate: 0,
+      reviewCount: 0,
+    };
+  }
+
+  const supabase = await createServerClient();
+  const { count, data: latestReviewRows } = await supabase
+    .from("reviews")
+    .select(
+      "id, score, titel, tekst, created_at, leerling_naam_snapshot, antwoord_tekst, antwoord_datum",
+      { count: "exact" },
+    )
+    .eq("instructeur_id", instructeur.id)
+    .eq("verborgen", false)
+    .order("created_at", { ascending: false })
+    .limit(latestLimit);
+
+  const latestReviews = (latestReviewRows ?? []) as PublicReviewRow[];
+  const reviewCount = count ?? latestReviews.length;
+  const repliedCount = latestReviews.filter((row) =>
+    row.antwoord_tekst?.trim(),
+  ).length;
+  const recentThirtyDayCount = latestReviews.filter((row) => {
+    const createdAt = new Date(row.created_at).getTime();
+    return createdAt >= Date.now() - 30 * 24 * 60 * 60 * 1000;
+  }).length;
+  const averageScore = roundReviewScore(
+    Number(fallbackAverageScore ?? instructeur.beoordeling ?? 0),
+  );
+
+  return {
+    averageScore,
+    latestReviews: latestReviews.map((row) => mapReview(row)),
+    recentThirtyDayCount,
+    repliedCount,
+    replyRate: latestReviews.length
+      ? Math.round((repliedCount / latestReviews.length) * 100)
+      : 0,
+    reviewCount,
+  };
+}
+
 export async function getCurrentInstructorReviews(): Promise<Review[]> {
   const instructeur = await getCurrentInstructeurRecord();
 
@@ -384,7 +442,14 @@ export async function getLearnerReviewOpportunities(): Promise<
     .eq("status", "afgerond")
     .order("start_at", { ascending: false });
 
-  if (error || !lessonRows?.length) {
+  if (error) {
+    logSupabaseDataError("reviews.learnerOpportunities", error, {
+      leerlingId: leerling.id,
+    });
+    return [];
+  }
+
+  if (!lessonRows?.length) {
     return [];
   }
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentRole } from "@/lib/data/profiles";
+import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import { createServerClient } from "@/lib/supabase/server";
 
 export async function assignPackageToStudentAction(
@@ -87,7 +88,12 @@ export async function assignPackageToStudentAction(
     ongelezen: true,
   });
 
+  await syncStudentDriverJourneyStatus(leerling.id);
+
   revalidatePath("/admin/leerlingen");
+  revalidatePath("/instructeur/dashboard");
+  revalidatePath("/instructeur/leerlingen");
+  revalidatePath("/instructeur/lessen");
   revalidatePath("/leerling/betalingen");
   revalidatePath("/leerling/dashboard");
   revalidatePath("/leerling/boekingen");

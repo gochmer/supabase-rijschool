@@ -2,11 +2,6 @@ import "server-only";
 
 import { cache } from "react";
 import {
-  instructeurs,
-  pakkettenPerInstructeur,
-  reviewsPerInstructeur,
-} from "@/lib/mock-data";
-import {
   formatAvailabilityDay,
   formatAvailabilityWindow,
 } from "@/lib/availability";
@@ -33,6 +28,7 @@ import {
   getLatestVisibleReviewsByInstructorIds,
   getReviewStatsByInstructorIds,
 } from "@/lib/data/reviews";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import { normalizeCityForSlug } from "@/lib/seo-cities";
 import { createPublicServerClient } from "@/lib/supabase/public";
 
@@ -57,6 +53,18 @@ type DbInstructorRow = {
   profiel_compleetheid: number | null;
   specialisaties: string[] | null;
   profielfoto_kleur: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type PublicInstructorProfileRow = {
+  id: string;
+  volledige_naam: string | null;
+  email: string | null;
+  telefoon: string | null;
+  avatar_url: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 type InstructorBookedLessonRow = {
@@ -120,31 +128,30 @@ function mapInstructor(
     reviewCount: number;
     averageScore: number;
   },
-  latestReview?: InstructeurProfiel["recente_review"]
+  latestReview?: InstructeurProfiel["recente_review"],
+  profile?: PublicInstructorProfileRow | null
 ): InstructeurProfiel {
-  const base = instructeurs.find((item) => item.slug === row.slug);
   const durationDefaults = resolveInstructorLessonDurationDefaults(row);
-  const resolvedReviewCount =
-    reviewStats?.reviewCount ?? base?.aantal_reviews ?? 0;
+  const resolvedReviewCount = reviewStats?.reviewCount ?? 0;
   const resolvedRating =
     reviewStats && reviewStats.reviewCount > 0
       ? reviewStats.averageScore
-      : toNumber(row.beoordeling, base?.beoordeling ?? 0);
+      : toNumber(row.beoordeling, 0);
 
   return {
     id: row.id,
     slug: row.slug,
     volledige_naam:
-      row.volledige_naam || base?.volledige_naam || "Instructeur",
-    email: base?.email || "",
-    telefoon: base?.telefoon || "",
-    avatar_url: row.avatar_url || base?.avatar_url || null,
+      row.volledige_naam || profile?.volledige_naam || "Instructeur",
+    email: profile?.email ?? "",
+    telefoon: profile?.telefoon ?? "",
+    avatar_url: row.avatar_url || profile?.avatar_url || null,
     rol: "instructeur",
-    created_at: base?.created_at || new Date().toISOString(),
-    updated_at: base?.updated_at || new Date().toISOString(),
-    bio: row.bio || base?.bio || "Nog geen introductietekst toegevoegd.",
-    ervaring_jaren: row.ervaring_jaren ?? base?.ervaring_jaren ?? 0,
-    prijs_per_les: toNumber(row.prijs_per_les, base?.prijs_per_les ?? 0),
+    created_at: profile?.created_at ?? row.created_at,
+    updated_at: profile?.updated_at ?? row.updated_at,
+    bio: row.bio || "Nog geen introductietekst toegevoegd.",
+    ervaring_jaren: row.ervaring_jaren ?? 0,
+    prijs_per_les: toNumber(row.prijs_per_les, 0),
     online_boeken_actief: Boolean(row.online_boeken_actief),
     standaard_rijles_duur_minuten: durationDefaults.rijles,
     standaard_proefles_duur_minuten: durationDefaults.proefles,
@@ -153,13 +160,12 @@ function mapInstructor(
     beoordeling: resolvedRating,
     aantal_reviews: resolvedReviewCount,
     recente_review: latestReview ?? null,
-    transmissie: row.transmissie || base?.transmissie || "beide",
-    steden: row.werkgebied?.length ? row.werkgebied : base?.steden || [],
+    transmissie: row.transmissie || "beide",
+    steden: row.werkgebied?.length ? row.werkgebied : [],
     specialisaties:
-      row.specialisaties?.length ? row.specialisaties : base?.specialisaties || [],
+      row.specialisaties?.length ? row.specialisaties : [],
     profielfoto_kleur:
       row.profielfoto_kleur ||
-      base?.profielfoto_kleur ||
       gradientPalette[
         Math.abs(row.id.length + row.slug.length) % gradientPalette.length
       ],
@@ -168,7 +174,7 @@ function mapInstructor(
       row.profiel_status === "in_beoordeling"
         ? row.profiel_status
         : "concept",
-    profiel_voltooid: row.profiel_compleetheid ?? base?.profiel_voltooid ?? 0,
+    profiel_voltooid: row.profiel_compleetheid ?? 0,
   };
 }
 
@@ -190,31 +196,49 @@ export const getPublicInstructors = cache(async function getPublicInstructors() 
   const supabase = getOptionalPublicClient();
 
   if (!supabase) {
-    return instructeurs;
+    logSupabaseDataError(
+      "instructors.publicClient",
+      new Error("Missing public Supabase environment"),
+    );
+    return [];
   }
 
   const { data: rows, error } = await supabase
     .from("instructeurs")
     .select(
-      "id, profile_id, slug, volledige_naam, avatar_url, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, standaard_rijles_duur_minuten, standaard_proefles_duur_minuten, standaard_pakketles_duur_minuten, standaard_examenrit_duur_minuten, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur"
+      "id, profile_id, slug, volledige_naam, avatar_url, bio, ervaring_jaren, werkgebied, prijs_per_les, online_boeken_actief, standaard_rijles_duur_minuten, standaard_proefles_duur_minuten, standaard_pakketles_duur_minuten, standaard_examenrit_duur_minuten, transmissie, beoordeling, profiel_status, profiel_compleetheid, specialisaties, profielfoto_kleur, created_at, updated_at"
     )
     .order("created_at", { ascending: false });
 
   if (error || !rows?.length) {
-    return instructeurs;
+    if (error) {
+      logSupabaseDataError("instructors.public", error);
+    }
+    return [];
   }
 
   const instructorIds = rows.map((row) => row.id);
-  const [reviewStatsMap, latestReviewMap] = await Promise.all([
+  const profileIds = rows.map((row) => row.profile_id);
+  const [reviewStatsMap, latestReviewMap, profilesResult] = await Promise.all([
     getReviewStatsByInstructorIds(instructorIds),
     getLatestVisibleReviewsByInstructorIds(instructorIds),
+    supabase
+      .from("profiles")
+      .select("id, volledige_naam, email, telefoon, avatar_url, created_at, updated_at")
+      .in("id", profileIds),
   ]);
+  const profileMap = new Map(
+    ((profilesResult.data ?? []) as PublicInstructorProfileRow[]).map(
+      (profile) => [profile.id, profile],
+    ),
+  );
 
   return rows.map((row) =>
     mapInstructor(
       row as DbInstructorRow,
       reviewStatsMap.get(row.id),
-      latestReviewMap.get(row.id)
+      latestReviewMap.get(row.id),
+      profileMap.get(row.profile_id) ?? null,
     )
   );
 });
@@ -224,13 +248,12 @@ export const getPublicInstructorsByLessonType = cache(async function getPublicIn
   const supabase = getOptionalPublicClient();
 
   if (!supabase) {
-    const fallbackSlugs = new Set(
-      Object.entries(pakkettenPerInstructeur)
-        .filter(([, packages]) => packages.some((pkg) => pkg.les_type === lesType))
-        .map(([slug]) => slug)
+    logSupabaseDataError(
+      "instructors.byLessonTypeClient",
+      new Error("Missing public Supabase environment"),
+      { lesType },
     );
-
-    return allInstructors.filter((instructor) => fallbackSlugs.has(instructor.slug));
+    return [];
   }
 
   const { data: packageRows, error } = (await supabase
@@ -244,13 +267,10 @@ export const getPublicInstructorsByLessonType = cache(async function getPublicIn
   };
 
   if (error || !packageRows?.length) {
-    const fallbackSlugs = new Set(
-      Object.entries(pakkettenPerInstructeur)
-        .filter(([, packages]) => packages.some((pkg) => pkg.les_type === lesType))
-        .map(([slug]) => slug)
-    );
-
-    return allInstructors.filter((instructor) => fallbackSlugs.has(instructor.slug));
+    if (error) {
+      logSupabaseDataError("instructors.byLessonType", error, { lesType });
+    }
+    return [];
   }
 
   const supportedInstructorIds = new Set(
@@ -310,7 +330,12 @@ export const getInstructorReviews = cache(async function getInstructorReviews(sl
   const supabase = getOptionalPublicClient();
 
   if (!supabase) {
-    return reviewsPerInstructeur[slug] ?? [];
+    logSupabaseDataError(
+      "instructors.reviewsClient",
+      new Error("Missing public Supabase environment"),
+      { slug },
+    );
+    return [];
   }
 
   const { data: reviewRows, error } = await supabase
@@ -323,7 +348,13 @@ export const getInstructorReviews = cache(async function getInstructorReviews(sl
     .order("created_at", { ascending: false });
 
   if (error || !reviewRows?.length) {
-    return reviewsPerInstructeur[slug] ?? [];
+    if (error) {
+      logSupabaseDataError("instructors.reviews", error, {
+        slug,
+        instructeurId: instructor.id,
+      });
+    }
+    return [];
   }
 
   return reviewRows.map((row) => ({
@@ -360,6 +391,11 @@ export const getInstructorAvailability = cache(async function getInstructorAvail
   const supabase = getOptionalPublicClient();
 
   if (!supabase) {
+    logSupabaseDataError(
+      "instructors.availabilityClient",
+      new Error("Missing public Supabase environment"),
+      { slug },
+    );
     return [];
   }
 
@@ -405,6 +441,10 @@ export const getInstructorAvailability = cache(async function getInstructorAvail
   ]);
 
   if (error) {
+    logSupabaseDataError("instructors.availability", error, {
+      slug,
+      instructeurId: instructor.id,
+    });
     return [];
   }
 
@@ -470,6 +510,11 @@ export async function getPublicInstructorAvailabilityMap(
   const supabase = getOptionalPublicClient();
 
   if (!supabase) {
+    logSupabaseDataError(
+      "instructors.availabilityMapClient",
+      new Error("Missing public Supabase environment"),
+      { instructorCount: uniqueInstructorIds.length },
+    );
     return {};
   }
 
@@ -517,6 +562,10 @@ export async function getPublicInstructorAvailabilityMap(
   ]);
 
   if (error) {
+    logSupabaseDataError("instructors.availabilityMap", error, {
+      instructorCount: uniqueInstructorIds.length,
+      limit,
+    });
     return {};
   }
 

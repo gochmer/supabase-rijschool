@@ -1,10 +1,10 @@
 import "server-only";
 
 import { cache } from "react";
-import { notificaties } from "@/lib/mock-data";
 import type { Notificatie } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase/server";
 import { ensureCurrentUserContext } from "@/lib/data/profiles";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 
 function formatRelativeDate(dateString: string) {
   const date = new Date(dateString);
@@ -19,11 +19,15 @@ function formatRelativeDate(dateString: string) {
   return `${days} dag${days === 1 ? "" : "en"} geleden`;
 }
 
-export const getCurrentNotifications = cache(async function getCurrentNotifications(): Promise<Notificatie[]> {
+export const getCurrentNotifications = cache(async function getCurrentNotifications({
+  limit = 20,
+}: {
+  limit?: number;
+} = {}): Promise<Notificatie[]> {
   const context = await ensureCurrentUserContext();
 
   if (!context) {
-    return notificaties;
+    return [];
   }
 
   const supabase = await createServerClient();
@@ -32,9 +36,13 @@ export const getCurrentNotifications = cache(async function getCurrentNotificati
     .select("id, titel, tekst, type, ongelezen, created_at")
     .eq("profiel_id", context.user.id)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(limit);
 
   if (error) {
+    logSupabaseDataError("notifications.current", error, {
+      profileId: context.user.id,
+      limit,
+    });
     return [];
   }
 
@@ -54,3 +62,9 @@ export const getCurrentNotifications = cache(async function getCurrentNotificati
     ongelezen: row.ongelezen,
   }));
 });
+
+export const getCurrentNotificationPreview = cache(
+  async function getCurrentNotificationPreview() {
+    return getCurrentNotifications({ limit: 8 });
+  },
+);

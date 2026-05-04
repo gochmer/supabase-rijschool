@@ -24,6 +24,7 @@ type AssessmentRow = {
   id: string;
   leerling_id: string;
   instructeur_id: string;
+  les_id?: string | null;
   vaardigheid_key: string;
   beoordelings_datum: string;
   status: string;
@@ -35,6 +36,7 @@ type LessonNoteRow = {
   id: string;
   leerling_id: string;
   instructeur_id: string;
+  les_id?: string | null;
   lesdatum: string;
   samenvatting?: string | null;
   sterk_punt?: string | null;
@@ -56,6 +58,7 @@ function mapAssessmentRows(rows: AssessmentRow[]): StudentProgressAssessment[] {
         id: row.id,
         leerling_id: row.leerling_id,
         instructeur_id: row.instructeur_id,
+        les_id: row.les_id ?? null,
         vaardigheid_key: row.vaardigheid_key,
         beoordelings_datum: row.beoordelings_datum,
         status: row.status,
@@ -71,6 +74,7 @@ function mapLessonNoteRows(rows: LessonNoteRow[]): StudentProgressLessonNote[] {
     id: row.id,
     leerling_id: row.leerling_id,
     instructeur_id: row.instructeur_id,
+    les_id: row.les_id ?? null,
     lesdatum: row.lesdatum,
     samenvatting: row.samenvatting ?? null,
     sterk_punt: row.sterk_punt ?? null,
@@ -117,14 +121,14 @@ export async function evaluateStudentTrajectorySignals({
     supabase
       .from("leerling_voortgang_beoordelingen")
       .select(
-        "id, leerling_id, instructeur_id, vaardigheid_key, beoordelings_datum, status, notitie, created_at"
+        "id, leerling_id, instructeur_id, les_id, vaardigheid_key, beoordelings_datum, status, notitie, created_at"
       )
       .eq("leerling_id", leerlingId)
       .eq("instructeur_id", instructeurId),
     supabase
       .from("leerling_voortgang_lesnotities")
       .select(
-        "id, leerling_id, instructeur_id, lesdatum, samenvatting, sterk_punt, focus_volgende_les, created_at, updated_at"
+        "id, leerling_id, instructeur_id, les_id, lesdatum, samenvatting, sterk_punt, focus_volgende_les, created_at, updated_at"
       )
       .eq("leerling_id", leerlingId)
       .eq("instructeur_id", instructeurId),

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
+import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
 import { createServerClient } from "@/lib/supabase/server";
 import { evaluateStudentTrajectorySignals } from "@/lib/student-trajectory-notifications";
@@ -12,6 +13,69 @@ import {
   isStudentProgressStatus,
   normalizeStudentProgressDate,
 } from "@/lib/student-progress";
+
+type ProgressLessonContext =
+  | {
+      date: string;
+      error?: never;
+      lesId: string | null;
+    }
+  | {
+      date?: never;
+      error: string;
+      lesId?: never;
+    };
+
+async function resolveProgressLessonContext({
+  fallbackDate,
+  instructeurId,
+  leerlingId,
+  lesId,
+  supabase,
+}: {
+  fallbackDate: string;
+  instructeurId: string;
+  leerlingId: string;
+  lesId?: string | null;
+  supabase: Awaited<ReturnType<typeof createServerClient>>;
+}): Promise<ProgressLessonContext> {
+  const normalizedFallbackDate = normalizeStudentProgressDate(fallbackDate);
+
+  if (!normalizedFallbackDate) {
+    return {
+      error: "Kies een geldige lesdatum.",
+    };
+  }
+
+  if (!lesId) {
+    return {
+      date: normalizedFallbackDate,
+      lesId: null,
+    };
+  }
+
+  const { data: lesson, error } = await supabase
+    .from("lessen")
+    .select("id, start_at")
+    .eq("id", lesId)
+    .eq("instructeur_id", instructeurId)
+    .eq("leerling_id", leerlingId)
+    .maybeSingle();
+
+  if (error || !lesson) {
+    return {
+      error: "Deze les hoort niet bij deze leerling of instructeur.",
+    };
+  }
+
+  return {
+    date:
+      normalizeStudentProgressDate(
+        lesson.start_at?.slice(0, 10) ?? normalizedFallbackDate,
+      ) ?? normalizedFallbackDate,
+    lesId: lesson.id,
+  };
+}
 
 async function syncStudentProgressPercentage(leerlingId: string) {
   const supabase = await createServerClient();
@@ -47,6 +111,7 @@ async function syncStudentProgressPercentage(leerlingId: string) {
 
 export async function saveStudentProgressAssessmentAction(input: {
   leerlingId: string;
+  lesId?: string | null;
   vaardigheidKey: string;
   beoordelingsDatum: string;
   status: string;
@@ -76,15 +141,6 @@ export async function saveStudentProgressAssessmentAction(input: {
     };
   }
 
-  const beoordelingsDatum = normalizeStudentProgressDate(input.beoordelingsDatum);
-
-  if (!beoordelingsDatum) {
-    return {
-      success: false,
-      message: "Kies een geldige lesdatum.",
-    };
-  }
-
   const hasLink = await hasInstructorStudentPlanningRelationship(
     instructeur.id,
     input.leerlingId
@@ -98,18 +154,52 @@ export async function saveStudentProgressAssessmentAction(input: {
   }
 
   const supabase = await createServerClient();
-  const { error } = await supabase.from("leerling_voortgang_beoordelingen").upsert(
-    {
-      leerling_id: input.leerlingId,
-      instructeur_id: instructeur.id,
-      vaardigheid_key: input.vaardigheidKey,
-      beoordelings_datum: beoordelingsDatum,
-      status: input.status,
-    },
-    {
-      onConflict: "leerling_id,instructeur_id,vaardigheid_key,beoordelings_datum",
-    }
-  );
+  const lessonContext = await resolveProgressLessonContext({
+    fallbackDate: input.beoordelingsDatum,
+    instructeurId: instructeur.id,
+    leerlingId: input.leerlingId,
+    lesId: input.lesId,
+    supabase,
+  });
+
+  if ("error" in lessonContext) {
+    return {
+      success: false,
+      message: lessonContext.error,
+    };
+  }
+
+  let existingAssessmentQuery = supabase
+    .from("leerling_voortgang_beoordelingen")
+    .select("id")
+    .eq("leerling_id", input.leerlingId)
+    .eq("instructeur_id", instructeur.id)
+    .eq("vaardigheid_key", input.vaardigheidKey);
+
+  existingAssessmentQuery = lessonContext.lesId
+    ? existingAssessmentQuery.eq("les_id", lessonContext.lesId)
+    : existingAssessmentQuery
+        .is("les_id", null)
+        .eq("beoordelings_datum", lessonContext.date);
+
+  const { data: existingAssessment } =
+    await existingAssessmentQuery.maybeSingle();
+  const payload = {
+    beoordelings_datum: lessonContext.date,
+    instructeur_id: instructeur.id,
+    leerling_id: input.leerlingId,
+    les_id: lessonContext.lesId,
+    status: input.status,
+    vaardigheid_key: input.vaardigheidKey,
+  };
+  const { error } = existingAssessment
+    ? await supabase
+        .from("leerling_voortgang_beoordelingen")
+        .update(payload)
+        .eq("id", existingAssessment.id)
+    : await supabase
+        .from("leerling_voortgang_beoordelingen")
+        .insert(payload);
 
   if (error) {
     return {
@@ -119,6 +209,7 @@ export async function saveStudentProgressAssessmentAction(input: {
   }
 
   await syncStudentProgressPercentage(input.leerlingId);
+  await syncStudentDriverJourneyStatus(input.leerlingId);
   await evaluateStudentTrajectorySignals({
     supabase,
     leerlingId: input.leerlingId,
@@ -139,6 +230,7 @@ export async function saveStudentProgressAssessmentAction(input: {
 
 export async function clearStudentProgressAssessmentAction(input: {
   leerlingId: string;
+  lesId?: string | null;
   vaardigheidKey: string;
   beoordelingsDatum: string;
 }) {
@@ -160,15 +252,6 @@ export async function clearStudentProgressAssessmentAction(input: {
     };
   }
 
-  const beoordelingsDatum = normalizeStudentProgressDate(input.beoordelingsDatum);
-
-  if (!beoordelingsDatum) {
-    return {
-      success: false,
-      message: "Kies een geldige lesdatum.",
-    };
-  }
-
   const hasLink = await hasInstructorStudentPlanningRelationship(
     instructeur.id,
     input.leerlingId
@@ -182,13 +265,33 @@ export async function clearStudentProgressAssessmentAction(input: {
   }
 
   const supabase = await createServerClient();
-  const { error } = await supabase
+  const lessonContext = await resolveProgressLessonContext({
+    fallbackDate: input.beoordelingsDatum,
+    instructeurId: instructeur.id,
+    leerlingId: input.leerlingId,
+    lesId: input.lesId,
+    supabase,
+  });
+
+  if ("error" in lessonContext) {
+    return {
+      success: false,
+      message: lessonContext.error,
+    };
+  }
+
+  let deleteQuery = supabase
     .from("leerling_voortgang_beoordelingen")
     .delete()
     .eq("leerling_id", input.leerlingId)
     .eq("instructeur_id", instructeur.id)
-    .eq("vaardigheid_key", input.vaardigheidKey)
-    .eq("beoordelings_datum", beoordelingsDatum);
+    .eq("vaardigheid_key", input.vaardigheidKey);
+
+  deleteQuery = lessonContext.lesId
+    ? deleteQuery.eq("les_id", lessonContext.lesId)
+    : deleteQuery.is("les_id", null).eq("beoordelings_datum", lessonContext.date);
+
+  const { error } = await deleteQuery;
 
   if (error) {
     return {
@@ -198,6 +301,7 @@ export async function clearStudentProgressAssessmentAction(input: {
   }
 
   await syncStudentProgressPercentage(input.leerlingId);
+  await syncStudentDriverJourneyStatus(input.leerlingId);
   await evaluateStudentTrajectorySignals({
     supabase,
     leerlingId: input.leerlingId,
@@ -218,6 +322,7 @@ export async function clearStudentProgressAssessmentAction(input: {
 
 export async function saveStudentProgressLessonNoteAction(input: {
   leerlingId: string;
+  lesId?: string | null;
   lesdatum: string;
   samenvatting?: string;
   sterkPunt?: string;
@@ -229,15 +334,6 @@ export async function saveStudentProgressLessonNoteAction(input: {
     return {
       success: false,
       message: "Alleen instructeurs kunnen lesnotities opslaan.",
-    };
-  }
-
-  const lesdatum = normalizeStudentProgressDate(input.lesdatum);
-
-  if (!lesdatum) {
-    return {
-      success: false,
-      message: "Kies een geldige lesdatum voor deze notitie.",
     };
   }
 
@@ -258,14 +354,33 @@ export async function saveStudentProgressLessonNoteAction(input: {
   const focusVolgendeLes = String(input.focusVolgendeLes ?? "").trim();
 
   const supabase = await createServerClient();
+  const lessonContext = await resolveProgressLessonContext({
+    fallbackDate: input.lesdatum,
+    instructeurId: instructeur.id,
+    leerlingId: input.leerlingId,
+    lesId: input.lesId,
+    supabase,
+  });
+
+  if ("error" in lessonContext) {
+    return {
+      success: false,
+      message: lessonContext.error,
+    };
+  }
 
   if (!samenvatting && !sterkPunt && !focusVolgendeLes) {
-    const { error: deleteError } = await supabase
+    let deleteQuery = supabase
       .from("leerling_voortgang_lesnotities")
       .delete()
       .eq("leerling_id", input.leerlingId)
-      .eq("instructeur_id", instructeur.id)
-      .eq("lesdatum", lesdatum);
+      .eq("instructeur_id", instructeur.id);
+
+    deleteQuery = lessonContext.lesId
+      ? deleteQuery.eq("les_id", lessonContext.lesId)
+      : deleteQuery.is("les_id", null).eq("lesdatum", lessonContext.date);
+
+    const { error: deleteError } = await deleteQuery;
 
     if (deleteError) {
       return {
@@ -274,21 +389,34 @@ export async function saveStudentProgressLessonNoteAction(input: {
       };
     }
   } else {
-    const { error } = await supabase
+    let existingNoteQuery = supabase
       .from("leerling_voortgang_lesnotities")
-      .upsert(
-        {
-          leerling_id: input.leerlingId,
-          instructeur_id: instructeur.id,
-          lesdatum,
-          samenvatting: samenvatting || null,
-          sterk_punt: sterkPunt || null,
-          focus_volgende_les: focusVolgendeLes || null,
-        },
-        {
-          onConflict: "leerling_id,instructeur_id,lesdatum",
-        }
-      );
+      .select("id")
+      .eq("leerling_id", input.leerlingId)
+      .eq("instructeur_id", instructeur.id);
+
+    existingNoteQuery = lessonContext.lesId
+      ? existingNoteQuery.eq("les_id", lessonContext.lesId)
+      : existingNoteQuery.is("les_id", null).eq("lesdatum", lessonContext.date);
+
+    const { data: existingNote } = await existingNoteQuery.maybeSingle();
+    const payload = {
+      focus_volgende_les: focusVolgendeLes || null,
+      instructeur_id: instructeur.id,
+      leerling_id: input.leerlingId,
+      les_id: lessonContext.lesId,
+      lesdatum: lessonContext.date,
+      samenvatting: samenvatting || null,
+      sterk_punt: sterkPunt || null,
+    };
+    const { error } = existingNote
+      ? await supabase
+          .from("leerling_voortgang_lesnotities")
+          .update(payload)
+          .eq("id", existingNote.id)
+      : await supabase
+          .from("leerling_voortgang_lesnotities")
+          .insert(payload);
 
     if (error) {
       return {
@@ -303,6 +431,7 @@ export async function saveStudentProgressLessonNoteAction(input: {
     leerlingId: input.leerlingId,
     instructeurId: instructeur.id,
   });
+  await syncStudentDriverJourneyStatus(input.leerlingId);
 
   revalidatePath("/instructeur/leerlingen");
   revalidatePath("/instructeur/dashboard");

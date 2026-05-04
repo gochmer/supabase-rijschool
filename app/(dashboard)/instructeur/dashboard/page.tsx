@@ -1,20 +1,21 @@
+import { Suspense } from "react";
+
 import { InstructorCommandCenter } from "@/components/dashboard/instructor-command-center";
+import { InstructorDashboardSkeleton } from "@/components/dashboard/instructor-dashboard-skeleton";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
-import { getLocationOptions } from "@/lib/data/locations";
 import {
-  getInstructeurLessonRequests,
-  getInstructeurLessons,
+  getInstructeurDashboardLessonRequests,
+  getInstructeurDashboardLessons,
 } from "@/lib/data/lesson-requests";
-import { getCurrentNotifications } from "@/lib/data/notifications";
-import { getCurrentInstructorPackages } from "@/lib/data/packages";
+import { getCurrentNotificationPreview } from "@/lib/data/notifications";
+import { getCurrentInstructorDashboardPackages } from "@/lib/data/packages";
+import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
 import {
-  getCurrentInstructeurRecord,
-  getCurrentProfile,
-} from "@/lib/data/profiles";
-import { getReviewStatsByInstructorIds } from "@/lib/data/reviews";
-import { getInstructeurLessonPlannerStudents } from "@/lib/data/student-progress";
+  getInstructeurDashboardProgressSignals,
+  getInstructeurDashboardStudents,
+} from "@/lib/data/student-progress";
 import { resolveInstructorLessonDurationDefaults } from "@/lib/lesson-durations";
 import {
   timedDashboardData,
@@ -22,7 +23,13 @@ import {
 } from "@/lib/performance/dashboard";
 
 const ROUTE = "/instructeur/dashboard";
-const LESSON_HISTORY_WINDOW_DAYS = 120;
+const LESSON_HISTORY_WINDOW_DAYS = 45;
+const LESSON_LOOKAHEAD_DAYS = 14;
+const DASHBOARD_LESSON_LIMIT = 48;
+const DASHBOARD_REQUEST_LIMIT = 12;
+const DASHBOARD_AVAILABILITY_LIMIT = 24;
+const DASHBOARD_RECURRING_AVAILABILITY_WEEKS = 2;
+const DASHBOARD_STUDENT_LIMIT = 12;
 
 function getLessonWindowStartIso() {
   return new Date(
@@ -30,75 +37,97 @@ function getLessonWindowStartIso() {
   ).toISOString();
 }
 
-export default async function InstructeurDashboardPage() {
+function getLessonWindowEndIso() {
+  return new Date(
+    Date.now() + LESSON_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+}
+
+export default function InstructeurDashboardPage() {
+  return (
+    <Suspense fallback={<InstructorDashboardSkeleton />}>
+      <InstructeurDashboardContent />
+    </Suspense>
+  );
+}
+
+async function InstructeurDashboardContent() {
   const {
     availabilitySlots,
     instructor,
     instructorPackages,
     instructorWithReviewStats,
     lessons,
-    locationOptions,
     notifications,
-    profile,
+    progressSignals,
+    profileName,
     requests,
     students,
   } = await timedDashboardRoute(ROUTE, async () => {
     const lessonWindowStart = getLessonWindowStartIso();
+    const lessonWindowEnd = getLessonWindowEndIso();
     const nowIso = new Date().toISOString();
     const [
       lessons,
       requests,
       notifications,
       instructor,
-      profile,
       instructorPackages,
       availabilitySlots,
       students,
-      locationOptions,
     ] = await Promise.all([
       timedDashboardData(ROUTE, "lessons", () =>
-        getInstructeurLessons({
+        getInstructeurDashboardLessons({
           from: lessonWindowStart,
-          limit: 240,
+          to: lessonWindowEnd,
+          limit: DASHBOARD_LESSON_LIMIT,
         }),
       ),
       timedDashboardData(ROUTE, "requests", () =>
-        getInstructeurLessonRequests({
-          limit: 80,
+        getInstructeurDashboardLessonRequests({
+          limit: DASHBOARD_REQUEST_LIMIT,
+          status: "aangevraagd",
         }),
       ),
-      timedDashboardData(ROUTE, "notifications", getCurrentNotifications),
+      timedDashboardData(ROUTE, "notifications", () =>
+        getCurrentNotificationPreview(),
+      ),
       timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
-      timedDashboardData(ROUTE, "profile", getCurrentProfile),
-      timedDashboardData(ROUTE, "packages", getCurrentInstructorPackages),
+      timedDashboardData(
+        ROUTE,
+        "packages",
+        getCurrentInstructorDashboardPackages,
+      ),
       timedDashboardData(ROUTE, "availability", () =>
         getCurrentInstructorAvailability({
-          concreteLimit: 160,
+          concreteLimit: DASHBOARD_AVAILABILITY_LIMIT,
           from: nowIso,
+          recurringWeeks: DASHBOARD_RECURRING_AVAILABILITY_WEEKS,
         }),
       ),
       timedDashboardData(
         ROUTE,
-        "planner-students",
-        getInstructeurLessonPlannerStudents,
+        "dashboard-students",
+        () =>
+          getInstructeurDashboardStudents({
+            lessonLimit: DASHBOARD_STUDENT_LIMIT * 18,
+          }),
       ),
-      timedDashboardData(ROUTE, "locations", getLocationOptions),
     ]);
+    const progressSignals = await timedDashboardData(
+      ROUTE,
+      "progress-signals",
+      () =>
+        getInstructeurDashboardProgressSignals({
+          instructorId: instructor?.id ?? null,
+          students,
+        }),
+    );
 
-    const reviewStats = instructor
-      ? (
-          await timedDashboardData(ROUTE, "review-stats", () =>
-            getReviewStatsByInstructorIds([instructor.id]),
-          )
-        ).get(instructor.id)
-      : null;
     const instructorWithReviewStats = instructor
       ? {
           ...instructor,
-          beoordeling: reviewStats?.reviewCount
-            ? reviewStats.averageScore
-            : instructor.beoordeling,
-          aantal_reviews: reviewStats?.reviewCount ?? 0,
+          aantal_reviews: 0,
         }
       : null;
 
@@ -108,9 +137,9 @@ export default async function InstructeurDashboardPage() {
       instructorPackages,
       instructorWithReviewStats,
       lessons,
-      locationOptions,
       notifications,
-      profile,
+      progressSignals,
+      profileName: instructor?.profielNaam ?? null,
       requests,
       students,
     };
@@ -127,11 +156,12 @@ export default async function InstructeurDashboardPage() {
         requests={requests}
         notifications={notifications}
         instructor={instructorWithReviewStats}
-        profileName={profile?.volledige_naam}
+        profileName={profileName}
         packages={instructorPackages}
         availabilitySlots={availabilitySlots}
         students={students}
-        locationOptions={locationOptions}
+        progressSignals={progressSignals}
+        locationOptions={[]}
         lessonDurationDefaults={resolveInstructorLessonDurationDefaults(
           instructor,
         )}

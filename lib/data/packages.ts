@@ -1,7 +1,6 @@
 import "server-only";
 
 import { cache } from "react";
-import { betalingen, pakketten, pakkettenPerInstructeur } from "@/lib/mock-data";
 import type { Pakket, RijlesType } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
 import { getRijlesType } from "@/lib/lesson-types";
@@ -18,6 +17,7 @@ import {
   getCurrentInstructeurRecord,
   getCurrentLeerlingRecord,
 } from "@/lib/data/profiles";
+import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import {
   getPublicInstructors,
   getPublicInstructorBySlug,
@@ -53,6 +53,7 @@ type PackageQueryResult = {
 
 type MaybePackageQueryResult = {
   data: DbPackageRow | null;
+  error?: unknown;
 };
 
 function getOptionalPublicPackageClient() {
@@ -140,34 +141,17 @@ export const getPublicPackages = cache(async function getPublicPackages(): Promi
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true })) as unknown as PackageQueryResult;
 
-  if (error || !packageRows?.length) {
-    return pakketten.filter((pkg) => pkg.instructeur_id == null && pkg.les_type === "auto");
+  if (error) {
+    logSupabaseDataError("packages.public", error, { lesType: "auto" });
+    return [];
+  }
+
+  if (!packageRows?.length) {
+    return [];
   }
 
   return packageRows.map((pkg) => toPackage(pkg as DbPackageRow));
 });
-
-function getMockPackagesByLessonType(lesType: Pakket["les_type"]) {
-  const platformPackages = pakketten
-    .filter((pkg) => pkg.les_type === lesType)
-    .map((pkg) => ({
-      ...pkg,
-      instructeur_naam: null,
-      instructeur_slug: null,
-    }));
-
-  const instructorPackages = Object.entries(pakkettenPerInstructeur).flatMap(
-    ([slug, packagesForInstructor]) =>
-      packagesForInstructor
-        .filter((pkg) => pkg.les_type === lesType)
-        .map((pkg) => ({
-          ...pkg,
-          instructeur_slug: slug,
-        }))
-  );
-
-  return [...platformPackages, ...instructorPackages];
-}
 
 export const getCatalogPackagesByLessonType = cache(async function getCatalogPackagesByLessonType(
   lesType: Pakket["les_type"]
@@ -182,8 +166,13 @@ export const getCatalogPackagesByLessonType = cache(async function getCatalogPac
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true })) as unknown as PackageQueryResult;
 
-  if (error || !packageRows?.length) {
-    return getMockPackagesByLessonType(lesType);
+  if (error) {
+    logSupabaseDataError("packages.catalogByLessonType", error, { lesType });
+    return [];
+  }
+
+  if (!packageRows?.length) {
+    return [];
   }
 
   const instructorIds = Array.from(
@@ -255,17 +244,15 @@ export const getPublicInstructorPackages = cache(async function getPublicInstruc
     .order("created_at", { ascending: true })) as unknown as PackageQueryResult;
 
   if (error) {
-    return (pakkettenPerInstructeur[slug] ?? []).filter((pkg) =>
-      lesType ? pkg.les_type === lesType : true
-    );
+    logSupabaseDataError("packages.publicInstructorPackages", error, {
+      slug,
+      lesType: lesType ?? null,
+    });
+    return [];
   }
 
   if (!packageRows?.length) {
-    return instructor.id.startsWith("ins-")
-      ? (pakkettenPerInstructeur[slug] ?? []).filter((pkg) =>
-          lesType ? pkg.les_type === lesType : true
-        )
-      : [];
+    return [];
   }
 
   return packageRows.map((pkg) =>
@@ -289,41 +276,10 @@ export async function getPublicInstructorPackageMap(
   const instructorById = new Map(
     publicInstructors.map((instructor) => [instructor.id, instructor])
   );
-  const instructorBySlug = new Map(
-    publicInstructors.map((instructor) => [instructor.slug, instructor])
-  );
-  const buildFallbackPackageMap = () =>
-    Object.entries(pakkettenPerInstructeur).reduce<Record<string, Pakket[]>>(
-      (accumulator, [slug, packagesForInstructor]) => {
-        const instructor = instructorBySlug.get(slug);
-
-        if (
-          !instructor ||
-          !uniqueInstructorIds.includes(instructor.id) ||
-          !packagesForInstructor.length
-        ) {
-          return accumulator;
-        }
-
-        accumulator[instructor.id] = packagesForInstructor
-          .filter(
-            (pkg) => pkg.actief !== false && (lesType ? pkg.les_type === lesType : true)
-          )
-          .map((pkg) => ({
-            ...pkg,
-            instructeur_id: instructor.id,
-            instructeur_naam: instructor.volledige_naam,
-            instructeur_slug: instructor.slug,
-          }));
-
-        return accumulator;
-      },
-      {}
-    );
   const supabase = getOptionalPublicPackageClient();
 
   if (!supabase) {
-    return buildFallbackPackageMap();
+    return {};
   }
 
   let query = supabase
@@ -343,8 +299,16 @@ export async function getPublicInstructorPackageMap(
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true })) as unknown as PackageQueryResult;
 
-  if (error || !packageRows?.length) {
-    return buildFallbackPackageMap();
+  if (error) {
+    logSupabaseDataError("packages.publicInstructorPackageMap", error, {
+      instructorCount: uniqueInstructorIds.length,
+      lesType: lesType ?? null,
+    });
+    return {};
+  }
+
+  if (!packageRows?.length) {
+    return {};
   }
 
   return packageRows.reduce<Record<string, Pakket[]>>((accumulator, pkg) => {
@@ -383,12 +347,64 @@ export const getCurrentInstructorPackages = cache(async function getCurrentInstr
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true })) as unknown as PackageQueryResult;
 
-  if (error || !packageRows?.length) {
+  if (error) {
+    logSupabaseDataError("packages.currentInstructor", error, {
+      instructeurId: instructeur.id,
+    });
+    return [];
+  }
+
+  if (!packageRows?.length) {
     return [];
   }
 
   return packageRows.map((pkg) => toPackage(pkg as DbPackageRow));
 });
+
+export const getCurrentInstructorDashboardPackages = cache(
+  async function getCurrentInstructorDashboardPackages(): Promise<Pakket[]> {
+    const instructeur = await getCurrentInstructeurRecord();
+
+    if (!instructeur) {
+      return [];
+    }
+
+    const supabase = await createServerClient();
+    const { data: packageRows, error } = (await supabase
+      .from("pakketten")
+      .select(
+        "id, naam, prijs, aantal_lessen, actief, instructeur_id, sort_order, uitgelicht, les_type",
+      )
+      .eq("instructeur_id", instructeur.id)
+      .order("uitgelicht", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .limit(24)) as unknown as PackageQueryResult;
+
+    if (error) {
+      logSupabaseDataError("packages.currentInstructorDashboard", error, {
+        instructeurId: instructeur.id,
+      });
+      return [];
+    }
+
+    if (!packageRows?.length) {
+      return [];
+    }
+
+    return packageRows.map((pkg) => ({
+      id: pkg.id,
+      naam: pkg.naam,
+      beschrijving: "",
+      prijs: toPackagePrijs(pkg.prijs),
+      lessen: pkg.aantal_lessen ?? 0,
+      les_type: getRijlesType(pkg.les_type),
+      actief: pkg.actief ?? true,
+      instructeur_id: pkg.instructeur_id,
+      sort_order: pkg.sort_order ?? 0,
+      uitgelicht: pkg.uitgelicht ?? false,
+    }));
+  },
+);
 
 export async function getCurrentStudentPackageOverview() {
   const leerling = await getCurrentLeerlingRecord();
@@ -396,19 +412,8 @@ export async function getCurrentStudentPackageOverview() {
   if (!leerling) {
     return {
       assignedPackage: null,
-      payments: betalingen.map((payment) => ({
-        id: payment.id,
-        omschrijving: payment.omschrijving,
-        bedrag: formatCurrency(payment.bedrag),
-        datum: payment.datum,
-        status: payment.status,
-      })),
-      availablePackages: pakketten.map((pkg) => ({
-        id: pkg.id,
-        naam: pkg.naam,
-        lessen: pkg.lessen,
-        prijsLabel: pkg.prijs ? formatCurrency(pkg.prijs) : "Op aanvraag",
-      })),
+      payments: [],
+      availablePackages: [],
       lessonUsage: {
         totalLessons: null,
         plannedLessons: 0,
@@ -420,10 +425,10 @@ export async function getCurrentStudentPackageOverview() {
 
   const supabase = await createServerClient();
   const [
-    { data: assignedPackage },
-    { data: packageLessonRows },
-    { data: paymentRows },
-    { data: packageRows },
+    assignedPackageResult,
+    packageLessonResult,
+    paymentResult,
+    packageResult,
   ] =
     await Promise.all([
       leerling.pakket_id
@@ -441,6 +446,7 @@ export async function getCurrentStudentPackageOverview() {
             .eq("pakket_id", leerling.pakket_id)
             .neq("status", "geannuleerd") as unknown as Promise<{
             data: Array<{ id: string; status: string | null }> | null;
+            error?: unknown;
           }>)
         : Promise.resolve({ data: [] }),
       supabase
@@ -458,6 +464,26 @@ export async function getCurrentStudentPackageOverview() {
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true })) as unknown as Promise<PackageQueryResult>,
     ]);
+  const queryErrors = [
+    ["assignedPackage", (assignedPackageResult as { error?: unknown }).error],
+    ["packageLessonUsage", (packageLessonResult as { error?: unknown }).error],
+    ["payments", (paymentResult as { error?: unknown }).error],
+    ["availablePackages", (packageResult as { error?: unknown }).error],
+  ] as const;
+
+  for (const [query, error] of queryErrors) {
+    if (error) {
+      logSupabaseDataError("packages.currentStudentOverview", error, {
+        leerlingId: leerling.id,
+        query,
+      });
+    }
+  }
+
+  const assignedPackage = assignedPackageResult.data;
+  const packageLessonRows = packageLessonResult.data;
+  const paymentRows = paymentResult.data;
+  const packageRows = packageResult.data;
   const packageLessonUsageRows = packageLessonRows ?? [];
   const plannedPackageLessons = packageLessonUsageRows.filter((lesson) =>
     ["geaccepteerd", "ingepland"].includes(lesson.status ?? "")
