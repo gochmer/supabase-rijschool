@@ -183,12 +183,12 @@ function MetricCard({
   }[tone];
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3.5 shadow-[0_20px_70px_-54px_rgba(0,0,0,0.95)] transition-colors hover:border-white/15 hover:bg-white/[0.055] 2xl:p-4">
+    <div className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.035] p-3 shadow-[0_18px_58px_-50px_rgba(0,0,0,0.95)] transition-colors hover:border-white/15 hover:bg-white/[0.055]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-xl border ring-4",
+            "flex size-8 shrink-0 items-center justify-center rounded-lg border ring-4",
             toneClass,
           )}
         >
@@ -203,11 +203,11 @@ function MetricCard({
               {value}
             </p>
           </div>
-          <p className="mt-2 min-h-10 text-xs leading-5 text-slate-400">
+          <p className="mt-1.5 min-h-10 text-xs leading-5 text-slate-400">
             {detail}
           </p>
           {typeof progress === "number" ? (
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
               <div
                 className={cn("h-full rounded-full", progressClass)}
                 style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
@@ -230,7 +230,7 @@ function SectionCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-[0_18px_60px_-52px_rgba(0,0,0,0.95)]",
+        "relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.035] p-3.5 shadow-[0_18px_58px_-52px_rgba(0,0,0,0.95)]",
         className,
       )}
     >
@@ -270,9 +270,7 @@ function PanelHeading({
       <div className="min-w-0">
         <h3 className="text-sm font-semibold text-white">{title}</h3>
         {subtitle ? (
-          <p className="mt-0.5 text-xs leading-5 text-slate-500">
-            {subtitle}
-          </p>
+          <p className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</p>
         ) : null}
       </div>
     </div>
@@ -295,7 +293,7 @@ function GuidanceRow({
   }[tone];
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-black/15 px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-black/15 px-3 py-2.5">
       <span className="text-xs text-slate-400">{label}</span>
       <span className={cn("text-sm font-semibold", toneClass)}>{value}</span>
     </div>
@@ -388,7 +386,7 @@ export function ProgressTrackingSystemPanel({
       : "Alle onderdelen zijn actueel vastgelegd en klaar voor opvolging.";
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-sky-300/12 bg-[radial-gradient(circle_at_15%_-10%,rgba(56,189,248,0.16),transparent_30%),radial-gradient(circle_at_92%_12%,rgba(16,185,129,0.10),transparent_24%),linear-gradient(145deg,rgba(8,18,32,0.98),rgba(3,9,18,0.99))] p-4 text-white shadow-[0_30px_100px_-62px_rgba(0,0,0,0.98)] 2xl:p-5">
+    <section className="overflow-hidden rounded-xl border border-sky-300/12 bg-[linear-gradient(145deg,rgba(8,18,32,0.98),rgba(3,9,18,0.99))] p-3.5 text-white shadow-[0_22px_76px_-58px_rgba(0,0,0,0.98)]">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-3xl">
           <div className="flex flex-wrap items-center gap-2">
@@ -399,8 +397,8 @@ export function ProgressTrackingSystemPanel({
               Live dossierlaag
             </span>
           </div>
-          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-white 2xl:text-xl">
-            Eén vaste laag voor skills, feedback en examengereedheid.
+          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-white">
+            Een vaste laag voor skills, feedback en examengereedheid.
           </h2>
           <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-400">
             Elke markering voedt dezelfde keten: skillstatus, les-score,
@@ -422,7 +420,7 @@ export function ProgressTrackingSystemPanel({
 
       <div
         className={cn(
-          "mt-4 grid gap-3 rounded-2xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center",
+          "mt-3 grid gap-3 rounded-xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center",
           hasAttention
             ? "border-amber-400/16 bg-amber-400/[0.07]"
             : "border-emerald-400/16 bg-emerald-400/[0.07]",
@@ -453,19 +451,19 @@ export function ProgressTrackingSystemPanel({
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center lg:min-w-[20rem]">
-          <div className="rounded-xl border border-white/[0.08] bg-black/15 px-3 py-2">
+          <div className="rounded-lg border border-white/[0.08] bg-black/15 px-3 py-2">
             <p className="text-[10px] text-slate-500">Dekking</p>
             <p className="mt-0.5 text-sm font-semibold text-white">
               {skillCoverage}%
             </p>
           </div>
-          <div className="rounded-xl border border-white/[0.08] bg-black/15 px-3 py-2">
+          <div className="rounded-lg border border-white/[0.08] bg-black/15 px-3 py-2">
             <p className="text-[10px] text-slate-500">Zelfstandig</p>
             <p className="mt-0.5 text-sm font-semibold text-emerald-200">
               {zelfstandigCount}
             </p>
           </div>
-          <div className="rounded-xl border border-white/[0.08] bg-black/15 px-3 py-2">
+          <div className="rounded-lg border border-white/[0.08] bg-black/15 px-3 py-2">
             <p className="text-[10px] text-slate-500">Open</p>
             <p className="mt-0.5 text-sm font-semibold text-amber-200">
               {nogOpenCount}
@@ -474,7 +472,7 @@ export function ProgressTrackingSystemPanel({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           icon={ClipboardCheck}
           label="Skilldekking"
@@ -495,7 +493,9 @@ export function ProgressTrackingSystemPanel({
           label="Examengereed"
           value={`${examReadyCount}`}
           detail={`${examAlmostCount} leerling${examAlmostCount === 1 ? "" : "en"} zit${examAlmostCount === 1 ? "" : "ten"} in de bijna-klaar zone.`}
-          progress={students.length ? (examReadyCount / students.length) * 100 : 0}
+          progress={
+            students.length ? (examReadyCount / students.length) * 100 : 0
+          }
           tone="emerald"
         />
         <MetricCard
@@ -507,7 +507,7 @@ export function ProgressTrackingSystemPanel({
         />
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_0.9fr_0.9fr]">
+      <div className="mt-3 grid gap-3 xl:grid-cols-[1.1fr_0.9fr_0.9fr]">
         <SectionCard className="xl:min-h-[14rem]">
           <PanelHeading
             icon={Activity}
@@ -520,7 +520,7 @@ export function ProgressTrackingSystemPanel({
               lessonScores.map((row) => (
                 <div
                   key={`${row.studentName}-${row.date}`}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-xl border border-white/[0.08] bg-black/15 px-3 py-2.5 text-sm"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border border-white/[0.08] bg-black/15 px-3 py-2.5 text-sm"
                 >
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
@@ -549,7 +549,7 @@ export function ProgressTrackingSystemPanel({
                 </div>
               ))
             ) : (
-              <p className="rounded-xl border border-dashed border-white/10 bg-black/10 p-3 text-sm leading-6 text-slate-400">
+              <p className="rounded-lg border border-dashed border-white/10 bg-black/10 p-3 text-sm leading-6 text-slate-400">
                 Zodra je per les skills markeert, ontstaan hier automatisch
                 les-scores.
               </p>
@@ -592,7 +592,7 @@ export function ProgressTrackingSystemPanel({
           />
           <div className="mt-3 space-y-3 text-sm leading-6 text-slate-300">
             {firstFocusStudent ? (
-              <div className="rounded-xl border border-emerald-400/15 bg-emerald-400/[0.07] p-3">
+              <div className="rounded-lg border border-emerald-400/15 bg-emerald-400/[0.07] p-3">
                 <p className="font-semibold text-white">
                   {firstFocusStudent.student.naam}
                 </p>
@@ -601,7 +601,7 @@ export function ProgressTrackingSystemPanel({
                 </p>
               </div>
             ) : lowProgressStudents.length ? (
-              <div className="rounded-xl border border-amber-400/15 bg-amber-400/[0.07] p-3">
+              <div className="rounded-lg border border-amber-400/15 bg-amber-400/[0.07] p-3">
                 <p className="font-semibold text-white">
                   {lowProgressStudents[0]?.naam}
                 </p>
@@ -610,7 +610,7 @@ export function ProgressTrackingSystemPanel({
                 </p>
               </div>
             ) : (
-              <div className="flex gap-2 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.07] p-3 text-emerald-200">
+              <div className="flex gap-2 rounded-lg border border-emerald-400/15 bg-emerald-400/[0.07] p-3 text-emerald-200">
                 <CheckCircle2 className="mt-1 size-4 shrink-0" />
                 <p>Geen acute voortgangsblokkade zichtbaar.</p>
               </div>
