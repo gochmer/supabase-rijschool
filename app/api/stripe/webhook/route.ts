@@ -216,6 +216,7 @@ export async function POST(request: Request) {
     });
 
     const { error: notificationError } = await supabase.from("notificaties").insert({
+      action_href: "/leerling/betalingen",
       profiel_id: profileId,
       titel: "Betaling ontvangen",
       tekst: "Je betaling is bevestigd en verwerkt in je leerlingdashboard.",

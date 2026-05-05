@@ -146,14 +146,17 @@ export async function getCurrentInstructorLessonCheckinBoards() {
 
   const supabase = await createServerClient();
   const now = new Date().toISOString();
+  const recentWindowStart = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const { data: lessons } = (await supabase
     .from("lessen")
     .select("id, titel, start_at, leerling_id, instructeur_id")
     .eq("instructeur_id", instructeur.id)
-    .in("status", ["ingepland", "geaccepteerd"])
-    .gte("start_at", now)
+    .in("status", ["ingepland", "geaccepteerd", "afgerond"])
+    .gte("start_at", recentWindowStart)
     .order("start_at", { ascending: true })
-    .limit(4)) as unknown as { data: UpcomingLessonRow[] | null };
+    .limit(60)) as unknown as { data: UpcomingLessonRow[] | null };
 
   if (!lessons?.length) {
     return [] as LessonCheckinBoard[];
@@ -180,6 +183,13 @@ export async function getCurrentInstructorLessonCheckinBoards() {
   const checkinMap = new Map((checkins ?? []).map((row) => [row.les_id, row]));
 
   return lessons
+    .filter((lesson) => {
+      if (!lesson.start_at) {
+        return false;
+      }
+
+      return lesson.start_at >= now || lesson.start_at >= recentWindowStart;
+    })
     .map((lesson) =>
       mapBoard(
         lesson,
@@ -201,14 +211,17 @@ export async function getCurrentLearnerLessonCheckinBoards() {
 
   const supabase = await createServerClient();
   const now = new Date().toISOString();
+  const recentWindowStart = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const { data: lessons } = (await supabase
     .from("lessen")
     .select("id, titel, start_at, leerling_id, instructeur_id")
     .eq("leerling_id", leerling.id)
-    .in("status", ["ingepland", "geaccepteerd"])
-    .gte("start_at", now)
+    .in("status", ["ingepland", "geaccepteerd", "afgerond"])
+    .gte("start_at", recentWindowStart)
     .order("start_at", { ascending: true })
-    .limit(2)) as unknown as { data: UpcomingLessonRow[] | null };
+    .limit(24)) as unknown as { data: UpcomingLessonRow[] | null };
 
   if (!lessons?.length) {
     return [] as LessonCheckinBoard[];
@@ -235,6 +248,13 @@ export async function getCurrentLearnerLessonCheckinBoards() {
   const checkinMap = new Map((checkins ?? []).map((row) => [row.les_id, row]));
 
   return lessons
+    .filter((lesson) => {
+      if (!lesson.start_at) {
+        return false;
+      }
+
+      return lesson.start_at >= now || lesson.start_at >= recentWindowStart;
+    })
     .map((lesson) =>
       mapBoard(
         lesson,

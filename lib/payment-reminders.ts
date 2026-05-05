@@ -198,6 +198,7 @@ export async function processDuePaymentReminders(options?: {
     }
 
     await supabase.from("notificaties").insert({
+      action_href: "/leerling/betalingen",
       profiel_id: profileId,
       titel: stage.title,
       tekst: buildReminderText(row, stage),

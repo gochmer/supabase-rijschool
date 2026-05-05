@@ -1,5 +1,7 @@
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { AvailabilityDashboard } from "@/components/instructor/availability-dashboard";
+import { getInstructorPlanningDataHealth } from "@/lib/data/data-health";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
 import {
   getInstructeurLessonRequests,
@@ -54,6 +56,7 @@ async function BeschikbaarheidContent() {
     requests,
     students,
     locationOptions,
+    dataHealth,
   ] = await timedDashboardRoute(ROUTE, async () => {
     const nowIso = new Date().toISOString();
     const lessonWindowStart = getLessonWindowStartIso();
@@ -91,6 +94,7 @@ async function BeschikbaarheidContent() {
       timedDashboardData(ROUTE, "locations", () =>
         getLocationOptions({ limit: AVAILABILITY_PAGE_LOCATION_LIMIT }),
       ),
+      timedDashboardData(ROUTE, "data-health", getInstructorPlanningDataHealth),
     ]);
   });
   const durationDefaults = resolveInstructorLessonDurationDefaults(instructeur);
@@ -102,6 +106,11 @@ async function BeschikbaarheidContent() {
   return (
     <>
       <DashboardPerformanceMark route={ROUTE} label="AvailabilityDashboard" />
+      <DataHealthCallout
+        className="mb-4"
+        label="Beschikbaarheid datastatus"
+        results={dataHealth}
+      />
       <AvailabilityDashboard
         slots={slots}
         lessons={lessons}

@@ -170,12 +170,14 @@ async function sendEmail({
 }
 
 async function createInAppNotification({
+  actionHref,
   supabase,
   profileId,
   title,
   text,
   type = "info",
 }: {
+  actionHref?: string | null;
   supabase: ServerSupabase;
   profileId: string | null | undefined;
   title: string;
@@ -187,6 +189,7 @@ async function createInAppNotification({
   }
 
   await supabase.from("notificaties").insert({
+    ...(actionHref?.trim() ? { action_href: actionHref.trim() } : {}),
     profiel_id: profileId,
     titel: title,
     tekst: text,
@@ -196,12 +199,14 @@ async function createInAppNotification({
 }
 
 async function createUniqueInAppNotification({
+  actionHref,
   supabase,
   profileId,
   title,
   text,
   type = "info",
 }: {
+  actionHref?: string | null;
   supabase: ServerSupabase;
   profileId: string | null | undefined;
   title: string;
@@ -226,6 +231,7 @@ async function createUniqueInAppNotification({
   }
 
   await createInAppNotification({
+    actionHref,
     supabase,
     profileId,
     title,
@@ -860,6 +866,137 @@ export async function notifyLearnerToLeaveReview({
   });
 }
 
+function formatFeedbackDate(dateValue: string) {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Amsterdam",
+  }).format(date);
+}
+
+function getLessonFeedbackPreview({
+  focus,
+  samenvatting,
+  sterkPunt,
+}: {
+  focus?: string | null;
+  samenvatting?: string | null;
+  sterkPunt?: string | null;
+}) {
+  if (focus?.trim()) {
+    return `Focus voor volgende keer: ${focus.trim()}`;
+  }
+
+  if (samenvatting?.trim()) {
+    return samenvatting.trim();
+  }
+
+  if (sterkPunt?.trim()) {
+    return `Sterk punt: ${sterkPunt.trim()}`;
+  }
+
+  return "Je instructeur heeft je lesverslag bijgewerkt.";
+}
+
+export async function notifyLearnerAboutProgressLessonFeedback({
+  supabase,
+  leerlingId,
+  instructeurNaam,
+  instructeurProfileId,
+  lesdatum,
+  lesTitel,
+  samenvatting,
+  sterkPunt,
+  focusVolgendeLes,
+}: {
+  actionHref?: string | null;
+  supabase: ServerSupabase;
+  leerlingId: string | null;
+  instructeurNaam: string;
+  instructeurProfileId: string | null;
+  lesdatum: string;
+  lesTitel?: string | null;
+  samenvatting?: string | null;
+  sterkPunt?: string | null;
+  focusVolgendeLes?: string | null;
+}) {
+  const learner = await getLearnerContactById(supabase, leerlingId);
+
+  if (!learner?.id) {
+    return;
+  }
+
+  const dateLabel = formatFeedbackDate(lesdatum);
+  const lessonLabel = lesTitel?.trim() || "Rijles";
+  const preview = getLessonFeedbackPreview({
+    focus: focusVolgendeLes,
+    samenvatting,
+    sterkPunt,
+  });
+  const title = "Nieuw lesverslag beschikbaar";
+  const text = `${instructeurNaam} heeft je lesverslag van ${dateLabel} bijgewerkt. ${preview}`;
+
+  await createUniqueInAppNotification({
+    actionHref: "/leerling/boekingen",
+    supabase,
+    profileId: learner.id,
+    title,
+    text,
+    type: "succes",
+  });
+
+  if (!instructeurProfileId || instructeurProfileId === learner.id) {
+    return;
+  }
+
+  const subject = `Je lesverslag van ${dateLabel}`;
+  const messageBody = [
+    `Hi, je lesverslag voor ${lessonLabel.toLowerCase()} staat klaar.`,
+    "",
+    samenvatting?.trim() ? `Samenvatting: ${samenvatting.trim()}` : null,
+    sterkPunt?.trim() ? `Sterk punt: ${sterkPunt.trim()}` : null,
+    focusVolgendeLes?.trim()
+      ? `Focus voor volgende keer: ${focusVolgendeLes.trim()}`
+      : null,
+    "",
+    "Je vindt dit ook terug bij je boekingen en voortgang.",
+  ]
+    .filter((line): line is string => line != null)
+    .join("\n");
+
+  const { data: existingMessage } = await supabase
+    .from("berichten")
+    .select("id")
+    .eq("afzender_profiel_id", instructeurProfileId)
+    .eq("ontvanger_profiel_id", learner.id)
+    .eq("onderwerp", subject)
+    .eq("inhoud", messageBody)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingMessage) {
+    return;
+  }
+
+  const { error } = await supabase.from("berichten").insert({
+    afzender_profiel_id: instructeurProfileId,
+    ontvanger_profiel_id: learner.id,
+    onderwerp: subject,
+    inhoud: messageBody,
+  });
+
+  if (error) {
+    console.error("Lesson feedback message insert failed", error);
+  }
+}
+
 export async function notifyLearnerAboutLessonCompassUpdate({
   supabase,
   leerlingId,
@@ -887,6 +1024,7 @@ export async function notifyLearnerAboutLessonCompassUpdate({
       : `${instructeurNaam} heeft jullie gedeelde leskompas bijgewerkt.`;
 
   await createInAppNotification({
+    actionHref: "/leerling/boekingen",
     supabase,
     profileId: learner.id,
     title,

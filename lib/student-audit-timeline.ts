@@ -40,6 +40,29 @@ const eventLabels: Record<string, { title: string; tone: StudentAuditTimelineEve
   package_planning_disabled: { title: "Planning gesloten", tone: "danger" },
 };
 
+const metadataLabels: Record<string, string> = {
+  allow_replace: "Bewust vervangen",
+  amount: "Bedrag",
+  enabled: "Planning actief",
+  lesson_count: "Aantal lessen",
+  next_package_id: "Nieuw pakket-id",
+  next_status: "Nieuwe status",
+  package_active: "Pakket actief",
+  package_lessons: "Aantal pakketlessen",
+  package_name: "Pakketnaam",
+  package_price: "Pakketprijs",
+  paid_at: "Betaald op",
+  payment_status: "Betalingstatus",
+  payment_status_changed: "Status aangepast",
+  planning_disabled: "Planning gesloten",
+  previous_package_id: "Vorig pakket-id",
+  previous_status: "Vorige status",
+  profile_id: "Profiel-id",
+  provider: "Provider",
+  replacement_package_id: "Vervangend pakket-id",
+  status: "Status",
+};
+
 const actorRoleLabels: Record<string, string> = {
   admin: "Admin",
   instructeur: "Instructeur",
@@ -101,6 +124,73 @@ function buildDetail(row: StudentAuditEventSourceRow) {
   return detailParts.join(" ");
 }
 
+export function getAuditEventCategory(
+  eventType: string,
+): StudentAuditTimelineEvent["category"] {
+  if (eventType.includes("_payment_") || eventType === "payment_paid") {
+    return "betaling";
+  }
+
+  if (eventType.includes("_planning_")) {
+    return "planning";
+  }
+
+  if (eventType.includes("_lessons_")) {
+    return "lessen";
+  }
+
+  if (eventType.startsWith("package_")) {
+    return "pakket";
+  }
+
+  return "overig";
+}
+
+function stringifyMetadataValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Ja" : "Nee";
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value.toLocaleString("nl-NL") : "-";
+  }
+
+  if (typeof value === "string") {
+    if (!value.trim()) {
+      return "-";
+    }
+
+    const date = new Date(value);
+    if (
+      !Number.isNaN(date.getTime()) &&
+      /^\d{4}-\d{2}-\d{2}T/.test(value)
+    ) {
+      return auditDateFormatter.format(date);
+    }
+
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function buildMetadataRows(metadata: Record<string, unknown> | null) {
+  return Object.entries(metadata ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => ({
+      label: metadataLabels[key] ?? key.replaceAll("_", " "),
+      value: stringifyMetadataValue(value),
+    }));
+}
+
 export function buildStudentAuditTimelineEvents({
   actorProfiles,
   rows,
@@ -121,11 +211,13 @@ export function buildStudentAuditTimelineEvents({
         id: row.id,
         leerlingId: row.leerling_id,
         eventType: row.event_type,
+        category: getAuditEventCategory(row.event_type),
         title: meta.title,
         detail: buildDetail(row),
         createdAt: row.created_at,
         createdAtLabel: getCreatedAtLabel(row.created_at),
         actorLabel: getActorLabel(row, actorMap),
+        metadata: buildMetadataRows(row.metadata),
         tone: meta.tone,
       } satisfies StudentAuditTimelineEvent;
     })

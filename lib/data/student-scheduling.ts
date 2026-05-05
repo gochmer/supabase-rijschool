@@ -3,7 +3,10 @@ import "server-only";
 import { parseRequestWindow } from "@/lib/booking-availability";
 import { getPublicInstructorAvailabilityMap } from "@/lib/data/instructors";
 import { getCurrentLeerlingRecord } from "@/lib/data/profiles";
-import { getLearnerTrialLessonState } from "@/lib/data/trial-lessons";
+import {
+  getLearnerTrialLessonState,
+  getTrialLessonBlockedMessage,
+} from "@/lib/data/trial-lessons";
 import { extractLessonRequestReference } from "@/lib/lesson-request-flow";
 import {
   addBookedMinutesForWeek,
@@ -14,7 +17,7 @@ import {
   type WeeklyBookingLimitSource,
   type WeeklyBookedMinutesMap,
 } from "@/lib/self-scheduling-limits";
-import type { BeschikbaarheidSlot, LesStatus } from "@/lib/types";
+import type { BeschikbaarheidSlot, LesStatus, TrialLessonStatus } from "@/lib/types";
 import { createServerClient } from "@/lib/supabase/server";
 
 const ACTIVE_REQUEST_STATUSES = ["geaccepteerd", "ingepland", "afgerond"] as const;
@@ -51,6 +54,8 @@ export type LearnerInstructorSchedulingAccess = {
   packageAssigned: boolean;
   planningBlockedUntilPackage: boolean;
   trialLessonAvailable: boolean;
+  trialLessonStatus: TrialLessonStatus;
+  trialLessonMessage: string;
   publicBookingEnabled: boolean;
   selfSchedulingAllowed: boolean;
   directBookingAllowed: boolean;
@@ -133,6 +138,8 @@ export type LearnerBookingEligibility = {
   planningBlockedUntilPackage: boolean;
   hasPendingRequest: boolean;
   trialLessonAvailable: boolean;
+  trialLessonStatus: TrialLessonStatus;
+  trialLessonMessage: string;
   publicBookingEnabled: boolean;
   selfSchedulingAllowed: boolean;
   directBookingAllowed: boolean;
@@ -182,6 +189,17 @@ export async function hasLearnerUsedTrialLesson(params: {
   });
 
   return !trialState.available;
+}
+
+function createAvailableTrialLessonAccessSnapshot() {
+  return {
+    trialLessonAvailable: true,
+    trialLessonStatus: "available" as TrialLessonStatus,
+    trialLessonMessage: getTrialLessonBlockedMessage(
+      { status: "available" },
+      "learner",
+    ),
+  };
 }
 
 async function getLearnerBookingLimitSnapshotsForInstructorIds(params: {
@@ -450,10 +468,11 @@ export async function getLearnerInstructorSchedulingAccess(
         instructorIds: [instructorId],
       })
     )[instructorId] ?? createEmptyBookingLimitSnapshot();
-  const trialLessonAvailable = !(await hasLearnerUsedTrialLesson({
+  const trialLessonState = await getLearnerTrialLessonState({
     supabase,
     leerlingId,
-  }));
+    actor: "learner",
+  });
 
   const publicBookingEnabled = Boolean(instructorRow?.online_boeken_actief);
   const packageAssigned = Boolean(learnerPackageRow?.pakket_id);
@@ -467,11 +486,14 @@ export async function getLearnerInstructorSchedulingAccess(
     hasActiveRelationship: hasRelationship,
     packageAssigned,
     planningBlockedUntilPackage: hasRelationship && !packageAssigned,
-    trialLessonAvailable,
+    trialLessonAvailable: trialLessonState.available,
+    trialLessonStatus: trialLessonState.status,
+    trialLessonMessage: trialLessonState.message,
     publicBookingEnabled,
     selfSchedulingAllowed,
     directBookingAllowed,
-    canViewAgenda: directBookingAllowed || (publicBookingEnabled && trialLessonAvailable),
+    canViewAgenda:
+      directBookingAllowed || (publicBookingEnabled && trialLessonState.available),
     weeklyBookingLimitMinutes: limitSnapshot.weeklyBookingLimitMinutes,
     manualWeeklyBookingLimitMinutes:
       limitSnapshot.manualWeeklyBookingLimitMinutes,
@@ -501,7 +523,7 @@ export async function getCurrentLearnerSchedulingAccessForInstructorSlug(
       hasActiveRelationship: false,
       packageAssigned: false,
       planningBlockedUntilPackage: false,
-      trialLessonAvailable: true,
+      ...createAvailableTrialLessonAccessSnapshot(),
       publicBookingEnabled: false,
       selfSchedulingAllowed: false,
       directBookingAllowed: false,
@@ -519,7 +541,7 @@ export async function getCurrentLearnerSchedulingAccessForInstructorSlug(
       hasActiveRelationship: false,
       packageAssigned: false,
       planningBlockedUntilPackage: false,
-      trialLessonAvailable: true,
+      ...createAvailableTrialLessonAccessSnapshot(),
       publicBookingEnabled,
       selfSchedulingAllowed: false,
       directBookingAllowed: false,
@@ -570,7 +592,7 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
           hasActiveRelationship: false,
           packageAssigned: false,
           planningBlockedUntilPackage: false,
-          trialLessonAvailable: true,
+          ...createAvailableTrialLessonAccessSnapshot(),
           publicBookingEnabled,
           selfSchedulingAllowed: false,
           directBookingAllowed: false,
@@ -618,10 +640,11 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
       data: RelationshipMapRow[] | null;
     }>,
   ]);
-  const trialLessonAvailable = !(await hasLearnerUsedTrialLesson({
+  const trialLessonState = await getLearnerTrialLessonState({
     supabase,
     leerlingId: leerling.id,
-  }));
+    actor: "learner",
+  });
   const packageAssigned = Boolean(leerling.pakket_id);
   const limitSnapshots = await getLearnerBookingLimitSnapshotsForInstructorIds({
     supabase,
@@ -661,12 +684,15 @@ export async function getCurrentLearnerSchedulingAccessMapForInstructorIds(
         hasActiveRelationship,
         packageAssigned,
         planningBlockedUntilPackage: hasActiveRelationship && !packageAssigned,
-        trialLessonAvailable,
+        trialLessonAvailable: trialLessonState.available,
+        trialLessonStatus: trialLessonState.status,
+        trialLessonMessage: trialLessonState.message,
         publicBookingEnabled,
         selfSchedulingAllowed,
         directBookingAllowed,
         canViewAgenda:
-          directBookingAllowed || (publicBookingEnabled && trialLessonAvailable),
+          directBookingAllowed ||
+          (publicBookingEnabled && trialLessonState.available),
         weeklyBookingLimitMinutes: limitSnapshot.weeklyBookingLimitMinutes,
         manualWeeklyBookingLimitMinutes:
           limitSnapshot.manualWeeklyBookingLimitMinutes,
@@ -836,6 +862,8 @@ export async function getCurrentLearnerBookingOverview(): Promise<LearnerBooking
         planningBlockedUntilPackage: access.planningBlockedUntilPackage,
         hasPendingRequest: pendingRequestInstructorIds.has(instructorId),
         trialLessonAvailable: access.trialLessonAvailable,
+        trialLessonStatus: access.trialLessonStatus,
+        trialLessonMessage: access.trialLessonMessage,
         publicBookingEnabled: access.publicBookingEnabled,
         selfSchedulingAllowed: access.selfSchedulingAllowed,
         directBookingAllowed: access.directBookingAllowed,

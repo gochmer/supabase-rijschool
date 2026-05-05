@@ -1,4 +1,5 @@
-import { Bell, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Bell, CheckCircle2 } from "lucide-react";
 
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions/notifications";
 import { ExperienceCallout } from "@/components/dashboard/experience-callout";
@@ -87,6 +88,15 @@ export default async function LeerlingNotificatiesPage() {
                     {notification.tekst}
                   </p>
                   <p className="mt-2 text-xs text-slate-400">{notification.tijd}</p>
+                  {notification.actionHref ? (
+                    <Link
+                      href={notification.actionHref}
+                      className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-sky-200 hover:text-sky-100"
+                    >
+                      Open actie
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  ) : null}
                 </div>
                 {notification.ongelezen ? (
                   <form

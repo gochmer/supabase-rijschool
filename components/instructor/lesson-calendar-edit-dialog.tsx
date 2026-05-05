@@ -1495,6 +1495,25 @@ export function LessonCalendarEditDialog({
           </Button>
           <div className="flex flex-wrap gap-1.5 sm:ml-auto">
             <Button
+              asChild
+              variant="outline"
+              className="h-7 rounded-lg border-emerald-300/18 bg-emerald-500/10 px-3 text-[11px] text-emerald-100 hover:bg-emerald-500/16 hover:text-white"
+            >
+              <Link
+                href={
+                  studentId && lesson
+                    ? `/instructeur/leerlingen?student=${encodeURIComponent(
+                        studentId,
+                      )}&date=${encodeURIComponent(date)}&lesson=${encodeURIComponent(
+                        lesson.id,
+                      )}&feedback=1#voortgang-feedback`
+                    : "/instructeur/leerlingen"
+                }
+              >
+                Voorbereiding/feedback
+              </Link>
+            </Button>
+            <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}

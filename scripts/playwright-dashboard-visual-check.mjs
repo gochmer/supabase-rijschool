@@ -32,6 +32,10 @@ const DASHBOARD_ROLES = [
       "/leerling/voortgang",
       "/leerling/profiel",
       "/leerling/boekingen",
+      "/leerling/betalingen",
+      "/leerling/berichten",
+      "/leerling/documenten",
+      "/leerling/lesmateriaal",
     ],
   },
   {
@@ -40,22 +44,35 @@ const DASHBOARD_ROLES = [
     routes: [
       "/instructeur/regie",
       "/instructeur/dashboard",
+      "/instructeur/lessen",
+      "/instructeur/beschikbaarheid",
+      "/instructeur/aanvragen",
       "/instructeur/leerlingen",
       "/instructeur/pakketten",
       "/instructeur/instellingen",
+      "/instructeur/inkomsten",
     ],
   },
   {
     role: "admin",
     emailEnv: "PLAYWRIGHT_ADMIN_EMAIL",
-    routes: ["/admin/dashboard", "/admin/instructeurs", "/admin/support"],
+    routes: [
+      "/admin/dashboard",
+      "/admin/leerlingen",
+      "/admin/lessen",
+      "/admin/betalingen",
+      "/admin/instructeurs",
+      "/admin/support",
+      "/admin/audit",
+      "/admin/instellingen",
+    ],
   },
 ];
 
 const VIEWPORTS = [
-  { name: "desktop", width: 1440, height: 1000 },
-  { name: "laptop-1280", width: 1280, height: 900 },
   { name: "mobiel", width: 390, height: 844 },
+  { name: "laptop-1280", width: 1280, height: 900 },
+  { name: "4k", width: 3840, height: 2160 },
 ];
 
 let cachedSupabaseAdminContext = null;
@@ -328,8 +345,10 @@ async function loginUser(page, email, redirectPath) {
   await gotoStable(page, `/inloggen?redirect=${encodeURIComponent(redirectPath)}`);
   await page.getByLabel("E-mailadres").fill(email);
   await page.getByLabel("Wachtwoord").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Inloggen", exact: true }).click();
-  await page.waitForURL(`**${redirectPath}`, { timeout: 30_000 });
+  await Promise.all([
+    page.waitForURL(`**${redirectPath}`, { timeout: 30_000 }),
+    page.getByRole("button", { name: "Inloggen", exact: true }).click(),
+  ]);
   await page.waitForTimeout(1_000);
 }
 

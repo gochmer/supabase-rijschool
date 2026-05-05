@@ -9,12 +9,15 @@ import {
   Clock3,
   FileText,
   Gauge,
+  NotebookPen,
   PackageCheck,
   UsersRound,
 } from "lucide-react";
 
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { FeedbackTodoCard } from "@/components/instructor/feedback-todo-card";
 import { SmartWeekPlanningPanel } from "@/components/instructor/smart-week-planning-panel";
 import { RequestStatusActions } from "@/components/requests/request-status-actions";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +30,8 @@ import {
 } from "@/components/ui/card";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
 import { getCurrentInstructorSettingsOverview } from "@/lib/data/instructor-account";
+import { getInstructorPlanningDataHealth } from "@/lib/data/data-health";
+import { getCurrentInstructorFeedbackTodoLessons } from "@/lib/data/instructor-feedback-todos";
 import { getLocationOptions } from "@/lib/data/locations";
 import {
   getInstructeurDashboardLessonRequests,
@@ -49,6 +54,7 @@ import { cn } from "@/lib/utils";
 
 const ROUTE = "/instructeur/regie";
 const PLANNING_WINDOW_DAYS = 14;
+const FEEDBACK_TODO_LIMIT = 6;
 
 const dateFormatter = new Intl.DateTimeFormat("nl-NL", {
   weekday: "long",
@@ -112,6 +118,7 @@ export default async function InstructeurRegiePage() {
 
   const {
     availabilitySlots,
+    feedbackTodos,
     instructor,
     lessons,
     locationOptions,
@@ -120,6 +127,7 @@ export default async function InstructeurRegiePage() {
     requests,
     settings,
     students,
+    dataHealth,
   } = await timedDashboardRoute(ROUTE, async () => {
     const [
       lessons,
@@ -127,9 +135,11 @@ export default async function InstructeurRegiePage() {
       notifications,
       settings,
       availabilitySlots,
+      feedbackTodos,
       students,
       instructor,
       locationOptions,
+      dataHealth,
     ] = await Promise.all([
       timedDashboardData(ROUTE, "planning-lessons", () =>
         getInstructeurDashboardLessons({
@@ -157,6 +167,12 @@ export default async function InstructeurRegiePage() {
           recurringWeeks: 2,
         }),
       ),
+      timedDashboardData(ROUTE, "feedback-todos", () =>
+        getCurrentInstructorFeedbackTodoLessons({
+          daysBack: 21,
+          limit: FEEDBACK_TODO_LIMIT,
+        }),
+      ),
       timedDashboardData(ROUTE, "students", () =>
         getInstructeurDashboardStudents({ lessonLimit: 160 }),
       ),
@@ -164,6 +180,7 @@ export default async function InstructeurRegiePage() {
       timedDashboardData(ROUTE, "locations", () =>
         getLocationOptions({ limit: 40 }),
       ),
+      timedDashboardData(ROUTE, "data-health", getInstructorPlanningDataHealth),
     ]);
     const progressSignals = await timedDashboardData(
       ROUTE,
@@ -177,6 +194,7 @@ export default async function InstructeurRegiePage() {
 
     return {
       availabilitySlots,
+      feedbackTodos,
       instructor,
       lessons,
       locationOptions,
@@ -185,6 +203,7 @@ export default async function InstructeurRegiePage() {
       requests,
       settings,
       students,
+      dataHealth,
     };
   });
 
@@ -259,6 +278,16 @@ export default async function InstructeurRegiePage() {
           : "emerald",
     },
     {
+      label: "Feedback",
+      value: `${feedbackTodos.length}`,
+      hint: feedbackTodos.length
+        ? "Lesverslag invullen"
+        : "Alles bijgewerkt",
+      href: feedbackTodos[0]?.href ?? "/instructeur/leerlingen",
+      icon: NotebookPen,
+      tone: feedbackTodos.length ? "amber" : "emerald",
+    },
+    {
       label: "Compliance",
       value: `${documentActions.length + maintenanceVehicles.length}`,
       hint:
@@ -278,6 +307,15 @@ export default async function InstructeurRegiePage() {
           text: "Accepteer wat past in je planning en wijs de rest duidelijk af.",
           href: "/instructeur/aanvragen",
           icon: ClipboardList,
+          tone: "warning" as const,
+        }
+      : null,
+    feedbackTodos.length
+      ? {
+          title: `${feedbackTodos.length} lesverslag${feedbackTodos.length === 1 ? "" : "en"} invullen`,
+          text: "Afgeronde lessen zonder feedback. Maak direct een korte update voor de leerling.",
+          href: feedbackTodos[0]?.href ?? "/instructeur/leerlingen",
+          icon: NotebookPen,
           tone: "warning" as const,
         }
       : null,
@@ -336,6 +374,11 @@ export default async function InstructeurRegiePage() {
         description="Een rustige start van je werkdag: eerst zien wat aandacht vraagt, daarna pas handelen."
       />
 
+      <DataHealthCallout
+        label="Regie datastatus"
+        results={dataHealth}
+      />
+
       <section className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] p-4 text-white shadow-[0_22px_70px_-52px_rgba(0,0,0,0.95)]">
         <div className="relative grid gap-5 xl:grid-cols-[1fr_22rem] xl:items-end">
           <div>
@@ -351,7 +394,7 @@ export default async function InstructeurRegiePage() {
                 ? `${instructor.profielNaam}, dit vraagt vandaag je aandacht.`
                 : "Dit vraagt vandaag je aandacht."}
             </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               {actionCards.map((item) => {
                 const Icon = item.icon;
 
@@ -507,6 +550,8 @@ export default async function InstructeurRegiePage() {
           </CardContent>
         </Card>
       </div>
+
+      <FeedbackTodoCard items={feedbackTodos} limit={3} />
 
       <Card className="border-white/10 bg-white/[0.045] text-white">
         <CardHeader>

@@ -48,9 +48,12 @@ import { MANUAL_LEARNER_INTAKE_ITEMS } from "@/lib/manual-learner-intake";
 import { getFirstLessonTemplateForPackage } from "@/lib/package-first-lesson-template";
 import type {
   InstructorStudentProgressRow,
+  InstructorFeedbackTemplate,
+  LessonCheckinBoard,
   Les,
   LocationOption,
   Pakket,
+  SharedLessonCompassBoard,
   StudentProgressAssessment,
   StudentProgressLessonNote,
   StudentProgressStatus,
@@ -100,9 +103,16 @@ import {
   type ActiveMarkMode,
 } from "@/components/instructor/students-board-parts";
 import { StudentPackageDialog } from "@/components/instructor/student-package-dialog";
+import { LessonCheckinPanel } from "@/components/lessons/lesson-checkin-board";
+import { LessonDetailTimeline } from "@/components/lessons/lesson-detail-timeline";
+import { SharedLessonCompass } from "@/components/lessons/shared-lesson-compass";
 import { ProgressPrintButton } from "@/components/progress/progress-print-button";
 import { StudentProgressLessonNoteEditor } from "@/components/progress/student-progress-lesson-note-editor";
 import { StudentAuditTimeline } from "@/components/shared/student-audit-timeline";
+import {
+  TrialLessonStatusCard,
+  getTrialLessonStatusMeta,
+} from "@/components/shared/trial-lesson-status-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -715,9 +725,13 @@ export function StudentsBoard({
   locationOptions = [],
   availabilitySlots = [],
   busyWindows = [],
+  feedbackTemplates = [],
+  lessonCheckinBoards = [],
+  lessonCompassBoards = [],
   packages = [],
   lessonDurationDefaults,
   initialDate = null,
+  initialFeedbackOpen = false,
   initialLessonId = null,
   initialStudentId = null,
 }: {
@@ -729,9 +743,13 @@ export function StudentsBoard({
   locationOptions?: LocationOption[];
   availabilitySlots?: LessonPlanningAvailabilitySlot[];
   busyWindows?: LessonPlanningBusyWindow[];
+  feedbackTemplates?: InstructorFeedbackTemplate[];
+  lessonCheckinBoards?: LessonCheckinBoard[];
+  lessonCompassBoards?: SharedLessonCompassBoard[];
   packages?: Pakket[];
   lessonDurationDefaults: InstructorLessonDurationDefaults;
   initialDate?: string | null;
+  initialFeedbackOpen?: boolean;
   initialLessonId?: string | null;
   initialStudentId?: string | null;
 }) {
@@ -991,6 +1009,38 @@ export function StudentsBoard({
       selectedStudent,
     });
   }, [selectedDate, selectedProgressLesson?.id, selectedStudent, selectedStudentNotes]);
+  const selectedProgressLessonAssessments = useMemo(() => {
+    if (!selectedProgressLesson) {
+      return [];
+    }
+
+    return selectedStudentAssessments.filter(
+      (assessment) => assessment.les_id === selectedProgressLesson.id,
+    );
+  }, [selectedProgressLesson, selectedStudentAssessments]);
+  const selectedDateAssessments = useMemo(() => {
+    return selectedStudentAssessments.filter(
+      (assessment) => assessment.beoordelings_datum === selectedDate,
+    );
+  }, [selectedDate, selectedStudentAssessments]);
+  const selectedLessonCompassBoards = useMemo(() => {
+    if (!selectedStudent) {
+      return [];
+    }
+
+    return lessonCompassBoards.filter(
+      (board) => board.leerling_id === selectedStudent.id,
+    );
+  }, [lessonCompassBoards, selectedStudent]);
+  const selectedLessonCheckinBoards = useMemo(() => {
+    if (!selectedProgressLesson) {
+      return [];
+    }
+
+    return lessonCheckinBoards.filter(
+      (board) => board.les_id === selectedProgressLesson.id,
+    );
+  }, [lessonCheckinBoards, selectedProgressLesson]);
   const recentNotes = useMemo(() => {
     return getRecentStudentNotes(selectedStudentNotes);
   }, [selectedStudentNotes]);
@@ -1458,6 +1508,10 @@ export function StudentsBoard({
               {visibleStudents.length ? (
                 visibleStudents.map((student, index) => {
                   const statusPill = getStudentStatusPill(student);
+                  const trialStatusMeta = getTrialLessonStatusMeta(
+                    student.trialLessonStatus,
+                    student.trialLessonAvailable,
+                  );
                   const isSelected = selectedStudent?.id === student.id;
                   const studentPackage =
                     packages.find((pkg) => pkg.id === student.pakketId) ??
@@ -1543,6 +1597,16 @@ export function StudentsBoard({
                           >
                             <span className="truncate">
                               {student.journeyLabel ?? "Onboarding"}
+                            </span>
+                          </span>
+                          <span
+                            className={cn(
+                              "inline-flex max-w-36 rounded-md border px-2.5 py-1 text-[11px] font-semibold",
+                              trialStatusMeta.pillClassName,
+                            )}
+                          >
+                            <span className="truncate">
+                              {trialStatusMeta.shortLabel}
                             </span>
                           </span>
                         </div>
@@ -1858,6 +1922,14 @@ export function StudentsBoard({
                   </Button>
                 </div>
               </div>
+
+              <TrialLessonStatusCard
+                available={selectedStudent.trialLessonAvailable}
+                className="border-white/10 bg-white/[0.035]"
+                message={selectedStudent.trialLessonMessage}
+                role="instructor"
+                status={selectedStudent.trialLessonStatus}
+              />
 
               <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
                 <div className="flex justify-between text-sm">
@@ -2207,6 +2279,60 @@ export function StudentsBoard({
                 visibleDates={visibleDates}
               />
 
+              {initialFeedbackOpen && selectedProgressLesson ? (
+                <Panel
+                  id="voortgang-feedback"
+                  className="border-emerald-300/24 bg-emerald-500/[0.075] ring-2 ring-emerald-400/18"
+                  data-completed-lesson-feedback-root
+                >
+                  <SectionTitle
+                    title="Les afgerond: vul feedback in"
+                    action={<Badge variant="success">Directe opvolging</Badge>}
+                  />
+                  <p className="mb-4 text-sm leading-6 text-emerald-50/90">
+                    Deze les is net afgerond. Leg nu de lesreflectie, het sterke
+                    punt en de focus voor de volgende les vast, zodat de
+                    leerling de update meteen terugziet in zijn voortgang.
+                  </p>
+                  <LessonDetailTimeline
+                    checkinBoards={selectedLessonCheckinBoards}
+                    className="mb-4 border-emerald-300/18 bg-emerald-400/[0.07]"
+                    compassBoards={selectedLessonCompassBoards}
+                    lesson={selectedProgressLesson}
+                    progressAssessments={selectedProgressLessonAssessments}
+                    progressNote={selectedLessonNote}
+                  />
+                  <StudentProgressLessonNoteEditor
+                    key={`completed-${selectedStudent.id}-${selectedDate}-${selectedProgressLesson.id}-${selectedLessonNote?.updated_at ?? "new"}`}
+                    leerlingId={selectedStudent.id}
+                    lesId={selectedProgressLesson.id}
+                    lesdatum={selectedDate}
+                    note={selectedLessonNote}
+                    contextAssessments={selectedProgressLessonAssessments}
+                    customTemplates={feedbackTemplates}
+                    onSaved={handleLessonNoteSaved}
+                    title={`Feedback voor ${formatLessonAuditLabel(selectedProgressLesson)}`}
+                  />
+                </Panel>
+              ) : null}
+
+              {initialFeedbackOpen && selectedProgressLesson ? (
+                <div
+                  className="space-y-3"
+                  data-lesson-preparation-followup-root
+                >
+                  <SharedLessonCompass
+                    boards={selectedLessonCompassBoards}
+                    role="instructeur"
+                  />
+                  <LessonCheckinPanel
+                    boards={selectedLessonCheckinBoards}
+                    readOnly={selectedProgressLesson.status === "afgerond"}
+                    role="instructeur"
+                  />
+                </div>
+              ) : null}
+
               <Panel data-note-editor-root>
                 <SectionTitle
                   title="Lesnotities / reflecties"
@@ -2228,6 +2354,12 @@ export function StudentsBoard({
                             lesId={selectedProgressLesson?.id ?? null}
                             lesdatum={selectedDate}
                             note={selectedLessonNote}
+                            contextAssessments={
+                              selectedProgressLesson
+                                ? selectedProgressLessonAssessments
+                                : selectedDateAssessments
+                            }
+                            customTemplates={feedbackTemplates}
                             onSaved={handleLessonNoteSaved}
                           />
                         </div>

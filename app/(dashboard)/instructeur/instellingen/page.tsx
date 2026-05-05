@@ -32,7 +32,9 @@ import {
   getVehicleTone,
   isDocumentReady,
 } from "@/components/instructor/instructor-settings-model";
+import { InstructorFeedbackTemplateManager } from "@/components/instructor/instructor-feedback-template-manager";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
+import { getCurrentInstructorFeedbackTemplates } from "@/lib/data/instructor-feedback-templates";
 import { getCurrentInstructorSettingsOverview } from "@/lib/data/instructor-account";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,12 +54,19 @@ import {
 const ROUTE = "/instructeur/instellingen";
 
 export default async function InstructeurInstellingenPage() {
-  const overview = await timedDashboardRoute(ROUTE, () =>
-    timedDashboardData(
-      ROUTE,
-      "settings-overview",
-      getCurrentInstructorSettingsOverview,
-    ),
+  const [overview, feedbackTemplates] = await timedDashboardRoute(ROUTE, () =>
+    Promise.all([
+      timedDashboardData(
+        ROUTE,
+        "settings-overview",
+        getCurrentInstructorSettingsOverview,
+      ),
+      timedDashboardData(
+        ROUTE,
+        "feedback-templates",
+        getCurrentInstructorFeedbackTemplates,
+      ),
+    ]),
   );
   const activeVehicles = overview.vehicles.filter(
     (vehicle) => vehicle.status === "actief"
@@ -480,6 +489,9 @@ export default async function InstructeurInstellingenPage() {
           </TabsTrigger>
           <TabsTrigger value="documenten" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-violet-200 data-active:text-slate-950">
             Documenten
+          </TabsTrigger>
+          <TabsTrigger value="feedbacktemplates" className="min-h-10 rounded-[1rem] px-3 text-sm data-active:bg-fuchsia-200 data-active:text-slate-950">
+            Feedbacktemplates
           </TabsTrigger>
         </TabsList>
 
@@ -1166,6 +1178,10 @@ export default async function InstructeurInstellingenPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="feedbacktemplates">
+          <InstructorFeedbackTemplateManager templates={feedbackTemplates} />
         </TabsContent>
       </Tabs>
     </div>

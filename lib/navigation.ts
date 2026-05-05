@@ -20,10 +20,12 @@ export const dashboardNavigation: Record<
 > = {
   leerling: [
     { href: "/leerling/dashboard", label: "Dashboard" },
-    { href: "/leerling/voortgang", label: "Voortgang" },
-    { href: "/leerling/boekingen", label: "Boekingen" },
+    {
+      href: "/leerling/voortgang",
+      label: "Leertraject",
+      activeHrefs: ["/leerling/boekingen", "/leerling/lesmateriaal"],
+    },
     { href: "/leerling/instructeurs", label: "Instructeurs" },
-    { href: "/leerling/lesmateriaal", label: "Lesmateriaal" },
     { href: "/leerling/betalingen", label: "Betalingen" },
     {
       href: "/leerling/berichten",
@@ -33,9 +35,12 @@ export const dashboardNavigation: Record<
     {
       href: "/leerling/profiel",
       label: "Profiel",
-      activeHrefs: ["/leerling/documenten", "/leerling/reviews"],
+      activeHrefs: [
+        "/leerling/documenten",
+        "/leerling/reviews",
+        "/leerling/instellingen",
+      ],
     },
-    { href: "/leerling/instellingen", label: "Instellingen" },
   ],
   instructeur: [
     {
@@ -68,16 +73,26 @@ export const dashboardNavigation: Record<
     { href: "/instructeur/instellingen", label: "Instellingen" },
   ],
   admin: [
-    { href: "/admin/dashboard", label: "Dashboard" },
-    { href: "/admin/gebruikers", label: "Gebruikers" },
-    { href: "/admin/instructeurs", label: "Instructeurs" },
-    { href: "/admin/leerlingen", label: "Leerlingen" },
-    { href: "/admin/lessen", label: "Lessen" },
-    { href: "/admin/betalingen", label: "Betalingen" },
-    { href: "/admin/pakketten", label: "Pakketten" },
-    { href: "/admin/reviews", label: "Reviews" },
-    { href: "/admin/support", label: "Support" },
-    { href: "/admin/instellingen", label: "Instellingen" },
+    {
+      href: "/admin/dashboard",
+      label: "Dashboard",
+      activeHrefs: ["/admin/audit", "/admin/instellingen"],
+    },
+    {
+      href: "/admin/gebruikers",
+      label: "Gebruikers",
+      activeHrefs: ["/admin/instructeurs", "/admin/leerlingen"],
+    },
+    {
+      href: "/admin/lessen",
+      label: "Operatie",
+      activeHrefs: ["/admin/pakketten", "/admin/betalingen"],
+    },
+    {
+      href: "/admin/reviews",
+      label: "Kwaliteit",
+      activeHrefs: ["/admin/support"],
+    },
   ],
 };
 

@@ -12,20 +12,28 @@ import {
   type PlanningWeekItem,
 } from "@/components/calendar/planning-week-view";
 import { LearnerLessonActions } from "@/components/learners/learner-lesson-actions";
+import { LessonDetailTimeline } from "@/components/lessons/lesson-detail-timeline";
 import { LessonFocusCard } from "@/components/lessons/lesson-focus-card";
 import { LessonQuickActions } from "@/components/lessons/lesson-quick-actions";
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { LearnerRequestOverview } from "@/components/learners/learner-request-overview";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { TrialLessonStatusCard } from "@/components/shared/trial-lesson-status-card";
 import { LessonRequestDialog } from "@/components/instructors/lesson-request-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCurrentLearnerLessonCheckinBoards } from "@/lib/data/lesson-checkins";
+import { getCurrentLearnerLessonCompassBoards } from "@/lib/data/lesson-compass";
+import { getLearnerJourneyDataHealth } from "@/lib/data/data-health";
+import { getTrialLessonStateFromRows } from "@/lib/data/trial-lessons";
 import {
   getLeerlingLessonRequests,
   getLeerlingLessons,
 } from "@/lib/data/lesson-requests";
 import { getCurrentStudentPackageOverview } from "@/lib/data/packages";
+import { getCurrentLeerlingProgressWorkspace } from "@/lib/data/student-progress";
 import { getCurrentLearnerBookingOverview } from "@/lib/data/student-scheduling";
 import {
   getLessonAttendanceLabel,
@@ -163,11 +171,24 @@ const tabTriggerClassName =
   "h-10 rounded-full px-4 text-slate-300 data-active:text-slate-950";
 
 export default async function LeerlingBoekingenPage() {
-  const [requests, lessons, bookingOverview, packageOverview] = await Promise.all([
+  const [
+    requests,
+    lessons,
+    bookingOverview,
+    packageOverview,
+    lessonCompassBoards,
+    lessonCheckinBoards,
+    progressWorkspace,
+    dataHealth,
+  ] = await Promise.all([
     getLeerlingLessonRequests(),
     getLeerlingLessons(),
     getCurrentLearnerBookingOverview(),
     getCurrentStudentPackageOverview(),
+    getCurrentLearnerLessonCompassBoards(),
+    getCurrentLearnerLessonCheckinBoards(),
+    getCurrentLeerlingProgressWorkspace(),
+    getLearnerJourneyDataHealth(),
   ]);
 
   const pendingRequests = requests.filter(
@@ -198,6 +219,11 @@ export default async function LeerlingBoekingenPage() {
     lessons,
     requestsWithLabels,
   );
+  const trialLessonState = getTrialLessonStateFromRows({
+    actor: "learner",
+    lessons,
+    requests: requestsWithLabels,
+  });
   const planningStats = [
     {
       icon: CalendarDays,
@@ -271,6 +297,11 @@ export default async function LeerlingBoekingenPage() {
         }
       />
 
+      <DataHealthCallout
+        label="Boekingen datastatus"
+        results={dataHealth}
+      />
+
       <Tabs defaultValue="zelf-plannen" className="space-y-4">
         <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="zelf-plannen" className={`${tabTriggerClassName} data-active:bg-sky-200`}>
@@ -320,6 +351,15 @@ export default async function LeerlingBoekingenPage() {
           ) : null}
         </div>
       </div>
+
+      <TrialLessonStatusCard
+        actionHref={trialLessonState.available ? "/leerling/instructeurs" : undefined}
+        actionLabel={trialLessonState.available ? "Proefles plannen" : undefined}
+        available={trialLessonState.available}
+        message={trialLessonState.message}
+        role="learner"
+        status={trialLessonState.status}
+      />
 
       <LessonFocusCard
         lesson={nextLesson}
@@ -490,11 +530,14 @@ export default async function LeerlingBoekingenPage() {
                         </p>
                       ) : null}
 
-                      {!item.trialLessonAvailable ? (
-                        <p className="text-[12px] leading-6 text-slate-300">
-                          Je proefles is al gebruikt; je plant hier alleen vervolglessen.
-                        </p>
-                      ) : null}
+                      <TrialLessonStatusCard
+                        available={item.trialLessonAvailable}
+                        className="border-white/10 bg-slate-950/28"
+                        compact
+                        message={item.trialLessonMessage}
+                        role="learner"
+                        status={item.trialLessonStatus}
+                      />
 
                       <div
                         className={cn(
@@ -639,75 +682,97 @@ export default async function LeerlingBoekingenPage() {
 
             {lessons.length ? (
               <div className="grid gap-3">
-                {lessons.map((lesson) => (
-                  <details
-                    key={lesson.id}
-                    className="group overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/6"
-                  >
-                    <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 transition hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-white">
-                          {lesson.titel}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-300">
-                          {lesson.datum} om {lesson.tijd} - {lesson.locatie}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="info">{lesson.status}</Badge>
-                        <Badge
-                          variant={getLessonAttendanceVariant(
-                            lesson.attendance_status
-                          )}
-                        >
-                          {getLessonAttendanceLabel(lesson.attendance_status)}
-                        </Badge>
-                        <span className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 text-xs font-semibold text-slate-100">
-                          Details
-                          <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
-                        </span>
-                      </div>
-                    </summary>
-                    <div className="border-t border-white/10 p-4">
-                      <div className="mb-3 rounded-2xl border border-sky-300/14 bg-sky-400/8 p-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="info">Lesvoorbereiding</Badge>
-                          <span className="text-xs text-slate-300">
-                            Doel, aandachtspunt en praktische info
-                          </span>
-                        </div>
-                        <div className="mt-3 grid gap-2 text-sm leading-6 text-slate-300 md:grid-cols-3">
-                          <p>
-                            <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                              Lesdoel
-                            </span>
+                {lessons.map((lesson) => {
+                  const lessonProgressAssessments =
+                    progressWorkspace.assessments.filter(
+                      (assessment) => assessment.les_id === lesson.id,
+                    );
+                  const lessonProgressNote =
+                    progressWorkspace.notes.find(
+                      (note) => note.les_id === lesson.id,
+                    ) ?? null;
+                  const lessonCheckins = lessonCheckinBoards.filter(
+                    (board) => board.les_id === lesson.id,
+                  );
+
+                  return (
+                    <details
+                      key={lesson.id}
+                      className="group overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/6"
+                    >
+                      <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 transition hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-white">
                             {lesson.titel}
                           </p>
-                          <p>
-                            <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                              Aandachtspunt
-                            </span>
-                            {lesson.lesson_note?.trim() ||
-                              "Vraag je instructeur naar de focus voor deze les."}
-                          </p>
-                          <p>
-                            <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
-                              Ophaallocatie
-                            </span>
-                            {lesson.locatie || "Locatie volgt nog"}
+                          <p className="mt-1 text-sm text-slate-300">
+                            {lesson.datum} om {lesson.tijd} - {lesson.locatie}
                           </p>
                         </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="info">{lesson.status}</Badge>
+                          <Badge
+                            variant={getLessonAttendanceVariant(
+                              lesson.attendance_status
+                            )}
+                          >
+                            {getLessonAttendanceLabel(lesson.attendance_status)}
+                          </Badge>
+                          <span className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/6 px-3 text-xs font-semibold text-slate-100">
+                            Details
+                            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                          </span>
+                        </div>
+                      </summary>
+                      <div className="border-t border-white/10 p-4">
+                        <LessonDetailTimeline
+                          checkinBoards={lessonCheckins}
+                          className="mb-3"
+                          compassBoards={lessonCompassBoards}
+                          lesson={lesson}
+                          progressAssessments={lessonProgressAssessments}
+                          progressNote={lessonProgressNote}
+                        />
+                        <div className="mb-3 rounded-2xl border border-sky-300/14 bg-sky-400/8 p-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="info">Lesvoorbereiding</Badge>
+                            <span className="text-xs text-slate-300">
+                              Doel, aandachtspunt en praktische info
+                            </span>
+                          </div>
+                          <div className="mt-3 grid gap-2 text-sm leading-6 text-slate-300 md:grid-cols-3">
+                            <p>
+                              <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                                Lesdoel
+                              </span>
+                              {lesson.titel}
+                            </p>
+                            <p>
+                              <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                                Aandachtspunt
+                              </span>
+                              {lesson.lesson_note?.trim() ||
+                                "Vraag je instructeur naar de focus voor deze les."}
+                            </p>
+                            <p>
+                              <span className="block text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                                Ophaallocatie
+                              </span>
+                              {lesson.locatie || "Locatie volgt nog"}
+                            </p>
+                          </div>
+                        </div>
+                        {lesson.lesson_note?.trim() ? (
+                          <p className="mb-3 rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[12px] leading-6 text-slate-300">
+                            Coachnotitie: {lesson.lesson_note.trim()}
+                          </p>
+                        ) : null}
+                        <LessonQuickActions lesson={lesson} tone="urban" />
+                        <LearnerLessonActions lesson={lesson} />
                       </div>
-                      {lesson.lesson_note?.trim() ? (
-                        <p className="mb-3 rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-[12px] leading-6 text-slate-300">
-                          Coachnotitie: {lesson.lesson_note.trim()}
-                        </p>
-                      ) : null}
-                      <LessonQuickActions lesson={lesson} tone="urban" />
-                      <LearnerLessonActions lesson={lesson} />
-                    </div>
-                  </details>
-                ))}
+                    </details>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm leading-7 text-slate-300">

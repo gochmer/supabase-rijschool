@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { processInstructorFeedbackReminders } from "@/lib/instructor-feedback-reminders";
 import { processDueLessonReminders } from "@/lib/lesson-reminders";
 
 export const dynamic = "force-dynamic";
@@ -41,12 +42,16 @@ async function handleReminderRun(request: NextRequest) {
   }
 
   try {
-    const result = await processDueLessonReminders();
+    const [lessonReminderResult, feedbackReminderResult] = await Promise.all([
+      processDueLessonReminders(),
+      processInstructorFeedbackReminders(),
+    ]);
 
     return NextResponse.json({
       ok: true,
-      message: "Lesherinneringen verwerkt.",
-      ...result,
+      message: "Lesherinneringen en feedback-reminders verwerkt.",
+      ...lessonReminderResult,
+      feedbackReminders: feedbackReminderResult,
     });
   } catch (error) {
     console.error("Lesson reminder cron failed", error);

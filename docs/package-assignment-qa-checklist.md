@@ -67,6 +67,10 @@ Geautomatiseerd via `public.audit_events`. Elke gevoelige pakketactie schrijft e
 - [ ] `package_planning_released` en `package_planning_disabled` leggen vast wanneer zelf plannen aan of uit is gezet.
 - [ ] Admin ziet de tijdlijn per leerling in `/admin/leerlingen`.
 - [ ] Instructeur ziet de tijdlijn bij de geselecteerde leerling in `/instructeur/leerlingen`.
+- [ ] Support kan filteren op pakket-, betaling-, planning- en lesacties.
+- [ ] Support kan een auditregel openen en metadata zien zonder databaseconsole.
+- [ ] Admin kan in `/admin/audit` alle auditregels zoeken, filteren en exporteren.
+- [ ] CSV-export loopt via een admin-only serverroute met datum-, actor-, leerling-, pakket- en betalingfilters.
 
 RLS-regel: admins mogen alles zien, instructeurs alleen auditregels van eigen leerlingen/werkplek en leerlingen alleen eigen auditregels.
 

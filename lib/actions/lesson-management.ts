@@ -139,7 +139,7 @@ function getLessonProgressHref({
     learnerId,
   )}&date=${encodeURIComponent(dateValue)}&lesson=${encodeURIComponent(
     lessonId,
-  )}#voortgang`;
+  )}&feedback=1#voortgang-feedback`;
 }
 
 function revalidateLessonViews() {

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { PackageAssignmentSelect } from "@/components/admin/package-assignment-select";
 import { StudentAuditTimeline } from "@/components/shared/student-audit-timeline";
+import { TrialLessonStatusCard } from "@/components/shared/trial-lesson-status-card";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -12,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { StudentAuditTimelineEvent } from "@/lib/types";
+import type { StudentAuditTimelineEvent, TrialLessonStatus } from "@/lib/types";
 
 type Student = {
   id: string;
@@ -29,6 +30,9 @@ type Student = {
   pakketGebruikLabel?: string;
   voortgang: string;
   status: string;
+  trialLessonAvailable?: boolean;
+  trialLessonStatus?: TrialLessonStatus;
+  trialLessonMessage?: string;
   auditEvents?: StudentAuditTimelineEvent[];
 };
 
@@ -134,7 +138,7 @@ export function StudentsManagementBoard({
               </div>
             </CardHeader>
             <CardContent className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="rounded-[1.5rem] bg-slate-50/80 p-4 dark:bg-white/5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm text-muted-foreground dark:text-slate-300">Huidig pakket</p>
@@ -161,6 +165,14 @@ export function StudentsManagementBoard({
                   <p className="text-sm text-muted-foreground dark:text-slate-300">Accountstatus</p>
                   <p className="mt-1 font-semibold capitalize dark:text-white">{student.status}</p>
                 </div>
+                <TrialLessonStatusCard
+                  available={student.trialLessonAvailable}
+                  className="border-slate-900/10 bg-slate-950 text-white dark:border-white/10 dark:bg-white/[0.055]"
+                  compact
+                  message={student.trialLessonMessage}
+                  role="admin"
+                  status={student.trialLessonStatus}
+                />
               </div>
               <PackageAssignmentSelect
                 leerlingId={student.id}

@@ -567,7 +567,77 @@ async function run() {
       "Pakket gekoppeld",
       "Betaling aangemaakt",
     ]);
+    await adminPage.locator('[data-audit-filter="betaling"]').first().click();
+    await assertPageHealthy(adminPage, "Admin audit betaling-filter", [
+      "Betaling aangemaakt",
+    ]);
+    await adminPage.locator('[data-audit-event="package_payment_created"]').first().click();
+    await assertPageHealthy(adminPage, "Admin audit detaildrawer", [
+      "Audit details",
+      "Metadata",
+      "Pakketprijs",
+    ]);
+    await gotoStable(adminPage, "/admin/audit");
+    await assertPageHealthy(adminPage, "Admin audit logboek", [
+      "Audit logboek",
+      "Package QA Leerling",
+      "Pakket gekoppeld",
+      "Betaling aangemaakt",
+    ]);
+    await adminPage.locator("[data-admin-audit-search]").fill("package_payment_created");
+    await assertPageHealthy(adminPage, "Admin audit logboek zoeken", [
+      "package_payment_created",
+      "Betaling aangemaakt",
+    ]);
+    await adminPage.locator("[data-admin-audit-search]").fill("");
+    await adminPage.locator("[data-admin-audit-category]").selectOption("betaling");
+    await assertPageHealthy(adminPage, "Admin audit logboek betaling-filter", [
+      "Betaling aangemaakt",
+    ]);
+    await adminPage.locator('[data-admin-audit-row="package_payment_created"]').first().click();
+    await assertPageHealthy(adminPage, "Admin audit logboek detail", [
+      "Audit detail",
+      "package_payment_created",
+      "Pakketprijs",
+    ]);
+    const auditExportButton = adminPage.locator("[data-admin-audit-export]");
+    await auditExportButton.waitFor({ state: "visible", timeout: 10_000 });
 
+    if (!(await auditExportButton.isEnabled())) {
+      throw new Error("Admin audit CSV-export is niet beschikbaar voor gefilterde auditregels.");
+    }
+    const auditExportResponse = await adminPage.evaluate(async (currentLearnerId) => {
+      const params = new URLSearchParams({
+        category: "betaling",
+        learnerId: currentLearnerId,
+        q: "package_payment_created",
+      });
+      const response = await fetch(`/api/admin/audit/export?${params.toString()}`);
+      return {
+        contentType: response.headers.get("content-type"),
+        ok: response.ok,
+        status: response.status,
+        text: await response.text(),
+      };
+    }, learner.id);
+
+    if (
+      !auditExportResponse.ok ||
+      !auditExportResponse.contentType?.includes("text/csv") ||
+      !auditExportResponse.text.includes("package_payment_created") ||
+      !auditExportResponse.text.includes("Betaling aangemaakt")
+    ) {
+      throw new Error(
+        `Admin audit server-export faalt: ${JSON.stringify({
+          contentType: auditExportResponse.contentType,
+          ok: auditExportResponse.ok,
+          status: auditExportResponse.status,
+          text: auditExportResponse.text.slice(0, 400),
+        })}`,
+      );
+    }
+
+    await gotoStable(adminPage, "/admin/leerlingen");
     await clickAdminPackageAssignment(adminPage, {
       leerlingId: learner.id,
       packageId: basePackage.id,
@@ -620,6 +690,10 @@ async function run() {
       "Package QA basis",
       "Pakket-tijdlijn",
       "Pakket gekoppeld",
+    ]);
+    await instructorPage.locator('[data-audit-filter="planning"]').first().click();
+    await assertPageHealthy(instructorPage, "Instructeur audit planning-filter", [
+      "Planning vrijgegeven",
     ]);
 
     await gotoStable(adminPage, "/admin/leerlingen");

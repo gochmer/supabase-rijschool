@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CircleAlert,
   ClipboardList,
+  NotebookPen,
   CreditCard,
   Gauge,
   MessageSquare,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import {
   DashboardActionHub,
   type DashboardActionHubItem,
@@ -40,6 +42,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentLearnerLessonCheckinBoards } from "@/lib/data/lesson-checkins";
 import { getCurrentLearnerLessonCompassBoards } from "@/lib/data/lesson-compass";
+import { getLearnerJourneyDataHealth } from "@/lib/data/data-health";
 import {
   getLeerlingDashboardMetrics,
   getLeerlingLessonRequests,
@@ -61,6 +64,7 @@ import {
   getStudentProgressStatusMeta,
   getStudentProgressSummary,
 } from "@/lib/student-progress";
+import type { StudentProgressLessonNote } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type LearnerCockpitCard = {
@@ -144,6 +148,118 @@ function LearnerCockpitCard({ card }: { card: LearnerCockpitCard }) {
   );
 }
 
+function formatLessonReportDate(dateValue?: string | null) {
+  if (!dateValue) {
+    return "Nog geen datum";
+  }
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Amsterdam",
+  }).format(date);
+}
+
+function LatestLessonReportCard({
+  note,
+}: {
+  note?: StudentProgressLessonNote | null;
+}) {
+  const hasReport = Boolean(
+    note?.samenvatting?.trim() ||
+      note?.sterk_punt?.trim() ||
+      note?.focus_volgende_les?.trim(),
+  );
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-emerald-300/18 bg-[linear-gradient(145deg,rgba(6,78,59,0.28),rgba(15,23,42,0.72),rgba(14,165,233,0.08))] p-4 text-white shadow-[0_24px_80px_-54px_rgba(0,0,0,0.95)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex size-10 items-center justify-center rounded-xl border border-emerald-200/18 bg-emerald-300/10 text-emerald-100">
+              <NotebookPen className="size-5" />
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.2em] text-emerald-100/75 uppercase">
+                Laatste lesverslag
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-white">
+                {hasReport ? "Dit nam je mee uit je laatste les" : "Nog geen lesverslag"}
+              </h2>
+            </div>
+          </div>
+
+          <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-300">
+            {hasReport
+              ? (note?.samenvatting?.trim() ??
+                "Je instructeur heeft feedback opgeslagen voor je traject.")
+              : "Zodra je instructeur feedback opslaat, zie je hier meteen je samenvatting en focus voor de volgende les."}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
+            {formatLessonReportDate(note?.lesdatum)}
+          </span>
+          {hasReport ? (
+            <span className="rounded-full border border-emerald-200/20 bg-emerald-300/10 px-3 py-1 text-xs font-semibold text-emerald-100">
+              Nieuwste feedback
+            </span>
+          ) : (
+            <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold text-slate-300">
+              Wacht op instructeur
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3">
+          <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
+            Sterk punt
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-200">
+            {note?.sterk_punt?.trim() ||
+              "Na je volgende les vult je instructeur hier in wat goed ging."}
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3">
+          <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
+            Focus voor volgende keer
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-200">
+            {note?.focus_volgende_les?.trim() ||
+              "Je volgende focus verschijnt hier zodra feedback is opgeslagen."}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+        <Button
+          asChild
+          className="h-9 rounded-full bg-emerald-300 text-emerald-950 hover:bg-emerald-200"
+        >
+          <Link href="/leerling/boekingen">Open boekingen</Link>
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="h-9 rounded-full border-white/10 bg-white/7 text-white hover:bg-white/12"
+        >
+          <Link href="/leerling/voortgang">Bekijk voortgang</Link>
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 export default async function LeerlingDashboardPage() {
   const [
     metrics,
@@ -155,6 +271,7 @@ export default async function LeerlingDashboardPage() {
     lessonCheckinBoards,
     progressWorkspace,
     profile,
+    dataHealth,
   ] =
     await Promise.all([
       getLeerlingDashboardMetrics(),
@@ -166,6 +283,7 @@ export default async function LeerlingDashboardPage() {
       getCurrentLearnerLessonCheckinBoards(),
       getCurrentLeerlingProgressWorkspace(),
       getCurrentProfile(),
+      getLearnerJourneyDataHealth(),
     ]);
 
   const upcomingLessons = lessons.slice(0, 4);
@@ -489,6 +607,11 @@ export default async function LeerlingDashboardPage() {
         }
       />
 
+      <DataHealthCallout
+        label="Leerling datastatus"
+        results={dataHealth}
+      />
+
       <section className="rounded-xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.84),rgba(30,41,59,0.48),rgba(14,165,233,0.09))] p-4 text-white shadow-[0_24px_80px_-54px_rgba(0,0,0,0.95)]">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -529,6 +652,8 @@ export default async function LeerlingDashboardPage() {
         primaryLabel={nextLesson ? "Open volgende les" : "Zoek instructeur"}
         items={learnerActionItems}
       />
+
+      <LatestLessonReportCard note={latestLessonNote} />
 
       <Tabs defaultValue="vandaag" className="space-y-4">
         <TabsList className="sticky top-28 z-10 !h-auto min-h-12 w-full justify-start overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-slate-950/72 p-1 text-slate-300 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.65)] [-ms-overflow-style:none] [scrollbar-width:none] backdrop-blur-xl [&::-webkit-scrollbar]:hidden">

@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_events: {
+        Row: {
+          actor_profile_id: string | null
+          actor_role: string
+          betaling_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: string
+          instructeur_id: string | null
+          leerling_id: string | null
+          metadata: Json
+          pakket_id: string | null
+          summary: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          actor_role?: string
+          betaling_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: string
+          instructeur_id?: string | null
+          leerling_id?: string | null
+          metadata?: Json
+          pakket_id?: string | null
+          summary: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          actor_role?: string
+          betaling_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: string
+          instructeur_id?: string | null
+          leerling_id?: string | null
+          metadata?: Json
+          pakket_id?: string | null
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_events_betaling_id_fkey"
+            columns: ["betaling_id"]
+            isOneToOne: false
+            referencedRelation: "betalingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_events_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_events_leerling_id_fkey"
+            columns: ["leerling_id"]
+            isOneToOne: false
+            referencedRelation: "leerlingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_events_pakket_id_fkey"
+            columns: ["pakket_id"]
+            isOneToOne: false
+            referencedRelation: "pakketten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       berichten: {
         Row: {
           afzender_profiel_id: string
@@ -259,6 +343,68 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "instructeur_documenten_instructeur_id_fkey"
+            columns: ["instructeur_id"]
+            isOneToOne: false
+            referencedRelation: "instructeurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructeur_feedback_templates: {
+        Row: {
+          actief: boolean
+          created_at: string
+          id: string
+          instructeur_id: string
+          label: string
+          last_used_at: string | null
+          note_type: string
+          omschrijving: string | null
+          sort_order: number
+          status: string | null
+          target: string
+          tekst: string
+          updated_at: string
+          usage_count: number
+          vaardigheid_key: string | null
+        }
+        Insert: {
+          actief?: boolean
+          created_at?: string
+          id?: string
+          instructeur_id: string
+          label: string
+          last_used_at?: string | null
+          note_type?: string
+          omschrijving?: string | null
+          sort_order?: number
+          status?: string | null
+          target: string
+          tekst: string
+          updated_at?: string
+          usage_count?: number
+          vaardigheid_key?: string | null
+        }
+        Update: {
+          actief?: boolean
+          created_at?: string
+          id?: string
+          instructeur_id?: string
+          label?: string
+          last_used_at?: string | null
+          note_type?: string
+          omschrijving?: string | null
+          sort_order?: number
+          status?: string | null
+          target?: string
+          tekst?: string
+          updated_at?: string
+          usage_count?: number
+          vaardigheid_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructeur_feedback_templates_instructeur_id_fkey"
             columns: ["instructeur_id"]
             isOneToOne: false
             referencedRelation: "instructeurs"
@@ -1291,6 +1437,7 @@ export type Database = {
       }
       notificaties: {
         Row: {
+          action_href: string | null
           created_at: string
           id: string
           ongelezen: boolean
@@ -1300,6 +1447,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          action_href?: string | null
           created_at?: string
           id?: string
           ongelezen?: boolean
@@ -1309,6 +1457,7 @@ export type Database = {
           type?: string
         }
         Update: {
+          action_href?: string | null
           created_at?: string
           id?: string
           ongelezen?: boolean

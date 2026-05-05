@@ -200,6 +200,7 @@ export interface Notificatie {
   tijd: string;
   type: "info" | "succes" | "waarschuwing";
   ongelezen: boolean;
+  actionHref?: string | null;
 }
 
 export interface SupportTicket {
@@ -260,16 +261,90 @@ export interface StudentProgressLessonNote {
   updated_at: string;
 }
 
+export type FeedbackTemplateTarget =
+  | "focusVolgendeLes"
+  | "samenvatting"
+  | "sterkPunt";
+
+export type CoachNoteTemplateType =
+  | "voortgangsnotitie"
+  | "lesfeedback"
+  | "gedragsobservatie"
+  | "examenvoorbereiding"
+  | "motivatiegesprek"
+  | "aandachtspunt"
+  | "algemene_begeleiding";
+
+export interface InstructorFeedbackTemplate {
+  id: string;
+  instructeur_id: string;
+  vaardigheid_key?: string | null;
+  status?: StudentProgressStatus | null;
+  target: FeedbackTemplateTarget;
+  note_type: CoachNoteTemplateType;
+  label: string;
+  last_used_at?: string | null;
+  omschrijving?: string | null;
+  tekst: string;
+  actief: boolean;
+  sort_order: number;
+  usage_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LessonDetailTimelineSummary {
+  les_id: string;
+  progress_mark_count: number;
+  progress_status_counts: Record<StudentProgressStatus, number>;
+  latest_progress_status: StudentProgressStatus | null;
+  latest_progress_label: string | null;
+  lesson_note_summary: string | null;
+  lesson_note_strength: string | null;
+  lesson_note_focus: string | null;
+  lesson_note_updated_at: string | null;
+}
+
+export interface InstructorFeedbackTodoLesson {
+  id: string;
+  leerling_id: string;
+  leerling_naam: string;
+  leerling_email?: string | null;
+  titel: string;
+  datum: string;
+  tijd: string;
+  start_at: string | null;
+  open_age_days: number;
+  open_age_hours: number;
+  open_label: string;
+  urgency: "recent" | "attention" | "urgent";
+  href: string;
+}
+
 export interface StudentAuditTimelineEvent {
   id: string;
   leerlingId: string | null;
   eventType: string;
+  category: "pakket" | "betaling" | "planning" | "lessen" | "overig";
   title: string;
   detail: string;
   createdAt: string;
   createdAtLabel: string;
   actorLabel: string;
+  metadata: Array<{
+    label: string;
+    value: string;
+  }>;
   tone: "info" | "success" | "warning" | "danger";
+}
+
+export interface AdminAuditLogEvent extends StudentAuditTimelineEvent {
+  actorRole: string;
+  entityType: string;
+  entityId: string | null;
+  leerlingLabel: string;
+  pakketLabel: string;
+  betalingLabel: string;
 }
 
 export interface InstructorStudentProgressRow {

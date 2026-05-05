@@ -56,9 +56,11 @@ function getConfidenceVariant(value: number | null | undefined) {
 
 export function LessonCheckinPanel({
   boards,
+  readOnly = false,
   role,
 }: {
   boards: LessonCheckinBoard[];
+  readOnly?: boolean;
   role: "leerling" | "instructeur";
 }) {
   const [isPending, startTransition] = useTransition();
@@ -67,7 +69,9 @@ export function LessonCheckinPanel({
   const title =
     role === "leerling" ? "Voor de les check-in" : "Live les-check-ins";
   const description =
-    role === "leerling"
+    readOnly
+      ? "Bekijk de check-in als context voor je evaluatie. Voor-les signalen blijven bewaard, maar worden na afloop niet meer aangepast."
+      : role === "leerling"
       ? "Geef voor je volgende les alvast door hoe je je voelt, of je op tijd bent en waar je vandaag hulp bij wilt."
       : "Zie nog voor de les waar een leerling spanning voelt en zet je focus direct terug op het dashboard.";
 
@@ -132,6 +136,7 @@ export function LessonCheckinPanel({
                 <LearnerCheckinEditor
                   board={board}
                   isPending={isPending}
+                  readOnly={readOnly}
                   onLocalUpdate={(updater) => updateBoardState(board.les_id, updater)}
                   onSave={(payload) =>
                     startTransition(async () => {
@@ -162,6 +167,7 @@ export function LessonCheckinPanel({
                 <InstructorCheckinEditor
                   board={board}
                   isPending={isPending}
+                  readOnly={readOnly}
                   onLocalUpdate={(updater) => updateBoardState(board.les_id, updater)}
                   onSave={(focus) =>
                     startTransition(async () => {
@@ -204,11 +210,13 @@ export function LessonCheckinPanel({
 function LearnerCheckinEditor({
   board,
   isPending,
+  readOnly = false,
   onLocalUpdate,
   onSave,
 }: {
   board: LessonCheckinBoard;
   isPending: boolean;
+  readOnly?: boolean;
   onLocalUpdate: (updater: (board: LessonCheckinBoard) => LessonCheckinBoard) => void;
   onSave: (payload: {
     confidence_level: number | null;
@@ -233,7 +241,7 @@ function LearnerCheckinEditor({
                 size="sm"
                 variant={board.confidence_level === value ? "default" : "outline"}
                 className="rounded-full"
-                disabled={isPending}
+                disabled={isPending || readOnly}
                 onClick={() =>
                   onLocalUpdate((current) => ({
                     ...current,
@@ -256,7 +264,7 @@ function LearnerCheckinEditor({
               size="sm"
               variant={board.arrival_mode === "op_tijd" ? "default" : "outline"}
               className="rounded-full"
-              disabled={isPending}
+              disabled={isPending || readOnly}
               onClick={() =>
                 onLocalUpdate((current) => ({
                   ...current,
@@ -272,7 +280,7 @@ function LearnerCheckinEditor({
               size="sm"
               variant={board.arrival_mode === "afstemmen" ? "default" : "outline"}
               className="rounded-full"
-              disabled={isPending}
+              disabled={isPending || readOnly}
               onClick={() =>
                 onLocalUpdate((current) => ({
                   ...current,
@@ -293,6 +301,7 @@ function LearnerCheckinEditor({
         </p>
         <Textarea
           value={draftMessage}
+          readOnly={readOnly}
           onChange={(event) => setDraftMessage(event.target.value)}
           placeholder="Bijvoorbeeld: invoegen op drukke rotondes, spanning bij examenkruispunten of rustig schakelen."
           className="mt-2 min-h-24 border-slate-200/80 bg-white/90 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
@@ -309,7 +318,7 @@ function LearnerCheckinEditor({
         <Button
           type="button"
           className="h-9 rounded-full"
-          disabled={isPending}
+          disabled={isPending || readOnly}
           onClick={() =>
             onSave({
               confidence_level: board.confidence_level ?? null,
@@ -318,7 +327,7 @@ function LearnerCheckinEditor({
             })
           }
         >
-          {isPending ? "Opslaan..." : "Check-in bijwerken"}
+          {readOnly ? "Alleen lezen" : isPending ? "Opslaan..." : "Check-in bijwerken"}
         </Button>
       </div>
     </div>
@@ -328,11 +337,13 @@ function LearnerCheckinEditor({
 function InstructorCheckinEditor({
   board,
   isPending,
+  readOnly = false,
   onLocalUpdate,
   onSave,
 }: {
   board: LessonCheckinBoard;
   isPending: boolean;
+  readOnly?: boolean;
   onLocalUpdate: (updater: (board: LessonCheckinBoard) => LessonCheckinBoard) => void;
   onSave: (focus: string) => void;
 }) {
@@ -370,7 +381,11 @@ function InstructorCheckinEditor({
           </p>
           <Textarea
             value={focus}
+            readOnly={readOnly}
             onChange={(event) => {
+              if (readOnly) {
+                return;
+              }
               setFocus(event.target.value);
               onLocalUpdate((current) => ({
                 ...current,
@@ -391,11 +406,15 @@ function InstructorCheckinEditor({
         <Button
           type="button"
           className="h-9 rounded-full"
-          disabled={isPending || !focus.trim()}
+          disabled={isPending || readOnly || !focus.trim()}
           onClick={() => onSave(focus)}
         >
           <Sparkles className="size-3.5" />
-          {isPending ? "Opslaan..." : "Focus terugsturen"}
+          {readOnly
+            ? "Alleen lezen"
+            : isPending
+              ? "Opslaan..."
+              : "Focus terugsturen"}
         </Button>
       </div>
     </div>

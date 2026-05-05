@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Check, CheckCheck, Loader2 } from "lucide-react";
+import { ArrowRight, Bell, Check, CheckCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions/notifications";
@@ -179,6 +180,16 @@ export function NotificationDropdown({
                       <p className="mt-2 text-[11px] font-medium text-muted-foreground">
                         {notification.tijd}
                       </p>
+                      {notification.actionHref ? (
+                        <Link
+                          href={notification.actionHref}
+                          onClick={() => markOneRead(notification.id)}
+                          className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-500 dark:text-sky-300 dark:hover:text-sky-200"
+                        >
+                          Open actie
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      ) : null}
                     </div>
                     {notification.ongelezen ? (
                       <Button

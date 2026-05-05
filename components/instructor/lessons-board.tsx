@@ -36,10 +36,13 @@ import {
   type PlanningWeekItem,
 } from "@/components/calendar/planning-week-view";
 import { LessonAttendanceActions } from "@/components/lessons/lesson-attendance-actions";
+import { LessonCheckinPanel } from "@/components/lessons/lesson-checkin-board";
+import { LessonDetailTimeline } from "@/components/lessons/lesson-detail-timeline";
 import { LessonEditDialog } from "@/components/lessons/lesson-edit-dialog";
 import { LessonFocusCard } from "@/components/lessons/lesson-focus-card";
 import { LessonNoteEditor } from "@/components/lessons/lesson-note-editor";
 import { LessonQuickActions } from "@/components/lessons/lesson-quick-actions";
+import { SharedLessonCompass } from "@/components/lessons/shared-lesson-compass";
 import { RequestStatusActions } from "@/components/requests/request-status-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,10 +71,13 @@ import { getRijlesTypeLabel } from "@/lib/lesson-types";
 import type {
   BeschikbaarheidSlot,
   InstructorStudentProgressRow,
+  LessonCheckinBoard,
+  LessonDetailTimelineSummary,
   Les,
   LesAanvraag,
   LesAanvraagType,
   LocationOption,
+  SharedLessonCompassBoard,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -521,14 +527,28 @@ function getRequestStatusPill(request: LesAanvraag) {
 }
 
 function LessonDetailsDialog({
+  lessonCheckinBoards = [],
+  lessonCompassBoards = [],
+  lessonTimelineSummary = null,
   lesson,
   locationOptions,
 }: {
+  lessonCheckinBoards?: LessonCheckinBoard[];
+  lessonCompassBoards?: SharedLessonCompassBoard[];
+  lessonTimelineSummary?: LessonDetailTimelineSummary | null;
   lesson: Les;
   locationOptions: LocationOption[];
 }) {
   const statusPill = getStatusPill(lesson.status);
   const StatusIcon = statusPill.icon;
+  const relatedCompassBoards = lesson.leerling_id
+    ? lessonCompassBoards.filter(
+        (board) => board.leerling_id === lesson.leerling_id,
+      )
+    : [];
+  const relatedCheckinBoards = lessonCheckinBoards.filter(
+    (board) => board.les_id === lesson.id,
+  );
 
   return (
     <Dialog>
@@ -591,9 +611,38 @@ function LessonDetailsDialog({
             tone="urban"
           />
 
+          <LessonDetailTimeline
+            checkinBoards={relatedCheckinBoards}
+            compassBoards={relatedCompassBoards}
+            lesson={lesson}
+            timeline={lessonTimelineSummary}
+          />
+
           <div className="grid gap-3 xl:grid-cols-2">
             <LessonAttendanceActions lesson={lesson} tone="urban" />
             <LessonNoteEditor lesson={lesson} tone="urban" />
+          </div>
+
+          <div className="space-y-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.045] p-3">
+              <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
+                Voorbereiding en live afstemming
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-300">
+                Gebruik deze kaarten om de lesfocus voor het vertrek te zetten
+                en de check-in van de leerling direct mee te nemen in je
+                feedback na afloop.
+              </p>
+            </div>
+            <SharedLessonCompass
+              boards={relatedCompassBoards}
+              role="instructeur"
+            />
+            <LessonCheckinPanel
+              boards={relatedCheckinBoards}
+              readOnly={lesson.status === "afgerond"}
+              role="instructeur"
+            />
           </div>
 
           <div className="flex flex-wrap justify-end gap-2 border-t border-white/10 pt-4">
@@ -679,11 +728,17 @@ function LessonMoreMenu({ lesson }: { lesson: Les }) {
 function LessonRow({
   isOutsideVisibleWeek,
   index,
+  lessonCheckinBoards,
+  lessonCompassBoards,
+  lessonTimelineSummary,
   lesson,
   locationOptions,
 }: {
   isOutsideVisibleWeek: boolean;
   index: number;
+  lessonCheckinBoards: LessonCheckinBoard[];
+  lessonCompassBoards: SharedLessonCompassBoard[];
+  lessonTimelineSummary?: LessonDetailTimelineSummary | null;
   lesson: Les;
   locationOptions: LocationOption[];
 }) {
@@ -746,6 +801,9 @@ function LessonRow({
       </div>
       <div className="flex items-center gap-1.5 2xl:gap-2">
         <LessonDetailsDialog
+          lessonCheckinBoards={lessonCheckinBoards}
+          lessonCompassBoards={lessonCompassBoards}
+          lessonTimelineSummary={lessonTimelineSummary}
           lesson={lesson}
           locationOptions={locationOptions}
         />
@@ -773,11 +831,17 @@ function LessonEmptyState() {
 function LessonCompactCard({
   isOutsideVisibleWeek,
   index,
+  lessonCheckinBoards,
+  lessonCompassBoards,
+  lessonTimelineSummary,
   lesson,
   locationOptions,
 }: {
   isOutsideVisibleWeek: boolean;
   index: number;
+  lessonCheckinBoards: LessonCheckinBoard[];
+  lessonCompassBoards: SharedLessonCompassBoard[];
+  lessonTimelineSummary?: LessonDetailTimelineSummary | null;
   lesson: Les;
   locationOptions: LocationOption[];
 }) {
@@ -848,6 +912,9 @@ function LessonCompactCard({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <LessonDetailsDialog
+            lessonCheckinBoards={lessonCheckinBoards}
+            lessonCompassBoards={lessonCompassBoards}
+            lessonTimelineSummary={lessonTimelineSummary}
             lesson={lesson}
             locationOptions={locationOptions}
           />
@@ -1217,6 +1284,9 @@ function WeekScopeCallout({
 function LessonListPanel({
   activeTab,
   firstItemIndex,
+  lessonCheckinBoards,
+  lessonCompassBoards,
+  lessonTimelineSummaryMap,
   locationOptions,
   pageSize,
   paginationPages,
@@ -1236,6 +1306,9 @@ function LessonListPanel({
 }: {
   activeTab: LessonTab;
   firstItemIndex: number;
+  lessonCheckinBoards: LessonCheckinBoard[];
+  lessonCompassBoards: SharedLessonCompassBoard[];
+  lessonTimelineSummaryMap: ReadonlyMap<string, LessonDetailTimelineSummary>;
   locationOptions: LocationOption[];
   pageSize: number;
   paginationPages: number[];
@@ -1375,6 +1448,11 @@ function LessonListPanel({
             <LessonCompactCard
               key={lesson.id}
               lesson={lesson}
+              lessonCheckinBoards={lessonCheckinBoards}
+              lessonCompassBoards={lessonCompassBoards}
+              lessonTimelineSummary={
+                lessonTimelineSummaryMap.get(lesson.id) ?? null
+              }
               isOutsideVisibleWeek={
                 !isInDateRange(
                   getLessonDate(lesson),
@@ -1416,6 +1494,11 @@ function LessonListPanel({
               <LessonRow
                 key={lesson.id}
                 lesson={lesson}
+                lessonCheckinBoards={lessonCheckinBoards}
+                lessonCompassBoards={lessonCompassBoards}
+                lessonTimelineSummary={
+                  lessonTimelineSummaryMap.get(lesson.id) ?? null
+                }
                 isOutsideVisibleWeek={
                   !isInDateRange(
                     getLessonDate(lesson),
@@ -1919,6 +2002,9 @@ function RequestListPanel({
 
 export function LessonsBoard({
   durationDefaults = DEFAULT_LESSON_DURATION_MINUTES,
+  lessonCheckinBoards = [],
+  lessonCompassBoards = [],
+  lessonTimelineSummaries = [],
   lessons,
   requests = [],
   slots = [],
@@ -1927,6 +2013,9 @@ export function LessonsBoard({
   initialQuery = "",
 }: {
   durationDefaults?: InstructorLessonDurationDefaults;
+  lessonCheckinBoards?: LessonCheckinBoard[];
+  lessonCompassBoards?: SharedLessonCompassBoard[];
+  lessonTimelineSummaries?: LessonDetailTimelineSummary[];
   lessons: Les[];
   requests?: LesAanvraag[];
   slots?: BeschikbaarheidSlot[];
@@ -1952,6 +2041,13 @@ export function LessonsBoard({
   const [activePlanningSection, setActivePlanningSection] =
     useState<PlanningSectionId>("week");
   const [manualPlannerNowMs] = useState(() => Date.now());
+  const lessonTimelineSummaryMap = useMemo(
+    () =>
+      new Map(
+        lessonTimelineSummaries.map((summary) => [summary.les_id, summary]),
+      ),
+    [lessonTimelineSummaries],
+  );
 
   const filteredLessons = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -2538,6 +2634,9 @@ export function LessonsBoard({
             <LessonListPanel
               activeTab={activeTab}
               firstItemIndex={firstItemIndex}
+              lessonCheckinBoards={lessonCheckinBoards}
+              lessonCompassBoards={lessonCompassBoards}
+              lessonTimelineSummaryMap={lessonTimelineSummaryMap}
               locationOptions={locationOptions}
               pageSize={pageSize}
               paginationPages={paginationPages}

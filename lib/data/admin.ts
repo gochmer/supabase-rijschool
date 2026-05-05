@@ -11,9 +11,15 @@ import {
 import { normalizePackageLabels } from "@/lib/package-labels";
 import { getPackageIconKey, getPackageThemeKey } from "@/lib/package-visuals";
 import { logSupabaseDataError } from "@/lib/data/runtime-safety";
+import {
+  getTrialLessonStateFromRows,
+  type TrialLessonLessonCandidate,
+  type TrialLessonRequestCandidate,
+} from "@/lib/data/trial-lessons";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   buildStudentAuditTimelineEvents,
+  getAuditEventCategory,
   groupStudentAuditTimelineEvents,
   type StudentAuditActorProfile,
   type StudentAuditEventSourceRow,
@@ -26,6 +32,7 @@ import {
   isStudentPackagePaymentNeeded,
   resolveStudentPackageStatus,
 } from "@/lib/student-package-status";
+import type { AdminAuditLogEvent, StudentAuditTimelineEvent } from "@/lib/types";
 
 type AdminPackageRow = {
   id: string;
@@ -54,12 +61,44 @@ type AdminStudentAuditEventRow = StudentAuditEventSourceRow & {
   leerling_id: string;
 };
 
+type AdminAuditEventRow = StudentAuditEventSourceRow & {
+  actor_profile_id: string | null;
+  actor_role: string | null;
+  betaling_id: string | null;
+  entity_id: string | null;
+  entity_type: string;
+  instructeur_id: string | null;
+  leerling_id: string | null;
+  pakket_id: string | null;
+};
+
+export type AdminAuditLogFilters = {
+  limit?: number;
+  search?: string;
+  category?: AdminAuditLogEvent["category"] | "alles";
+  actorRole?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  leerlingId?: string;
+  actorProfileId?: string;
+  pakketId?: string;
+  betalingId?: string;
+};
+
 type AdminStudentPaymentRow = {
   id: string;
   profiel_id: string;
   pakket_id: string | null;
   status: string | null;
   created_at: string;
+};
+
+type AdminTrialLessonRequestRow = TrialLessonRequestCandidate & {
+  leerling_id: string | null;
+};
+
+type AdminTrialLessonRow = TrialLessonLessonCandidate & {
+  leerling_id: string | null;
 };
 
 function formatDate(dateString: string | null | undefined) {
@@ -247,6 +286,8 @@ export async function getAdminStudents() {
     { data: pakkettenRows },
     { data: paymentRows },
     { data: lessonRows },
+    trialRequestsResult,
+    trialLessonsResult,
     auditEventsResult,
   ] = await Promise.all([
     supabase
@@ -258,7 +299,7 @@ export async function getAdminStudents() {
           .from("pakketten")
           .select("id, naam, prijs, aantal_lessen, actief")
           .in("id", pakketIds)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     pakketIds.length && profileIds.length
       ? supabase
           .from("betalingen")
@@ -266,7 +307,7 @@ export async function getAdminStudents() {
           .in("profiel_id", profileIds)
           .in("pakket_id", pakketIds)
           .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     pakketIds.length && leerlingIds.length
       ? supabase
           .from("lessen")
@@ -274,7 +315,45 @@ export async function getAdminStudents() {
           .in("leerling_id", leerlingIds)
           .in("pakket_id", pakketIds)
           .neq("status", "geannuleerd")
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
+    leerlingIds.length
+      ? (supabase
+          .from("lesaanvragen")
+          .select(
+            "id, leerling_id, aanvraag_type, status, created_at, voorkeursdatum, tijdvak"
+          )
+          .in("leerling_id", leerlingIds)
+          .eq("aanvraag_type", "proefles")
+          .in("status", [
+            "aangevraagd",
+            "geaccepteerd",
+            "ingepland",
+            "afgerond",
+          ])
+          .order("created_at", { ascending: false })
+          .limit(300) as unknown as Promise<{
+          data: AdminTrialLessonRequestRow[] | null;
+          error?: unknown;
+        }>)
+      : Promise.resolve({ data: [], error: null }),
+    leerlingIds.length
+      ? (supabase
+          .from("lessen")
+          .select("id, leerling_id, titel, status, created_at, start_at")
+          .in("leerling_id", leerlingIds)
+          .ilike("titel", "%proefles%")
+          .in("status", [
+            "aangevraagd",
+            "geaccepteerd",
+            "ingepland",
+            "afgerond",
+          ])
+          .order("start_at", { ascending: false })
+          .limit(300) as unknown as Promise<{
+          data: AdminTrialLessonRow[] | null;
+          error?: unknown;
+        }>)
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from("audit_events" as never)
       .select("id, actor_profile_id, actor_role, created_at, event_type, leerling_id, metadata, summary")
@@ -288,6 +367,18 @@ export async function getAdminStudents() {
 
   if (auditEventsResult.error) {
     logSupabaseDataError("admin.students.auditEvents", auditEventsResult.error, {
+      studentCount: leerlingIds.length,
+    });
+  }
+
+  if (trialRequestsResult.error) {
+    logSupabaseDataError("admin.students.trialRequests", trialRequestsResult.error, {
+      studentCount: leerlingIds.length,
+    });
+  }
+
+  if (trialLessonsResult.error) {
+    logSupabaseDataError("admin.students.trialLessons", trialLessonsResult.error, {
       studentCount: leerlingIds.length,
     });
   }
@@ -361,6 +452,28 @@ export async function getAdminStudents() {
 
     lessonUsageMap.set(key, current);
   }
+  const trialRequestsByStudent = new Map<string, AdminTrialLessonRequestRow[]>();
+  const trialLessonsByStudent = new Map<string, AdminTrialLessonRow[]>();
+
+  for (const request of trialRequestsResult.data ?? []) {
+    if (!request.leerling_id) {
+      continue;
+    }
+
+    const current = trialRequestsByStudent.get(request.leerling_id) ?? [];
+    current.push(request);
+    trialRequestsByStudent.set(request.leerling_id, current);
+  }
+
+  for (const lesson of trialLessonsResult.data ?? []) {
+    if (!lesson.leerling_id) {
+      continue;
+    }
+
+    const current = trialLessonsByStudent.get(lesson.leerling_id) ?? [];
+    current.push(lesson);
+    trialLessonsByStudent.set(lesson.leerling_id, current);
+  }
 
   return rows.map((row) => {
     const profile = profileMap.get(row.profile_id);
@@ -384,6 +497,11 @@ export async function getAdminStudents() {
       ...packageUsage,
     });
     const statusMeta = getStudentPackageStatusMeta(packageStatus);
+    const trialLessonState = getTrialLessonStateFromRows({
+      actor: "instructor",
+      lessons: trialLessonsByStudent.get(row.id) ?? [],
+      requests: trialRequestsByStudent.get(row.id) ?? [],
+    });
 
     return {
       id: row.id,
@@ -414,9 +532,289 @@ export async function getAdminStudents() {
       pakketLessenResterend: packageUsage.remainingLessons,
       voortgang: `${row.voortgang_percentage ?? 0}%`,
       status: "actief",
+      trialLessonAvailable: trialLessonState.available,
+      trialLessonStatus: trialLessonState.status,
+      trialLessonMessage: trialLessonState.message,
       auditEvents: auditEventsByStudent.get(row.id) ?? [],
     };
   });
+}
+
+function getAuditEntityLabel(value: string | null | undefined, fallback: string) {
+  return value ? value.slice(0, 8) : fallback;
+}
+
+function getAuditDateBoundary(value: string | undefined, endOfDay = false) {
+  if (!value) {
+    return null;
+  }
+
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00.000Z`)
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  if (endOfDay) {
+    date.setUTCHours(23, 59, 59, 999);
+  }
+
+  return date.toISOString();
+}
+
+function matchesAdminAuditFilters(
+  event: AdminAuditLogEvent,
+  filters: AdminAuditLogFilters,
+) {
+  const category = filters.category && filters.category !== "alles"
+    ? filters.category
+    : null;
+
+  if (category && event.category !== category) {
+    return false;
+  }
+
+  const search = filters.search?.trim().toLowerCase();
+
+  if (!search) {
+    return true;
+  }
+
+  const metadataText = event.metadata
+    .map((item) => `${item.label} ${item.value}`)
+    .join(" ");
+
+  return [
+    event.actorLabel,
+    event.actorRole,
+    event.betalingLabel,
+    event.category,
+    event.detail,
+    event.entityId,
+    event.entityType,
+    event.eventType,
+    event.leerlingId,
+    event.leerlingLabel,
+    event.pakketLabel,
+    event.title,
+    metadataText,
+  ].some((value) => (value ?? "").toLowerCase().includes(search));
+}
+
+export async function getAdminAuditLogEvents({
+  limit = 500,
+  search,
+  category = "alles",
+  actorRole,
+  dateFrom,
+  dateTo,
+  leerlingId,
+  actorProfileId,
+  pakketId,
+  betalingId,
+}: AdminAuditLogFilters = {}): Promise<AdminAuditLogEvent[]> {
+  const supabase = await createServerClient();
+  const normalizedLimit = Math.min(Math.max(limit, 1), 10_000);
+  const fromBoundary = getAuditDateBoundary(dateFrom);
+  const toBoundary = getAuditDateBoundary(dateTo, true);
+  let query = supabase
+    .from("audit_events" as never)
+    .select(
+      "id, actor_profile_id, actor_role, betaling_id, created_at, entity_id, entity_type, event_type, instructeur_id, leerling_id, metadata, pakket_id, summary",
+    )
+    .order("created_at" as never, { ascending: false } as never)
+    .limit(normalizedLimit);
+
+  if (fromBoundary) {
+    query = query.gte("created_at" as never, fromBoundary as never);
+  }
+
+  if (toBoundary) {
+    query = query.lte("created_at" as never, toBoundary as never);
+  }
+
+  if (actorRole && actorRole !== "alles") {
+    query = query.eq("actor_role" as never, actorRole as never);
+  }
+
+  if (leerlingId) {
+    query = query.eq("leerling_id" as never, leerlingId as never);
+  }
+
+  if (actorProfileId) {
+    query = query.eq("actor_profile_id" as never, actorProfileId as never);
+  }
+
+  if (pakketId) {
+    query = query.eq("pakket_id" as never, pakketId as never);
+  }
+
+  if (betalingId) {
+    query = query.eq("betaling_id" as never, betalingId as never);
+  }
+
+  const { data: rows, error } = (await query) as unknown as {
+    data: AdminAuditEventRow[] | null;
+    error?: unknown;
+  };
+
+  if (error) {
+    logSupabaseDataError("admin.auditLog.events", error, {
+      actorRole,
+      betalingId,
+      category,
+      dateFrom,
+      dateTo,
+      leerlingId,
+      limit: normalizedLimit,
+      pakketId,
+    });
+    return [];
+  }
+
+  const auditRows = rows ?? [];
+
+  if (!auditRows.length) {
+    return [];
+  }
+
+  const actorProfileIds = Array.from(
+    new Set(
+      auditRows
+        .map((row) => row.actor_profile_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const learnerIds = Array.from(
+    new Set(
+      auditRows
+        .map((row) => row.leerling_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const packageIds = Array.from(
+    new Set(
+      auditRows
+        .map((row) => row.pakket_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  const [actorProfilesResult, learnersResult, packagesResult] =
+    await Promise.all([
+      actorProfileIds.length
+        ? (supabase
+            .from("profiles")
+            .select("id, volledige_naam, email")
+            .in("id", actorProfileIds) as unknown as Promise<{
+            data: StudentAuditActorProfile[] | null;
+            error?: unknown;
+          }>)
+        : Promise.resolve({ data: [] as StudentAuditActorProfile[] }),
+      learnerIds.length
+        ? supabase
+            .from("leerlingen")
+            .select(
+              "id, profile:profiles!leerlingen_profile_id_fkey(id, volledige_naam, email)",
+            )
+            .in("id", learnerIds)
+        : Promise.resolve({ data: [] }),
+      packageIds.length
+        ? supabase
+            .from("pakketten")
+            .select("id, naam")
+            .in("id", packageIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+  const relationErrors = [
+    ["actorProfiles", (actorProfilesResult as { error?: unknown }).error],
+    ["learners", (learnersResult as { error?: unknown }).error],
+    ["packages", (packagesResult as { error?: unknown }).error],
+  ] as const;
+
+  for (const [query, relationError] of relationErrors) {
+    if (relationError) {
+      logSupabaseDataError("admin.auditLog.relations", relationError, {
+        query,
+        limit,
+      });
+    }
+  }
+
+  const timelineEvents = buildStudentAuditTimelineEvents({
+    actorProfiles: actorProfilesResult.data ?? [],
+    rows: auditRows,
+  });
+  const timelineEventMap = new Map(
+    timelineEvents.map((event) => [event.id, event]),
+  );
+  const learnerMap = new Map<string, string>();
+
+  for (const row of learnersResult.data ?? []) {
+    const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+    learnerMap.set(
+      row.id,
+      profile?.volledige_naam ||
+        profile?.email ||
+        getAuditEntityLabel(row.id, "Leerling"),
+    );
+  }
+
+  const packageMap = new Map(
+    (packagesResult.data ?? []).map((pkg) => [pkg.id, pkg.naam]),
+  );
+
+  return auditRows
+    .map((row) => {
+      const timelineEvent =
+        timelineEventMap.get(row.id) ??
+        ({
+          actorLabel: row.actor_role ?? "Systeem",
+          category: getAuditEventCategory(row.event_type),
+          createdAt: row.created_at,
+          createdAtLabel: formatDate(row.created_at),
+          detail: row.summary,
+          eventType: row.event_type,
+          id: row.id,
+          leerlingId: row.leerling_id,
+          metadata: [],
+          title: row.event_type,
+          tone: "info" as const,
+        } satisfies StudentAuditTimelineEvent);
+
+      return {
+        ...timelineEvent,
+        actorRole: row.actor_role ?? "system",
+        entityId: row.entity_id,
+        entityType: row.entity_type,
+        leerlingLabel: row.leerling_id
+          ? learnerMap.get(row.leerling_id) ??
+            getAuditEntityLabel(row.leerling_id, "Leerling")
+          : "Geen leerling",
+        pakketLabel: row.pakket_id
+          ? packageMap.get(row.pakket_id) ??
+            getAuditEntityLabel(row.pakket_id, "Pakket")
+          : "Geen pakket",
+        betalingLabel: getAuditEntityLabel(row.betaling_id, "Geen betaling"),
+      } satisfies AdminAuditLogEvent;
+    })
+    .filter((event) =>
+      matchesAdminAuditFilters(event, {
+        actorProfileId,
+        actorRole,
+        betalingId,
+        category,
+        dateFrom,
+        dateTo,
+        leerlingId,
+        limit: normalizedLimit,
+        pakketId,
+        search,
+      }),
+    );
 }
 
 export async function getAdminLessons() {

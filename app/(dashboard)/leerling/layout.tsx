@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth";
+import { DashboardModuleTabs } from "@/components/dashboard/dashboard-module-tabs";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default async function LeerlingLayout({
@@ -8,5 +9,10 @@ export default async function LeerlingLayout({
 }) {
   await requireRole(["leerling"]);
 
-  return <DashboardShell role="leerling">{children}</DashboardShell>;
+  return (
+    <DashboardShell role="leerling">
+      <DashboardModuleTabs role="leerling" />
+      {children}
+    </DashboardShell>
+  );
 }

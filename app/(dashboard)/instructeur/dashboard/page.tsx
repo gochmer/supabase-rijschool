@@ -4,6 +4,7 @@ import { InstructorCommandCenter } from "@/components/dashboard/instructor-comma
 import { InstructorDashboardSkeleton } from "@/components/dashboard/instructor-dashboard-skeleton";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { RealtimeDashboardSync } from "@/components/dashboard/realtime-dashboard-sync";
+import { getCurrentInstructorFeedbackTodoLessons } from "@/lib/data/instructor-feedback-todos";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
 import {
   getInstructeurDashboardLessonRequests,
@@ -30,6 +31,7 @@ const DASHBOARD_REQUEST_LIMIT = 12;
 const DASHBOARD_AVAILABILITY_LIMIT = 24;
 const DASHBOARD_RECURRING_AVAILABILITY_WEEKS = 2;
 const DASHBOARD_STUDENT_LIMIT = 12;
+const DASHBOARD_FEEDBACK_TODO_LIMIT = 6;
 
 function getLessonWindowStartIso() {
   return new Date(
@@ -54,6 +56,7 @@ export default function InstructeurDashboardPage() {
 async function InstructeurDashboardContent() {
   const {
     availabilitySlots,
+    feedbackTodos,
     instructor,
     instructorPackages,
     instructorWithReviewStats,
@@ -74,6 +77,7 @@ async function InstructeurDashboardContent() {
       instructor,
       instructorPackages,
       availabilitySlots,
+      feedbackTodos,
       students,
     ] = await Promise.all([
       timedDashboardData(ROUTE, "lessons", () =>
@@ -105,6 +109,12 @@ async function InstructeurDashboardContent() {
           recurringWeeks: DASHBOARD_RECURRING_AVAILABILITY_WEEKS,
         }),
       ),
+      timedDashboardData(ROUTE, "feedback-todos", () =>
+        getCurrentInstructorFeedbackTodoLessons({
+          daysBack: LESSON_HISTORY_WINDOW_DAYS,
+          limit: DASHBOARD_FEEDBACK_TODO_LIMIT,
+        }),
+      ),
       timedDashboardData(
         ROUTE,
         "dashboard-students",
@@ -133,6 +143,7 @@ async function InstructeurDashboardContent() {
 
     return {
       availabilitySlots,
+      feedbackTodos,
       instructor,
       instructorPackages,
       instructorWithReviewStats,
@@ -159,6 +170,7 @@ async function InstructeurDashboardContent() {
         profileName={profileName}
         packages={instructorPackages}
         availabilitySlots={availabilitySlots}
+        feedbackTodos={feedbackTodos}
         students={students}
         progressSignals={progressSignals}
         locationOptions={[]}

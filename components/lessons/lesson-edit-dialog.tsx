@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { updateLessonAction } from "@/lib/actions/lesson-management";
@@ -55,6 +56,7 @@ export function LessonEditDialog({
   lesson: Les;
   locationOptions?: LocationOption[];
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(getInitialDate(lesson));
   const [time, setTime] = useState(getInitialTime(lesson));
@@ -149,9 +151,22 @@ export function LessonEditDialog({
       });
 
       if (result.success) {
-        toast.success(result.message);
+        const progressHref =
+          "progressHref" in result ? result.progressHref : null;
+
+        toast.success(
+          progressHref
+            ? "Les afgerond. Ik open de voortgangskaart voor feedback."
+            : result.message,
+        );
         setOpen(false);
         resetTransientState();
+        if (progressHref) {
+          router.push(progressHref);
+          return;
+        }
+
+        router.refresh();
       } else {
         toast.error(result.message);
       }

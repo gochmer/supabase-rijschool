@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth";
+import { DashboardModuleTabs } from "@/components/dashboard/dashboard-module-tabs";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default async function AdminLayout({
@@ -8,5 +9,10 @@ export default async function AdminLayout({
 }) {
   await requireRole(["admin"]);
 
-  return <DashboardShell role="admin">{children}</DashboardShell>;
+  return (
+    <DashboardShell role="admin">
+      <DashboardModuleTabs role="admin" />
+      {children}
+    </DashboardShell>
+  );
 }

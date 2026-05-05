@@ -1,5 +1,7 @@
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { InstructorRequestsBoard } from "@/components/requests/instructor-requests-board";
+import { getInstructorPlanningDataHealth } from "@/lib/data/data-health";
 import { getInstructeurLessonRequests } from "@/lib/data/lesson-requests";
 import { getLocationOptions } from "@/lib/data/locations";
 import {
@@ -30,11 +32,11 @@ async function AanvragenContent({
 }: {
   searchParams: Promise<{ focus?: string; tab?: string }>;
 }) {
-  const { locationOptions, params, requests } = await timedDashboardRoute(
+  const { dataHealth, locationOptions, params, requests } = await timedDashboardRoute(
     ROUTE,
     async () => {
       const params = await searchParams;
-      const [requests, locationOptions] = await Promise.all([
+      const [requests, locationOptions, dataHealth] = await Promise.all([
         timedDashboardData(ROUTE, "requests", () =>
           getInstructeurLessonRequests({
             limit: REQUEST_PAGE_REQUEST_LIMIT,
@@ -43,9 +45,11 @@ async function AanvragenContent({
         timedDashboardData(ROUTE, "locations", () =>
           getLocationOptions({ limit: REQUEST_PAGE_LOCATION_LIMIT }),
         ),
+        timedDashboardData(ROUTE, "data-health", getInstructorPlanningDataHealth),
       ]);
 
       return {
+        dataHealth,
         locationOptions,
         params,
         requests,
@@ -69,6 +73,11 @@ async function AanvragenContent({
   return (
     <>
       <DashboardPerformanceMark route={ROUTE} label="InstructorRequestsBoard" />
+      <DataHealthCallout
+        className="mb-4"
+        label="Aanvragen datastatus"
+        results={dataHealth}
+      />
       <InstructorRequestsBoard
         requests={requests}
         locationOptions={locationOptions}

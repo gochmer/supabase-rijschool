@@ -1,13 +1,18 @@
 import { CreditCard, WalletCards } from "lucide-react";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { InsightPanel } from "@/components/dashboard/insight-panel";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { TrendCard } from "@/components/dashboard/trend-card";
 import { getAdminPayments } from "@/lib/data/admin";
+import { getAdminDashboardDataHealth } from "@/lib/data/data-health";
 
 export default async function AdminBetalingenPage() {
-  const payments = await getAdminPayments();
+  const [payments, dataHealth] = await Promise.all([
+    getAdminPayments(),
+    getAdminDashboardDataHealth(),
+  ]);
 
   return (
     <>
@@ -15,6 +20,11 @@ export default async function AdminBetalingenPage() {
         tone="urban"
         title="Betalingen beheren"
         description="Controleer betaalstatus, historie, trend en afwijkingen in een moderner financieel overzicht."
+      />
+
+      <DataHealthCallout
+        label="Admin betalingen datastatus"
+        results={dataHealth}
       />
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">

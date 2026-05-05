@@ -263,6 +263,7 @@ async function notifyPackageAssignment(input: {
     toPackageAmount(input.pakket.prijs) > 0 && input.paymentStatus !== "betaald";
 
   await supabase.from("notificaties").insert({
+    action_href: needsPayment ? "/leerling/betalingen" : "/leerling/dashboard",
     profiel_id: input.leerling.profile_id,
     titel: "Pakket gekoppeld",
     tekst: needsPayment

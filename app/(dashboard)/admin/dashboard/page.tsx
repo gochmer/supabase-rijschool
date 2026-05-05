@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import {
   DashboardActionHub,
   type DashboardActionHubItem,
@@ -36,6 +37,7 @@ import {
   getAdminSupportTickets,
   getAdminUsers,
 } from "@/lib/data/admin";
+import { getAdminDashboardDataHealth } from "@/lib/data/data-health";
 
 function parsePercent(value: string) {
   const parsed = Number(value.replace("%", ""));
@@ -63,6 +65,7 @@ export default async function AdminDashboardPage() {
     reviews,
     users,
     instructors,
+    dataHealth,
   ] = await Promise.all([
     getAdminDashboardMetrics(),
     getAdminPayments(),
@@ -72,6 +75,7 @@ export default async function AdminDashboardPage() {
     getAdminReviews(),
     getAdminUsers(),
     getAdminInstructors(),
+    getAdminDashboardDataHealth(),
   ]);
   const openTickets = tickets.filter((ticket) => ticket.status !== "afgesloten");
   const reviewAttention = reviews.filter(
@@ -322,6 +326,11 @@ export default async function AdminDashboardPage() {
             </Button>
           </>
         }
+      />
+
+      <DataHealthCallout
+        label="Admin datastatus"
+        results={dataHealth}
       />
 
       <DashboardActionHub

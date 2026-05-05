@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
+import { DashboardModuleTabs } from "@/components/dashboard/dashboard-module-tabs";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { InstructorModuleTabs } from "@/components/dashboard/instructor-module-tabs";
 
 export default async function InstructeurLayout({
   children,
@@ -11,7 +11,7 @@ export default async function InstructeurLayout({
 
   return (
     <DashboardShell role="instructeur">
-      <InstructorModuleTabs />
+      <DashboardModuleTabs role="instructeur" />
       {children}
     </DashboardShell>
   );

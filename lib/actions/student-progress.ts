@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getCurrentInstructeurRecord } from "@/lib/data/profiles";
 import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import { hasInstructorStudentPlanningRelationship } from "@/lib/data/student-scheduling";
+import { markInstructorFeedbackReminderResolved } from "@/lib/instructor-feedback-reminders";
+import { notifyLearnerAboutProgressLessonFeedback } from "@/lib/notification-events";
 import { createServerClient } from "@/lib/supabase/server";
 import { evaluateStudentTrajectorySignals } from "@/lib/student-trajectory-notifications";
 import {
@@ -19,6 +21,8 @@ type ProgressLessonContext =
       date: string;
       error?: never;
       lesId: string | null;
+      lesStartAt?: string | null;
+      lesTitel?: string | null;
     }
   | {
       date?: never;
@@ -49,14 +53,15 @@ async function resolveProgressLessonContext({
 
   if (!lesId) {
     return {
-      date: normalizedFallbackDate,
-      lesId: null,
-    };
+    date: normalizedFallbackDate,
+    lesId: null,
+    lesStartAt: null,
+  };
   }
 
   const { data: lesson, error } = await supabase
     .from("lessen")
-    .select("id, start_at")
+    .select("id, start_at, titel")
     .eq("id", lesId)
     .eq("instructeur_id", instructeurId)
     .eq("leerling_id", leerlingId)
@@ -74,6 +79,8 @@ async function resolveProgressLessonContext({
         lesson.start_at?.slice(0, 10) ?? normalizedFallbackDate,
       ) ?? normalizedFallbackDate,
     lesId: lesson.id,
+    lesStartAt: lesson.start_at,
+    lesTitel: lesson.titel,
   };
 }
 
@@ -424,6 +431,26 @@ export async function saveStudentProgressLessonNoteAction(input: {
         message: "Opslaan van de lesnotitie is niet gelukt.",
       };
     }
+
+    await notifyLearnerAboutProgressLessonFeedback({
+      supabase,
+      focusVolgendeLes,
+      instructeurNaam: instructeur.profielNaam ?? "Je instructeur",
+      instructeurProfileId: instructeur.profile_id,
+      leerlingId: input.leerlingId,
+      lesdatum: lessonContext.date,
+      lesTitel: lessonContext.lesTitel,
+      samenvatting,
+      sterkPunt,
+    });
+
+    await markInstructorFeedbackReminderResolved({
+      instructorProfileId: instructeur.profile_id,
+      learnerId: input.leerlingId,
+      lessonId: lessonContext.lesId,
+      lessonStartAt: lessonContext.lesStartAt,
+      supabase,
+    });
   }
 
   await evaluateStudentTrajectorySignals({
@@ -435,8 +462,15 @@ export async function saveStudentProgressLessonNoteAction(input: {
 
   revalidatePath("/instructeur/leerlingen");
   revalidatePath("/instructeur/dashboard");
+  revalidatePath("/instructeur/regie");
+  revalidatePath("/instructeur/berichten");
+  revalidatePath("/instructeur/lessen");
+  revalidatePath("/leerling/berichten");
+  revalidatePath("/leerling/boekingen");
   revalidatePath("/leerling/dashboard");
+  revalidatePath("/leerling/notificaties");
   revalidatePath("/leerling/profiel");
+  revalidatePath("/leerling/voortgang");
 
   return {
     success: true,

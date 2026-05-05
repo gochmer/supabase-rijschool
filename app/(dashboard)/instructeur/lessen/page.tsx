@@ -1,7 +1,12 @@
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { LessonsBoard } from "@/components/instructor/lessons-board";
+import { getInstructorPlanningDataHealth } from "@/lib/data/data-health";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
+import { getCurrentInstructorLessonDetailTimelineSummaries } from "@/lib/data/lesson-detail-timeline";
 import { getLocationOptions } from "@/lib/data/locations";
+import { getCurrentInstructorLessonCheckinBoards } from "@/lib/data/lesson-checkins";
+import { getCurrentInstructorLessonCompassBoards } from "@/lib/data/lesson-compass";
 import {
   getInstructeurLessonRequests,
   getInstructeurLessons,
@@ -61,7 +66,11 @@ async function InstructeurLessenContent({
 }) {
   const {
     instructeur,
+    lessonCheckinBoards,
+    lessonCompassBoards,
+    lessonTimelineSummaries,
     lessons,
+    planningDataHealth,
     locationOptions,
     params,
     requests,
@@ -79,6 +88,10 @@ async function InstructeurLessenContent({
       locationOptions,
       students,
       instructeur,
+      lessonCompassBoards,
+      lessonCheckinBoards,
+      lessonTimelineSummaries,
+      planningDataHealth,
     ] = await Promise.all([
       timedDashboardData(ROUTE, "lessons", () =>
         getInstructeurLessons({
@@ -111,11 +124,37 @@ async function InstructeurLessenContent({
           }),
       ),
       timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
+      timedDashboardData(
+        ROUTE,
+        "lesson-compass",
+        getCurrentInstructorLessonCompassBoards,
+      ),
+      timedDashboardData(
+        ROUTE,
+        "lesson-checkins",
+        getCurrentInstructorLessonCheckinBoards,
+      ),
+      timedDashboardData(ROUTE, "lesson-detail-timeline", () =>
+        getCurrentInstructorLessonDetailTimelineSummaries({
+          from: lessonWindowStart,
+          limit: LESSON_PAGE_LESSON_LIMIT * 4,
+          to: lessonWindowEnd,
+        }),
+      ),
+      timedDashboardData(
+        ROUTE,
+        "data-health",
+        getInstructorPlanningDataHealth,
+      ),
     ]);
 
     return {
       instructeur,
+      lessonCheckinBoards,
+      lessonCompassBoards,
+      lessonTimelineSummaries,
       lessons,
+      planningDataHealth,
       locationOptions,
       params,
       requests,
@@ -128,12 +167,20 @@ async function InstructeurLessenContent({
   return (
     <>
       <DashboardPerformanceMark route={ROUTE} label="LessonsBoard" />
+      <DataHealthCallout
+        className="mb-4"
+        label="Planning datastatus"
+        results={planningDataHealth}
+      />
       <LessonsBoard
         lessons={lessons}
         requests={requests}
         slots={slots}
         students={students}
         locationOptions={locationOptions}
+        lessonCheckinBoards={lessonCheckinBoards}
+        lessonCompassBoards={lessonCompassBoards}
+        lessonTimelineSummaries={lessonTimelineSummaries}
         durationDefaults={durationDefaults}
         initialQuery={params.zoek ?? ""}
       />

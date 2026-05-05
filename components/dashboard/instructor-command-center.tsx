@@ -23,6 +23,7 @@ import {
   XCircle,
 } from "lucide-react";
 
+import { FeedbackTodoCard } from "@/components/instructor/feedback-todo-card";
 import { LessonCreateDialog } from "@/components/instructor/lesson-create-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { buildCancellationRecoveryPlans } from "@/lib/lesson-reschedule-proposal
 import type {
   BeschikbaarheidSlot,
   InstructorDashboardProgressSignals,
+  InstructorFeedbackTodoLesson,
   InstructorStudentProgressRow,
   Les,
   LesAanvraag,
@@ -59,6 +61,7 @@ type InstructorCommandCenterProps = {
   profileName?: string | null;
   packages: Pakket[];
   availabilitySlots: BeschikbaarheidSlot[];
+  feedbackTodos?: InstructorFeedbackTodoLesson[];
   students: InstructorStudentProgressRow[];
   progressSignals?: InstructorDashboardProgressSignals;
   locationOptions: LocationOption[];
@@ -333,15 +336,25 @@ function getLessonDashboardHref(lesson: Les) {
 }
 
 function getNotificationHref(notification: Notificatie) {
-  if (notification.titel.toLowerCase().includes("aanvraag")) {
+  if (notification.actionHref) {
+    return notification.actionHref;
+  }
+
+  const title = notification.titel.toLowerCase();
+
+  if (title.includes("feedback") || title.includes("verslag")) {
+    return "/instructeur/leerlingen";
+  }
+
+  if (title.includes("aanvraag")) {
     return "/instructeur/aanvragen";
   }
 
-  if (notification.titel.toLowerCase().includes("les")) {
+  if (title.includes("les")) {
     return "/instructeur/lessen";
   }
 
-  if (notification.titel.toLowerCase().includes("review")) {
+  if (title.includes("review")) {
     return "/instructeur/reviews";
   }
 
@@ -774,6 +787,7 @@ export function InstructorCommandCenter({
   profileName,
   packages,
   availabilitySlots,
+  feedbackTodos = [],
   students,
   progressSignals = {
     behindStudents: [],
@@ -1788,6 +1802,8 @@ export function InstructorCommandCenter({
               )}
             </div>
           </CommandPanel>
+
+          <FeedbackTodoCard items={feedbackTodos} limit={3} />
 
           <CommandPanel>
             <SectionHeader title="Snelle acties" />

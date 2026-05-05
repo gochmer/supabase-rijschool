@@ -9,11 +9,16 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
 import { ProgressTrackingSystemPanel } from "@/components/instructor/progress-tracking-system-panel";
 import { StudentsBoard } from "@/components/instructor/students-board";
 import { StudentOnboardDialog } from "@/components/instructor/student-onboard-dialog";
+import { getInstructorPlanningDataHealth } from "@/lib/data/data-health";
+import { getCurrentInstructorFeedbackTemplates } from "@/lib/data/instructor-feedback-templates";
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
+import { getCurrentInstructorLessonCheckinBoards } from "@/lib/data/lesson-checkins";
+import { getCurrentInstructorLessonCompassBoards } from "@/lib/data/lesson-compass";
 import {
   getInstructeurLessonRequests,
   getInstructeurLessons,
@@ -335,7 +340,12 @@ function StudentPrioritiesPanel({
 export default async function LeerlingenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; lesson?: string; student?: string }>;
+  searchParams: Promise<{
+    date?: string;
+    feedback?: string;
+    lesson?: string;
+    student?: string;
+  }>;
 }) {
   const params = await searchParams;
   const [
@@ -347,6 +357,10 @@ export default async function LeerlingenPage({
     availabilitySlots,
     lessons,
     requests,
+    lessonCompassBoards,
+    lessonCheckinBoards,
+    feedbackTemplates,
+    dataHealth,
   ] = await timedDashboardRoute(ROUTE, async () => {
     const nowIso = new Date().toISOString();
     const lessonWindowStart = getLessonWindowStartIso();
@@ -375,6 +389,22 @@ export default async function LeerlingenPage({
           limit: 160,
         }),
       ),
+      timedDashboardData(
+        ROUTE,
+        "lesson-compass",
+        getCurrentInstructorLessonCompassBoards,
+      ),
+      timedDashboardData(
+        ROUTE,
+        "lesson-checkins",
+        getCurrentInstructorLessonCheckinBoards,
+      ),
+      timedDashboardData(
+        ROUTE,
+        "feedback-templates",
+        getCurrentInstructorFeedbackTemplates,
+      ),
+      timedDashboardData(ROUTE, "data-health", getInstructorPlanningDataHealth),
     ]);
   });
   const lessonDurationDefaults =
@@ -469,6 +499,11 @@ export default async function LeerlingenPage({
         />
       </header>
 
+      <DataHealthCallout
+        label="Leerlingen datastatus"
+        results={dataHealth}
+      />
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-5">
         {studentStats.map((item) => (
           <StudentStatCard key={item.label} {...item} />
@@ -499,9 +534,13 @@ export default async function LeerlingenPage({
         locationOptions={locationOptions}
         availabilitySlots={planningAvailabilitySlots}
         busyWindows={busyWindows}
+        lessonCheckinBoards={lessonCheckinBoards}
+        lessonCompassBoards={lessonCompassBoards}
+        feedbackTemplates={feedbackTemplates}
         packages={packages}
         lessonDurationDefaults={lessonDurationDefaults}
         initialDate={params.date ?? null}
+        initialFeedbackOpen={params.feedback === "1"}
         initialLessonId={params.lesson ?? null}
         initialStudentId={params.student ?? null}
       />

@@ -33,7 +33,7 @@ export const getCurrentNotifications = cache(async function getCurrentNotificati
   const supabase = await createServerClient();
   const { data: rows, error } = await supabase
     .from("notificaties")
-    .select("id, titel, tekst, type, ongelezen, created_at")
+    .select("id, titel, tekst, type, ongelezen, action_href, created_at")
     .eq("profiel_id", context.user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -55,6 +55,7 @@ export const getCurrentNotifications = cache(async function getCurrentNotificati
     titel: row.titel,
     tekst: row.tekst,
     tijd: formatRelativeDate(row.created_at),
+    actionHref: row.action_href,
     type:
       row.type === "succes" || row.type === "waarschuwing"
         ? row.type
