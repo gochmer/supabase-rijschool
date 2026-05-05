@@ -162,7 +162,9 @@ export default async function LeerlingVoortgangPage() {
             icon: ClipboardList,
             label: "Pakket",
             value: packageOverview.assignedPackage?.naam ?? "Nog geen pakket",
-            text: intelligence.packageSignal.usageLabel,
+            text: packageOverview.assignedPackage
+              ? `${packageOverview.assignment.statusLabel} - ${packageOverview.assignment.usageLabel}`
+              : intelligence.packageSignal.usageLabel,
           },
         ].map((item) => (
           <section key={item.label} className={cardClassName}>

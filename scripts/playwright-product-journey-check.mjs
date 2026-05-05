@@ -463,6 +463,30 @@ async function assertPageHealthy(page, label, expectedTexts = []) {
   }
 }
 
+async function waitForVisibleText(page, text, timeout = 15_000) {
+  await page.waitForFunction(
+    (expectedText) =>
+      Array.from(document.querySelectorAll("body *")).some((element) => {
+        if (!element.textContent?.includes(expectedText)) {
+          return false;
+        }
+
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          Number(style.opacity) !== 0 &&
+          rect.width > 0 &&
+          rect.height > 0
+        );
+      }),
+    text,
+    { timeout }
+  );
+}
+
 async function visitAndAssert(page, pathname, label, expectedTexts = []) {
   await gotoStable(page, pathname);
   await assertPageHealthy(page, label, expectedTexts);
@@ -784,6 +808,16 @@ async function run() {
       "Codex Productiereis Leerling",
       "Productiereis pakket",
     ]);
+    const goToNextLessonWeekButton = instructorPage
+      .getByRole("button", { name: /Ga naar week van volgende les/ })
+      .first();
+    await goToNextLessonWeekButton.waitFor({
+      state: "visible",
+      timeout: 15_000,
+    });
+    await goToNextLessonWeekButton.click();
+    await waitForVisibleText(instructorPage, "18 mei");
+    await waitForVisibleText(instructorPage, "10:00 - 11:00");
 
     const result = {
       registratie: "ok",
@@ -801,6 +835,7 @@ async function run() {
         pakketId: followupLesson.pakket_id,
       },
       voortgang: "3 skillmetingen + lesfeedback zichtbaar",
+      weekNavigatie: "week van volgende les opent vanuit callout",
       betaling: payment.status,
       notificatie: "Productiereis voltooid",
       uiRoutes: [

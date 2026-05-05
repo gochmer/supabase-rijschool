@@ -240,6 +240,12 @@ function formatCompactDateTime(date: Date | null) {
     : "Nog niet gepland";
 }
 
+function formatWeekRange(start: Date, endExclusive: Date) {
+  const inclusiveEnd = addDays(endExclusive, -1);
+
+  return `${dateFormatter.format(start)} - ${dateFormatter.format(inclusiveEnd)}`;
+}
+
 function formatDurationHours(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
@@ -258,6 +264,10 @@ function getLessonSortValue(lesson: Les) {
 
   const parsed = new Date(lesson.start_at).getTime();
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function isCancelledLesson(lesson: Les) {
+  return lesson.status === "geannuleerd" || lesson.status === "geweigerd";
 }
 
 function getLessonDate(lesson: Les) {
@@ -615,6 +625,14 @@ function LessonDetailsDialog({
   );
 }
 
+function LessonScopeBadge() {
+  return (
+    <span className="mt-1 inline-flex w-fit items-center rounded-full border border-sky-300/20 bg-sky-400/10 px-2 py-0.5 text-[10px] font-semibold text-sky-100 2xl:text-xs">
+      Buiten deze week
+    </span>
+  );
+}
+
 function LessonMoreMenu({ lesson }: { lesson: Les }) {
   return (
     <DropdownMenu>
@@ -659,10 +677,12 @@ function LessonMoreMenu({ lesson }: { lesson: Les }) {
 }
 
 function LessonRow({
+  isOutsideVisibleWeek,
   index,
   lesson,
   locationOptions,
 }: {
+  isOutsideVisibleWeek: boolean;
   index: number;
   lesson: Les;
   locationOptions: LocationOption[];
@@ -705,6 +725,7 @@ function LessonRow({
         <p className="mt-0.5 capitalize text-slate-400 2xl:mt-1">
           {formatLessonWeekday(lesson)}
         </p>
+        {isOutsideVisibleWeek ? <LessonScopeBadge /> : null}
       </div>
       <div>
         <p className="text-slate-100">{lesson.tijd}</p>
@@ -750,10 +771,12 @@ function LessonEmptyState() {
 }
 
 function LessonCompactCard({
+  isOutsideVisibleWeek,
   index,
   lesson,
   locationOptions,
 }: {
+  isOutsideVisibleWeek: boolean;
   index: number;
   lesson: Les;
   locationOptions: LocationOption[];
@@ -814,6 +837,7 @@ function LessonCompactCard({
           <p className="mt-0.5 capitalize text-slate-400">
             {formatLessonWeekday(lesson)} - {lesson.duur_minuten} min
           </p>
+          {isOutsideVisibleWeek ? <LessonScopeBadge /> : null}
         </div>
       </div>
 
@@ -1120,6 +1144,76 @@ function StudentProgressOverview({
   );
 }
 
+function WeekScopeCallout({
+  nextLesson,
+  onGoToNextLessonWeek,
+  onOpenAgenda,
+  outsideWeekLessonCount,
+  showGoToNextLessonWeek,
+  weekLessonCount,
+  weekRangeLabel,
+}: {
+  nextLesson: Les | null;
+  onGoToNextLessonWeek?: () => void;
+  onOpenAgenda: () => void;
+  outsideWeekLessonCount: number;
+  showGoToNextLessonWeek?: boolean;
+  weekLessonCount: number;
+  weekRangeLabel: string;
+}) {
+  const nextLessonDate = nextLesson ? getLessonDate(nextLesson) : null;
+
+  return (
+    <div className="mb-4 grid gap-3 rounded-xl border border-sky-300/16 bg-[linear-gradient(135deg,rgba(14,165,233,0.12),rgba(124,58,237,0.08),rgba(255,255,255,0.03))] p-3 text-sm text-sky-100 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center 2xl:p-4">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-sky-300/20 bg-sky-400/12 text-sky-100">
+          <Eye className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-semibold text-white">
+            Je bekijkt: {weekRangeLabel}
+          </p>
+          <p className="mt-1 leading-6 text-sky-100/78">
+            {weekLessonCount
+              ? `${weekLessonCount} les${weekLessonCount === 1 ? "" : "sen"} zichtbaar in deze week.`
+              : "Geen lessen in deze week."}{" "}
+            {outsideWeekLessonCount
+              ? `${outsideWeekLessonCount} les${outsideWeekLessonCount === 1 ? "" : "sen"} vallen buiten deze week.`
+              : "Alle geladen lessen vallen binnen deze week."}
+          </p>
+          {nextLesson ? (
+            <p className="mt-2 text-xs font-semibold text-sky-100">
+              Volgende les: {nextLesson.leerling_naam || "Leerling"} op{" "}
+              {formatCompactDateTime(nextLessonDate)}.
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row lg:flex-col 2xl:flex-row">
+        {showGoToNextLessonWeek ? (
+          <Button
+            type="button"
+            className="h-10 rounded-lg bg-sky-300 px-3 text-slate-950 hover:bg-sky-200"
+            onClick={onGoToNextLessonWeek}
+          >
+            <CalendarRange className="size-4" />
+            Ga naar week van volgende les
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 rounded-lg border-sky-200/20 bg-white/8 px-3 text-white hover:bg-white/12"
+          onClick={onOpenAgenda}
+        >
+          <ListChecks className="size-4" />
+          Bekijk volledige planning
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function LessonListPanel({
   activeTab,
   firstItemIndex,
@@ -1136,6 +1230,8 @@ function LessonListPanel({
   sortedLessons,
   totalPages,
   typeFilter,
+  visibleWeekEnd,
+  visibleWeekStart,
   visibleLessons,
 }: {
   activeTab: LessonTab;
@@ -1153,8 +1249,14 @@ function LessonListPanel({
   sortedLessons: Les[];
   totalPages: number;
   typeFilter: LessonTypeFilter;
+  visibleWeekEnd: Date;
+  visibleWeekStart: Date;
   visibleLessons: Les[];
 }) {
+  const outsideVisibleWeekCount = sortedLessons.filter((lesson) =>
+    !isInDateRange(getLessonDate(lesson), visibleWeekStart, visibleWeekEnd)
+  ).length;
+
   return (
     <PlanningOsPanel
       id="agenda-overzicht"
@@ -1167,6 +1269,20 @@ function LessonListPanel({
         <p className="mt-1 text-sm text-slate-400">
           Zoek, filter en open details van geplande en afgeronde lessen.
         </p>
+      </div>
+      <div className="mb-4 rounded-lg border border-sky-300/16 bg-sky-400/8 p-3 text-sm leading-6 text-sky-100">
+        <p className="font-semibold">Volledige planning</p>
+        <p className="mt-1 text-sky-100/78">
+          Deze lijst toont alle geladen lessen die bij je filters passen. De
+          weekplanning is alleen een visuele weekfilter.
+        </p>
+        {outsideVisibleWeekCount ? (
+          <p className="mt-2 text-xs font-semibold text-sky-100/90">
+            {outsideVisibleWeekCount} les
+            {outsideVisibleWeekCount === 1 ? "" : "sen"} vallen buiten de
+            huidige week en krijgen hieronder een badge.
+          </p>
+        ) : null}
       </div>
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between 2xl:gap-4">
         <div className="flex flex-wrap gap-3 2xl:gap-5">
@@ -1259,6 +1375,13 @@ function LessonListPanel({
             <LessonCompactCard
               key={lesson.id}
               lesson={lesson}
+              isOutsideVisibleWeek={
+                !isInDateRange(
+                  getLessonDate(lesson),
+                  visibleWeekStart,
+                  visibleWeekEnd,
+                )
+              }
               index={firstItemIndex + index}
               locationOptions={locationOptions}
             />
@@ -1293,6 +1416,13 @@ function LessonListPanel({
               <LessonRow
                 key={lesson.id}
                 lesson={lesson}
+                isOutsideVisibleWeek={
+                  !isInDateRange(
+                    getLessonDate(lesson),
+                    visibleWeekStart,
+                    visibleWeekEnd,
+                  )
+                }
                 index={firstItemIndex + index}
                 locationOptions={locationOptions}
               />
@@ -1816,8 +1946,7 @@ export function LessonsBoard({
   const [selectedRequest, setSelectedRequest] = useState<LesAanvraag | null>(
     null,
   );
-  const calendarInitialAnchorDate = useMemo(() => new Date(), []);
-  const [visibleWeekStart, setVisibleWeekStart] = useState(() =>
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() =>
     getStartOfWeek(new Date()),
   );
   const [activePlanningSection, setActivePlanningSection] =
@@ -2045,6 +2174,7 @@ export function LessonsBoard({
   const paginationPages = getPaginationPages(safePage, totalPages);
 
   const today = new Date();
+  const visibleWeekStart = selectedWeekStart;
   const visibleWeekEnd = addDays(visibleWeekStart, 7);
   const weekLessons = lessons.filter((lesson) =>
     isInDateRange(getLessonDate(lesson), visibleWeekStart, visibleWeekEnd),
@@ -2056,7 +2186,30 @@ export function LessonsBoard({
     isInDateRange(getSlotDate(slot), visibleWeekStart, visibleWeekEnd),
   );
   const activeWeekLessons = weekLessons.filter(
-    (lesson) => !["geannuleerd", "geweigerd"].includes(lesson.status),
+    (lesson) => !isCancelledLesson(lesson),
+  );
+  const actionableLessons = lessons
+    .filter((lesson) => !isCancelledLesson(lesson) && getLessonDate(lesson))
+    .sort((left, right) => getLessonSortValue(left) - getLessonSortValue(right));
+  const outsideVisibleWeekLessonCount = actionableLessons.filter(
+    (lesson) =>
+      !isInDateRange(getLessonDate(lesson), visibleWeekStart, visibleWeekEnd),
+  ).length;
+  const upcomingActionableLessons = actionableLessons.filter((lesson) => {
+    const lessonDate = getLessonDate(lesson);
+
+    return Boolean(lessonDate && lessonDate >= today);
+  });
+  const futurePlannedLessons = upcomingActionableLessons.filter((lesson) =>
+    ["ingepland", "geaccepteerd"].includes(lesson.status),
+  );
+  const nextFutureLessonForScope =
+    futurePlannedLessons[0] ?? upcomingActionableLessons[0] ?? null;
+  const nextLessonForScope =
+    nextFutureLessonForScope ?? actionableLessons[0] ?? null;
+  const visibleWeekRangeLabel = formatWeekRange(
+    visibleWeekStart,
+    visibleWeekEnd,
   );
   const completedWeekLessons = weekLessons.filter(
     (lesson) => lesson.status === "afgerond",
@@ -2231,6 +2384,25 @@ export function LessonsBoard({
     target.focus({ preventScroll: true });
   }
 
+  function openFullLessonPlanning() {
+    setActivePlanningSection("agenda");
+    setActiveTab("all");
+    setQuery("");
+    setTypeFilter("all");
+    setCurrentPage(1);
+  }
+
+  function goToNextLessonWeek() {
+    const nextLessonDate = getLessonDate(nextFutureLessonForScope);
+
+    if (!nextLessonDate) {
+      return;
+    }
+
+    setActivePlanningSection("week");
+    setSelectedWeekStart(getStartOfWeek(nextLessonDate));
+  }
+
   return (
     <div className="space-y-4 text-white 2xl:space-y-6">
       <ScheduleLessonFromSlotDialog
@@ -2379,6 +2551,8 @@ export function LessonsBoard({
               sortedLessons={sortedLessons}
               totalPages={totalPages}
               typeFilter={typeFilter}
+              visibleWeekEnd={visibleWeekEnd}
+              visibleWeekStart={visibleWeekStart}
               visibleLessons={visibleLessons}
             />
           ) : activePlanningSection === "requests" ? (
@@ -2447,12 +2621,24 @@ export function LessonsBoard({
                 </div>
               </div>
 
+              <WeekScopeCallout
+                nextLesson={nextLessonForScope}
+                onGoToNextLessonWeek={goToNextLessonWeek}
+                onOpenAgenda={openFullLessonPlanning}
+                outsideWeekLessonCount={outsideVisibleWeekLessonCount}
+                showGoToNextLessonWeek={
+                  activeWeekLessons.length === 0 && Boolean(nextFutureLessonForScope)
+                }
+                weekLessonCount={activeWeekLessons.length}
+                weekRangeLabel={visibleWeekRangeLabel}
+              />
+
               <PlanningWeekView
                 emptyLabel="Geen lessen, aanvragen of open plekken."
                 fitToContainer
-                initialAnchorDate={calendarInitialAnchorDate}
                 items={calendarItems}
                 navigationLabel="Week van"
+                onSelectedWeekStartChange={setSelectedWeekStart}
                 onSelectItem={(item) => {
                   if (item.kind === "available" && item.meta?.slot) {
                     setPlanningSlot(item.meta.slot);
@@ -2468,7 +2654,7 @@ export function LessonsBoard({
                     setSelectedRequest(item.meta.request);
                   }
                 }}
-                onVisibleWeekStartChange={setVisibleWeekStart}
+                selectedWeekStart={selectedWeekStart}
                 tone="urban"
               />
 

@@ -12,6 +12,20 @@ import { normalizePackageLabels } from "@/lib/package-labels";
 import { getPackageIconKey, getPackageThemeKey } from "@/lib/package-visuals";
 import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import { createServerClient } from "@/lib/supabase/server";
+import {
+  buildStudentAuditTimelineEvents,
+  groupStudentAuditTimelineEvents,
+  type StudentAuditActorProfile,
+  type StudentAuditEventSourceRow,
+} from "@/lib/student-audit-timeline";
+import {
+  calculateStudentPackageUsage,
+  formatStudentPackageAssignedDate,
+  formatStudentPackageUsage,
+  getStudentPackageStatusMeta,
+  isStudentPackagePaymentNeeded,
+  resolveStudentPackageStatus,
+} from "@/lib/student-package-status";
 
 type AdminPackageRow = {
   id: string;
@@ -33,6 +47,18 @@ type AdminPackageRow = {
   cover_focus_x: number | null;
   cover_focus_y: number | null;
   les_type: string | null;
+  created_at: string;
+};
+
+type AdminStudentAuditEventRow = StudentAuditEventSourceRow & {
+  leerling_id: string;
+};
+
+type AdminStudentPaymentRow = {
+  id: string;
+  profiel_id: string;
+  pakket_id: string | null;
+  status: string | null;
   created_at: string;
 };
 
@@ -211,19 +237,90 @@ export async function getAdminStudents() {
   }
 
   const profileIds = rows.map((row) => row.profile_id);
+  const leerlingIds = rows.map((row) => row.id);
   const pakketIds = rows
     .map((row) => row.pakket_id)
     .filter((value): value is string => Boolean(value));
 
-  const [{ data: profiles }, { data: pakkettenRows }] = await Promise.all([
+  const [
+    { data: profiles },
+    { data: pakkettenRows },
+    { data: paymentRows },
+    { data: lessonRows },
+    auditEventsResult,
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, volledige_naam, email, telefoon")
       .in("id", profileIds),
     pakketIds.length
-      ? supabase.from("pakketten").select("id, naam").in("id", pakketIds)
+      ? supabase
+          .from("pakketten")
+          .select("id, naam, prijs, aantal_lessen, actief")
+          .in("id", pakketIds)
       : Promise.resolve({ data: [] }),
+    pakketIds.length && profileIds.length
+      ? supabase
+          .from("betalingen")
+          .select("id, profiel_id, pakket_id, status, created_at")
+          .in("profiel_id", profileIds)
+          .in("pakket_id", pakketIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    pakketIds.length && leerlingIds.length
+      ? supabase
+          .from("lessen")
+          .select("leerling_id, pakket_id, status")
+          .in("leerling_id", leerlingIds)
+          .in("pakket_id", pakketIds)
+          .neq("status", "geannuleerd")
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("audit_events" as never)
+      .select("id, actor_profile_id, actor_role, created_at, event_type, leerling_id, metadata, summary")
+      .in("leerling_id" as never, leerlingIds as never)
+      .order("created_at" as never, { ascending: false } as never)
+      .limit(300) as unknown as Promise<{
+      data: AdminStudentAuditEventRow[] | null;
+      error?: unknown;
+    }>,
   ]);
+
+  if (auditEventsResult.error) {
+    logSupabaseDataError("admin.students.auditEvents", auditEventsResult.error, {
+      studentCount: leerlingIds.length,
+    });
+  }
+
+  const auditRows = auditEventsResult.data ?? [];
+  const auditActorProfileIds = Array.from(
+    new Set(
+      auditRows
+        .map((row) => row.actor_profile_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const { data: auditActorProfiles, error: auditActorProfilesError } =
+    auditActorProfileIds.length
+      ? ((await supabase
+          .from("profiles")
+          .select("id, volledige_naam, email")
+          .in("id", auditActorProfileIds)) as unknown as {
+          data: StudentAuditActorProfile[] | null;
+          error?: unknown;
+        })
+      : { data: [] as StudentAuditActorProfile[], error: null };
+
+  if (auditActorProfilesError) {
+    logSupabaseDataError("admin.students.auditActorProfiles", auditActorProfilesError);
+  }
+
+  const auditEventsByStudent = groupStudentAuditTimelineEvents(
+    buildStudentAuditTimelineEvents({
+      actorProfiles: auditActorProfiles ?? [],
+      rows: auditRows,
+    }),
+  );
 
   const profileMap = new Map(
     (profiles ?? []).map((profile) => [profile.id, profile])
@@ -231,19 +328,93 @@ export async function getAdminStudents() {
   const pakketMap = new Map(
     (pakkettenRows ?? []).map((pakket) => [pakket.id, pakket])
   );
+  const paymentMap = new Map<string, AdminStudentPaymentRow>();
+
+  for (const payment of paymentRows ?? []) {
+    const key = `${payment.profiel_id}:${payment.pakket_id}`;
+
+    if (!paymentMap.has(key)) {
+      paymentMap.set(key, payment);
+    }
+  }
+  const lessonUsageMap = new Map<
+    string,
+    { plannedLessons: number; usedLessons: number }
+  >();
+
+  for (const lesson of lessonRows ?? []) {
+    if (!lesson.leerling_id || !lesson.pakket_id) {
+      continue;
+    }
+
+    const key = `${lesson.leerling_id}:${lesson.pakket_id}`;
+    const current = lessonUsageMap.get(key) ?? {
+      plannedLessons: 0,
+      usedLessons: 0,
+    };
+
+    if (["geaccepteerd", "ingepland"].includes(lesson.status ?? "")) {
+      current.plannedLessons += 1;
+    } else if (lesson.status === "afgerond") {
+      current.usedLessons += 1;
+    }
+
+    lessonUsageMap.set(key, current);
+  }
 
   return rows.map((row) => {
     const profile = profileMap.get(row.profile_id);
+    const pakket = row.pakket_id ? pakketMap.get(row.pakket_id) : null;
+    const payment = row.pakket_id
+      ? paymentMap.get(`${row.profile_id}:${row.pakket_id}`) ?? null
+      : null;
+    const usageCounts = row.pakket_id
+      ? lessonUsageMap.get(`${row.id}:${row.pakket_id}`)
+      : null;
+    const packageUsage = calculateStudentPackageUsage({
+      totalLessons: pakket?.aantal_lessen ?? null,
+      plannedLessons: usageCounts?.plannedLessons ?? 0,
+      usedLessons: usageCounts?.usedLessons ?? 0,
+    });
+    const packageStatus = resolveStudentPackageStatus({
+      hasPackage: Boolean(row.pakket_id && pakket),
+      packageActive: pakket?.actief ?? null,
+      packagePrice: pakket?.prijs ?? null,
+      paymentStatus: payment?.status ?? null,
+      ...packageUsage,
+    });
+    const statusMeta = getStudentPackageStatusMeta(packageStatus);
+
     return {
       id: row.id,
       naam: profile?.volledige_naam ?? "Leerling",
       email: profile?.email ?? "",
       telefoon: profile?.telefoon ?? "",
+      pakketId: row.pakket_id ?? null,
       pakket: row.pakket_id
-        ? pakketMap.get(row.pakket_id)?.naam ?? "Onbekend pakket"
+        ? pakket?.naam ?? "Onbekend pakket"
         : "Nog geen pakket",
+      pakketStatus: packageStatus,
+      pakketStatusLabel: statusMeta.label,
+      pakketStatusBadgeVariant: statusMeta.badgeVariant,
+      pakketToegewezenOp: formatStudentPackageAssignedDate(
+        payment?.created_at ?? null
+      ),
+      pakketBetalingNodig: isStudentPackagePaymentNeeded({
+        packagePrice: pakket?.prijs ?? null,
+        paymentStatus: payment?.status ?? null,
+      }),
+      pakketBetalingStatus: payment?.status ?? null,
+      pakketGebruikLabel: row.pakket_id
+        ? formatStudentPackageUsage(packageUsage)
+        : "Nog geen pakket gekoppeld",
+      pakketLessenTotaal: packageUsage.totalLessons,
+      pakketLessenGepland: packageUsage.plannedLessons,
+      pakketLessenGebruikt: packageUsage.usedLessons,
+      pakketLessenResterend: packageUsage.remainingLessons,
       voortgang: `${row.voortgang_percentage ?? 0}%`,
       status: "actief",
+      auditEvents: auditEventsByStudent.get(row.id) ?? [],
     };
   });
 }

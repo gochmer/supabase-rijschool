@@ -260,6 +260,18 @@ export interface StudentProgressLessonNote {
   updated_at: string;
 }
 
+export interface StudentAuditTimelineEvent {
+  id: string;
+  leerlingId: string | null;
+  eventType: string;
+  title: string;
+  detail: string;
+  createdAt: string;
+  createdAtLabel: string;
+  actorLabel: string;
+  tone: "info" | "success" | "warning" | "danger";
+}
+
 export interface InstructorStudentProgressRow {
   id: string;
   profileId?: string;
@@ -278,6 +290,19 @@ export interface InstructorStudentProgressRow {
   pakketGevolgdeLessen?: number;
   pakketResterendeLessen?: number | null;
   pakketPlanningGeblokkeerd?: boolean;
+  pakketStatus?:
+    | "geen_pakket"
+    | "in_afwachting_betaling"
+    | "actief"
+    | "volledig_gebruikt"
+    | "verlopen";
+  pakketStatusLabel?: string;
+  pakketStatusDescription?: string;
+  pakketStatusBadgeVariant?: "default" | "info" | "success" | "warning" | "danger";
+  pakketToegewezenOp?: string;
+  pakketBetalingNodig?: boolean;
+  pakketBetalingStatus?: string | null;
+  pakketGebruikLabel?: string;
   aanvraagStatus: string;
   email?: string;
   telefoon?: string;
@@ -302,6 +327,7 @@ export interface InstructorStudentProgressRow {
   trialLessonAvailable?: boolean;
   trialLessonStatus?: TrialLessonStatus;
   trialLessonMessage?: string;
+  auditEvents?: StudentAuditTimelineEvent[];
 }
 
 export interface InstructorDashboardProgressSignalStudent {

@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
+import { recordAuditEvent } from "@/lib/audit-events";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -17,6 +18,22 @@ type StripeWebhookEvent = {
       };
     };
   };
+};
+
+type PaymentAuditRow = {
+  id: string;
+  profiel_id: string;
+  pakket_id: string | null;
+  bedrag: number | string | null;
+  status: string;
+};
+
+type LearnerAuditRow = {
+  id: string;
+};
+
+type PackageAuditRow = {
+  instructeur_id: string | null;
 };
 
 function getStripeSignatureParts(signatureHeader: string | null) {
@@ -152,6 +169,51 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
+
+    const [{ data: payment }, { data: learner }] = (await Promise.all([
+      supabase
+        .from("betalingen")
+        .select("id, profiel_id, pakket_id, bedrag, status")
+        .eq("id", paymentId)
+        .eq("profiel_id", profileId)
+        .maybeSingle(),
+      supabase
+        .from("leerlingen")
+        .select("id")
+        .eq("profile_id", profileId)
+        .maybeSingle(),
+    ])) as unknown as [
+      { data: PaymentAuditRow | null },
+      { data: LearnerAuditRow | null },
+    ];
+    const { data: packageRow } = payment?.pakket_id
+      ? ((await supabase
+          .from("pakketten")
+          .select("instructeur_id")
+          .eq("id", payment.pakket_id)
+          .maybeSingle()) as unknown as { data: PackageAuditRow | null })
+      : { data: null };
+
+    await recordAuditEvent({
+      actorRole: "system",
+      eventType: payment?.pakket_id ? "package_payment_paid" : "payment_paid",
+      entityType: "payment",
+      entityId: paymentId,
+      leerlingId: learner?.id ?? null,
+      instructeurId: packageRow?.instructeur_id ?? null,
+      pakketId: payment?.pakket_id ?? null,
+      betalingId: paymentId,
+      summary: payment?.pakket_id
+        ? "Pakketbetaling afgerond via Stripe."
+        : "Betaling afgerond via Stripe.",
+      metadata: {
+        provider: "stripe",
+        paid_at: paidAt,
+        profile_id: profileId,
+        amount: payment?.bedrag ?? null,
+        status: payment?.status ?? "betaald",
+      },
+    });
 
     const { error: notificationError } = await supabase.from("notificaties").insert({
       profiel_id: profileId,

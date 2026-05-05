@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getLessonEndAt } from "@/lib/booking-availability";
 import { resolveLocationSelection, type LocationSelectionInput } from "@/lib/actions/location-resolution";
+import { assignStudentPackage } from "@/lib/actions/student-package-assignment";
 import { findSchedulingConflict } from "@/lib/data/scheduling-conflicts";
 import { syncStudentDriverJourneyStatus } from "@/lib/data/driver-journey";
 import {
@@ -397,9 +398,6 @@ export async function createInstructorLearnerAction(input: {
   const manualLinksTable = admin.from(
     "instructeur_leerling_koppelingen" as never
   ) as unknown as ManualLearnerLinkWriteBuilder;
-  const planningRightsTable = admin.from(
-    "leerling_planningsrechten" as never
-  ) as unknown as StudentPlanningRightsDeleteBuilder;
 
   let existingProfile =
     (
@@ -533,40 +531,21 @@ export async function createInstructorLearnerAction(input: {
   }
 
   if (selectedPackage) {
-    const { error } = await admin
-      .from("leerlingen" as never)
-      .update({
-        pakket_id: selectedPackage.id,
-      } as never)
-      .eq("id", learner.id);
+    const assignmentResult = await assignStudentPackage({
+      leerlingId: learner.id,
+      pakketId: selectedPackage.id,
+      actorInstructeurId: instructeur.id,
+      actorProfileId: context.profile?.id ?? null,
+      actorRole: "instructeur",
+      notifyLearner: false,
+    });
 
-    if (error) {
-      return {
-        success: false,
-        message: "De leerling is gekoppeld, maar het pakket kon niet worden ingesteld.",
-      };
-    }
-  }
-
-  if (selectedPackage) {
-    const { error } = await planningRightsTable.upsert(
-      {
-        leerling_id: learner.id,
-        instructeur_id: instructeur.id,
-        zelf_inplannen_toegestaan: true,
-        vrijgegeven_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "leerling_id,instructeur_id",
-      }
-    );
-
-    if (error) {
+    if (!assignmentResult.success) {
       return {
         success: false,
         message:
-          "De leerling is toegevoegd, maar het vrijgeven van de planning is niet gelukt.",
+          assignmentResult.message ||
+          "De leerling is gekoppeld, maar het pakket kon niet worden ingesteld.",
       };
     }
   }
@@ -599,10 +578,12 @@ export async function createInstructorLearnerAction(input: {
 export async function updateInstructorLearnerPackageAction(input: {
   leerlingId: string;
   packageId: string | null;
+  replaceExisting?: boolean;
 }) {
+  const context = await ensureCurrentUserContext();
   const instructeur = await getCurrentInstructeurRecord();
 
-  if (!instructeur) {
+  if (!context || !instructeur) {
     return {
       success: false,
       message: "Alleen een ingelogde instructeur kan een leerlingpakket aanpassen.",
@@ -644,44 +625,19 @@ export async function updateInstructorLearnerPackageAction(input: {
     selectedPackage = data;
   }
 
-  const admin = await createAdminClient();
-  const { error } = await admin
-    .from("leerlingen" as never)
-    .update({
-      pakket_id: selectedPackage?.id ?? null,
-    } as never)
-    .eq("id", input.leerlingId);
+  const assignmentResult = await assignStudentPackage({
+    leerlingId: input.leerlingId,
+    pakketId: selectedPackage?.id ?? null,
+    actorInstructeurId: instructeur.id,
+    actorProfileId: context.profile?.id ?? null,
+    actorRole: "instructeur",
+    allowReplace: Boolean(input.replaceExisting),
+  });
 
-  if (error) {
+  if (!assignmentResult.success) {
     return {
       success: false,
-      message: "Het pakket kon niet worden bijgewerkt.",
-    };
-  }
-
-  const now = new Date().toISOString();
-  const planningRightsTable = admin.from(
-    "leerling_planningsrechten" as never
-  ) as unknown as StudentPlanningRightsDeleteBuilder;
-  const { error: planningError } = await planningRightsTable.upsert(
-    {
-      leerling_id: input.leerlingId,
-      instructeur_id: instructeur.id,
-      zelf_inplannen_toegestaan: Boolean(selectedPackage),
-      vrijgegeven_at: selectedPackage ? now : null,
-      updated_at: now,
-    },
-    {
-      onConflict: "leerling_id,instructeur_id",
-    }
-  );
-
-  if (planningError) {
-    return {
-      success: false,
-      message: selectedPackage
-        ? "Het pakket is gekoppeld, maar de planning kon niet worden vrijgegeven."
-        : "Het pakket is verwijderd, maar de planningstoegang kon niet worden bijgewerkt.",
+      message: assignmentResult.message || "Het pakket kon niet worden bijgewerkt.",
     };
   }
 

@@ -21,6 +21,20 @@ import {
   getStudentExamReadiness,
   getStudentProgressSummary,
 } from "@/lib/student-progress";
+import {
+  calculateStudentPackageUsage,
+  formatStudentPackageAssignedDate,
+  formatStudentPackageUsage,
+  getStudentPackageStatusMeta,
+  isStudentPackagePaymentNeeded,
+  resolveStudentPackageStatus,
+} from "@/lib/student-package-status";
+import {
+  buildStudentAuditTimelineEvents,
+  groupStudentAuditTimelineEvents,
+  type StudentAuditActorProfile,
+  type StudentAuditEventSourceRow,
+} from "@/lib/student-audit-timeline";
 import { resolveDriverJourneyState } from "@/lib/driver-journey";
 import {
   addBookedMinutesForWeek,
@@ -57,6 +71,10 @@ type InstructorStudentLinkRow = {
   bron: string | null;
   onboarding_notitie: string | null;
   intake_checklist_keys: string[] | null;
+};
+
+type InstructorStudentAuditEventRow = StudentAuditEventSourceRow & {
+  leerling_id: string;
 };
 
 type InstructorDashboardStudentLinkRow = {
@@ -114,8 +132,18 @@ type InstructorStudentRow = {
 type InstructorStudentPackageRow = {
   id: string;
   naam: string;
+  prijs: number | string | null;
   aantal_lessen: number | null;
+  actief: boolean | null;
   zelf_inplannen_limiet_minuten_per_week: number | null;
+};
+
+type InstructorStudentPaymentRow = {
+  id: string;
+  profiel_id: string;
+  pakket_id: string | null;
+  status: string | null;
+  created_at: string;
 };
 
 export async function getInstructorStudentCount(instructorId: string) {
@@ -1103,9 +1131,11 @@ export async function getInstructeurStudentsWorkspace() {
   const [
     profilesResult,
     packagesResult,
+    paymentsResult,
     assessmentsResult,
     notesResult,
     schedulingAccessResult,
+    auditEventsResult,
   ] = await Promise.all([
     profileIds.length
       ? supabase
@@ -1116,9 +1146,20 @@ export async function getInstructeurStudentsWorkspace() {
     packageIds.length
       ? (supabase
           .from("pakketten")
-          .select("id, naam, aantal_lessen, zelf_inplannen_limiet_minuten_per_week")
+          .select("id, naam, prijs, aantal_lessen, actief, zelf_inplannen_limiet_minuten_per_week")
           .in("id", packageIds) as unknown as Promise<{
           data: InstructorStudentPackageRow[] | null;
+        }>)
+      : Promise.resolve({ data: [] }),
+    packageIds.length && profileIds.length
+      ? (supabase
+          .from("betalingen")
+          .select("id, profiel_id, pakket_id, status, created_at")
+          .in("profiel_id", profileIds)
+          .in("pakket_id", packageIds)
+          .order("created_at", { ascending: false }) as unknown as Promise<{
+          data: InstructorStudentPaymentRow[] | null;
+          error?: unknown;
         }>)
       : Promise.resolve({ data: [] }),
     supabase
@@ -1147,14 +1188,25 @@ export async function getInstructeurStudentsWorkspace() {
       )
       .eq("instructeur_id", instructeur.id)
       .in("leerling_id", leerlingIds),
+    supabase
+      .from("audit_events" as never)
+      .select("id, actor_profile_id, actor_role, created_at, event_type, leerling_id, metadata, summary")
+      .in("leerling_id" as never, leerlingIds as never)
+      .order("created_at" as never, { ascending: false } as never)
+      .limit(300) as unknown as Promise<{
+      data: InstructorStudentAuditEventRow[] | null;
+      error?: unknown;
+    }>,
   ]);
 
   const workspaceRelationErrors = [
     ["profiles", (profilesResult as { error?: unknown }).error],
     ["packages", (packagesResult as { error?: unknown }).error],
+    ["payments", (paymentsResult as { error?: unknown }).error],
     ["assessments", (assessmentsResult as { error?: unknown }).error],
     ["notes", (notesResult as { error?: unknown }).error],
     ["schedulingAccess", (schedulingAccessResult as { error?: unknown }).error],
+    ["auditEvents", (auditEventsResult as { error?: unknown }).error],
   ] as const;
 
   for (const [query, error] of workspaceRelationErrors) {
@@ -1170,9 +1222,58 @@ export async function getInstructeurStudentsWorkspace() {
   const profileMap = new Map(
     (profilesResult.data ?? []).map((profile) => [profile.id, profile]),
   );
+  const auditRows = auditEventsResult.data ?? [];
+  const auditActorProfileIds = Array.from(
+    new Set(
+      auditRows
+        .map((row) => row.actor_profile_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const { data: auditActorProfiles, error: auditActorProfilesError } =
+    auditActorProfileIds.length
+      ? ((await supabase
+          .from("profiles")
+          .select("id, volledige_naam, email")
+          .in("id", auditActorProfileIds)) as unknown as {
+          data: StudentAuditActorProfile[] | null;
+          error?: unknown;
+        })
+      : { data: [] as StudentAuditActorProfile[], error: null };
+
+  if (auditActorProfilesError) {
+    logSupabaseDataError(
+      "studentProgress.studentsWorkspace.auditActorProfiles",
+      auditActorProfilesError,
+      {
+        instructeurId: instructeur.id,
+      },
+    );
+  }
+
+  const auditEventsByStudent = groupStudentAuditTimelineEvents(
+    buildStudentAuditTimelineEvents({
+      actorProfiles: auditActorProfiles ?? [],
+      rows: auditRows,
+    }),
+  );
   const packageMap = new Map(
     (packagesResult.data ?? []).map((pkg) => [pkg.id, pkg]),
   );
+  const paymentMap = new Map<string, InstructorStudentPaymentRow>();
+
+  for (const payment of paymentsResult.data ?? []) {
+    if (!payment.pakket_id) {
+      continue;
+    }
+
+    const key = `${payment.profiel_id}:${payment.pakket_id}`;
+
+    if (!paymentMap.has(key)) {
+      paymentMap.set(key, payment);
+    }
+  }
+
   const schedulingAccessMap = new Map(
     ((schedulingAccessResult.data ?? []) as StudentSchedulingAccessRow[]).map(
       (row) => [row.leerling_id, row],
@@ -1356,6 +1457,10 @@ export async function getInstructeurStudentsWorkspace() {
       const assignedPackage = student.pakket_id
         ? packageMap.get(student.pakket_id) ?? null
         : null;
+      const assignedPayment =
+        student.pakket_id && assignedPackage
+          ? paymentMap.get(`${student.profile_id}:${student.pakket_id}`) ?? null
+          : null;
       const packageLessons = relatedLessons.filter(
         (lesson) =>
           lesson.status !== "geannuleerd" &&
@@ -1368,16 +1473,21 @@ export async function getInstructeurStudentsWorkspace() {
       const pakketGevolgdeLessen = packageLessons.filter(
         (lesson) => lesson.status === "afgerond",
       ).length;
-      const pakketTotaalLessen = assignedPackage?.aantal_lessen ?? null;
-      const pakketResterendeLessen =
-        pakketTotaalLessen && pakketTotaalLessen > 0
-          ? Math.max(
-              pakketTotaalLessen -
-                pakketIngeplandeLessen -
-                pakketGevolgdeLessen,
-              0,
-            )
-          : null;
+      const packageUsage = calculateStudentPackageUsage({
+        totalLessons: assignedPackage?.aantal_lessen ?? null,
+        plannedLessons: pakketIngeplandeLessen,
+        usedLessons: pakketGevolgdeLessen,
+      });
+      const pakketTotaalLessen = packageUsage.totalLessons;
+      const pakketResterendeLessen = packageUsage.remainingLessons;
+      const packageStatus = resolveStudentPackageStatus({
+        hasPackage: Boolean(assignedPackage),
+        packageActive: assignedPackage?.actief ?? null,
+        packagePrice: assignedPackage?.prijs ?? null,
+        paymentStatus: assignedPayment?.status ?? null,
+        ...packageUsage,
+      });
+      const packageStatusMeta = getStudentPackageStatusMeta(packageStatus);
       const planningVrijTeGeven =
         Boolean(student.pakket_id) &&
         (Boolean(manualLink) ||
@@ -1516,6 +1626,21 @@ export async function getInstructeurStudentsWorkspace() {
         pakketGevolgdeLessen,
         pakketResterendeLessen,
         pakketPlanningGeblokkeerd: !student.pakket_id,
+        pakketStatus: packageStatus,
+        pakketStatusLabel: packageStatusMeta.label,
+        pakketStatusDescription: packageStatusMeta.description,
+        pakketStatusBadgeVariant: packageStatusMeta.badgeVariant,
+        pakketToegewezenOp: formatStudentPackageAssignedDate(
+          assignedPayment?.created_at ?? null,
+        ),
+        pakketBetalingNodig: isStudentPackagePaymentNeeded({
+          packagePrice: assignedPackage?.prijs ?? null,
+          paymentStatus: assignedPayment?.status ?? null,
+        }),
+        pakketBetalingStatus: assignedPayment?.status ?? null,
+        pakketGebruikLabel: assignedPackage
+          ? formatStudentPackageUsage(packageUsage)
+          : "Nog geen pakket gekoppeld",
         aanvraagStatus:
           latestRequest?.status != null
             ? getRequestStatusLabel(latestRequest.status)
@@ -1545,6 +1670,7 @@ export async function getInstructeurStudentsWorkspace() {
         trialLessonAvailable: trialLessonState.available,
         trialLessonStatus: trialLessonState.status,
         trialLessonMessage: trialLessonState.message,
+        auditEvents: auditEventsByStudent.get(student.id) ?? [],
         ...journeyFields,
       };
     },

@@ -19,6 +19,14 @@ import {
 } from "@/lib/data/profiles";
 import { logSupabaseDataError } from "@/lib/data/runtime-safety";
 import {
+  calculateStudentPackageUsage,
+  formatStudentPackageAssignedDate,
+  formatStudentPackageUsage,
+  getStudentPackageStatusMeta,
+  isStudentPackagePaymentNeeded,
+  resolveStudentPackageStatus,
+} from "@/lib/student-package-status";
+import {
   getPublicInstructors,
   getPublicInstructorBySlug,
 } from "@/lib/data/instructors";
@@ -420,6 +428,19 @@ export async function getCurrentStudentPackageOverview() {
         usedLessons: 0,
         remainingLessons: null,
       },
+      assignment: {
+        assignedAt: null,
+        assignedAtLabel: "Nog niet vastgelegd",
+        paymentId: null,
+        paymentNeeded: false,
+        paymentStatus: null,
+        status: "geen_pakket" as const,
+        statusLabel: "Nog geen pakket",
+        statusDescription:
+          "Koppel eerst een pakket om vervolglessen en betaling duidelijk te maken.",
+        statusBadgeVariant: "warning" as const,
+        usageLabel: "Nog geen pakket gekoppeld",
+      },
     };
   }
 
@@ -451,7 +472,7 @@ export async function getCurrentStudentPackageOverview() {
         : Promise.resolve({ data: [] }),
       supabase
         .from("betalingen")
-        .select("id, bedrag, status, betaald_at, created_at")
+        .select("id, pakket_id, bedrag, status, betaald_at, created_at")
         .eq("profiel_id", leerling.profile_id)
         .order("created_at", { ascending: false }),
       (supabase
@@ -492,10 +513,28 @@ export async function getCurrentStudentPackageOverview() {
     (lesson) => lesson.status === "afgerond"
   ).length;
   const assignedLessonTotal = assignedPackage?.aantal_lessen ?? null;
-  const remainingPackageLessons =
-    assignedLessonTotal && assignedLessonTotal > 0
-      ? Math.max(assignedLessonTotal - plannedPackageLessons - usedPackageLessons, 0)
+  const lessonUsage = calculateStudentPackageUsage({
+    totalLessons: assignedLessonTotal,
+    plannedLessons: plannedPackageLessons,
+    usedLessons: usedPackageLessons,
+  });
+  const assignedPayment =
+    assignedPackage && paymentRows?.length
+      ? paymentRows.find((payment) => payment.pakket_id === assignedPackage.id) ??
+        null
       : null;
+  const assignmentStatus = resolveStudentPackageStatus({
+    hasPackage: Boolean(assignedPackage),
+    packageActive: assignedPackage?.actief ?? null,
+    packagePrice: assignedPackage?.prijs ?? null,
+    paymentStatus: assignedPayment?.status ?? null,
+    ...lessonUsage,
+  });
+  const assignmentMeta = getStudentPackageStatusMeta(assignmentStatus);
+  const paymentNeeded = isStudentPackagePaymentNeeded({
+    packagePrice: assignedPackage?.prijs ?? null,
+    paymentStatus: assignedPayment?.status ?? null,
+  });
 
   return {
     assignedPackage: assignedPackage
@@ -522,10 +561,26 @@ export async function getCurrentStudentPackageOverview() {
         }
       : null,
     lessonUsage: {
-      totalLessons: assignedLessonTotal,
-      plannedLessons: plannedPackageLessons,
-      usedLessons: usedPackageLessons,
-      remainingLessons: remainingPackageLessons,
+      totalLessons: lessonUsage.totalLessons,
+      plannedLessons: lessonUsage.plannedLessons,
+      usedLessons: lessonUsage.usedLessons,
+      remainingLessons: lessonUsage.remainingLessons,
+    },
+    assignment: {
+      assignedAt: assignedPayment?.created_at ?? null,
+      assignedAtLabel: formatStudentPackageAssignedDate(
+        assignedPayment?.created_at ?? null
+      ),
+      paymentId: assignedPayment?.id ?? null,
+      paymentNeeded,
+      paymentStatus: assignedPayment?.status ?? null,
+      status: assignmentStatus,
+      statusLabel: assignmentMeta.label,
+      statusDescription: assignmentMeta.description,
+      statusBadgeVariant: assignmentMeta.badgeVariant,
+      usageLabel: assignedPackage
+        ? formatStudentPackageUsage(lessonUsage)
+        : "Nog geen pakket gekoppeld",
     },
     payments:
       paymentRows?.map((payment) => ({

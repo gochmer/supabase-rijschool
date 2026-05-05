@@ -25,6 +25,7 @@ import {
   getLeerlingLessonRequests,
   getLeerlingLessons,
 } from "@/lib/data/lesson-requests";
+import { getCurrentStudentPackageOverview } from "@/lib/data/packages";
 import { getCurrentLearnerBookingOverview } from "@/lib/data/student-scheduling";
 import {
   getLessonAttendanceLabel,
@@ -162,10 +163,11 @@ const tabTriggerClassName =
   "h-10 rounded-full px-4 text-slate-300 data-active:text-slate-950";
 
 export default async function LeerlingBoekingenPage() {
-  const [requests, lessons, bookingOverview] = await Promise.all([
+  const [requests, lessons, bookingOverview, packageOverview] = await Promise.all([
     getLeerlingLessonRequests(),
     getLeerlingLessons(),
     getCurrentLearnerBookingOverview(),
+    getCurrentStudentPackageOverview(),
   ]);
 
   const pendingRequests = requests.filter(
@@ -289,6 +291,34 @@ export default async function LeerlingBoekingenPage() {
         {planningStats.map((item) => (
           <DashboardStatCard key={item.label} {...item} />
         ))}
+      </div>
+
+      <div className="rounded-xl border border-white/10 bg-white/[0.055] p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <Badge variant={packageOverview.assignment.statusBadgeVariant}>
+              {packageOverview.assignment.statusLabel}
+            </Badge>
+            <h2 className="mt-2 text-lg font-semibold text-white">
+              {packageOverview.assignedPackage?.naam ??
+                "Nog geen pakket gekoppeld"}
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
+              {packageOverview.assignedPackage
+                ? `${packageOverview.assignment.usageLabel}. Toegewezen: ${packageOverview.assignment.assignedAtLabel}.`
+                : "Na je proefles koppelt je instructeur of admin een pakket. Daarna komen vervolglessen en betaalstatus hier terug."}
+            </p>
+          </div>
+          {packageOverview.assignment.paymentNeeded ? (
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-full border-amber-200/20 bg-amber-400/10 text-amber-100 hover:bg-amber-400/15"
+            >
+              <Link href="/leerling/betalingen">Betaling afronden</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <LessonFocusCard

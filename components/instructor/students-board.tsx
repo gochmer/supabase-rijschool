@@ -102,6 +102,7 @@ import {
 import { StudentPackageDialog } from "@/components/instructor/student-package-dialog";
 import { ProgressPrintButton } from "@/components/progress/progress-print-button";
 import { StudentProgressLessonNoteEditor } from "@/components/progress/student-progress-lesson-note-editor";
+import { StudentAuditTimeline } from "@/components/shared/student-audit-timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -1898,12 +1899,12 @@ export function StudentsBoard({
                     variant={
                       selectedStudent.pakketPlanningGeblokkeerd
                         ? "warning"
-                        : "success"
+                        : selectedStudent.pakketStatusBadgeVariant ?? "success"
                     }
                   >
                     {selectedStudent.pakketPlanningGeblokkeerd
                       ? "Geblokkeerd"
-                      : "Vrijgegeven"}
+                      : selectedStudent.pakketStatusLabel ?? "Vrijgegeven"}
                   </Badge>
                 </div>
                 {selectedStudent.pakketPlanningGeblokkeerd ? (
@@ -1911,39 +1912,59 @@ export function StudentsBoard({
                     Vervolglessen blijven dicht tot je een pakket koppelt. Een proefles kan nog wel los in het traject staan.
                   </p>
                 ) : (
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <MiniStat
-                      icon={CalendarDays}
-                      label="Gepland"
-                      value={`${selectedStudent.pakketIngeplandeLessen ?? 0}`}
-                    />
-                    <MiniStat
-                      icon={CheckCircle2}
-                      label="Gevolgd"
-                      value={`${selectedStudent.pakketGevolgdeLessen ?? 0}`}
-                    />
-                    <MiniStat
-                      icon={ShieldCheck}
-                      label="Over"
-                      value={
-                        selectedStudent.pakketResterendeLessen == null
-                          ? "Flex"
-                          : `${selectedStudent.pakketResterendeLessen}`
-                      }
-                    />
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs leading-5 text-slate-400">
+                      {selectedStudent.pakketStatusDescription ??
+                        "Dit pakket is actief voor de leerling."}
+                      {selectedStudent.pakketBetalingNodig
+                        ? ` Betaling staat nog op ${selectedStudent.pakketBetalingStatus ?? "open"}.`
+                        : ""}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <MiniStat
+                        icon={CalendarDays}
+                        label="Gepland"
+                        value={`${selectedStudent.pakketIngeplandeLessen ?? 0}`}
+                      />
+                      <MiniStat
+                        icon={CheckCircle2}
+                        label="Gevolgd"
+                        value={`${selectedStudent.pakketGevolgdeLessen ?? 0}`}
+                      />
+                      <MiniStat
+                        icon={ShieldCheck}
+                        label="Over"
+                        value={
+                          selectedStudent.pakketResterendeLessen == null
+                            ? "Flex"
+                            : `${selectedStudent.pakketResterendeLessen}`
+                        }
+                      />
+                    </div>
+                    <p className="text-[11px] leading-5 text-slate-500">
+                      Toegewezen: {selectedStudent.pakketToegewezenOp ?? "Nog niet vastgelegd"}
+                    </p>
                   </div>
                 )}
               </div>
+
+              <StudentAuditTimeline
+                events={selectedStudent.auditEvents ?? []}
+                limit={5}
+              />
 
               <div className="grid gap-2">
                 <StudentPackageDialog
                   leerlingId={selectedStudent.id}
                   leerlingNaam={selectedStudent.naam}
+                  currentPackageId={selectedStudent.pakketId ?? null}
                   currentPackageName={
                     selectedStudent.pakket !== "Nog geen pakket"
                       ? selectedStudent.pakket
                       : null
                   }
+                  currentPackageStatusLabel={selectedStudent.pakketStatusLabel}
+                  currentPackageUsageLabel={selectedStudent.pakketGebruikLabel}
                   packages={packages}
                 />
                 <CreateManualLessonDialog

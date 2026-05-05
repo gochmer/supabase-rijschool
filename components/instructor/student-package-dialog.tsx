@@ -29,18 +29,34 @@ const NO_PACKAGE_VALUE = "__no_package__";
 export function StudentPackageDialog({
   leerlingId,
   leerlingNaam,
+  currentPackageId,
   currentPackageName,
+  currentPackageStatusLabel,
+  currentPackageUsageLabel,
   packages = [],
 }: {
   leerlingId: string;
   leerlingNaam: string;
+  currentPackageId?: string | null;
   currentPackageName?: string | null;
+  currentPackageStatusLabel?: string | null;
+  currentPackageUsageLabel?: string | null;
   packages?: Pakket[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState(NO_PACKAGE_VALUE);
+  const [replaceExisting, setReplaceExisting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const selectedPackage =
+    selectedPackageId !== NO_PACKAGE_VALUE
+      ? packages.find((pkg) => pkg.id === selectedPackageId) ?? null
+      : null;
+  const replacesExisting = Boolean(
+    currentPackageId &&
+      selectedPackageId !== NO_PACKAGE_VALUE &&
+      selectedPackageId !== currentPackageId
+  );
 
   function handleSubmit() {
     startTransition(async () => {
@@ -48,6 +64,7 @@ export function StudentPackageDialog({
         leerlingId,
         packageId:
           selectedPackageId !== NO_PACKAGE_VALUE ? selectedPackageId : null,
+        replaceExisting: replacesExisting && replaceExisting,
       });
 
       if (!result.success) {
@@ -67,10 +84,8 @@ export function StudentPackageDialog({
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (nextOpen) {
-          const matchingPackage = packages.find(
-            (pkg) => pkg.naam === currentPackageName
-          );
-          setSelectedPackageId(matchingPackage?.id ?? NO_PACKAGE_VALUE);
+          setSelectedPackageId(currentPackageId ?? NO_PACKAGE_VALUE);
+          setReplaceExisting(false);
         }
       }}
     >
@@ -89,7 +104,13 @@ export function StudentPackageDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <Select value={selectedPackageId} onValueChange={setSelectedPackageId}>
+          <Select
+            value={selectedPackageId}
+            onValueChange={(value) => {
+              setSelectedPackageId(value);
+              setReplaceExisting(false);
+            }}
+          >
             <SelectTrigger className="dark:border-white/10 dark:bg-white/5 dark:text-white">
               <SelectValue placeholder="Kies een pakket" />
             </SelectTrigger>
@@ -106,7 +127,36 @@ export function StudentPackageDialog({
           {currentPackageName ? (
             <p className="text-[12px] leading-5 text-slate-500 dark:text-slate-400">
               Huidig pakket: {currentPackageName}
+              {currentPackageStatusLabel ? ` - ${currentPackageStatusLabel}` : ""}
             </p>
+          ) : null}
+          {currentPackageUsageLabel ? (
+            <p className="text-[12px] leading-5 text-slate-500 dark:text-slate-400">
+              {currentPackageUsageLabel}
+            </p>
+          ) : null}
+          {selectedPackage ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-[12px] leading-5 text-slate-300">
+              <p className="font-semibold text-white">{selectedPackage.naam}</p>
+              <p className="mt-1">
+                {selectedPackage.lessen || "Flexibel"} lessen - EUR{" "}
+                {selectedPackage.prijs.toLocaleString("nl-NL")}
+              </p>
+            </div>
+          ) : null}
+          {replacesExisting ? (
+            <label className="flex items-start gap-2 rounded-2xl border border-amber-300/18 bg-amber-400/10 p-3 text-[12px] leading-5 text-amber-100">
+              <input
+                checked={replaceExisting}
+                onChange={(event) => setReplaceExisting(event.target.checked)}
+                type="checkbox"
+                className="mt-1"
+              />
+              <span>
+                Ik vervang dit pakket bewust. Open betalingen van het oude
+                pakket worden gesloten.
+              </span>
+            </label>
           ) : null}
         </div>
 
@@ -114,7 +164,11 @@ export function StudentPackageDialog({
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Annuleren
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending}>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isPending || (replacesExisting && !replaceExisting)}
+          >
             {isPending ? "Opslaan..." : "Pakket opslaan"}
           </Button>
         </DialogFooter>

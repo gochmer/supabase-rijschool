@@ -113,12 +113,9 @@ export default async function LeerlingProfielPage() {
   const packageLabel =
     packageOverview.assignedPackage?.naam ?? "Nog geen pakket gekoppeld";
   const packageUsage = packageOverview.lessonUsage;
-  const packageUsageLabel =
-    packageOverview.assignedPackage && packageUsage.totalLessons
-      ? `${packageUsage.usedLessons}/${packageUsage.totalLessons} gevolgd, ${packageUsage.plannedLessons} gepland, ${packageUsage.remainingLessons ?? 0} beschikbaar`
-      : packageOverview.assignedPackage
-        ? `${packageUsage.usedLessons} gevolgd, ${packageUsage.plannedLessons} gepland`
-        : null;
+  const packageUsageLabel = packageOverview.assignedPackage
+    ? `${packageOverview.assignment.statusLabel} - ${packageOverview.assignment.usageLabel}`
+    : null;
   const profileIntegrity = [
     hasProfileName,
     hasProfilePhone,
@@ -282,7 +279,9 @@ export default async function LeerlingProfielPage() {
       className: "border-rose-300/18 bg-rose-400/12 text-rose-100",
     },
     {
-      label: packageLabel,
+      label: packageOverview.assignedPackage
+        ? `${packageOverview.assignment.statusLabel}: ${packageLabel}`
+        : packageLabel,
       className: "border-amber-300/18 bg-amber-400/12 text-amber-100",
     },
   ];

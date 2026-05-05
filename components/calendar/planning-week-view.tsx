@@ -913,8 +913,10 @@ export function PlanningWeekView<Meta = unknown>({
   initialAnchorDate,
   items,
   navigationLabel = "Week van",
+  onSelectedWeekStartChange,
   onSelectItem,
   onVisibleWeekStartChange,
+  selectedWeekStart,
   selectedItemId,
   showNavigation,
   tone = "default",
@@ -926,16 +928,30 @@ export function PlanningWeekView<Meta = unknown>({
   initialAnchorDate?: Date;
   items: Array<PlanningWeekItem<Meta>>;
   navigationLabel?: string;
+  onSelectedWeekStartChange?: (weekStart: Date) => void;
   onSelectItem?: (item: PlanningWeekItem<Meta>) => void;
   onVisibleWeekStartChange?: (weekStart: Date) => void;
+  selectedWeekStart?: Date;
   selectedItemId?: string | null;
   showNavigation?: boolean;
   tone?: PlanningWeekTone;
   weekDays?: Date[];
 }) {
-  const [anchorDate, setAnchorDate] = useState<Date>(
+  const [internalAnchorDate, setInternalAnchorDate] = useState<Date>(
     initialAnchorDate ?? items[0]?.startAt ?? new Date(),
   );
+  const anchorDate = selectedWeekStart ?? internalAnchorDate;
+  function setWeekAnchor(nextDate: Date) {
+    const nextWeekStart = startOfWeek(nextDate, { weekStartsOn: 1 });
+
+    if (selectedWeekStart) {
+      onSelectedWeekStartChange?.(new Date(nextWeekStart));
+      return;
+    }
+
+    setInternalAnchorDate(nextWeekStart);
+    onSelectedWeekStartChange?.(new Date(nextWeekStart));
+  }
   const resolvedWeekDays = useMemo(() => {
     if (weekDays?.length) {
       return weekDays;
@@ -1002,7 +1018,7 @@ export function PlanningWeekView<Meta = unknown>({
                 tone === "urban" &&
                   "border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white",
               )}
-              onClick={() => setAnchorDate((current) => addWeeks(current, -1))}
+              onClick={() => setWeekAnchor(addWeeks(anchorDate, -1))}
             >
               <ChevronLeft className="size-4" />
             </Button>
@@ -1014,7 +1030,7 @@ export function PlanningWeekView<Meta = unknown>({
                 tone === "urban" &&
                   "border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white",
               )}
-              onClick={() => setAnchorDate(new Date())}
+              onClick={() => setWeekAnchor(new Date())}
             >
               Deze week
             </Button>
@@ -1027,7 +1043,7 @@ export function PlanningWeekView<Meta = unknown>({
                 tone === "urban" &&
                   "border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white",
               )}
-              onClick={() => setAnchorDate((current) => addWeeks(current, 1))}
+              onClick={() => setWeekAnchor(addWeeks(anchorDate, 1))}
             >
               <ChevronRight className="size-4" />
             </Button>

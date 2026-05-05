@@ -42,6 +42,7 @@ export default async function LeerlingBetalingenPage({
 }) {
   const params = await searchParams;
   const overview = await getCurrentStudentPackageOverview();
+  const packageAssignment = overview.assignment;
   const paidCount = overview.payments.filter(
     (payment) => payment.status === "betaald"
   ).length;
@@ -55,9 +56,16 @@ export default async function LeerlingBetalingenPage({
       icon: Wallet,
       label: "Actief pakket",
       value: overview.assignedPackage?.naam ?? "Nog niet gekoppeld",
-      tone: overview.assignedPackage ? "emerald" : "amber",
+      tone:
+        packageAssignment.status === "actief"
+          ? "emerald"
+          : packageAssignment.status === "in_afwachting_betaling"
+            ? "amber"
+            : overview.assignedPackage
+              ? "sky"
+              : "amber",
       detail: overview.assignedPackage
-        ? `${overview.assignedPackage.lessen || "Flexibel"} lessen - ${overview.assignedPackage.prijsLabel}`
+        ? `${packageAssignment.statusLabel} - ${packageAssignment.usageLabel}`
         : "Klaar om aan een traject gekoppeld te worden.",
     },
     {
@@ -144,15 +152,15 @@ export default async function LeerlingBetalingenPage({
           <section className={urbanCardClassName}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <Badge variant={overview.assignedPackage ? "success" : "warning"}>
-                  {overview.assignedPackage ? "Actief" : "Nog niet gekoppeld"}
+                <Badge variant={packageAssignment.statusBadgeVariant}>
+                  {packageAssignment.statusLabel}
                 </Badge>
                 <h2 className="mt-3 text-2xl font-semibold text-white">
                   {overview.assignedPackage?.naam ?? "Nog geen pakket toegewezen"}
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
                   {overview.assignedPackage
-                    ? overview.assignedPackage.beschrijving
+                    ? packageAssignment.statusDescription
                     : "Zodra een admin of instructeur een pakket koppelt, zie je hier meteen de belangrijkste details."}
                 </p>
               </div>
@@ -165,11 +173,25 @@ export default async function LeerlingBetalingenPage({
                     </p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/6 p-3">
-                    <p className="text-[11px] text-slate-300">Waarde</p>
+                    <p className="text-[11px] text-slate-300">Toegewezen</p>
                     <p className="mt-1 text-lg font-semibold text-white">
-                      {overview.assignedPackage.prijsLabel}
+                      {packageAssignment.assignedAtLabel}
                     </p>
                   </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-3">
+                    <p className="text-[11px] text-slate-300">Verbruik</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {packageAssignment.usageLabel}
+                    </p>
+                  </div>
+                  {packageAssignment.paymentNeeded ? (
+                    <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3">
+                      <p className="text-[11px] text-amber-100">Betaling nodig</p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        Status: {packageAssignment.paymentStatus ?? "open"}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
