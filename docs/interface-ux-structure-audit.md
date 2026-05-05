@@ -35,6 +35,7 @@ Er is bewust niet aan businesslogica of datastromen gezeten. De verbeteringen zi
 - `DashboardModuleTabs` rustiger gemaakt door tabbeschrijvingen alleen nog als actieve modulecontext te tonen;
 - `/instructeur/regie` compacter ingericht als cockpit: status bovenaan, neutrale KPI-kaarten, weekplanning naast acties en drie scanbare werkkaarten onderin;
 - `/instructeur/dashboard` compacter gemaakt als analysepagina: rustige statusheader, neutralere KPI-kaarten, minder zware OS-panelen en een loading skeleton die dezelfde compacte structuur volgt;
+- `/instructeur/leerlingen` opnieuw gesorteerd als werkruimte: status en primaire actie bovenaan, leerlingstatistieken en prioriteiten links, progress tracking rechts en daarna pas het volledige dossierbord;
 - encoding van `Financiën` in modulelabels hersteld.
 
 Effect: minder grote lege vlakken, minder verticale scroll en snellere scanbaarheid op dashboardpagina's.

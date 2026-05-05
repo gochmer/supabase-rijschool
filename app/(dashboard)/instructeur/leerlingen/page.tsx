@@ -8,6 +8,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 
 import { DataHealthCallout } from "@/components/dashboard/data-health-callout";
 import { DashboardPerformanceMark } from "@/components/dashboard/dashboard-performance-mark";
@@ -51,7 +52,11 @@ type StudentPriority = {
 };
 
 const busyLessonStatuses = new Set(["geaccepteerd", "ingepland"]);
-const busyRequestStatuses = new Set(["aangevraagd", "geaccepteerd", "ingepland"]);
+const busyRequestStatuses = new Set([
+  "aangevraagd",
+  "geaccepteerd",
+  "ingepland",
+]);
 const ROUTE = "/instructeur/leerlingen";
 const LESSON_HISTORY_WINDOW_DAYS = 180;
 
@@ -61,11 +66,30 @@ function getLessonWindowStartIso() {
   ).toISOString();
 }
 
-const statToneClasses: Record<StudentStatTone, string> = {
-  amber: "border-amber-400/26 bg-amber-400/12 text-amber-300",
-  blue: "border-blue-400/26 bg-blue-500/12 text-blue-300",
-  emerald: "border-emerald-400/26 bg-emerald-500/12 text-emerald-300",
-  rose: "border-rose-400/28 bg-rose-500/12 text-rose-300",
+const statToneClasses: Record<
+  StudentStatTone,
+  { dot: string; icon: string; value: string }
+> = {
+  amber: {
+    dot: "bg-amber-300",
+    icon: "bg-amber-400/12 text-amber-200",
+    value: "text-amber-100",
+  },
+  blue: {
+    dot: "bg-sky-300",
+    icon: "bg-sky-400/12 text-sky-200",
+    value: "text-sky-100",
+  },
+  emerald: {
+    dot: "bg-emerald-300",
+    icon: "bg-emerald-400/12 text-emerald-200",
+    value: "text-emerald-100",
+  },
+  rose: {
+    dot: "bg-rose-300",
+    icon: "bg-rose-400/12 text-rose-200",
+    value: "text-rose-100",
+  },
 };
 
 const priorityToneClasses: Record<StudentPriorityTone, string> = {
@@ -141,7 +165,10 @@ function getStudentPriority(
     };
   }
 
-  if (student.voortgang < 40 && student.laatsteBeoordeling !== "Nog geen beoordeling") {
+  if (
+    student.voortgang < 40 &&
+    student.laatsteBeoordeling !== "Nog geen beoordeling"
+  ) {
     return {
       detail: `${student.voortgang}% voortgang na recente beoordeling`,
       href: getStudentHref(student.id),
@@ -214,30 +241,41 @@ function getStudentDashboardSummary(students: InstructorStudentProgressRow[]) {
 }
 
 function StudentStatCard({
+  helper,
   icon: Icon,
   label,
   tone,
   value,
 }: {
+  helper: string;
   icon: LucideIcon;
   label: string;
   tone: StudentStatTone;
   value: string;
 }) {
+  const toneClasses = statToneClasses[tone];
+
   return (
-    <div className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] p-3.5 text-white shadow-[0_24px_70px_-52px_rgba(0,0,0,0.95)] 2xl:rounded-xl 2xl:p-5">
-      <div className="flex items-center gap-3 2xl:gap-5">
+    <div className="rounded-xl border border-white/10 bg-white/[0.045] p-3.5 text-white shadow-[0_18px_54px_-46px_rgba(0,0,0,0.95)]">
+      <div className="flex items-center gap-3">
         <span
-          className={`flex size-11 shrink-0 items-center justify-center rounded-lg border 2xl:size-16 2xl:rounded-xl ${statToneClasses[tone]}`}
+          className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${toneClasses.icon}`}
         >
-          <Icon className="size-5 2xl:size-8" />
+          <Icon className="size-5" />
         </span>
-        <div>
-          <p className="text-sm text-slate-200 2xl:text-base">{label}</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-white 2xl:mt-2 2xl:text-3xl">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
+            {label}
+          </p>
+          <p
+            className={`mt-1 text-2xl font-semibold tracking-tight ${toneClasses.value}`}
+          >
             {value}
           </p>
-          <p className="mt-1.5 text-xs text-slate-400 2xl:mt-3 2xl:text-sm">Deze maand</p>
+          <p className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+            <span className={`size-1.5 rounded-full ${toneClasses.dot}`} />
+            <span className="truncate">{helper}</span>
+          </p>
         </div>
       </div>
     </div>
@@ -271,28 +309,32 @@ function StudentPrioritiesPanel({
   ];
 
   return (
-    <section className="rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.76),rgba(15,23,42,0.36))] p-3.5 text-white shadow-[0_24px_70px_-52px_rgba(0,0,0,0.95)] 2xl:rounded-xl 2xl:p-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
+    <section className="rounded-xl border border-white/10 bg-white/[0.045] p-3.5 text-white shadow-[0_18px_58px_-48px_rgba(0,0,0,0.95)]">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <CircleAlert className="size-4 text-amber-300 2xl:size-5" />
-            <h2 className="text-lg font-semibold tracking-tight 2xl:text-xl">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-amber-400/12 text-amber-200">
+              <CircleAlert className="size-4" />
+            </span>
+            <h2 className="text-base font-semibold tracking-tight">
               Slimme prioriteiten
             </h2>
           </div>
-          <p className="mt-1 text-xs text-slate-400 2xl:text-sm">
+          <p className="mt-1 text-xs leading-5 text-slate-400">
             Automatisch berekend uit planning, voortgang en accountstatus.
           </p>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-3 2xl:gap-3">
+        <div className="grid gap-2 sm:grid-cols-3">
           {insightItems.map((item) => (
             <div
               key={item.label}
-              className="min-w-32 rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 2xl:min-w-36 2xl:py-3"
+              className="min-w-28 rounded-lg border border-white/10 bg-slate-950/24 px-3 py-2"
             >
-              <p className="text-xs text-slate-400">{item.label}</p>
-              <p className="mt-1 text-xl font-semibold text-white 2xl:text-2xl">
+              <p className="text-[10px] font-semibold tracking-[0.12em] text-slate-500 uppercase">
+                {item.label}
+              </p>
+              <p className="mt-1 text-lg font-semibold text-white">
                 {item.value}
               </p>
             </div>
@@ -300,16 +342,16 @@ function StudentPrioritiesPanel({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-4 2xl:mt-5 2xl:gap-4">
+      <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
         {priorities.length ? (
           priorities.map((priority) => {
             const Icon = priority.icon;
 
             return (
-              <a
+              <Link
                 key={`${priority.label}-${priority.name}`}
                 href={priority.href}
-                className={`group rounded-lg border p-3 transition hover:-translate-y-0.5 hover:bg-white/[0.07] 2xl:p-4 ${priorityToneClasses[priority.tone]}`}
+                className={`group rounded-lg border p-3 transition hover:-translate-y-0.5 hover:bg-white/[0.07] ${priorityToneClasses[priority.tone]}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-current/20 bg-white/5 2xl:size-9">
@@ -324,11 +366,11 @@ function StudentPrioritiesPanel({
                 <p className="mt-1.5 text-xs leading-5 text-slate-400 2xl:mt-2">
                   {priority.detail}
                 </p>
-              </a>
+              </Link>
             );
           })
         ) : (
-          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100 lg:col-span-4 2xl:p-4">
+          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100 lg:col-span-2 xl:col-span-1 2xl:col-span-2">
             Alles ziet er rustig uit. Er zijn geen directe leerlingprioriteiten.
           </div>
         )}
@@ -366,7 +408,11 @@ export default async function LeerlingenPage({
     const lessonWindowStart = getLessonWindowStartIso();
 
     return Promise.all([
-      timedDashboardData(ROUTE, "student-workspace", getInstructeurStudentsWorkspace),
+      timedDashboardData(
+        ROUTE,
+        "student-workspace",
+        getInstructeurStudentsWorkspace,
+      ),
       timedDashboardData(ROUTE, "locations", getLocationOptions),
       timedDashboardData(ROUTE, "packages", getCurrentInstructorPackages),
       timedDashboardData(ROUTE, "instructor", getCurrentInstructeurRecord),
@@ -416,9 +462,13 @@ export default async function LeerlingenPage({
         return false;
       }
 
-      return slot.beschikbaar !== false && new Date(slot.eind_at).getTime() > nowMs;
+      return (
+        slot.beschikbaar !== false && new Date(slot.eind_at).getTime() > nowMs
+      );
     })
-    .sort((left, right) => (left.start_at ?? "").localeCompare(right.start_at ?? ""))
+    .sort((left, right) =>
+      (left.start_at ?? "").localeCompare(right.start_at ?? ""),
+    )
     .slice(0, 48);
   const busyWindows = [
     ...lessons
@@ -455,24 +505,28 @@ export default async function LeerlingenPage({
   const studentSummary = getStudentDashboardSummary(workspace.students);
   const studentStats = [
     {
+      helper: `${studentSummary.studentsWithoutNextLesson} zonder vervolgafspraak`,
       icon: UsersRound,
       label: "Totaal leerlingen",
       value: `${studentSummary.totalStudents}`,
       tone: "blue",
     },
     {
+      helper: "Met actieve voortgang of planning",
       icon: CheckCircle2,
       label: "Actief",
       value: `${studentSummary.activeStudents}`,
       tone: "emerald",
     },
     {
+      helper: "Uitnodiging of planning mist",
       icon: Clock3,
       label: "Inactief",
       value: `${studentSummary.inactiveStudents}`,
       tone: "amber",
     },
     {
+      helper: "Geen trajectsignalen zichtbaar",
       icon: CircleX,
       label: "Uitgevallen",
       value: `${studentSummary.droppedStudents}`,
@@ -480,48 +534,119 @@ export default async function LeerlingenPage({
     },
   ] as const;
 
+  const hasOperationalAttention =
+    studentSummary.priorities.length > 0 ||
+    studentSummary.studentsWithoutNextLesson > 0 ||
+    studentSummary.lowProgressStudents > 0;
+
   return (
-    <div className="space-y-4 text-white 2xl:space-y-7">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl 2xl:text-4xl">
+    <div className="space-y-3 text-white 2xl:space-y-4">
+      <header className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="rounded-xl border border-white/10 bg-white/[0.045] p-4 shadow-[0_20px_60px_-48px_rgba(0,0,0,0.95)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-white/10 bg-white/7 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-300 uppercase">
+              Leerlingenbeheer
+            </span>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                hasOperationalAttention
+                  ? "border-amber-300/18 bg-amber-400/10 text-amber-100"
+                  : "border-emerald-300/18 bg-emerald-400/10 text-emerald-100"
+              }`}
+            >
+              {hasOperationalAttention ? "Opvolging nodig" : "Rustig overzicht"}
+            </span>
+          </div>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Leerlingen
           </h1>
-          <p className="mt-1.5 text-sm text-slate-400 2xl:mt-2 2xl:text-lg">
-            Beheer en overzicht van al je leerlingen.
+          <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-400">
+            Beheer leerlingen, planning, pakketten, feedback en voortgang vanuit
+            een duidelijke werkruimte. Eerst de signalen, daarna het volledige
+            dossier.
           </p>
         </div>
-        <StudentOnboardDialog
-          packages={packages}
-          triggerLabel="Nieuwe leerling"
-          triggerClassName="h-9 rounded-lg bg-blue-600 px-4 text-sm text-white shadow-[0_18px_50px_-28px_rgba(37,99,235,0.9)] hover:bg-blue-500 2xl:h-12 2xl:px-5 2xl:text-base"
-          showTriggerIcon
-        />
+
+        <div className="rounded-xl border border-white/10 bg-white/[0.045] p-3.5 shadow-[0_18px_54px_-46px_rgba(0,0,0,0.95)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                Werkstatus
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white">
+                {studentSummary.totalStudents
+                  ? `${studentSummary.activeStudents} actief van ${studentSummary.totalStudents}`
+                  : "Nog geen leerlingen"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                {studentSummary.priorities.length
+                  ? `${studentSummary.priorities.length} directe actie${studentSummary.priorities.length === 1 ? "" : "s"} zichtbaar.`
+                  : "Geen directe blokkades zichtbaar."}
+              </p>
+            </div>
+            <span
+              className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+                hasOperationalAttention
+                  ? "bg-amber-400/12 text-amber-100"
+                  : "bg-emerald-400/12 text-emerald-100"
+              }`}
+            >
+              {hasOperationalAttention ? (
+                <CircleAlert className="size-5" />
+              ) : (
+                <CheckCircle2 className="size-5" />
+              )}
+            </span>
+          </div>
+          <div className="mt-3">
+            <StudentOnboardDialog
+              packages={packages}
+              triggerLabel="Nieuwe leerling"
+              triggerClassName="h-9 w-full rounded-lg bg-blue-600 px-4 text-sm text-white shadow-[0_18px_50px_-28px_rgba(37,99,235,0.9)] hover:bg-blue-500"
+              showTriggerIcon
+            />
+          </div>
+        </div>
       </header>
 
-      <DataHealthCallout
-        label="Leerlingen datastatus"
-        results={dataHealth}
-      />
+      <DataHealthCallout label="Leerlingen datastatus" results={dataHealth} />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-5">
-        {studentStats.map((item) => (
-          <StudentStatCard key={item.label} {...item} />
-        ))}
+      <section className="grid gap-3 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.45fr)]">
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            {studentStats.map((item) => (
+              <StudentStatCard key={item.label} {...item} />
+            ))}
+          </div>
+
+          <StudentPrioritiesPanel
+            lowProgressStudents={studentSummary.lowProgressStudents}
+            priorities={studentSummary.priorities}
+            studentsWithSelfPlanning={studentSummary.studentsWithSelfPlanning}
+            studentsWithoutNextLesson={studentSummary.studentsWithoutNextLesson}
+          />
+        </div>
+
+        <ProgressTrackingSystemPanel
+          assessments={workspace.assessments}
+          notes={workspace.notes}
+          students={workspace.students}
+        />
+      </section>
+
+      <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3.5 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-white">Leerlingdossiers</p>
+          <p className="mt-0.5 text-xs leading-5 text-slate-400">
+            Zoek, open en beheer planning, pakketten, feedback en audit per
+            leerling.
+          </p>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-slate-300">
+          {workspace.students.length} dossier
+          {workspace.students.length === 1 ? "" : "s"}
+        </span>
       </div>
-
-      <StudentPrioritiesPanel
-        lowProgressStudents={studentSummary.lowProgressStudents}
-        priorities={studentSummary.priorities}
-        studentsWithSelfPlanning={studentSummary.studentsWithSelfPlanning}
-        studentsWithoutNextLesson={studentSummary.studentsWithoutNextLesson}
-      />
-
-      <ProgressTrackingSystemPanel
-        assessments={workspace.assessments}
-        notes={workspace.notes}
-        students={workspace.students}
-      />
 
       <DashboardPerformanceMark route={ROUTE} label="StudentsBoard" />
 
