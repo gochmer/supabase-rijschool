@@ -18,21 +18,24 @@ export function MetricCard({
   context: string;
 }) {
   return (
-    <Card className="surface-panel group relative overflow-hidden transition-transform duration-300 hover:-translate-y-1">
+    <Card
+      size="sm"
+      className="surface-panel group relative overflow-hidden transition-transform duration-300 hover:-translate-y-0.5"
+    >
       <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#0f172a,#2563eb,#38bdf8)] dark:bg-[linear-gradient(90deg,#e2e8f0,#38bdf8,#0ea5e9)]" />
       <div className="absolute -right-10 -top-10 size-28 rounded-full bg-sky-100/60 blur-2xl transition-transform duration-500 group-hover:scale-110 dark:bg-sky-400/14" />
-      <CardHeader className="relative pb-3">
+      <CardHeader className="relative pb-2">
         <div className="flex items-center justify-between gap-3">
           <CardDescription className="text-[12px] font-medium dark:text-slate-300">{label}</CardDescription>
           <div className="flex size-7 items-center justify-center rounded-full bg-slate-50 text-slate-500 dark:bg-white/8 dark:text-slate-300">
             <ArrowUpRight className="size-3.5" />
           </div>
         </div>
-        <CardTitle className="text-[1.5rem] tracking-tight text-slate-950 dark:text-white sm:text-[1.8rem]">
+        <CardTitle className="text-[1.35rem] tracking-tight text-slate-950 dark:text-white sm:text-[1.55rem]">
           {waarde}
         </CardTitle>
       </CardHeader>
-      <CardContent className="relative pt-0 text-[13px] leading-6 text-muted-foreground dark:text-slate-300">
+      <CardContent className="relative pt-0 text-[12px] leading-5 text-muted-foreground dark:text-slate-300">
         {context}
       </CardContent>
     </Card>

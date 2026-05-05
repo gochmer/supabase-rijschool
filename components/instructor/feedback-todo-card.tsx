@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CheckCircle2, NotebookPen } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  NotebookPen,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,13 +42,15 @@ export function FeedbackTodoCard({
   limit?: number;
 }) {
   const visibleItems = items.slice(0, limit);
-  const urgentCount = items.filter((lesson) => lesson.urgency === "urgent").length;
+  const urgentCount = items.filter(
+    (lesson) => lesson.urgency === "urgent",
+  ).length;
   const oldestOpenLabel = items[0]?.open_label ?? null;
 
   return (
     <section
       className={cn(
-        "rounded-xl border border-amber-300/18 bg-[linear-gradient(145deg,rgba(245,158,11,0.12),rgba(15,23,42,0.66),rgba(14,165,233,0.06))] p-4 text-white shadow-[0_20px_70px_-52px_rgba(0,0,0,0.95)]",
+        "rounded-xl border border-amber-300/18 bg-[linear-gradient(145deg,rgba(245,158,11,0.1),rgba(15,23,42,0.62),rgba(14,165,233,0.045))] p-3.5 text-white shadow-[0_20px_70px_-52px_rgba(0,0,0,0.95)]",
         className,
       )}
     >
@@ -64,7 +71,7 @@ export function FeedbackTodoCard({
               </h3>
             </div>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-300">
+          <p className="mt-2 text-sm leading-6 text-slate-300">
             {items.length
               ? "Rond deze lessen af met een korte samenvatting, sterk punt en focus voor de volgende keer."
               : "Geen open feedbackactie. Zodra je een les afrondt zonder verslag, verschijnt die hier."}
@@ -81,7 +88,7 @@ export function FeedbackTodoCard({
       </div>
 
       {oldestOpenLabel ? (
-        <div className="mt-4 flex items-start gap-2 rounded-lg border border-white/10 bg-slate-950/24 px-3 py-2 text-xs leading-5 text-slate-300">
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-white/10 bg-slate-950/24 px-3 py-2 text-xs leading-5 text-slate-300">
           <AlertTriangle
             className={cn(
               "mt-0.5 size-4 shrink-0",
@@ -98,7 +105,7 @@ export function FeedbackTodoCard({
         </div>
       ) : null}
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-3 space-y-2">
         {visibleItems.length ? (
           visibleItems.map((lesson) => {
             const urgencyBadge = getUrgencyBadge(lesson);
@@ -145,7 +152,8 @@ export function FeedbackTodoCard({
               Geen vergeten feedback
             </span>
             <p className="mt-1 text-emerald-100/75">
-              Je leerlingen hebben voor de afgeronde lessen een zichtbaar verslag.
+              Je leerlingen hebben voor de afgeronde lessen een zichtbaar
+              verslag.
             </p>
           </div>
         )}
@@ -158,7 +166,7 @@ export function FeedbackTodoCard({
         </p>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-white/10 pt-3">
         <Button
           asChild
           variant="outline"

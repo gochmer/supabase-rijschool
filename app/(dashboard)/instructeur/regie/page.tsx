@@ -6,9 +6,7 @@ import {
   CarFront,
   CheckCircle2,
   ClipboardList,
-  Clock3,
   FileText,
-  Gauge,
   NotebookPen,
   PackageCheck,
   UsersRound,
@@ -31,6 +29,7 @@ import {
 import { getCurrentInstructorAvailability } from "@/lib/data/instructor-account";
 import { getCurrentInstructorSettingsOverview } from "@/lib/data/instructor-account";
 import { getInstructorPlanningDataHealth } from "@/lib/data/data-health";
+import type { DataHealthCheck } from "@/lib/data/data-health";
 import { getCurrentInstructorFeedbackTodoLessons } from "@/lib/data/instructor-feedback-todos";
 import { getLocationOptions } from "@/lib/data/locations";
 import {
@@ -55,13 +54,6 @@ import { cn } from "@/lib/utils";
 const ROUTE = "/instructeur/regie";
 const PLANNING_WINDOW_DAYS = 14;
 const FEEDBACK_TODO_LIMIT = 6;
-
-const dateFormatter = new Intl.DateTimeFormat("nl-NL", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  timeZone: "Europe/Amsterdam",
-});
 
 const timeFormatter = new Intl.DateTimeFormat("nl-NL", {
   hour: "2-digit",
@@ -109,6 +101,91 @@ function getLessonStatusTone(status: string) {
   }
 
   return "info" as const;
+}
+
+const cockpitToneClasses = {
+  amber: {
+    dot: "bg-amber-300",
+    icon: "bg-amber-300/12 text-amber-100",
+    value: "text-amber-100",
+  },
+  emerald: {
+    dot: "bg-emerald-300",
+    icon: "bg-emerald-300/12 text-emerald-100",
+    value: "text-emerald-100",
+  },
+  rose: {
+    dot: "bg-rose-300",
+    icon: "bg-rose-300/12 text-rose-100",
+    value: "text-rose-100",
+  },
+  sky: {
+    dot: "bg-sky-300",
+    icon: "bg-sky-300/12 text-sky-100",
+    value: "text-sky-100",
+  },
+} as const;
+
+const actionToneClasses = {
+  danger: {
+    badge: "bg-rose-400/15 text-rose-100",
+    dot: "bg-rose-400",
+    row: "hover:border-rose-200/20 hover:bg-rose-400/8",
+  },
+  info: {
+    badge: "bg-sky-400/15 text-sky-100",
+    dot: "bg-sky-400",
+    row: "hover:border-sky-200/20 hover:bg-sky-400/8",
+  },
+  warning: {
+    badge: "bg-amber-400/15 text-amber-100",
+    dot: "bg-amber-400",
+    row: "hover:border-amber-200/20 hover:bg-amber-400/8",
+  },
+} as const;
+
+function RegieDataStatusCard({ results }: { results: DataHealthCheck[] }) {
+  const failed = results.filter((item) => item.status === "error");
+  const empty = results.filter((item) => item.status === "empty");
+  const isError = failed.length > 0;
+  const Icon = isError ? AlertTriangle : CheckCircle2;
+
+  return (
+    <section
+      className={cn(
+        "flex min-h-full items-center justify-between gap-3 rounded-xl border p-3.5 text-white shadow-[0_18px_54px_-44px_rgba(0,0,0,0.9)]",
+        isError
+          ? "border-rose-300/20 bg-rose-400/10"
+          : "border-emerald-300/18 bg-white/[0.055]",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-full",
+            isError
+              ? "bg-rose-400/18 text-rose-100"
+              : "bg-emerald-400/18 text-emerald-100",
+          )}
+        >
+          <Icon className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white">Datastatus</p>
+          <p className="mt-0.5 truncate text-[13px] text-slate-300">
+            {isError
+              ? `${failed.length} databron${failed.length === 1 ? "" : "nen"} vragen controle`
+              : empty.length
+                ? `${empty.length} bron${empty.length === 1 ? "" : "nen"} leeg, database bereikbaar`
+                : "Planning- en leerlingdata geladen"}
+          </p>
+        </div>
+      </div>
+      <Badge variant={isError ? "danger" : "success"}>
+        {isError ? "Check" : "OK"}
+      </Badge>
+    </section>
+  );
 }
 
 export default async function InstructeurRegiePage() {
@@ -254,9 +331,7 @@ export default async function InstructeurRegiePage() {
     {
       label: "Aanvragen",
       value: `${requests.length}`,
-      hint: requests.length
-        ? "Nog beantwoorden"
-        : "Inbox is rustig",
+      hint: requests.length ? "Nog beantwoorden" : "Inbox is rustig",
       href: "/instructeur/aanvragen",
       icon: ClipboardList,
       tone: requests.length ? "amber" : "emerald",
@@ -280,9 +355,7 @@ export default async function InstructeurRegiePage() {
     {
       label: "Feedback",
       value: `${feedbackTodos.length}`,
-      hint: feedbackTodos.length
-        ? "Lesverslag invullen"
-        : "Alles bijgewerkt",
+      hint: feedbackTodos.length ? "Lesverslag invullen" : "Alles bijgewerkt",
       href: feedbackTodos[0]?.href ?? "/instructeur/leerlingen",
       icon: NotebookPen,
       tone: feedbackTodos.length ? "amber" : "emerald",
@@ -296,7 +369,10 @@ export default async function InstructeurRegiePage() {
           : "Basis staat klaar",
       href: "/instructeur/documenten",
       icon: FileText,
-      tone: documentActions.length || maintenanceVehicles.length ? "amber" : "emerald",
+      tone:
+        documentActions.length || maintenanceVehicles.length
+          ? "amber"
+          : "emerald",
     },
   ] as const;
 
@@ -367,170 +443,129 @@ export default async function InstructeurRegiePage() {
   ].filter(Boolean);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        tone="urban"
-        title="Regie"
-        description="Een rustige start van je werkdag: eerst zien wat aandacht vraagt, daarna pas handelen."
-      />
+    <div className="space-y-3">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <PageHeader
+          tone="urban"
+          title="Regie"
+          description="Rustige start van de werkdag: eerst zien wat aandacht vraagt, daarna pas handelen."
+        />
+        <RegieDataStatusCard results={dataHealth} />
+      </div>
 
       <DataHealthCallout
+        className="!mt-3"
         label="Regie datastatus"
         results={dataHealth}
+        showAllEmptyState={false}
       />
 
-      <section className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] p-4 text-white shadow-[0_22px_70px_-52px_rgba(0,0,0,0.95)]">
-        <div className="relative grid gap-5 xl:grid-cols-[1fr_22rem] xl:items-end">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-[0.22em] text-white/75 uppercase">
-              <Gauge className="size-3.5" />
-              Dagcockpit
-            </div>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {dateFormatter.format(now)}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">
-              {instructor?.profielNaam
-                ? `${instructor.profielNaam}, dit vraagt vandaag je aandacht.`
-                : "Dit vraagt vandaag je aandacht."}
-            </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              {actionCards.map((item) => {
-                const Icon = item.icon;
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {actionCards.map((item) => {
+          const Icon = item.icon;
+          const tone = cockpitToneClasses[item.tone];
 
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={cn(
-                      "rounded-lg border p-4 transition hover:-translate-y-0.5 hover:bg-white/10",
-                      item.tone === "amber" &&
-                        "border-amber-300/25 bg-amber-400/10",
-                      item.tone === "rose" &&
-                        "border-rose-300/25 bg-rose-400/10",
-                      item.tone === "emerald" &&
-                        "border-emerald-300/25 bg-emerald-400/10",
-                      item.tone === "sky" && "border-sky-300/25 bg-sky-400/10",
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-semibold tracking-[0.18em] text-white/62 uppercase">
-                        {item.label}
-                      </p>
-                      <Icon className="size-4 text-white/70" />
-                    </div>
-                    <p className="mt-3 text-3xl font-semibold">{item.value}</p>
-                    <p className="mt-1 text-xs leading-5 text-white/65">{item.hint}</p>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          <SmartWeekPlanningPanel
-            blockedCandidateCount={smartPlanning.blockedCandidateCount}
-            busyWindows={smartPlanning.busyWindows}
-            candidateCount={smartPlanning.candidateCount}
-            durationDefaults={durationDefaults}
-            locationOptions={locationOptions}
-            openSlotCount={smartPlanning.openSlotCount}
-            proposals={smartPlanning.proposals}
-          />
-        </div>
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={cn(
+                "rounded-xl border border-white/10 bg-white/[0.045] p-3.5 text-white shadow-[0_18px_54px_-44px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.07]",
+              )}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className={cn(
+                    "flex size-9 items-center justify-center rounded-lg",
+                    tone.icon,
+                  )}
+                >
+                  <Icon className="size-4.5" />
+                </span>
+                <span className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                  {item.label}
+                </span>
+              </div>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <p
+                  className={cn(
+                    "text-2xl font-semibold tracking-tight",
+                    tone.value,
+                  )}
+                >
+                  {item.value}
+                </p>
+                <p className="flex items-center gap-2 text-right text-xs leading-5 text-slate-400">
+                  <span className={cn("size-1.5 rounded-full", tone.dot)} />
+                  <span>{item.hint}</span>
+                </p>
+              </div>
+            </Link>
+          );
+        })}
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
-        <Card className="border-white/10 bg-white/[0.045] text-white">
-          <CardHeader>
-            <CardTitle>Vandaag gepland</CardTitle>
-            <CardDescription className="text-slate-400">
-              De eerstvolgende lessen in je dagritme.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {todaysLessons.length ? (
-              <div className="space-y-3">
-                {todaysLessons.slice(0, 6).map((lesson) => (
-                  <Link
-                    key={lesson.id}
-                    href="/instructeur/lessen"
-                    className="grid gap-3 rounded-lg border border-white/10 bg-slate-950/28 p-4 transition hover:bg-white/8 sm:grid-cols-[6rem_1fr_auto] sm:items-center"
-                  >
-                    <div className="flex items-center gap-2 text-sm font-semibold text-sky-100">
-                      <Clock3 className="size-4" />
-                      {getTimeLabel(lesson.start_at, lesson.tijd)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-white">
-                        {lesson.leerling_naam}
-                      </p>
-                      <p className="mt-1 truncate text-sm text-slate-400">
-                        {lesson.titel} - {lesson.locatie}
-                      </p>
-                    </div>
-                    <Badge variant={getLessonStatusTone(lesson.status)}>
-                      {lesson.status}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-white/12 bg-slate-950/22 p-6 text-center">
-                <CheckCircle2 className="mx-auto size-9 text-emerald-300" />
-                <p className="mt-3 font-semibold text-white">
-                  Geen lessen vandaag
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Je hoeft niets te forceren. Gebruik open plekken alleen voor
-                  aanvragen of leerlingen die echt een vervolgmoment nodig hebben.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(21rem,0.75fr)]">
+        <SmartWeekPlanningPanel
+          blockedCandidateCount={smartPlanning.blockedCandidateCount}
+          busyWindows={smartPlanning.busyWindows}
+          candidateCount={smartPlanning.candidateCount}
+          durationDefaults={durationDefaults}
+          locationOptions={locationOptions}
+          openSlotCount={smartPlanning.openSlotCount}
+          proposals={smartPlanning.proposals}
+        />
 
-        <Card className="border-white/10 bg-white/[0.045] text-white">
+        <Card size="sm" className="border-white/10 bg-white/[0.045] text-white">
           <CardHeader>
             <CardTitle>Acties nodig</CardTitle>
             <CardDescription className="text-slate-400">
-              De cockpit zet alleen echte signalen bovenaan.
+              Alleen signalen die nu opvolging vragen.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {nextActions.length ? (
-              <div className="space-y-3">
+              <div className="divide-y divide-white/8">
                 {nextActions.map((item) => {
                   if (!item) {
                     return null;
                   }
 
+                  const tone = actionToneClasses[item.tone];
                   const Icon = item.icon;
 
                   return (
                     <Link
                       key={item.title}
                       href={item.href}
-                      className="flex gap-3 rounded-lg border border-white/10 bg-slate-950/28 p-4 transition hover:bg-white/8"
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-2 py-3 transition",
+                        tone.row,
+                      )}
                     >
                       <span
                         className={cn(
-                          "flex size-10 shrink-0 items-center justify-center rounded-lg",
-                          item.tone === "danger"
-                            ? "bg-rose-400/15 text-rose-200"
-                            : item.tone === "warning"
-                              ? "bg-amber-400/15 text-amber-200"
-                              : "bg-sky-400/15 text-sky-200",
+                          "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                          tone.badge,
                         )}
                       >
-                        <Icon className="size-5" />
+                        <Icon className="size-4" />
                       </span>
-                      <span className="min-w-0">
+                      <span className="min-w-0 flex-1">
                         <span className="block font-semibold text-white">
                           {item.title}
                         </span>
-                        <span className="mt-1 block text-sm leading-6 text-slate-400">
+                        <span className="mt-0.5 line-clamp-1 block text-xs text-slate-400">
                           {item.text}
                         </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-1 text-xs font-semibold",
+                          tone.badge,
+                        )}
+                      >
+                        Open
                       </span>
                     </Link>
                   );
@@ -538,9 +573,7 @@ export default async function InstructeurRegiePage() {
               </div>
             ) : (
               <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 p-5">
-                <p className="font-semibold text-emerald-100">
-                  Alles rustig
-                </p>
+                <p className="font-semibold text-emerald-100">Alles rustig</p>
                 <p className="mt-1 text-sm leading-6 text-emerald-100/75">
                   Geen open aanvragen, urgente leerling-signalen of operationele
                   acties. Mooi moment om vooruit te plannen.
@@ -551,63 +584,131 @@ export default async function InstructeurRegiePage() {
         </Card>
       </div>
 
-      <FeedbackTodoCard items={feedbackTodos} limit={3} />
+      <div className="grid gap-3 xl:grid-cols-3">
+        <Card size="sm" className="border-white/10 bg-white/[0.045] text-white">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>Vandaag gepland</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Eerstvolgende lessen in je dagritme.
+                </CardDescription>
+              </div>
+              <Link
+                href="/instructeur/lessen"
+                className="text-xs font-semibold text-sky-200 hover:text-sky-100"
+              >
+                Bekijk alles
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {todaysLessons.length ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-xs">
+                  <thead className="text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase">
+                    <tr>
+                      <th className="py-2 pr-3">Tijd</th>
+                      <th className="py-2 pr-3">Leerling</th>
+                      <th className="py-2 pr-3">Les</th>
+                      <th className="py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/8">
+                    {todaysLessons.slice(0, 6).map((lesson) => (
+                      <tr key={lesson.id}>
+                        <td className="whitespace-nowrap py-2.5 pr-3 font-semibold text-sky-100">
+                          {getTimeLabel(lesson.start_at, lesson.tijd)}
+                        </td>
+                        <td className="max-w-[8rem] truncate py-2.5 pr-3 text-white">
+                          {lesson.leerling_naam}
+                        </td>
+                        <td className="max-w-[8rem] truncate py-2.5 pr-3 text-slate-400">
+                          {lesson.titel}
+                        </td>
+                        <td className="py-2.5">
+                          <Badge variant={getLessonStatusTone(lesson.status)}>
+                            {lesson.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/12 bg-slate-950/22 p-4 text-center">
+                <CheckCircle2 className="mx-auto size-7 text-emerald-300" />
+                <p className="mt-2 font-semibold text-white">
+                  Geen lessen vandaag
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">
+                  Gebruik open plekken alleen voor echte opvolging.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card className="border-white/10 bg-white/[0.045] text-white">
-        <CardHeader>
-          <CardTitle>Open aanvragen</CardTitle>
-          <CardDescription className="text-slate-400">
-            Beoordeel aanvragen direct vanuit je cockpit zonder naar de lijst te
-            hoeven schakelen.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {requests.length ? (
-            <div className="grid gap-3 xl:grid-cols-2">
-              {requests.slice(0, 4).map((request) => (
-                <div
-                  key={request.id}
-                  className="rounded-lg border border-white/10 bg-slate-950/28 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-white">
-                        {request.leerling_naam}
-                      </p>
-                      <p className="mt-1 text-sm leading-6 text-slate-400">
-                        {request.voorkeursdatum} - {request.tijdvak}
-                      </p>
+        <FeedbackTodoCard className="h-full" items={feedbackTodos} limit={4} />
+
+        <Card size="sm" className="border-white/10 bg-white/[0.045] text-white">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>Open aanvragen</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Snel beoordelen vanuit de cockpit.
+                </CardDescription>
+              </div>
+              <Link
+                href="/instructeur/aanvragen"
+                className="text-xs font-semibold text-sky-200 hover:text-sky-100"
+              >
+                Bekijk alles
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {requests.length ? (
+              <div className="divide-y divide-white/8">
+                {requests.slice(0, 4).map((request) => (
+                  <div key={request.id} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-white">
+                          {request.leerling_naam}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-slate-400">
+                          {request.voorkeursdatum} - {request.tijdvak}
+                        </p>
+                      </div>
+                      <Badge variant="warning">Open</Badge>
                     </div>
-                    <Badge variant="warning">Aanvraag</Badge>
+                    <div className="mt-3">
+                      <RequestStatusActions
+                        requestId={request.id}
+                        status={request.status}
+                        locationOptions={[]}
+                      />
+                    </div>
                   </div>
-                  {request.bericht ? (
-                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-300">
-                      {request.bericht}
-                    </p>
-                  ) : null}
-                  <div className="mt-4">
-                    <RequestStatusActions
-                      requestId={request.id}
-                      status={request.status}
-                      locationOptions={[]}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-white/12 bg-slate-950/22 p-6 text-center">
-              <CheckCircle2 className="mx-auto size-9 text-emerald-300" />
-              <p className="mt-3 font-semibold text-white">
-                Geen open aanvragen
-              </p>
-              <p className="mt-1 text-sm leading-6 text-slate-400">
-                Nieuwe aanvragen verschijnen hier zodra ze binnenkomen.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/12 bg-slate-950/22 p-6 text-center">
+                <CheckCircle2 className="mx-auto size-9 text-emerald-300" />
+                <p className="mt-3 font-semibold text-white">
+                  Geen open aanvragen
+                </p>
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  Nieuwe aanvragen verschijnen hier zodra ze binnenkomen.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <DashboardPerformanceMark route={ROUTE} label="InstructorRegie" />
     </div>

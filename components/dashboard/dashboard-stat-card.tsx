@@ -59,24 +59,24 @@ export function DashboardStatCard({
   const styles = toneStyles[tone];
 
   return (
-    <div className="group rounded-xl border border-white/10 bg-white/[0.055] p-4 text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)] transition hover:border-white/18 hover:bg-white/[0.08]">
+    <div className="group rounded-xl border border-white/10 bg-white/[0.055] p-3.5 text-white shadow-[0_18px_54px_-44px_rgba(0,0,0,0.9)] transition hover:border-white/18 hover:bg-white/[0.08]">
       <div className="flex items-start gap-3">
         <div
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-lg ring-1",
+            "flex size-9 shrink-0 items-center justify-center rounded-lg ring-1",
             styles.icon
           )}
         >
-          <Icon className="size-5" />
+          <Icon className="size-4.5" />
         </div>
         <div className="min-w-0">
           <p className="text-[12px] font-medium text-slate-300">
             {label}
           </p>
-          <p className="mt-2 truncate text-2xl font-semibold tracking-tight text-white">
+          <p className="mt-1.5 truncate text-xl font-semibold tracking-tight text-white">
             {value}
           </p>
-          <p className={cn("mt-4 text-[12px] leading-5", styles.trend)}>
+          <p className={cn("mt-2.5 text-[12px] leading-5", styles.trend)}>
             {detail}
           </p>
         </div>

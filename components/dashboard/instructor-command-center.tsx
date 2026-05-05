@@ -407,7 +407,7 @@ function CommandPanel({
   return (
     <section
       className={cn(
-        "rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.055),rgba(15,23,42,0.34))] p-3 shadow-[0_22px_70px_-50px_rgba(0,0,0,0.95)] 2xl:rounded-xl 2xl:p-5",
+        "rounded-xl border border-white/10 bg-white/[0.045] p-3.5 shadow-[0_18px_58px_-48px_rgba(0,0,0,0.95)] 2xl:p-4",
         className,
       )}
     >
@@ -458,35 +458,35 @@ function StatTile({
   tone: "blue" | "green" | "amber" | "purple" | "teal";
 }) {
   const toneClass = {
-    amber: "border-amber-400/26 bg-amber-400/12 text-amber-300",
-    blue: "border-blue-400/26 bg-blue-500/12 text-blue-300",
-    green: "border-emerald-400/26 bg-emerald-500/12 text-emerald-300",
-    purple: "border-violet-400/26 bg-violet-500/12 text-violet-300",
-    teal: "border-teal-400/26 bg-teal-500/12 text-teal-300",
+    amber: "bg-amber-400/12 text-amber-200",
+    blue: "bg-blue-500/12 text-blue-200",
+    green: "bg-emerald-500/12 text-emerald-200",
+    purple: "bg-violet-500/12 text-violet-200",
+    teal: "bg-teal-500/12 text-teal-200",
   }[tone];
 
   return (
     <Link
       href={href}
-      className="group rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(15,23,42,0.34))] p-3 text-white shadow-[0_20px_60px_-46px_rgba(0,0,0,0.95)] transition hover:border-white/18 hover:bg-white/[0.08] 2xl:rounded-xl 2xl:p-5"
+      className="group rounded-xl border border-white/10 bg-white/[0.045] p-3.5 text-white shadow-[0_18px_54px_-46px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.075] 2xl:p-4"
     >
-      <div className="flex items-center gap-3 2xl:gap-4">
+      <div className="flex items-center gap-3">
         <span
           className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-lg border 2xl:size-14",
+            "flex size-10 shrink-0 items-center justify-center rounded-lg",
             toneClass,
           )}
         >
-          <Icon className="size-5 2xl:size-7" />
+          <Icon className="size-5" />
         </span>
         <div className="min-w-0">
           <p className="truncate text-[10px] font-semibold tracking-[0.14em] text-slate-400 uppercase">
             {label}
           </p>
-          <p className="mt-1 text-xl font-semibold tracking-tight text-white 2xl:text-2xl">
+          <p className="mt-1 text-xl font-semibold tracking-tight text-white">
             {value}
           </p>
-          <p className="mt-1 truncate text-[11px] text-emerald-300 2xl:text-[12px]">{helper}</p>
+          <p className="mt-1 truncate text-[11px] text-slate-400">{helper}</p>
         </div>
       </div>
     </Link>
@@ -537,11 +537,11 @@ function OperationMetricCard({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3 2xl:rounded-xl 2xl:p-4">
+    <div className="rounded-lg border border-white/10 bg-slate-950/22 p-3">
       <div className="flex items-center justify-between gap-3">
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg border",
+            "flex size-8 shrink-0 items-center justify-center rounded-lg border",
             getOperationToneClass(tone),
           )}
         >
@@ -557,7 +557,9 @@ function OperationMetricCard({
       <p className="mt-1 text-2xl font-semibold tracking-tight text-white">
         {value}
       </p>
-      <p className="mt-1.5 text-[12px] leading-5 text-slate-400">{detail}</p>
+      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-slate-400">
+        {detail}
+      </p>
     </div>
   );
 }
@@ -971,7 +973,8 @@ export function InstructorCommandCenter({
                   ? "Bezig met lessen"
                   : "Onboarding"),
       nextAction:
-        firstStudent?.journeyNextAction ?? "Wacht op de volgende concrete stap.",
+        firstStudent?.journeyNextAction ??
+        "Wacht op de volgende concrete stap.",
       status,
       tone: firstStudent?.journeyTone ?? ("info" as const),
     };
@@ -997,39 +1000,68 @@ export function InstructorCommandCenter({
     .slice(0, 3);
 
   return (
-    <div className="space-y-4 text-white 2xl:space-y-7">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between 2xl:gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl 2xl:text-4xl">
+    <div className="space-y-3 text-white 2xl:space-y-4">
+      <header className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="rounded-xl border border-white/10 bg-white/[0.045] p-4 shadow-[0_20px_60px_-48px_rgba(0,0,0,0.95)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-white/10 bg-white/7 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-slate-300 uppercase">
+              Analyse
+            </span>
+            <span className="rounded-full border border-emerald-300/16 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-100">
+              {unreadNotifications.length
+                ? `${unreadNotifications.length} melding${unreadNotifications.length === 1 ? "" : "en"}`
+                : "Geen open meldingen"}
+            </span>
+          </div>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Dashboard
           </h1>
-          <p className="mt-1.5 text-sm text-slate-400 2xl:mt-2 2xl:text-lg">
-            Welkom terug, {displayName}! Hier is een overzicht van je
-            activiteiten.
+          <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-400">
+            Welkom terug, {displayName}. Hier zie je analyse, gezondheid en
+            ontwikkeling van je rijschool. Gebruik Regie voor de dagelijkse
+            acties.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 2xl:gap-3">
-          {realtime}
-          <Button
-            asChild
-            variant="outline"
-            className="h-9 rounded-lg border-white/10 bg-white/7 px-3 text-sm text-white hover:bg-white/12 2xl:h-11 2xl:px-4 2xl:text-base"
-          >
-            <Link href="/instructeur/beschikbaarheid">
-              <CalendarRange className="size-4" />
-              {formatWeekRange(weekDays)}
-            </Link>
-          </Button>
-          <LessonCreateDialog
-            students={students}
-            locationOptions={locationOptions}
-            durationDefaults={lessonDurationDefaults}
-            className="h-9 rounded-lg bg-blue-600 px-4 text-sm text-white shadow-[0_18px_50px_-28px_rgba(37,99,235,0.9)] hover:bg-blue-500 2xl:h-11 2xl:px-5 2xl:text-base"
-          />
+
+        <div className="rounded-xl border border-white/10 bg-white/[0.045] p-3.5 shadow-[0_18px_54px_-46px_rgba(0,0,0,0.95)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
+                Dashboardstatus
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white">
+                Data geladen voor {formatWeekRange(weekDays)}
+              </p>
+            </div>
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-400/12 text-emerald-100">
+              <CheckCircle2 className="size-5" />
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {realtime}
+              <Button
+                asChild
+                variant="outline"
+                className="h-9 flex-1 rounded-lg border-white/10 bg-white/7 px-3 text-sm text-white hover:bg-white/12"
+              >
+                <Link href="/instructeur/beschikbaarheid">
+                  <CalendarRange className="size-4" />
+                  Week
+                </Link>
+              </Button>
+            </div>
+            <LessonCreateDialog
+              students={students}
+              locationOptions={locationOptions}
+              durationDefaults={lessonDurationDefaults}
+              className="h-9 w-full rounded-lg bg-blue-600 px-4 text-sm text-white shadow-[0_18px_50px_-28px_rgba(37,99,235,0.9)] hover:bg-blue-500"
+            />
+          </div>
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5 2xl:gap-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile
           label="Totaal leerlingen"
           value={`${students.length}`}
@@ -1072,16 +1104,16 @@ export function InstructorCommandCenter({
         />
       </div>
 
-      <CommandPanel className="border-cyan-300/14 bg-[linear-gradient(145deg,rgba(14,165,233,0.11),rgba(15,23,42,0.38),rgba(16,185,129,0.08))]">
+      <CommandPanel className="border-cyan-300/12 bg-[linear-gradient(145deg,rgba(14,165,233,0.075),rgba(15,23,42,0.22),rgba(16,185,129,0.045))]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="inline-flex rounded-full border border-cyan-300/18 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-cyan-100 uppercase">
               Rijschool OS
             </div>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-white 2xl:text-2xl">
+            <h2 className="mt-2 text-lg font-semibold tracking-tight text-white">
               Operatie, planning en groei in een cockpit
             </h2>
-            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-300">
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
               De planning wordt gelezen als bedrijfsproces: vrije blokken,
               wachtrij, no-show risico, pakketmomenten en capaciteit komen hier
               samen.
@@ -1099,7 +1131,7 @@ export function InstructorCommandCenter({
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5 2xl:gap-4">
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {operationMetrics.map((metric) => (
             <OperationMetricCard
               key={metric.label}
@@ -1112,14 +1144,14 @@ export function InstructorCommandCenter({
           ))}
         </div>
 
-        <div className="mt-4 rounded-lg border border-sky-300/14 bg-[linear-gradient(135deg,rgba(14,165,233,0.11),rgba(15,23,42,0.24),rgba(16,185,129,0.08))] p-3 2xl:rounded-xl 2xl:p-4">
+        <div className="mt-3 rounded-lg border border-sky-300/12 bg-slate-950/18 p-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/18 bg-sky-400/10 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] text-sky-100 uppercase">
                 <Gauge className="size-3.5" />
                 Driver journey
               </div>
-              <h3 className="mt-3 text-lg font-semibold text-white">
+              <h3 className="mt-2 text-base font-semibold text-white">
                 Centrale leerlingstatus
               </h3>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
@@ -1139,7 +1171,7 @@ export function InstructorCommandCenter({
             </Button>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
             {journeyGroups.map((group) => (
               <div
                 key={group.status}
@@ -1199,8 +1231,8 @@ export function InstructorCommandCenter({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-3 2xl:gap-4">
-          <div className="rounded-lg border border-rose-400/16 bg-rose-500/8 p-3 2xl:rounded-xl 2xl:p-4">
+        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-lg border border-rose-400/16 bg-rose-500/8 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="size-4 text-rose-200" />
@@ -1223,7 +1255,7 @@ export function InstructorCommandCenter({
             />
           </div>
 
-          <div className="rounded-lg border border-emerald-400/16 bg-emerald-500/8 p-3 2xl:rounded-xl 2xl:p-4">
+          <div className="rounded-lg border border-emerald-400/16 bg-emerald-500/8 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Gauge className="size-4 text-emerald-200" />
@@ -1246,7 +1278,7 @@ export function InstructorCommandCenter({
             />
           </div>
 
-          <div className="rounded-lg border border-amber-400/16 bg-amber-500/8 p-3 2xl:rounded-xl 2xl:p-4">
+          <div className="rounded-lg border border-amber-400/16 bg-amber-500/8 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <PackageCheck className="size-4 text-amber-200" />
@@ -1272,7 +1304,7 @@ export function InstructorCommandCenter({
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg border border-violet-300/14 bg-[linear-gradient(135deg,rgba(139,92,246,0.13),rgba(15,23,42,0.26),rgba(14,165,233,0.08))] p-3 2xl:rounded-xl 2xl:p-4">
+        <div className="mt-3 rounded-lg border border-violet-300/12 bg-slate-950/18 p-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -1292,7 +1324,7 @@ export function InstructorCommandCenter({
                   {operations.copilot.confidence}% zekerheid
                 </Badge>
               </div>
-              <h3 className="mt-3 text-lg font-semibold text-white 2xl:text-xl">
+              <h3 className="mt-2 text-base font-semibold text-white">
                 {operations.copilot.headline}
               </h3>
               <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-300">
@@ -1311,7 +1343,7 @@ export function InstructorCommandCenter({
             </Button>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
             <div className="rounded-lg border border-white/10 bg-slate-950/24 p-3">
               <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
                 Slimme instroom
@@ -1360,7 +1392,7 @@ export function InstructorCommandCenter({
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 xl:grid-cols-2">
+          <div className="mt-3 grid gap-2 xl:grid-cols-2">
             {operations.copilot.suggestions.length ? (
               operations.copilot.suggestions.map((suggestion) => (
                 <Link
@@ -1416,8 +1448,8 @@ export function InstructorCommandCenter({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] 2xl:gap-5">
-          <div className="rounded-lg border border-white/10 bg-slate-950/22 p-3 2xl:rounded-xl 2xl:p-4">
+        <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+          <div className="rounded-lg border border-white/10 bg-slate-950/18 p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
@@ -1427,7 +1459,9 @@ export function InstructorCommandCenter({
                   Open aanvragen koppelen aan vrije blokken
                 </h3>
               </div>
-              <Badge variant={operations.autoPlanningCount > 0 ? "success" : "info"}>
+              <Badge
+                variant={operations.autoPlanningCount > 0 ? "success" : "info"}
+              >
                 {operations.autoPlanningCount} match
                 {operations.autoPlanningCount === 1 ? "" : "es"}
               </Badge>
@@ -1463,7 +1497,7 @@ export function InstructorCommandCenter({
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-slate-950/22 p-3 2xl:rounded-xl 2xl:p-4">
+          <div className="rounded-lg border border-white/10 bg-slate-950/18 p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase">
@@ -1507,13 +1541,15 @@ export function InstructorCommandCenter({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:gap-4">
-          <div className="rounded-lg border border-white/10 bg-slate-950/20 p-3 2xl:rounded-xl 2xl:p-4">
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-white/10 bg-slate-950/18 p-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">
                 No-show reductie
               </h3>
-              <Badge variant={operations.noShowRiskCount > 0 ? "danger" : "success"}>
+              <Badge
+                variant={operations.noShowRiskCount > 0 ? "danger" : "success"}
+              >
                 {operations.noShowRiskCount} risico
               </Badge>
             </div>
@@ -1544,12 +1580,16 @@ export function InstructorCommandCenter({
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-slate-950/20 p-3 2xl:rounded-xl 2xl:p-4">
+          <div className="rounded-lg border border-white/10 bg-slate-950/18 p-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">
                 Vervolg pakketten
               </h3>
-              <Badge variant={operations.estimatedRevenuePotential > 0 ? "warning" : "info"}>
+              <Badge
+                variant={
+                  operations.estimatedRevenuePotential > 0 ? "warning" : "info"
+                }
+              >
                 {formatCurrency(operations.estimatedRevenuePotential)}
               </Badge>
             </div>
@@ -1582,15 +1622,15 @@ export function InstructorCommandCenter({
         </div>
       </CommandPanel>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_19rem] 2xl:grid-cols-[minmax(0,1fr)_23rem] 2xl:gap-6">
-        <div className="space-y-4 2xl:space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[minmax(16rem,0.72fr)_minmax(0,1.38fr)] 2xl:gap-6">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_19rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="space-y-3">
+          <div className="grid gap-3 lg:grid-cols-[minmax(16rem,0.72fr)_minmax(0,1.38fr)]">
             <CommandPanel>
               <SectionHeader
                 title="Aankomende lessen"
                 href="/instructeur/lessen"
               />
-              <div className="space-y-2.5 2xl:space-y-3">
+              <div className="space-y-2.5">
                 {upcomingLessons.slice(0, 5).length ? (
                   upcomingLessons.slice(0, 5).map((lesson) => (
                     <Link
@@ -1627,7 +1667,7 @@ export function InstructorCommandCenter({
               <Button
                 asChild
                 variant="outline"
-                className="mt-3 h-9 w-full justify-between rounded-lg border-white/10 bg-white/7 text-sm text-white hover:bg-white/12 2xl:mt-4 2xl:h-10 2xl:text-base"
+                className="mt-3 h-9 w-full justify-between rounded-lg border-white/10 bg-white/7 text-sm text-white hover:bg-white/12"
               >
                 <Link href="/instructeur/lessen">
                   Alle lessen bekijken
@@ -1647,7 +1687,7 @@ export function InstructorCommandCenter({
                 lessons={lessonsThisWeek}
                 weekDays={weekDays}
               />
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-[10px] text-slate-400 2xl:gap-4 2xl:text-[11px]">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-[10px] text-slate-400">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="size-2 rounded-full bg-emerald-400" />
                   Beschikbaar
@@ -1664,7 +1704,7 @@ export function InstructorCommandCenter({
             </CommandPanel>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3 2xl:gap-6">
+          <div className="grid gap-3 lg:grid-cols-3">
             <CommandPanel>
               <SectionHeader
                 title="Recente reviews"
@@ -1763,13 +1803,13 @@ export function InstructorCommandCenter({
           </div>
         </div>
 
-        <aside className="space-y-4 2xl:space-y-6">
+        <aside className="space-y-3">
           <CommandPanel>
             <SectionHeader
               title="Recente meldingen"
               href="/instructeur/berichten"
             />
-            <div className="space-y-2.5 2xl:space-y-3">
+            <div className="space-y-2.5">
               {notifications.slice(0, 4).length ? (
                 notifications.slice(0, 4).map((notification) => {
                   const Icon = getNotificationIcon(notification);
@@ -1778,7 +1818,7 @@ export function InstructorCommandCenter({
                     <Link
                       key={notification.id}
                       href={getNotificationHref(notification)}
-                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white/7 2xl:py-2"
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white/7"
                     >
                       <span className="flex size-8 items-center justify-center rounded-full bg-blue-500/16 text-blue-200">
                         <Icon className="size-4" />
@@ -1807,7 +1847,7 @@ export function InstructorCommandCenter({
 
           <CommandPanel>
             <SectionHeader title="Snelle acties" />
-            <div className="space-y-1.5 2xl:space-y-2">
+            <div className="space-y-1.5">
               {[
                 {
                   href: "/instructeur/lessen",
@@ -1834,7 +1874,7 @@ export function InstructorCommandCenter({
                   key={item.label}
                   asChild
                   variant="ghost"
-                  className="h-9 w-full justify-between rounded-lg px-3 text-sm text-slate-200 hover:bg-white/10 hover:text-white 2xl:h-10 2xl:text-base"
+                  className="h-9 w-full justify-between rounded-lg px-3 text-sm text-slate-200 hover:bg-white/10 hover:text-white"
                 >
                   <Link href={item.href}>
                     <span className="inline-flex items-center gap-2">
@@ -1854,7 +1894,7 @@ export function InstructorCommandCenter({
               href="/instructeur/lessen"
               cta="Open agenda"
             />
-            <div className="mb-3 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 text-[9px] font-semibold tracking-[0.08em] text-slate-300 uppercase 2xl:text-[10px]">
+            <div className="mb-3 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 text-[9px] font-semibold tracking-[0.08em] text-slate-300 uppercase">
               <span className="rounded-md border border-rose-400/20 bg-rose-500/12 px-2 py-1 text-center text-rose-100">
                 Geannuleerd
               </span>
@@ -1882,7 +1922,11 @@ export function InstructorCommandCenter({
                           {plan.lesson.leerling_naam || "Leerling"}
                         </p>
                         <p className="mt-1 truncate text-[11px] text-slate-400">
-                          {plan.lesson.titel} - {formatWeekday(plan.lesson.start_at, plan.lesson.datum)}
+                          {plan.lesson.titel} -{" "}
+                          {formatWeekday(
+                            plan.lesson.start_at,
+                            plan.lesson.datum,
+                          )}
                         </p>
                       </div>
                       <Badge className="border border-sky-300/22 bg-sky-400/14 px-2 py-1 text-[9px] text-sky-100">
@@ -1903,7 +1947,8 @@ export function InstructorCommandCenter({
                       </div>
                     ) : (
                       <p className="mt-3 rounded-md border border-amber-300/18 bg-amber-400/10 px-2 py-1.5 text-[11px] leading-5 text-amber-100">
-                        Geen vrije alternatieven gevonden. Zet extra beschikbaarheid open om een voorstel te sturen.
+                        Geen vrije alternatieven gevonden. Zet extra
+                        beschikbaarheid open om een voorstel te sturen.
                       </p>
                     )}
                   </Link>
@@ -1916,7 +1961,7 @@ export function InstructorCommandCenter({
 
           <CommandPanel>
             <SectionHeader title="Statistieken" />
-            <div className="space-y-2.5 text-sm 2xl:space-y-3">
+            <div className="space-y-2.5 text-sm">
               {[
                 {
                   icon: CalendarDays,
@@ -1962,7 +2007,7 @@ export function InstructorCommandCenter({
         </aside>
       </div>
 
-      <CommandPanel className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between 2xl:gap-5">
+      <CommandPanel className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/18 text-blue-100 ring-1 ring-blue-400/20">
             <Bell className="size-5" />

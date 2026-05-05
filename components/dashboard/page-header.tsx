@@ -24,7 +24,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "overflow-hidden p-4 xl:p-5",
+        "overflow-hidden p-3.5 xl:p-4",
         isUrban
           ? "rounded-xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035))] text-white shadow-[0_20px_60px_-44px_rgba(0,0,0,0.9)]"
           : isHazard
@@ -32,8 +32,8 @@ export function PageHeader({
             : "surface-panel rounded-[1.35rem]"
       )}
     >
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-1.5">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <p
               className={cn(
@@ -62,7 +62,7 @@ export function PageHeader({
           </div>
           <h1
             className={cn(
-              "text-[1.65rem] font-semibold tracking-tight sm:text-[2rem]",
+              "text-[1.45rem] font-semibold tracking-tight sm:text-[1.75rem]",
               isUrban || isHazard ? "text-white" : "text-slate-950 dark:text-white"
             )}
           >
@@ -70,7 +70,7 @@ export function PageHeader({
           </h1>
           <p
             className={cn(
-              "max-w-2xl text-[13px] leading-6 sm:text-sm",
+              "max-w-3xl text-[13px] leading-6",
               isUrban
                 ? "text-slate-300"
                 : isHazard

@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -32,7 +34,7 @@ const LazyCreateManualLessonDialog = dynamic(
     ),
   {
     loading: () => (
-      <Button className="w-full rounded-lg" disabled>
+      <Button className="w-full rounded-xl" disabled>
         <Loader2 className="size-4 animate-spin" />
         Planner laden
       </Button>
@@ -44,22 +46,55 @@ const LazyCreateManualLessonDialog = dynamic(
 function getToneClasses(tone: SmartWeekPlanningProposal["tone"]) {
   switch (tone) {
     case "amber":
-      return "border-amber-300/25 bg-amber-400/10 text-amber-100";
+      return "border-amber-300/20 bg-amber-400/[0.08] text-amber-100 ring-amber-300/10";
     case "sky":
-      return "border-sky-300/25 bg-sky-400/10 text-sky-100";
+      return "border-sky-300/20 bg-sky-400/[0.08] text-sky-100 ring-sky-300/10";
     case "violet":
-      return "border-violet-300/25 bg-violet-400/10 text-violet-100";
+      return "border-violet-300/20 bg-violet-400/[0.08] text-violet-100 ring-violet-300/10";
     default:
-      return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
+      return "border-emerald-300/20 bg-emerald-400/[0.08] text-emerald-100 ring-emerald-300/10";
   }
 }
 
 function getSuggestedTitle(proposal: SmartWeekPlanningProposal) {
-  if (proposal.student.pakket && proposal.student.pakket !== "Nog geen pakket") {
+  if (
+    proposal.student.pakket &&
+    proposal.student.pakket !== "Nog geen pakket"
+  ) {
     return proposal.student.pakket;
   }
 
   return "Rijles";
+}
+
+function PlanningStatPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.045] px-2.5 py-1 text-[11px] text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+      <span>{label}</span>
+      <span className="font-semibold text-white">{value}</span>
+    </div>
+  );
+}
+
+function ProposalMetaRow({
+  children,
+  icon: Icon,
+}: {
+  children: React.ReactNode;
+  icon: typeof CalendarClock;
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-2 text-xs text-white/75">
+      <Icon className="size-4 shrink-0 text-white/45" />
+      <span className="min-w-0 truncate">{children}</span>
+    </span>
+  );
 }
 
 export function SmartWeekPlanningPanel({
@@ -85,122 +120,155 @@ export function SmartWeekPlanningPanel({
     [proposals, showProposals],
   );
   const canSuggest = proposals.length > 0;
+  const topProposal = proposals[0] ?? null;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-950/35 p-4 text-white">
-      <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-400/15 text-violet-100">
-          <Sparkles className="size-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-white">Slimme weekplanning</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-400">
-            Combineer open plekken met leerlingen zonder vervolgafspraak.
+    <section className="overflow-hidden rounded-2xl border border-violet-300/12 bg-[radial-gradient(circle_at_12%_-10%,rgba(139,92,246,0.16),transparent_32%),radial-gradient(circle_at_92%_6%,rgba(34,211,238,0.10),transparent_24%),linear-gradient(145deg,rgba(9,17,31,0.98),rgba(4,9,18,0.99))] p-4 text-white shadow-[0_30px_100px_-64px_rgba(0,0,0,0.98)] 2xl:p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-xl border border-violet-300/18 bg-violet-400/10 text-violet-100 ring-4 ring-violet-300/10">
+              <Sparkles className="size-4" />
+            </span>
+            <p className="text-[10px] font-bold tracking-[0.26em] text-violet-200 uppercase">
+              Smart planning cockpit
+            </p>
+            <span className="rounded-full border border-cyan-300/15 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-100">
+              Weekfocus
+            </span>
+          </div>
+          <h3 className="mt-2 text-lg font-semibold tracking-tight text-white">
+            Slimme weekplanning
+          </h3>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
+            Open plekken, passende leerlingen en directe voorstellen in één
+            rustige werkkaart.
           </p>
         </div>
-      </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-        <div className="rounded-lg border border-white/10 bg-white/6 p-3">
-          <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
-            Open plekken
-          </p>
-          <p className="mt-1 text-xl font-semibold">{openSlotCount}</p>
-        </div>
-        <div className="rounded-lg border border-white/10 bg-white/6 p-3">
-          <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
-            Te plannen
-          </p>
-          <p className="mt-1 text-xl font-semibold">{candidateCount}</p>
-        </div>
-        <div className="rounded-lg border border-white/10 bg-white/6 p-3">
-          <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-400 uppercase">
-            Geblokkeerd
-          </p>
-          <p className="mt-1 text-xl font-semibold">{blockedCandidateCount}</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row xl:flex-col">
-        <Button
-          className="rounded-lg bg-violet-500 text-white hover:bg-violet-400"
-          disabled={!canSuggest}
-          onClick={() => setShowProposals((value) => !value)}
-          type="button"
-        >
-          <Sparkles className="size-4" />
-          {showProposals ? "Voorstellen verbergen" : "Stel planning voor"}
-        </Button>
-        <Button asChild className="rounded-lg" variant="outline">
-          <Link href="/instructeur/beschikbaarheid">
-            Weekplanning beheren
-            <ArrowRight className="size-4" />
+        <div className="flex flex-wrap items-center gap-2 lg:max-w-[26rem] lg:justify-end">
+          <PlanningStatPill label="Open plekken" value={openSlotCount} />
+          <PlanningStatPill label="Te plannen" value={candidateCount} />
+          <PlanningStatPill label="Geblokkeerd" value={blockedCandidateCount} />
+          <Link
+            href="/instructeur/lessen"
+            className="inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[11px] font-semibold text-sky-200 transition hover:border-sky-300/25 hover:bg-sky-400/10 hover:text-sky-100"
+          >
+            Volledige planning
+            <ArrowRight className="size-3.5" />
           </Link>
-        </Button>
+        </div>
       </div>
 
-      {!canSuggest ? (
-        <div className="mt-4 rounded-lg border border-dashed border-white/12 bg-slate-950/22 p-4">
-          <CheckCircle2 className="size-5 text-emerald-300" />
-          <p className="mt-2 text-sm font-semibold text-white">
-            Geen voorstel nodig
-          </p>
-          <p className="mt-1 text-xs leading-5 text-slate-400">
-            Er zijn geen passende open plekken of leerlingen die nu gepland
-            kunnen worden.
-          </p>
+      <div
+        className={cn(
+          "mt-4 grid gap-3 rounded-2xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center",
+          canSuggest
+            ? "border-violet-300/14 bg-violet-400/[0.07]"
+            : "border-emerald-300/14 bg-emerald-400/[0.07]",
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={cn(
+              "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border",
+              canSuggest
+                ? "border-violet-300/18 bg-violet-400/10 text-violet-100"
+                : "border-emerald-300/18 bg-emerald-400/10 text-emerald-100",
+            )}
+          >
+            {canSuggest ? (
+              <Sparkles className="size-4" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">
+              {canSuggest ? "Planningvoorstellen beschikbaar" : "Geen voorstel nodig"}
+            </p>
+            <p className="mt-0.5 text-xs leading-5 text-slate-400">
+              {topProposal
+                ? `${topProposal.student.naam} heeft nu de hoogste match: ${Math.min(99, topProposal.score)}% op ${topProposal.dateLabel}.`
+                : "Er zijn geen passende open plekken of leerlingen die nu gepland kunnen worden."}
+            </p>
+          </div>
         </div>
-      ) : null}
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[20rem]">
+          <Button
+            className="h-9 rounded-xl bg-violet-500 text-xs font-semibold text-white hover:bg-violet-400"
+            disabled={!canSuggest}
+            onClick={() => setShowProposals((value) => !value)}
+            type="button"
+          >
+            <Sparkles className="size-4" />
+            {showProposals ? "Voorstellen verbergen" : "Planning voorstellen"}
+          </Button>
+          <Button
+            asChild
+            className="h-9 rounded-xl border-white/[0.08] bg-white/[0.035] text-xs font-semibold text-white hover:bg-white/[0.07]"
+            variant="outline"
+          >
+            <Link href="/instructeur/beschikbaarheid">
+              Week beheren
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       {visibleProposals.length ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {visibleProposals.map((proposal) => (
             <div
               key={proposal.id}
               className={cn(
-                "rounded-lg border p-3 shadow-[0_16px_48px_-38px_rgba(0,0,0,0.95)]",
+                "group relative overflow-hidden rounded-2xl border p-3.5 shadow-[0_20px_70px_-54px_rgba(0,0,0,0.95)] ring-4 transition-colors hover:bg-white/[0.045] 2xl:p-4",
                 getToneClasses(proposal.tone),
               )}
             >
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <Badge className="bg-white/15 text-white" variant="default">
+                  <Badge
+                    className="rounded-full border border-white/10 bg-white/[0.10] px-2 py-0.5 text-[10px] font-semibold text-white shadow-none"
+                    variant="default"
+                  >
                     {proposal.priorityLabel}
                   </Badge>
-                  <p className="mt-3 truncate font-semibold text-white">
+                  <p className="mt-3 truncate text-base font-semibold text-white">
                     {proposal.student.naam}
                   </p>
-                  <p className="mt-1 truncate text-xs text-white/70">
+                  <p className="mt-0.5 truncate text-xs text-white/60">
                     {proposal.student.pakket}
                   </p>
                 </div>
-                <div className="rounded-full border border-white/15 bg-slate-950/30 px-2 py-1 text-xs font-semibold text-white/80">
+                <div className="shrink-0 rounded-full border border-white/12 bg-slate-950/35 px-2.5 py-1 text-xs font-semibold text-white/85">
                   {Math.min(99, proposal.score)}%
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2 text-sm text-white/82">
-                <span className="flex items-center gap-2">
-                  <CalendarClock className="size-4 text-white/60" />
+              <div className="mt-4 grid gap-2 rounded-xl border border-white/[0.08] bg-black/15 p-3">
+                <ProposalMetaRow icon={CalendarClock}>
                   {proposal.dateLabel}
-                </span>
-                <span className="flex items-center gap-2">
-                  <Clock3 className="size-4 text-white/60" />
+                </ProposalMetaRow>
+                <ProposalMetaRow icon={Clock3}>
                   {proposal.timeLabel} ({proposal.durationLabel})
-                </span>
-                <span className="flex items-center gap-2">
-                  <PackageCheck className="size-4 text-white/60" />
+                </ProposalMetaRow>
+                <ProposalMetaRow icon={PackageCheck}>
                   {proposal.student.pakketIngeplandeLessen ??
                     proposal.student.gekoppeldeLessen}{" "}
-                  les{(proposal.student.pakketIngeplandeLessen ??
+                  les
+                  {(proposal.student.pakketIngeplandeLessen ??
                     proposal.student.gekoppeldeLessen) === 1
                     ? ""
                     : "sen"}{" "}
                   gepland
-                </span>
+                </ProposalMetaRow>
               </div>
 
-              <p className="mt-3 text-xs leading-5 text-white/68">
+              <p className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.04] p-3 text-xs leading-5 text-white/68">
                 {proposal.reason}
               </p>
 
@@ -214,7 +282,7 @@ export function SmartWeekPlanningPanel({
                   locationOptions={locationOptions}
                   studentOptions={[proposal.student]}
                   suggestedTitle={getSuggestedTitle(proposal)}
-                  triggerClassName="w-full rounded-lg bg-cyan-400 text-slate-950 hover:bg-cyan-300"
+                  triggerClassName="h-9 w-full rounded-xl bg-cyan-400 text-xs font-semibold text-slate-950 hover:bg-cyan-300"
                   triggerLabel="Plan voorstel"
                 />
               </div>
@@ -223,7 +291,7 @@ export function SmartWeekPlanningPanel({
 
           {proposals.length > 2 && !showProposals ? (
             <Button
-              className="w-full rounded-lg"
+              className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.035] text-xs font-semibold text-white hover:bg-white/[0.07] lg:col-span-2"
               onClick={() => setShowProposals(true)}
               type="button"
               variant="ghost"
@@ -234,6 +302,6 @@ export function SmartWeekPlanningPanel({
           ) : null}
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }

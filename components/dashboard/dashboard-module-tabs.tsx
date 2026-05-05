@@ -351,19 +351,17 @@ export function DashboardModuleTabs({ role }: { role: GebruikersRol }) {
   }
 
   const activeTab = group.tabs.find((tab) => isRouteActive(pathname, tab.href));
-  const hasTabDescriptions = group.tabs.some((tab) => tab.description);
-  const isSingleTab = group.tabs.length === 1;
 
   return (
     <section
       className={cn(
-        "rounded-xl border px-3 py-3 shadow-[0_22px_70px_-54px_rgba(0,0,0,0.95)] 2xl:px-5 2xl:py-4",
+        "rounded-xl border px-3 py-2.5 shadow-[0_20px_60px_-54px_rgba(0,0,0,0.95)] 2xl:px-4",
         isUrban
           ? "border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.065),rgba(15,23,42,0.36))] text-white"
           : "border-slate-200 bg-white/86 text-slate-950 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.055] dark:text-white",
       )}
     >
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
           <p
             className={cn(
@@ -375,7 +373,7 @@ export function DashboardModuleTabs({ role }: { role: GebruikersRol }) {
           </p>
           <h2
             className={cn(
-              "mt-1 text-lg font-semibold",
+              "mt-0.5 text-base font-semibold",
               isUrban ? "text-white" : "text-slate-950 dark:text-white",
             )}
           >
@@ -384,7 +382,7 @@ export function DashboardModuleTabs({ role }: { role: GebruikersRol }) {
           {activeTab?.description ? (
             <p
               className={cn(
-                "mt-1 text-sm",
+                "mt-0.5 text-[13px]",
                 isUrban ? "text-slate-400" : "text-muted-foreground",
               )}
             >
@@ -394,12 +392,7 @@ export function DashboardModuleTabs({ role }: { role: GebruikersRol }) {
         </div>
         <nav
           aria-label={`${group.label} tabs`}
-          className={cn(
-            "min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-            hasTabDescriptions && !isSingleTab
-              ? "grid gap-2 sm:grid-cols-2 xl:w-[50rem] xl:grid-cols-4"
-              : "flex gap-2",
-          )}
+          className="flex min-w-0 gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {group.tabs.map((tab) => {
             const active = isRouteActive(pathname, tab.href);
@@ -413,10 +406,7 @@ export function DashboardModuleTabs({ role }: { role: GebruikersRol }) {
                 onFocus={() => router.prefetch(tab.href)}
                 onMouseEnter={() => router.prefetch(tab.href)}
                 className={cn(
-                  "shrink-0 rounded-lg border px-3 text-sm font-semibold transition-colors 2xl:px-4",
-                  hasTabDescriptions && !isSingleTab
-                    ? "flex min-h-16 flex-col justify-center"
-                    : "inline-flex h-9 items-center 2xl:h-10",
+                  "inline-flex h-9 shrink-0 items-center rounded-lg border px-3 text-sm font-semibold transition-colors 2xl:px-4",
                   active
                     ? isUrban
                       ? "border-sky-300/30 bg-white text-slate-950 shadow-[0_14px_34px_-24px_rgba(226,232,240,0.7)]"
@@ -426,23 +416,7 @@ export function DashboardModuleTabs({ role }: { role: GebruikersRol }) {
                       : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/8 dark:text-slate-200 dark:hover:bg-white/12",
                 )}
               >
-                <span>{tab.label}</span>
-                {tab.description && !isSingleTab ? (
-                  <span
-                    className={cn(
-                      "mt-1 text-xs font-medium",
-                      active
-                        ? isUrban
-                          ? "text-slate-600"
-                          : "text-slate-200 dark:text-slate-600"
-                        : isUrban
-                          ? "text-slate-400"
-                          : "text-slate-500 dark:text-slate-400",
-                    )}
-                  >
-                    {tab.description}
-                  </span>
-                ) : null}
+                {tab.label}
               </Link>
             );
           })}
